@@ -1,0 +1,180 @@
+/* Guide and expert profile pages. */
+
+.short-answer {
+  padding: 24px 26px;
+  margin-bottom: 32px;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 18px;
+}
+
+.short-answer__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--blue-700);
+  margin-bottom: 10px;
+}
+
+.short-answer > p:last-child {
+  font-size: 17.5px;
+  line-height: 1.7;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.author-card {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 24px 26px;
+  background: var(--surface-page);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+}
+
+/* ------------------------------------------------------------ expert page */
+
+.expert-hero {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.expert-portrait {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 26px;
+  text-align: center;
+}
+
+.expert-portrait__roles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.timeline {
+  display: grid;
+  gap: 0;
+  position: relative;
+}
+
+.timeline > li {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 24px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.timeline > li:last-child {
+  border-bottom: 0;
+}
+
+.timeline__years {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline h3 {
+  font-size: 17px;
+  margin-bottom: 3px;
+}
+
+.timeline__org {
+  font-size: 14.5px;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.timeline p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------ index pages */
+
+.index-hero {
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 0 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.card-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.person-card {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 22px 24px;
+}
+
+.person-card h3 {
+  font-size: 18px;
+  margin-bottom: 3px;
+}
+
+.person-card__role {
+  font-size: 14px;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+.person-card p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1000px) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .expert-hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 700px) {
+  .card-grid,
+  .card-grid--2 {
+    grid-template-columns: 1fr;
+  }
+
+  .author-card {
+    flex-direction: column;
+  }
+
+  .timeline > li {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

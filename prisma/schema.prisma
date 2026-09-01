@@ -1,0 +1,905 @@
+// TenBestFind — data model
+//
+// Provider is SQLite so the project runs with no external services. The schema
+// avoids native enums and scalar lists so it ports to PostgreSQL by changing
+// only the datasource block: status-style columns are strings constrained by
+// the union types in src/lib/enums.ts, and list-style columns are JSON.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- geography
+
+model Country {
+  id          String   @id @default(cuid())
+  code        String   @unique // us, ca
+  name        String
+  slug        String   @unique
+  demonym     String? // "American", "Canadian"
+  currency    String   @default("USD")
+  blurb       String?
+  heroImage   String?
+  regionLabel String   @default("states") // states | provinces
+  sortOrder   Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  regions  Region[]
+  rankings Ranking[]
+  faqs     Faq[]
+
+  @@index([published])
+}
+
+model Region {
+  id        String   @id @default(cuid())
+  code      String // fl, tx, on, bc
+  name      String
+  slug      String
+  countryId String
+  blurb     String?
+  heroImage String?
+  groupName String? // header mega menu grouping: Northeast, South, Central, ...
+  // Trade licensing notes rendered on the region hub, as JSON:
+  // [{ trade, authority, licensed, note }]
+  licensing String?
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  country  Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  cities   City[]
+  rankings Ranking[]
+
+  @@unique([countryId, slug])
+  @@index([countryId, published])
+}
+
+model City {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String
+  regionId   String
+  county     String?
+  latitude   Float?
+  longitude  Float?
+  population Int?
+  blurb      String?
+  heroImage  String?
+  // Local market conditions rendered on the city hub, as JSON:
+  // [{ title, body, iconKey }]
+  conditions String?
+  // Neighborhood names, as a JSON array of strings
+  neighborhoods String?
+  topMetro   Boolean  @default(false) // listed under Top metros in the header
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  region       Region         @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  businesses   Business[]
+  rankings     Ranking[]
+  serviceAreas BusinessArea[]
+  placements   SponsoredPlacement[]
+  costRows     CostRow[]
+
+  @@unique([regionId, slug])
+  @@index([regionId, published])
+  @@index([published])
+}
+
+// ---------------------------------------------------------------- taxonomy
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String // "Plumbers"
+  singular    String // "Plumber"
+  serviceName String // "Plumbing"
+  slug        String   @unique
+  iconKey     String   @default("wrench")
+  tagline     String? // "Repairs · Drains · Water heaters"
+  description String?
+  groupName   String? // editorial band on the services index
+  navGroup    String? // header mega menu column, null keeps it out of the menu
+  navOrder    Int      @default(0)
+  featured    Boolean  @default(false) // shown in the homepage category grid
+  wide        Boolean  @default(false) // double-width tile on the homepage grid
+  trending    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subservices Subservice[]
+  businesses  Business[]
+  rankings    Ranking[]
+  guides      Guide[]
+  posts       Post[]
+  placements  SponsoredPlacement[]
+
+  @@index([published, sortOrder])
+}
+
+model Subservice {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  categoryId  String
+  description String?
+  iconKey     String?
+  trending    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  offered  BusinessService[]
+
+  @@unique([categoryId, slug])
+}
+
+// ---------------------------------------------------------------- businesses
+
+model Business {
+  id         String  @id @default(cuid())
+  name       String
+  slug       String  @unique
+  categoryId String
+  cityId     String?
+
+  tagline       String?
+  description   String? // business provided
+  editorialTake String? // written by an editor
+  bestFor       String?
+  // JSON arrays of strings
+  strengths     String?
+  considerations String?
+
+  logoUrl     String?
+  website     String?
+  phone       String?
+  email       String?
+  addressLine String?
+  postalCode  String?
+  // Opening hours as JSON: [{ day, opens, closes, closed }]
+  hours       String?
+
+  yearFounded    Int?
+  employeeCount  String?
+  licenseNumber  String?
+  warrantyTerms  String?
+  emergency      Boolean @default(false)
+  financing      Boolean @default(false)
+  freeEstimates  Boolean @default(false)
+
+  googleRating       Float?
+  googleReviewCount  Int?
+  googleDataUpdated  DateTime?
+  // Star distribution as JSON: { "5": 240, "4": 52, ... }
+  googleDistribution String?
+
+  verified    Boolean  @default(false)
+  claimed     Boolean  @default(false)
+  stripeCustomerId String? @unique
+  status      String   @default("DRAFT") // DRAFT | PENDING | PUBLISHED | REJECTED | ARCHIVED
+  submittedAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category      Category             @relation(fields: [categoryId], references: [id])
+  city          City?                @relation(fields: [cityId], references: [id])
+  owner         User?                @relation("BusinessOwner", fields: [ownerId], references: [id])
+  ownerId       String?
+  services      BusinessService[]
+  areas         BusinessArea[]
+  credentials   Credential[]
+  photos        BusinessPhoto[]
+  reviews       Review[]
+  entries       RankingEntry[]
+  subscriptions Subscription[]
+  placements    SponsoredPlacement[]
+  claims        ClaimRequest[]
+  events        AnalyticsEvent[]
+  dailyStats    BusinessDailyStat[]
+
+  @@index([categoryId, status])
+  @@index([cityId, status])
+  @@index([status])
+}
+
+model BusinessService {
+  businessId   String
+  subserviceId String
+
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  subservice Subservice @relation(fields: [subserviceId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, subserviceId])
+}
+
+model BusinessArea {
+  businessId String
+  cityId     String
+  primary    Boolean @default(false)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  city     City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, cityId])
+}
+
+model Credential {
+  id         String    @id @default(cuid())
+  businessId String
+  label      String // "State plumbing licence"
+  identifier String?
+  authority  String?
+  status     String    @default("REPORTED") // VERIFIED | REPORTED | EXPIRED
+  checkedAt  DateTime?
+  sourceUrl  String?
+  sortOrder  Int       @default(0)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model BusinessPhoto {
+  id         String  @id @default(cuid())
+  businessId String
+  url        String
+  alt        String?
+  sortOrder  Int     @default(0)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+// Third-party reviews shown with attribution. Never blended into one score.
+model Review {
+  id         String   @id @default(cuid())
+  businessId String
+  source     String   @default("GOOGLE") // GOOGLE | BBB | OTHER
+  author     String
+  rating     Float
+  body       String
+  postedAt   DateTime
+  sourceUrl  String?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, postedAt])
+}
+
+// ---------------------------------------------------------------- rankings
+
+model Ranking {
+  id         String  @id @default(cuid())
+  title      String
+  slug       String
+  categoryId String
+  cityId     String?
+  regionId   String?
+  countryId  String?
+
+  summary          String? // answer-first hero paragraph
+  intro            String?
+  methodologyNote  String?
+  companiesReviewed Int    @default(0)
+  readingMinutes   Int     @default(8)
+
+  status        String    @default("DRAFT") // DRAFT | REVIEW | PUBLISHED | ARCHIVED
+  publishedAt   DateTime?
+  lastReviewedAt DateTime?
+  authorId      String?
+  reviewerId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category Category       @relation(fields: [categoryId], references: [id])
+  city     City?          @relation(fields: [cityId], references: [id])
+  region   Region?        @relation(fields: [regionId], references: [id])
+  country  Country?       @relation(fields: [countryId], references: [id])
+  author   Person?        @relation("RankingAuthor", fields: [authorId], references: [id])
+  reviewer Person?        @relation("RankingReviewer", fields: [reviewerId], references: [id])
+  entries  RankingEntry[]
+  criteria Criterion[]
+  costs    CostRow[]
+  sources  Source[]
+  faqs     Faq[]
+  events   AnalyticsEvent[]
+
+  @@unique([categoryId, cityId])
+  @@index([status, publishedAt])
+  @@index([cityId])
+}
+
+model RankingEntry {
+  id          String  @id @default(cuid())
+  rankingId   String
+  businessId  String
+  position    Int
+  designation String? // "Best for emergency call-outs"
+  whyPicked   String?
+  // JSON arrays of strings
+  likes       String?
+  concerns    String?
+  sponsored   Boolean @default(false)
+
+  ranking  Ranking  @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([rankingId, businessId])
+  @@index([rankingId, position])
+}
+
+// Evaluation factors, reused by rankings and the How We Rank page.
+model Criterion {
+  id         String  @id @default(cuid())
+  rankingId  String?
+  title      String
+  body       String
+  importance String  @default("HIGH") // HIGH | MODERATE | SUPPORTING
+  iconKey    String?
+  scope      String  @default("RANKING") // RANKING | GLOBAL
+  categoryId String?
+  sortOrder  Int     @default(0)
+
+  ranking Ranking? @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+
+  @@index([rankingId])
+  @@index([scope])
+}
+
+// A sourced price row. Null prices render as "Quoted per project" rather than
+// an invented figure.
+model CostRow {
+  id        String  @id @default(cuid())
+  rankingId String?
+  guideId   String?
+  cityId    String?
+  label     String
+  lowPrice  Int?
+  highPrice Int?
+  typical   Int?
+  unit      String  @default("project") // project | sq_ft | hour | visit
+  currency  String  @default("USD")
+  note      String?
+  sourceId  String?
+  sortOrder Int     @default(0)
+
+  ranking Ranking? @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  guide   Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  city    City?    @relation(fields: [cityId], references: [id])
+  source  Source?  @relation(fields: [sourceId], references: [id])
+
+  @@index([rankingId])
+  @@index([guideId])
+  @@index([cityId])
+}
+
+// ---------------------------------------------------------------- editorial
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  role      String // "Senior editor, home services"
+  bio       String?
+  limits    String? // explicit statement of what this person does not cover
+  portrait  String?
+  email     String?
+  // JSON arrays
+  specializations String?
+  links           String? // [{ label, url }]
+  markets         String?
+  isAuthor   Boolean @default(true)
+  isReviewer Boolean @default(false)
+  isExpert   Boolean @default(false)
+  yearsExperience Int?
+  published  Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  credentials      PersonCredential[]
+  experience       PersonExperience[]
+  authoredRankings Ranking[]          @relation("RankingAuthor")
+  reviewedRankings Ranking[]          @relation("RankingReviewer")
+  authoredGuides   Guide[]            @relation("GuideAuthor")
+  reviewedGuides   Guide[]            @relation("GuideReviewer")
+  posts            Post[]
+
+  @@index([published])
+}
+
+model PersonCredential {
+  id        String    @id @default(cuid())
+  personId  String
+  label     String
+  issuer    String?
+  status    String    @default("SELF_REPORTED") // VERIFIED | SELF_REPORTED | EXPIRED
+  issuedAt  DateTime?
+  checkedAt DateTime?
+  sourceUrl String?
+  sortOrder Int       @default(0)
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+}
+
+model PersonExperience {
+  id        String    @id @default(cuid())
+  personId  String
+  role      String
+  org       String
+  startedAt DateTime?
+  endedAt   DateTime?
+  summary   String?
+  sortOrder Int       @default(0)
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+}
+
+model Guide {
+  id         String  @id @default(cuid())
+  title      String
+  slug       String  @unique
+  type       String  @default("EDITORIAL") // EDITORIAL | COST
+  categoryId String?
+  excerpt    String?
+  shortAnswer String?
+  // JSON array of strings
+  keyTakeaways String?
+  // Body as an array of blocks: [{ kind, ...props }]
+  body        String?
+  heroImage   String?
+  readingMinutes Int  @default(9)
+
+  // Cost-guide summary fields
+  typicalLow  Int?
+  typicalHigh Int?
+  unitLow     Int?
+  unitHigh    Int?
+  unitLabel   String?
+
+  status      String    @default("DRAFT") // DRAFT | REVIEW | PUBLISHED | ARCHIVED
+  publishedAt DateTime?
+  reviewedAt  DateTime?
+  authorId    String?
+  reviewerId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  author   Person?   @relation("GuideAuthor", fields: [authorId], references: [id])
+  reviewer Person?   @relation("GuideReviewer", fields: [reviewerId], references: [id])
+  costs    CostRow[]
+  sources  Source[]
+  faqs     Faq[]
+
+  @@index([status, publishedAt])
+  @@index([type])
+}
+
+model Source {
+  id        String    @id @default(cuid())
+  rankingId String?
+  guideId   String?
+  label     String
+  publisher String?
+  url       String?
+  accessedAt DateTime?
+  tier      String    @default("PRIMARY") // PRIMARY | SECONDARY | REPORTED | EDITORIAL
+  sortOrder Int       @default(0)
+
+  ranking Ranking?  @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  guide   Guide?    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  costs   CostRow[]
+
+  @@index([rankingId])
+  @@index([guideId])
+}
+
+// FAQs attach to a ranking, guide, country or page; unattached rows with
+// scope GLOBAL feed the homepage and the trust pages.
+model Faq {
+  id        String  @id @default(cuid())
+  question  String
+  answer    String
+  scope     String  @default("GLOBAL") // GLOBAL | RANKING | GUIDE | COUNTRY | PAGE | BUSINESS
+  rankingId String?
+  guideId   String?
+  countryId String?
+  pageId    String?
+  sortOrder Int     @default(0)
+
+  ranking Ranking? @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  guide   Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  country Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  page    Page?    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([scope, sortOrder])
+}
+
+// ---------------------------------------------------------------- CMS
+
+model Page {
+  id       String  @id @default(cuid())
+  title    String
+  slug     String  @unique
+  parentId String?
+  // document | contact | sitemap | landing
+  template String  @default("document")
+  excerpt  String?
+  // Body as an array of blocks: [{ kind, ...props }]
+  body     String?
+  noticeTitle String?
+  noticeBody  String?
+  printable   Boolean @default(false)
+  status      String  @default("DRAFT") // DRAFT | PUBLISHED | ARCHIVED
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Page?  @relation("PageTree", fields: [parentId], references: [id])
+  children Page[] @relation("PageTree")
+  faqs     Faq[]
+
+  @@index([status])
+}
+
+model Post {
+  id         String    @id @default(cuid())
+  title      String
+  slug       String    @unique
+  excerpt    String?
+  body       String?
+  heroImage  String?
+  categoryId String?
+  authorId   String?
+  status     String    @default("DRAFT") // DRAFT | REVIEW | PUBLISHED | ARCHIVED
+  publishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  author   Person?   @relation(fields: [authorId], references: [id])
+
+  @@index([status, publishedAt])
+}
+
+// Rank Math style per-entity SEO record. entityType is one of the CMS model
+// names; entityId is that row's id.
+model SeoMeta {
+  id         String @id @default(cuid())
+  entityType String // page | post | ranking | guide | business | category | city | region | country | person
+  entityId   String
+
+  title           String?
+  description     String?
+  canonical       String?
+  focusKeyword    String?
+  extraKeywords   String? // JSON array
+  breadcrumbTitle String?
+
+  robotsIndex     Boolean @default(true)
+  robotsFollow    Boolean @default(true)
+  robotsNoArchive Boolean @default(false)
+  robotsNoSnippet Boolean @default(false)
+  robotsNoImageIndex Boolean @default(false)
+  maxSnippet      Int?
+  maxImagePreview String? // none | standard | large
+  maxVideoPreview Int?
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+  twitterCard   String  @default("summary_large_image")
+  twitterTitle  String?
+  twitterDescription String?
+  twitterImage  String?
+
+  schemaType String? // Article | FAQPage | ItemList | LocalBusiness | Person | WebPage
+  schemaJson String? // JSON-LD override
+
+  score     Int      @default(0) // content analysis score, 0-100
+  analysis  String? // JSON array of { id, label, status, hint }
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([entityType])
+}
+
+model Redirect {
+  id        String   @id @default(cuid())
+  source    String   @unique
+  target    String
+  code      Int      @default(301)
+  hits      Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------- commerce
+
+model Plan {
+  id          String   @id @default(cuid())
+  key         String   @unique // claim | listing | top10 | advertising
+  name        String
+  description String?
+  priceCents  Int      @default(0)
+  currency    String   @default("USD")
+  interval    String   @default("month") // month | year | quote
+  unitLabel   String   @default("per location")
+  // JSON array of strings
+  features    String?
+  editorial   Boolean  @default(false) // true when the plan touches placement
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+
+  // Mirrored into Stripe by the sync action; price ids are immutable there, so
+  // changing the amount creates a new price and repoints this field.
+  stripeProductId String?
+  stripePriceId   String?
+  stripeSyncedAt  DateTime?
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id         String    @id @default(cuid())
+  businessId String
+  planId     String
+  status     String    @default("PENDING") // PENDING | ACTIVE | PAST_DUE | CANCELED
+  quantity   Int       @default(1)
+  startedAt  DateTime?
+  currentPeriodEnd DateTime?
+  canceledAt DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+
+  stripeSubscriptionId String? @unique
+  stripeCustomerId     String?
+  // Set while a checkout session is open, cleared when the webhook lands.
+  stripeCheckoutId     String?
+  // Top 10 placements are scoped to one city and trade
+  scopeCityId     String?
+  scopeCategoryId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
+  invoices Invoice[]
+
+  @@index([businessId, status])
+  @@index([status])
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  number         String    @unique
+  amountCents    Int
+  currency       String    @default("USD")
+  status         String    @default("OPEN") // OPEN | PAID | VOID | REFUNDED
+  issuedAt       DateTime  @default(now())
+  paidAt         DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+
+  stripeInvoiceId String? @unique
+  hostedUrl       String?
+  pdfUrl          String?
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+model SponsoredPlacement {
+  id         String    @id @default(cuid())
+  businessId String
+  cityId     String?
+  categoryId String?
+  kind       String    @default("FEATURED_PARTNER") // FEATURED_PARTNER | TOP10_LISTING | CATEGORY_BANNER
+  label      String    @default("Sponsored")
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime?
+  status     String    @default("ACTIVE") // ACTIVE | PAUSED | ENDED
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  city     City?     @relation(fields: [cityId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([status, cityId, categoryId])
+}
+
+// ---------------------------------------------------------------- workflow
+
+model ClaimRequest {
+  id         String  @id @default(cuid())
+  businessId String?
+  userId     String?
+  businessName String
+  ownerName  String
+  ownerEmail String
+  ownerPhone String?
+  role       String?
+  verificationMethod String @default("EMAIL") // EMAIL | PHONE | WEBSITE_TOKEN | DOCUMENT
+  // Requested field changes, as JSON: [{ field, current, requested }]
+  requested  String?
+  status     String   @default("SUBMITTED") // SUBMITTED | VERIFYING | APPROVED | REJECTED
+  notes      String?
+  submittedAt DateTime @default(now())
+  reviewedAt  DateTime?
+
+  business Business? @relation(fields: [businessId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
+
+  @@index([status])
+}
+
+model Submission {
+  id        String   @id @default(cuid())
+  kind      String   @default("BUSINESS") // BUSINESS | CORRECTION | CONTACT | RANKING_REQUEST
+  subject   String
+  email     String
+  name      String?
+  pageUrl   String?
+  message   String?
+  payload   String? // JSON
+  status    String   @default("NEW") // NEW | IN_REVIEW | RESOLVED | CLOSED
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+
+  @@index([kind, status])
+}
+
+// ---------------------------------------------------------------- analytics
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  type       String // PAGE_VIEW | PROFILE_VIEW | WEBSITE_CLICK | PHONE_CLICK | QUOTE_CLICK | DIRECTIONS_CLICK | IMPRESSION | SEARCH | RANKING_VIEW
+  path       String
+  businessId String?
+  rankingId  String?
+  referrer   String?
+  country    String?
+  device     String? // desktop | mobile | tablet
+  sessionId  String?
+  metadata   String? // JSON
+  createdAt  DateTime @default(now())
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ranking  Ranking?  @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+
+  @@index([type, createdAt])
+  @@index([businessId, createdAt])
+}
+
+// Daily rollup so the admin charts do not scan the raw event table.
+model BusinessDailyStat {
+  id          String   @id @default(cuid())
+  businessId  String
+  date        DateTime
+  impressions Int      @default(0)
+  profileViews Int     @default(0)
+  websiteClicks Int    @default(0)
+  phoneClicks Int      @default(0)
+  quoteClicks Int      @default(0)
+  directionsClicks Int @default(0)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, date])
+  @@index([date])
+}
+
+// ---------------------------------------------------------------- platform
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("EDITOR") // ADMIN | EDITOR | BUSINESS_OWNER
+  active       Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  businesses Business[]     @relation("BusinessOwner")
+  claims     ClaimRequest[]
+  auditLogs  AuditLog[]
+
+  @@index([role])
+}
+
+model Setting {
+  key       String   @id
+  value     String // JSON
+  groupName String   @default("general")
+  label     String?
+  updatedAt DateTime @updatedAt
+
+  @@index([groupName])
+}
+
+// Connection records for external AI tooling. Secrets are stored hashed and
+// only the last four characters are ever returned to the UI.
+model McpConnector {
+  id          String    @id @default(cuid())
+  name        String
+  url         String
+  transport   String    @default("http") // http | sse | stdio
+  authType    String    @default("bearer") // none | bearer | oauth | header
+  tokenHash   String?
+  tokenLast4  String?
+  headerName  String?
+  scopes      String? // JSON array
+  enabled     Boolean   @default(false)
+  lastConnectedAt DateTime?
+  lastStatus  String? // ok | error
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  keyLast4   String
+  scopes     String? // JSON array
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Every Stripe event we accept is recorded before it is applied, so a
+// redelivery is a no-op rather than a double charge or a duplicate invoice.
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   @default("stripe")
+  externalId  String   @unique
+  type        String
+  status      String   @default("RECEIVED") // RECEIVED | PROCESSED | FAILED | IGNORED
+  error       String?
+  payload     String? // JSON, trimmed
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([type, receivedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String // create | update | delete | publish | login
+  entityType String
+  entityId   String?
+  summary    String?
+  diff       String? // JSON
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, createdAt])
+}

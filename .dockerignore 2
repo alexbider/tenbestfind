@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+media
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal
+.env
+.env.local
+tsconfig.tsbuildinfo
+
+# Design reference, not part of the running site.
+project
+chats

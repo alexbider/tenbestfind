@@ -1,0 +1,326 @@
+/* Business profile: hero, overview card, glance grid, credentials, reviews. */
+
+.biz-hero__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.biz-hero__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.overview-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  padding: 24px 26px;
+}
+
+.overview-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.overview-card__head h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.overview-card > p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.overview-card__fit {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.overview-card__fit li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.overview-card__fit strong {
+  color: var(--ink);
+}
+
+/* ----------------------------------------------------------- contact card */
+
+.contact-card {
+  padding: 24px 26px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  position: sticky;
+  top: calc(var(--header-h) + 20px);
+}
+
+.contact-card__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.contact-card__facts {
+  display: grid;
+  gap: 16px;
+  margin: 22px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.contact-card__facts dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.contact-card__facts dd {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.hours {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.hours > summary {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.hours ul {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hours li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------ glance grid */
+
+.glance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.glance-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+.glance-tile > span:first-child {
+  display: inline-flex;
+  color: var(--blue-700);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.glance-tile strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.glance-tile span span {
+  display: block;
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------- review histogram */
+
+.dist-bars {
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+
+.dist-bars li {
+  display: grid;
+  grid-template-columns: 70px 1fr 130px;
+  align-items: center;
+  gap: 14px;
+}
+
+.dist-bars__label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.dist-bars__track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.dist-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue-400);
+}
+
+.dist-bars__count {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------ ranked in */
+
+.ranked-in {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px 22px;
+}
+
+.ranked-in__pos {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold-ink);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.ranked-in a {
+  display: block;
+  font-size: 16.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ranked-in a:hover {
+  color: var(--gold-ink);
+}
+
+.ranked-in span span {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  color: rgba(232, 237, 245, 0.72);
+}
+
+/* ----------------------------------------------------------- credentials */
+
+.credential-list {
+  display: grid;
+  gap: 12px;
+}
+
+.credential-list > li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.credential-list__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.credential-list strong {
+  display: block;
+  font-size: 15.5px;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.credential-list span span {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.credential-list > li > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1000px) {
+  .glance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contact-card {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .glance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dist-bars li {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .dist-bars__count {
+    grid-column: 2;
+    text-align: left;
+  }
+}

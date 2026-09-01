@@ -1,0 +1,71 @@
+# Deployed to the VPS through Hostinger's Docker project API, so a redeploy is
+# one API call with no shell on the box.
+#
+# This matches how the host template actually runs Traefik: on the host network,
+# reading container labels off the docker socket, with exposedbydefault off and
+# a global http→https redirect already in place. So there is no shared external
+# network to join and no redirect middleware to declare here.
+#
+# The image carries no data. The database and the uploads are volumes, so a
+# redeploy replaces the code and leaves the content alone.
+
+services:
+  site:
+    build:
+      context: ${GIT_CONTEXT}
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+    image: tenbestfind:latest
+    restart: unless-stopped
+    ports:
+      - "3000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tenbestfind.rule=Host(`${SITE_HOST}`) || Host(`www.${SITE_HOST}`)
+      - traefik.http.routers.tenbestfind.entrypoints=websecure
+      - traefik.http.routers.tenbestfind.tls.certresolver=letsencrypt
+      - traefik.http.services.tenbestfind.loadbalancer.server.port=3000
+    environment:
+      - DATABASE_URL=file:/data/tenbestfind.db
+      - MEDIA_DIR=/media
+      - MEDIA_PUBLIC_PATH=/uploads
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+      - TZ=${TZ:-UTC}
+    volumes:
+      # The database and the uploads outlive any redeploy.
+      - site-data:/data
+      - site-media:/media
+
+  # The nightly rollup the admin dashboards read. It waits on a loop rather than
+  # needing cron on the host. The build block is repeated so the image exists
+  # whichever service compose starts first.
+  rollup:
+    build:
+      context: ${GIT_CONTEXT}
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    image: tenbestfind:latest
+    restart: unless-stopped
+    depends_on:
+      - site
+    environment:
+      - DATABASE_URL=file:/data/tenbestfind.db
+      - TZ=${TZ:-UTC}
+    volumes:
+      - site-data:/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sleep 86400
+          npx tsx scripts/rollup.ts || echo "rollup failed, retrying tomorrow"
+        done
+
+volumes:
+  site-data:
+  site-media:

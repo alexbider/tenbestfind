@@ -1,0 +1,61 @@
+/* ============================================================
+   Addiction Rehab Centers — Spacing, Radius, Shadow, Motion
+   8-point spacing. Soft shadows. Premium rounded corners.
+   ============================================================ */
+:root {
+  /* ---- 8-point spacing scale ---- */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   24px;
+  --space-6:   32px;
+  --space-7:   48px;
+  --space-8:   64px;
+  --space-9:   80px;
+  --space-10:  120px;
+  --space-11:  160px;
+
+  /* Section rhythm */
+  --section-y:        var(--space-9);   /* 80px vertical breathing room */
+  --section-y-large:  var(--space-10);  /* 120px feature sections */
+  --container-max:    1200px;
+  --container-pad:    var(--space-5);
+
+  /* ---- Radius ---- */
+  --radius-sm:    8px;
+  --radius-input: 14px;   /* inputs */
+  --radius-btn:   14px;   /* buttons */
+  --radius-card:  18px;   /* cards */
+  --radius-image: 20px;   /* imagery */
+  --radius-section: 24px; /* large sections */
+  --radius-pill:  999px;
+  --radius-full:  50%;
+
+  /* ---- Soft shadow system (subtle depth, never heavy) ---- */
+  --shadow-xs:  0 1px 2px rgba(18, 47, 92, 0.04);
+  --shadow-sm:  0 1px 3px rgba(18, 47, 92, 0.06), 0 1px 2px rgba(18, 47, 92, 0.04);
+  --shadow-md:  0 4px 12px rgba(18, 47, 92, 0.08), 0 2px 4px rgba(18, 47, 92, 0.04);
+  --shadow-lg:  0 12px 28px rgba(18, 47, 92, 0.10), 0 4px 10px rgba(18, 47, 92, 0.05);
+  --shadow-xl:  0 24px 56px rgba(18, 47, 92, 0.14), 0 8px 18px rgba(18, 47, 92, 0.06);
+  /* Brand-tinted lift for primary buttons */
+  --shadow-primary:      0 8px 20px rgba(45, 116, 215, 0.28);
+  --shadow-primary-hover: 0 12px 28px rgba(45, 116, 215, 0.36);
+
+  /* ---- Motion — subtle, calm ---- */
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);    /* @kind other */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);  /* @kind other */
+  --dur-fast:   140ms;  /* @kind other */
+  --dur-base:   220ms;  /* @kind other */
+  --dur-slow:   360ms;  /* @kind other */
+  --lift-hover: translateY(-4px);  /* @kind other */
+
+  /* ---- Layering ---- */
+  --z-sticky:  100;   /* @kind other */
+  --z-header:  200;   /* @kind other */
+  --z-dropdown: 300;  /* @kind other */
+  --z-modal:   400;   /* @kind other */
+  --z-toast:   500;   /* @kind other */
+  --z-floating: 600;  /* @kind other */
+}

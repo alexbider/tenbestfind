@@ -1,0 +1,246 @@
+/* Country, region and city hub layouts. */
+
+.glance-card {
+  padding: 26px 28px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+}
+
+.glance-card__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.glance-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+  margin: 0;
+}
+
+.glance-card__grid dt {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.glance-card__grid dd {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ region cards */
+
+.region-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 32px 24px;
+}
+
+.region-groups__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.region-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.region-card:hover {
+  border-color: var(--blue-200);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+  color: var(--text-primary);
+}
+
+.region-card__code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.region-card strong {
+  display: block;
+  font-size: 15.5px;
+  color: var(--ink);
+}
+
+.region-card span span {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.region-card > svg {
+  margin-left: auto;
+  color: var(--gray-300);
+}
+
+.region-card:hover > svg {
+  color: var(--color-primary);
+  opacity: 1;
+  transform: none;
+}
+
+/* -------------------------------------------------------------- metro grid */
+
+.metro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+/* --------------------------------------------------------- licensing list */
+
+.licensing-list {
+  display: grid;
+  gap: 12px;
+}
+
+.licensing-list > li {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+
+.licensing-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.licensing-list h3 {
+  font-size: 17px;
+  color: #fff;
+}
+
+.licensing-list__authority {
+  font-size: 14.5px;
+  color: var(--gold-ink);
+  margin-bottom: 6px;
+}
+
+.licensing-list__note {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(232, 237, 245, 0.72);
+}
+
+/* ------------------------------------------------------------- conditions */
+
+.conditions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.conditions-grid > li {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.conditions-grid__icon {
+  display: inline-flex;
+  color: var(--blue-700);
+  margin-bottom: 14px;
+}
+
+.conditions-grid h3 {
+  font-size: 17px;
+  margin-bottom: 7px;
+}
+
+.conditions-grid p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- seasons */
+
+.seasons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.seasons > li {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.seasons h3 {
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.seasons p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(232, 237, 245, 0.72);
+}
+
+@media (max-width: 1000px) {
+  .metro-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .seasons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .metro-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seasons {
+    grid-template-columns: 1fr;
+  }
+
+  .glance-card__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

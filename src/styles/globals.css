@@ -1,0 +1,555 @@
+/* Design tokens carried over verbatim from the design system export. */
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/layout.css";
+@import "./components.css";
+@import "./header.css";
+@import "./footer.css";
+@import "./home.css";
+@import "./blocks.css";
+@import "./hubs.css";
+@import "./ranking.css";
+@import "./forms.css";
+@import "./business.css";
+@import "./editorial.css";
+@import "./admin.css";
+
+/* ------------------------------------------------------------------
+   TenBestFind additions on top of the base system.
+   Gold is reserved for the "10" ranking numeral and ranking marks.
+   ------------------------------------------------------------------ */
+:root {
+  --gold: #8a5f0b;
+  --gold-ink: #e7b863;
+  --gold-soft: #fbf4e6;
+  --ink: #101f3d;
+  --shell: 1200px;
+  --gutter: 24px;
+  --header-h: 74px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--surface-card);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  letter-spacing: var(--ls-tight);
+  color: var(--ink);
+}
+
+h1 {
+  letter-spacing: -0.032em;
+}
+
+p {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+button {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 999;
+  padding: 12px 20px;
+  background: var(--surface-card);
+  color: var(--color-primary);
+  font-weight: 600;
+  border-radius: 0 0 12px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.shell {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+.section {
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+.section--tight {
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.section--page {
+  background: var(--surface-page);
+}
+
+.section--soft {
+  background: var(--surface-soft);
+}
+
+.section--ink {
+  background: var(--ink);
+  color: var(--text-on-ink);
+}
+
+.section--ink h1,
+.section--ink h2,
+.section--ink h3 {
+  color: #fff;
+}
+
+.rule-top {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.rule-bottom {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Section header: heading and lead on the left, an optional link on the right.
+   Every section on the site uses this so left edges and baselines line up. */
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.section-head__text {
+  max-width: 640px;
+}
+
+.section-head h2,
+.h2 {
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.section-head p {
+  margin-top: 14px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.eyebrow--muted {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  color: var(--text-muted);
+}
+
+.lead {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.measure {
+  max-width: var(--measure-article);
+}
+
+/* ------------------------------------------------------------------ links */
+
+.arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.arrow-link svg {
+  transition: transform 200ms var(--ease-out);
+}
+
+.arrow-link:hover svg {
+  transform: translateX(3px);
+}
+
+/* ----------------------------------------------------------------- buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-hover);
+  color: #fff;
+  box-shadow: var(--shadow-primary-hover);
+}
+
+.btn--secondary {
+  background: var(--surface-card);
+  color: var(--ink);
+  border: 1.5px solid var(--border-strong);
+}
+
+.btn--secondary:hover {
+  color: var(--ink);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.btn--sm {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn[disabled],
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------- cards */
+
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.card--lift {
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+
+.card--lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--blue-200);
+}
+
+.thumb {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 520ms var(--ease-out);
+}
+
+.card--lift:hover .thumb img {
+  transform: scale(1.05);
+}
+
+.thumb__tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------- chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: transform 200ms var(--ease-out), background 200ms var(--ease-out),
+    border-color 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.chip:hover {
+  transform: translateY(-2px);
+  background: var(--blue-50);
+  border-color: var(--blue-200);
+  color: var(--color-primary-hover);
+}
+
+.chip[aria-pressed="true"],
+.chip--active {
+  background: var(--blue-50);
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
+  font-weight: 600;
+}
+
+/* The ranking numeral. Gold appears here and nowhere else. */
+.rank-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sponsored-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* ------------------------------------------------------------------ tables */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.data-table tbody tr {
+  transition: background 140ms var(--ease-out);
+}
+
+.data-table tbody tr:hover {
+  background: var(--surface-page);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* -------------------------------------------------------------------- misc */
+
+.divider {
+  height: 1px;
+  background: var(--border-subtle);
+  border: 0;
+  margin: 0;
+}
+
+.prose p {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.prose p + p {
+  margin-top: 18px;
+}
+
+.prose h2 {
+  font-size: 28px;
+  line-height: 1.2;
+  margin-top: 44px;
+  margin-bottom: 14px;
+}
+
+.prose h3 {
+  font-size: 21px;
+  line-height: 1.3;
+  margin-top: 32px;
+  margin-bottom: 10px;
+}
+
+.prose ul {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.prose li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.prose li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue-300);
+}
+
+.prose a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .section {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  .section-head {
+    margin-bottom: 28px;
+  }
+}

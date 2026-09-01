@@ -1,0 +1,510 @@
+/* Shared component classes used across the public templates. */
+
+/* ------------------------------------------------------------- breadcrumbs */
+
+.crumbs {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.crumbs a:hover {
+  color: var(--color-primary);
+}
+
+.crumbs-bar {
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+}
+
+.crumbs-bar .shell {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+/* -------------------------------------------------------------- trust strip */
+
+.trust-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.trust-strip__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 20px 24px;
+  border-right: 1px solid var(--border-subtle);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.trust-strip__item:first-child {
+  padding-left: 0;
+}
+
+.trust-strip__item:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+/* --------------------------------------------------------------- row links */
+
+.row-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  margin: 0 -10px;
+  border-radius: 10px;
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.row-link svg {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  color: var(--color-primary);
+}
+
+.row-link:hover {
+  background: var(--blue-50);
+  color: var(--color-primary-hover);
+}
+
+.row-link:hover svg,
+.row-link:focus-visible svg {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ------------------------------------------------------------ search field */
+
+.searchbox {
+  position: relative;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 7px;
+}
+
+.search-form__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  min-width: 0;
+}
+
+.search-form__field input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  height: 52px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.search-form__divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-subtle);
+  margin: 8px 0;
+}
+
+.search-form button[type="submit"] {
+  height: 52px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-primary);
+  white-space: nowrap;
+  transition: background 140ms var(--ease-out);
+}
+
+.search-form button[type="submit"]:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Suggestions stay in the DOM and reveal on focus, so every link is crawlable
+   without JavaScript. */
+.suggest {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 150;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 22px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), visibility 200ms;
+}
+
+.searchbox:focus-within .suggest {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.suggest__group p {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.suggest__group a {
+  display: block;
+  padding: 6px 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.suggest__group a:hover {
+  color: var(--color-primary);
+}
+
+/* ---------------------------------------------------------------- FAQ list */
+
+.faq-list {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.faq-item > summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 4px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+  list-style: none;
+  cursor: pointer;
+  transition: color 160ms var(--ease-out);
+}
+
+.faq-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item > summary:hover {
+  color: var(--color-primary);
+}
+
+.faq-item__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--color-primary);
+  margin-top: 3px;
+  transition: transform 220ms var(--ease-out);
+}
+
+.faq-item[open] .faq-item__icon {
+  transform: rotate(45deg);
+}
+
+.faq-item__answer {
+  padding: 0 44px 24px 4px;
+}
+
+.faq-item__answer p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* -------------------------------------------------------------- index rows */
+
+.index-list {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.index-list > li {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.index-row {
+  display: grid;
+  grid-template-columns: 52px 200px 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 16px;
+  margin: 0 -16px;
+  border-radius: 12px;
+  color: var(--text-primary);
+  transition: background 140ms var(--ease-out);
+}
+
+.index-row:hover {
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+
+.index-row__title {
+  display: block;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.index-row__summary {
+  display: block;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.index-row__meta {
+  justify-self: end;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- on-this-page nav */
+
+.toc {
+  position: sticky;
+  top: calc(var(--header-h) + 24px);
+  align-self: start;
+}
+
+.toc__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.toc a {
+  display: block;
+  padding: 8px 12px;
+  margin-left: -12px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.toc a:hover {
+  background: var(--blue-50);
+  color: var(--color-primary);
+}
+
+/* ------------------------------------------------------------ disclosure UI */
+
+/* Caveats live behind a toggle rather than sitting inline. */
+.disclosure__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.disclosure__trigger:hover {
+  color: var(--color-primary-hover);
+}
+
+dialog.modal {
+  width: min(600px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  color: var(--text-primary);
+}
+
+dialog.modal::backdrop {
+  background: rgba(16, 31, 61, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  background: var(--blue-50);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.modal__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.modal__close:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+}
+
+.modal__body {
+  padding: 22px 24px 26px;
+  max-width: 62ch;
+}
+
+.modal__body p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.modal__body p + p {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  dialog.modal {
+    width: 100vw;
+    max-width: 100vw;
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+/* ---------------------------------------------------------------- callouts */
+
+.callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-page);
+}
+
+.callout--note {
+  background: var(--amber-50);
+  border-color: #f3e2bd;
+}
+
+.callout--alert {
+  background: #fdecea;
+  border-color: #f6cdc9;
+}
+
+.callout--brand {
+  background: var(--blue-50);
+  border-color: var(--blue-100);
+}
+
+.callout__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+
+.callout p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 960px) {
+  .split {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  .toc {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-form > * {
+    width: 100%;
+  }
+
+  .search-form__divider {
+    display: none;
+  }
+
+  .trust-strip__item {
+    border-right: 0;
+    padding-left: 0;
+  }
+
+  .index-row {
+    grid-template-columns: 1fr;
+    row-gap: 6px;
+  }
+
+  .index-row__meta {
+    justify-self: start;
+  }
+}

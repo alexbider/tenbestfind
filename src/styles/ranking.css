@@ -1,0 +1,369 @@
+/* Ranking page: hero meta, the company cards, the featured partner box. */
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.hero-meta > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.hero-meta a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* -------------------------------------------------------- featured partner */
+
+.partner-box {
+  background: var(--surface-card);
+  border: 1.5px solid var(--gold-ink);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.partner-box__band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(90deg, var(--gold-soft) 0%, rgba(251, 244, 230, 0.4) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.partner-box__body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px 0;
+}
+
+.partner-box__desc {
+  padding: 16px 24px 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.partner-box__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 24px 0;
+}
+
+.partner-box__chips > li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-page);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.partner-box__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 24px 22px;
+}
+
+/* ------------------------------------------------------------ rank cards */
+
+.rank-list {
+  display: grid;
+  gap: 20px;
+}
+
+.rank-card {
+  position: relative;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+
+.rank-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.rank-card__hairline {
+  height: 3px;
+  background: linear-gradient(90deg, var(--ink) 0%, var(--color-primary) 55%, var(--gold-ink) 100%);
+}
+
+.rank-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px 26px 20px;
+  background: linear-gradient(180deg, var(--blue-50) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.rank-card__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.rank-card__identity h3 {
+  font-size: 22px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.rank-card__identity h3 a {
+  color: var(--ink);
+}
+
+.rank-card__identity h3 a:hover {
+  color: var(--color-primary);
+}
+
+.rank-card__designation {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+.rank-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.rank-card__address,
+.rank-card__verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.rank-card__verified {
+  color: var(--green-600);
+  font-weight: 600;
+}
+
+/* The rank reads as an editorial numeral rather than a medal. */
+.rank-card__mark {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.rank-card__mark span {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 2px;
+}
+
+.rank-card__mark strong {
+  display: block;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--blue-300);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.rank-card__mark::after {
+  content: "";
+  display: block;
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--gold-ink);
+  margin: 8px 0 0 auto;
+}
+
+.rank-card__why {
+  padding: 4px 26px 20px;
+}
+
+.rank-card__why h4,
+.rank-card__pros h4 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.rank-card__why p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.rank-card__pros {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 0 26px 20px;
+}
+
+.rank-card__pros ul {
+  display: grid;
+  gap: 9px;
+}
+
+.rank-card__pros li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.rank-card__pros li svg {
+  margin-top: 3px;
+}
+
+.rank-card__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px 24px;
+  margin: 0 26px 20px;
+  padding: 20px 22px;
+  background: var(--surface-page);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.rank-card__details dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.rank-card__details dd {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.rank-card__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 26px 24px;
+}
+
+.table-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.related-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+/* ------------------------------------------------------------ business grid */
+
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.biz-card {
+  padding: 20px 22px;
+}
+
+.biz-card__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.biz-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.biz-card__address {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1000px) {
+  .biz-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .rank-card__pros {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .rank-card__head {
+    flex-wrap: wrap;
+  }
+
+  .rank-card__mark {
+    order: -1;
+    margin-left: auto;
+  }
+
+  .biz-grid {
+    grid-template-columns: 1fr;
+  }
+}

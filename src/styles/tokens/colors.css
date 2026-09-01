@@ -1,0 +1,78 @@
+/* ============================================================
+   Addiction Rehab Centers — Color System
+   Calm, clinical, trustworthy. Blue-led. Never pure black.
+   ============================================================ */
+:root {
+  /* ---- Brand: Blue ---- */
+  --blue-50:  #EAF4FF;   /* light blue wash */
+  --blue-100: #D6E8FF;
+  --blue-200: #AECFFB;
+  --blue-300: #7FB1F4;
+  --blue-400: #4E8FE8;
+  --blue-500: #2D74D7;   /* PRIMARY brand blue */
+  --blue-600: #1E5FBF;   /* dark blue / hover */
+  --blue-700: #184E9E;
+  --blue-800: #163F7D;
+  --blue-900: #122F5C;
+
+  /* ---- Maple accent (from logo leaf) — used sparingly ---- */
+  --maple-500: #E0322B;
+  --maple-600: #C32620;
+
+  /* ---- Success / verified ---- */
+  --green-50:  #E9F8F0;
+  --green-100: #CDEFDD;
+  --green-500: #1F9D6B;   /* verified facilities, trust ticks */
+  --green-600: #178054;
+
+  /* ---- Warning / advisory (info boxes) ---- */
+  --amber-50:  #FEF6E7;
+  --amber-500: #D99A1C;
+  --amber-600: #B67E12;
+
+  /* ---- Neutrals (warm-cool gray, never pure black) ---- */
+  --white:    #FFFFFF;
+  --gray-50:  #F7F9FC;   /* light gray background */
+  --gray-100: #EEF2F8;
+  --gray-200: #E2E8F0;   /* hairline borders */
+  --gray-300: #CBD5E1;
+  --gray-400: #94A3B8;
+  --gray-500: #6B7280;   /* secondary text */
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #2D3748;   /* primary text (charcoal) */
+  --gray-900: #1A2233;   /* deepest ink, footer */
+
+  /* ============================================================
+     Semantic aliases — reference these in components
+     ============================================================ */
+  --color-primary:        var(--blue-500);
+  --color-primary-hover:  var(--blue-600);
+  --color-primary-active: var(--blue-700);
+  --color-primary-soft:   var(--blue-50);
+  --color-on-primary:     var(--white);
+
+  --color-accent:         var(--maple-500);
+  --color-success:        var(--green-500);
+  --color-success-soft:   var(--green-50);
+  --color-warning:        var(--amber-500);
+  --color-warning-soft:   var(--amber-50);
+
+  --surface-page:    var(--gray-50);   /* soft warm-white page */
+  --surface-card:    var(--white);     /* pure white surfaces */
+  --surface-sunken:  var(--gray-100);
+  --surface-soft:    var(--blue-50);   /* tinted feature sections */
+  --surface-ink:     var(--gray-900);  /* dark footer / emphasis */
+
+  --border-subtle:   var(--gray-200);
+  --border-strong:   var(--gray-300);
+  --border-focus:    var(--blue-500);
+
+  --text-primary:    var(--gray-800);
+  --text-secondary:  var(--gray-500);
+  --text-muted:      var(--gray-400);
+  --text-on-ink:     #E8EDF5;
+  --text-link:       var(--blue-600);
+
+  --focus-ring:      0 0 0 3px rgba(45, 116, 215, 0.32);
+}

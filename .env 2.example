@@ -1,0 +1,9 @@
+DATABASE_URL=""
+SESSION_SECRET=""
+NEXT_PUBLIC_SITE_URL=""
+
+# Stripe. Leave blank to run without payments: the flows still record intent
+# and the admin still works, but checkout is skipped.
+STRIPE_SECRET_KEY=""
+STRIPE_WEBHOOK_SECRET=""
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
