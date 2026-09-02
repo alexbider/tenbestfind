@@ -1,0 +1,637 @@
+import { db } from "../db";
+import { recordMove } from "../redirects";
+import { fullDate, slugify } from "../format";
+import { parseList } from "../json";
+import { routes } from "../urls";
+import {
+  arr,
+  bool,
+  int,
+  limitOf,
+  object,
+  oneOf,
+  optBool,
+  optRows,
+  optStr,
+  patch,
+  recordWrite,
+  reqStr,
+  str,
+  ToolError,
+  type Tool,
+} from "./kit";
+
+// Businesses and the people who write about them, plus the two inboxes: claims
+// from owners and corrections from readers.
+
+const BUSINESS_STATUS = ["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "ARCHIVED"] as const;
+
+async function findBusiness(key: string) {
+  const business = await db.business.findFirst({ where: { OR: [{ id: key }, { slug: key }] } });
+  if (!business) throw new ToolError(`No business matches ${key}.`);
+  return business;
+}
+
+export const DIRECTORY_TOOLS: Tool[] = [
+  {
+    name: "create_business",
+    title: "Create a business",
+    description:
+      "Adds a listing by hand. For bulk work use queue_import_batch, which scrapes and writes the copy for you.",
+    write: true,
+    schema: object(
+      {
+        name: str("The company name."),
+        categoryId: str("Service id."),
+        cityId: str("City id."),
+        slug: str("URL slug. Derived from the name when omitted."),
+        website: str("Their site."),
+        phone: str("Contact number."),
+        email: str("Main contact address."),
+        addressLine: str("Street address."),
+        postalCode: str("Postal or ZIP code."),
+        tagline: str("One line."),
+        description: str("The main profile copy."),
+        editorialTake: str("The site's own assessment."),
+        bestFor: str("Short phrase."),
+        status: str("Defaults to DRAFT."),
+      },
+      ["name", "categoryId"],
+    ),
+    handler: async (args, ctx) => {
+      const name = reqStr(args, "name");
+      const categoryId = reqStr(args, "categoryId");
+      if (!(await db.category.findUnique({ where: { id: categoryId } }))) {
+        throw new ToolError("That service id does not exist.");
+      }
+      const cityId = optStr(args, "cityId");
+      if (cityId && !(await db.city.findUnique({ where: { id: cityId } }))) {
+        throw new ToolError("That city id does not exist.");
+      }
+
+      const slug = slugify(optStr(args, "slug") ?? name);
+      if (await db.business.findUnique({ where: { slug } })) {
+        throw new ToolError(`A business already uses the slug ${slug}. Pass a different slug.`);
+      }
+
+      const status = args.status ? oneOf(String(args.status), BUSINESS_STATUS, "status") : "DRAFT";
+      const business = await db.business.create({
+        data: {
+          name,
+          slug,
+          categoryId,
+          cityId: cityId ?? null,
+          status,
+          publishedAt: status === "PUBLISHED" ? new Date() : null,
+          ...patch(args, {
+            website: "string",
+            phone: "string",
+            email: "string",
+            addressLine: "string",
+            postalCode: "string",
+            tagline: "string",
+            description: "string",
+            editorialTake: "string",
+            bestFor: "string",
+          }),
+        },
+      });
+
+      await recordWrite(ctx, {
+        action: "create",
+        entityType: "business",
+        entityId: business.id,
+        summary: `business ${business.name}`,
+        paths: ["/", routes.business(business.slug)],
+      });
+      return { id: business.id, url: routes.business(business.slug), status: business.status };
+    },
+  },
+
+  {
+    name: "update_business",
+    title: "Update a business",
+    description:
+      "Changes any part of a profile. Only the fields you pass are touched. Renaming the slug leaves a redirect behind.",
+    write: true,
+    schema: object(
+      {
+        idOrSlug: str("The business id or slug."),
+        name: str("The company name."),
+        slug: str("URL slug."),
+        categoryId: str("Move it to a different service."),
+        cityId: str("Move it to a different city."),
+        tagline: str("One line."),
+        description: str("The main profile copy."),
+        editorialTake: str("The site's own assessment."),
+        bestFor: str("Short phrase."),
+        strengths: arr("Replaces the list."),
+        considerations: arr("Replaces the list."),
+        website: str("Their site."),
+        phone: str("Contact number."),
+        email: str("Main contact address."),
+        addressLine: str("Street address."),
+        postalCode: str("Postal or ZIP code."),
+        logoUrl: str("Logo image URL."),
+        yearFounded: int("Year the company started."),
+        employeeCount: str("For example 20 to 50."),
+        licenseNumber: str("As published by the issuing authority."),
+        warrantyTerms: str("What they warranty and for how long."),
+        emergency: bool("Offers emergency call-outs."),
+        financing: bool("Offers financing."),
+        freeEstimates: bool("Gives free estimates."),
+        verified: bool("Credentials checked by an editor."),
+      },
+      ["idOrSlug"],
+    ),
+    handler: async (args, ctx) => {
+      const existing = await findBusiness(reqStr(args, "idOrSlug"));
+
+      const data = patch(args, {
+        name: "string",
+        categoryId: "string",
+        cityId: "string",
+        tagline: "string",
+        description: "string",
+        editorialTake: "string",
+        bestFor: "string",
+        website: "string",
+        phone: "string",
+        email: "string",
+        addressLine: "string",
+        postalCode: "string",
+        logoUrl: "string",
+        yearFounded: "int",
+        employeeCount: "string",
+        licenseNumber: "string",
+        warrantyTerms: "string",
+        emergency: "bool",
+        financing: "bool",
+        freeEstimates: "bool",
+        verified: "bool",
+        strengths: "json",
+        considerations: "json",
+      });
+
+      const slug = args.slug !== undefined ? slugify(String(args.slug)) : existing.slug;
+      if (slug !== existing.slug && (await db.business.findUnique({ where: { slug } }))) {
+        throw new ToolError(`A business already uses the slug ${slug}.`);
+      }
+      if (Object.keys(data).length === 0 && slug === existing.slug) {
+        throw new ToolError("Pass at least one field to change.");
+      }
+
+      const business = await db.business.update({ where: { id: existing.id }, data: { ...data, slug } });
+      if (slug !== existing.slug) {
+        await recordMove(routes.business(existing.slug), routes.business(business.slug));
+      }
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name}: ${[...Object.keys(data), ...(slug !== existing.slug ? ["slug"] : [])].join(", ")}`,
+        paths: ["/", routes.business(business.slug)],
+      });
+      return { id: business.id, url: routes.business(business.slug), updated: Object.keys(data) };
+    },
+  },
+
+  {
+    name: "set_business_status",
+    title: "Publish or unpublish a business",
+    write: true,
+    description: "Moves a listing between DRAFT, PENDING, PUBLISHED, REJECTED and ARCHIVED.",
+    schema: object({ idOrSlug: str("The business id or slug."), status: str("The new status.") }, [
+      "idOrSlug",
+      "status",
+    ]),
+    handler: async (args, ctx) => {
+      const existing = await findBusiness(reqStr(args, "idOrSlug"));
+      const status = oneOf(reqStr(args, "status"), BUSINESS_STATUS, "status");
+
+      const business = await db.business.update({
+        where: { id: existing.id },
+        data: {
+          status,
+          publishedAt: status === "PUBLISHED" ? (existing.publishedAt ?? new Date()) : existing.publishedAt,
+        },
+      });
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name} set to ${status}`,
+        paths: ["/", routes.business(business.slug)],
+      });
+      return { id: business.id, status, url: routes.business(business.slug) };
+    },
+  },
+
+  {
+    name: "set_business_details",
+    title: "Set a business's services, areas, hours, credentials and photos",
+    description:
+      "Each list you pass replaces that list wholesale. Omit one to leave it alone. Use list_taxonomy for the ids.",
+    write: true,
+    schema: object(
+      {
+        idOrSlug: str("The business id or slug."),
+        subserviceIds: arr("Subservice ids this company offers."),
+        serviceAreaCityIds: arr("City ids it covers."),
+        hours: arr("Opening hours, one entry per day.", {
+          type: "object",
+          additionalProperties: false,
+          required: ["day"],
+          properties: {
+            day: { type: "string", description: "Monday through Sunday." },
+            opens: { type: "string", description: "24-hour, for example 08:00." },
+            closes: { type: "string" },
+            closed: { type: "boolean" },
+          },
+        }),
+        credentials: arr("Licences, insurance and certifications.", {
+          type: "object",
+          additionalProperties: false,
+          required: ["label"],
+          properties: {
+            label: { type: "string" },
+            identifier: { type: "string", description: "Licence or policy number." },
+            authority: { type: "string", description: "Who issued it." },
+            status: { type: "string", description: "VERIFIED, REPORTED or EXPIRED." },
+            sourceUrl: { type: "string" },
+          },
+        }),
+        photos: arr("Image URLs, in order."),
+      },
+      ["idOrSlug"],
+    ),
+    handler: async (args, ctx) => {
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+      const touched: string[] = [];
+
+      const subserviceIds = args.subserviceIds === undefined ? undefined : (args.subserviceIds as string[]);
+      if (subserviceIds) {
+        const valid = await db.subservice.findMany({
+          where: { id: { in: subserviceIds.map(String) } },
+          select: { id: true },
+        });
+        await db.businessService.deleteMany({ where: { businessId: business.id } });
+        if (valid.length > 0) {
+          await db.businessService.createMany({
+            data: valid.map((row) => ({ businessId: business.id, subserviceId: row.id })),
+          });
+        }
+        touched.push(`${valid.length} services`);
+      }
+
+      const areaIds = args.serviceAreaCityIds === undefined ? undefined : (args.serviceAreaCityIds as string[]);
+      if (areaIds) {
+        const valid = await db.city.findMany({ where: { id: { in: areaIds.map(String) } }, select: { id: true } });
+        await db.businessArea.deleteMany({ where: { businessId: business.id } });
+        if (valid.length > 0) {
+          await db.businessArea.createMany({
+            data: valid.map((row, index) => ({
+              businessId: business.id,
+              cityId: row.id,
+              primary: index === 0,
+            })),
+          });
+        }
+        touched.push(`${valid.length} service areas`);
+      }
+
+      const hours = optRows(args, "hours");
+      if (hours) {
+        await db.business.update({
+          where: { id: business.id },
+          data: {
+            hours: JSON.stringify(
+              hours.map((row) => ({
+                day: String(row.day ?? ""),
+                opens: row.opens ? String(row.opens) : undefined,
+                closes: row.closes ? String(row.closes) : undefined,
+                closed: row.closed === true,
+              })),
+            ),
+          },
+        });
+        touched.push("hours");
+      }
+
+      const credentials = optRows(args, "credentials");
+      if (credentials) {
+        await db.credential.deleteMany({ where: { businessId: business.id } });
+        await db.credential.createMany({
+          data: credentials.map((row, index) => ({
+            businessId: business.id,
+            label: String(row.label ?? ""),
+            identifier: row.identifier ? String(row.identifier) : null,
+            authority: row.authority ? String(row.authority) : null,
+            status: row.status ? oneOf(String(row.status), ["VERIFIED", "REPORTED", "EXPIRED"], "status") : "REPORTED",
+            sourceUrl: row.sourceUrl ? String(row.sourceUrl) : null,
+            checkedAt: row.status && String(row.status).toUpperCase() === "VERIFIED" ? new Date() : null,
+            sortOrder: index,
+          })),
+        });
+        touched.push(`${credentials.length} credentials`);
+      }
+
+      const photos = args.photos === undefined ? undefined : (args.photos as string[]);
+      if (photos) {
+        await db.businessPhoto.deleteMany({ where: { businessId: business.id } });
+        const usable = photos.map(String).filter((url) => url.startsWith("http"));
+        if (usable.length > 0) {
+          await db.businessPhoto.createMany({
+            data: usable.map((url, index) => ({
+              businessId: business.id,
+              url,
+              alt: business.name,
+              sortOrder: index,
+            })),
+          });
+        }
+        touched.push(`${usable.length} photos`);
+      }
+
+      if (touched.length === 0) throw new ToolError("Pass at least one list to set.");
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name}: ${touched.join(", ")}`,
+        paths: ["/", routes.business(business.slug)],
+      });
+      return { id: business.id, set: touched };
+    },
+  },
+
+  {
+    name: "delete_business",
+    title: "Delete a business",
+    description:
+      "Removes the listing and everything attached to it. Archiving keeps the record and the URL, and is almost always the better move.",
+    write: true,
+    admin: true,
+    destructive: true,
+    schema: object({ idOrSlug: str("The business id or slug."), confirm: bool("Must be true.") }, [
+      "idOrSlug",
+      "confirm",
+    ]),
+    handler: async (args, ctx) => {
+      if (optBool(args, "confirm") !== true) throw new ToolError("Pass confirm: true to delete.");
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+
+      const entries = await db.rankingEntry.count({ where: { businessId: business.id } });
+      await db.business.delete({ where: { id: business.id } });
+      await recordWrite(ctx, {
+        action: "delete",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name}, removed from ${entries} rankings`,
+      });
+      return { deleted: business.name, removedFromRankings: entries };
+    },
+  },
+
+  /* ------------------------------------------------------------- people */
+
+  {
+    name: "list_people",
+    title: "List the editorial team",
+    description: "Authors, reviewers and subject experts, with what each is allowed to sign.",
+    schema: object({ limit: int("Default 50.") }),
+    handler: async (args) => {
+      const rows = await db.person.findMany({ orderBy: { name: "asc" }, take: limitOf(args, 50) });
+      return {
+        people: rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          role: row.role,
+          url: routes.expert(row.slug),
+          isAuthor: row.isAuthor,
+          isReviewer: row.isReviewer,
+          isExpert: row.isExpert,
+          published: row.published,
+          specializations: parseList(row.specializations),
+        })),
+      };
+    },
+  },
+
+  {
+    name: "upsert_person",
+    title: "Create or update a person",
+    description: "An author, reviewer or expert. The limits field is the explicit statement of what they do not cover.",
+    write: true,
+    schema: object(
+      {
+        id: str("Omit to create."),
+        name: str("Their name."),
+        slug: str("URL slug."),
+        role: str("For example Senior editor, home services."),
+        bio: str("Biography."),
+        limits: str("What this person does not cover. Published as written."),
+        portrait: str("Image URL."),
+        email: str("Contact address."),
+        yearsExperience: int("Years in the field."),
+        specializations: arr("Areas they cover."),
+        markets: arr("Cities or regions they know."),
+        links: arr("Profile links.", {
+          type: "object",
+          additionalProperties: false,
+          required: ["label", "url"],
+          properties: { label: { type: "string" }, url: { type: "string" } },
+        }),
+        isAuthor: bool("May be credited as an author."),
+        isReviewer: bool("May be credited as a reviewer."),
+        isExpert: bool("Shown as a subject expert."),
+        published: bool("Visible on the site."),
+      },
+      [],
+    ),
+    handler: async (args, ctx) => {
+      const id = optStr(args, "id");
+      const data = patch(args, {
+        name: "string",
+        role: "string",
+        bio: "string",
+        limits: "string",
+        portrait: "string",
+        email: "string",
+        yearsExperience: "int",
+        specializations: "json",
+        markets: "json",
+        links: "json",
+        isAuthor: "bool",
+        isReviewer: "bool",
+        isExpert: "bool",
+        published: "bool",
+      });
+
+      if (!id) {
+        const name = reqStr(args, "name");
+        const person = await db.person.create({
+          data: {
+            name,
+            slug: slugify(optStr(args, "slug") ?? name),
+            role: optStr(args, "role") ?? "Contributor",
+            ...data,
+          },
+        });
+        await recordWrite(ctx, {
+          action: "create",
+          entityType: "person",
+          entityId: person.id,
+          summary: person.name,
+          paths: ["/", routes.expertsIndex(), routes.expert(person.slug)],
+        });
+        return { id: person.id, url: routes.expert(person.slug) };
+      }
+
+      const existing = await db.person.findFirst({ where: { OR: [{ id }, { slug: id }] } });
+      if (!existing) throw new ToolError("No person matches that id.");
+      const slug = args.slug !== undefined ? slugify(String(args.slug)) : existing.slug;
+      const person = await db.person.update({ where: { id: existing.id }, data: { ...data, slug } });
+      if (slug !== existing.slug) await recordMove(routes.expert(existing.slug), routes.expert(person.slug));
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "person",
+        entityId: person.id,
+        summary: person.name,
+        paths: ["/", routes.expertsIndex(), routes.expert(person.slug)],
+      });
+      return { id: person.id, url: routes.expert(person.slug) };
+    },
+  },
+
+  /* ------------------------------------------------------------ inboxes */
+
+  {
+    name: "list_inbox",
+    title: "List claims and corrections",
+    description:
+      "Business owners claiming a listing, and readers reporting something wrong. Both need a human decision.",
+    schema: object({
+      kind: str("claims or submissions. Both if omitted."),
+      status: str("Filter by status."),
+      limit: int("Default 25."),
+    }),
+    handler: async (args) => {
+      const kind = String(args.kind ?? "").toLowerCase();
+      const take = limitOf(args, 25);
+      const status = optStr(args, "status");
+
+      return {
+        ...(kind !== "submissions"
+          ? {
+              claims: (
+                await db.claimRequest.findMany({
+                  where: status ? { status: status.toUpperCase() } : {},
+                  orderBy: { submittedAt: "desc" },
+                  take,
+                  include: { business: true },
+                })
+              ).map((row) => ({
+                id: row.id,
+                business: row.business?.name ?? row.businessName,
+                businessId: row.businessId,
+                owner: row.ownerName,
+                email: row.ownerEmail,
+                method: row.verificationMethod,
+                status: row.status,
+                submitted: fullDate(row.submittedAt),
+              })),
+            }
+          : {}),
+        ...(kind !== "claims"
+          ? {
+              submissions: (
+                await db.submission.findMany({
+                  where: status ? { status: status.toUpperCase() } : {},
+                  orderBy: { createdAt: "desc" },
+                  take,
+                })
+              ).map((row) => ({
+                id: row.id,
+                kind: row.kind,
+                subject: row.subject,
+                email: row.email,
+                status: row.status,
+                received: fullDate(row.createdAt),
+              })),
+            }
+          : {}),
+      };
+    },
+  },
+
+  {
+    name: "resolve_inbox_item",
+    title: "Decide a claim or a correction",
+    description:
+      "Approving a claim marks the business claimed. A correction is moved through IN_REVIEW to RESOLVED or CLOSED.",
+    write: true,
+    schema: object(
+      {
+        kind: str("claim or submission."),
+        id: str("The id."),
+        status: str("Claims: SUBMITTED, VERIFYING, APPROVED or REJECTED. Submissions: NEW, IN_REVIEW, RESOLVED or CLOSED."),
+        note: str("Internal note recorded with the decision."),
+      },
+      ["kind", "id", "status"],
+    ),
+    handler: async (args, ctx) => {
+      const kind = reqStr(args, "kind").toLowerCase();
+      const id = reqStr(args, "id");
+      const note = optStr(args, "note");
+
+      if (kind === "claim") {
+        const status = oneOf(reqStr(args, "status"), ["SUBMITTED", "VERIFYING", "APPROVED", "REJECTED"], "status");
+        const claim = await db.claimRequest.findUnique({ where: { id } });
+        if (!claim) throw new ToolError("No claim matches that id.");
+
+        await db.claimRequest.update({
+          where: { id },
+          data: { status, ...(note ? { notes: note } : {}), reviewedAt: new Date() },
+        });
+        if (status === "APPROVED" && claim.businessId) {
+          await db.business.update({ where: { id: claim.businessId }, data: { claimed: true } });
+        }
+        await recordWrite(ctx, {
+          action: "update",
+          entityType: "claim",
+          entityId: id,
+          summary: `${claim.businessName} claim ${status.toLowerCase()}`,
+        });
+        return { id, status };
+      }
+
+      if (kind === "submission") {
+        const status = oneOf(reqStr(args, "status"), ["NEW", "IN_REVIEW", "RESOLVED", "CLOSED"], "status");
+        const submission = await db.submission.findUnique({ where: { id } });
+        if (!submission) throw new ToolError("No submission matches that id.");
+
+        await db.submission.update({
+          where: { id },
+          data: {
+            status,
+            ...(note ? { message: `${submission.message ?? ""}\n\nEditor note: ${note}`.trim() } : {}),
+            resolvedAt: status === "RESOLVED" ? new Date() : null,
+          },
+        });
+        await recordWrite(ctx, {
+          action: "update",
+          entityType: "submission",
+          entityId: id,
+          summary: `${submission.subject} ${status.toLowerCase()}`,
+        });
+        return { id, status };
+      }
+
+      throw new ToolError("kind must be claim or submission.");
+    },
+  },
+];

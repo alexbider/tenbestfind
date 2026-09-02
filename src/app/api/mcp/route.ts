@@ -1,5 +1,5 @@
 import { challengeHeader, verifyBearer, type Bearer } from "@/lib/oauth";
-import { describe, runTool, ToolError, visibleTools } from "@/lib/mcp-tools";
+import { describe, runTool, ToolError, visibleTools } from "@/lib/mcp";
 
 // The MCP endpoint, spoken over streamable HTTP.
 //

@@ -109,12 +109,27 @@ Claude registers itself (RFC 7591), you are sent to `/connect/` to sign in with
 your staff account and approve the scopes, and the token is bound to this server
 with a resource indicator (RFC 8707).
 
+The tool surface covers everything the admin console does: pages, guides, posts
+and rankings; services, subservices and the whole location tree; businesses with
+their services, hours, credentials and photos; the editorial team; claims and
+corrections; packages and sponsored inventory; every setting including the whole
+global SEO configuration; redirects, media, users, the audit log, analytics, and
+the import pipeline.
+
 A connected app acts as the person who approved it and can do nothing that
 account cannot. Read tools need `mcp:read`, write tools need `mcp:write` and an
-editor account, and queueing an import batch needs an administrator. Every write
-lands in the audit log with the application's name against it. **Admin,
-Connected apps** lists what is connected and revokes either one session or an
-application outright.
+editor account, and the administrative ones need an administrator. Deletions
+need `confirm: true` and refuse while dependent content still exists. Every
+write lands in the audit log with the application's name against it, and purges
+the cache for the pages it touched, so a change made through Claude is live
+immediately. **Admin, Connected apps** lists what is connected and revokes
+either one session or an application outright.
+
+Two things are deliberately absent. There is no tool that reads an API key back,
+only one that replaces it. And accounts cannot be created and passwords cannot
+be set through the connector, because a password should not travel through a
+model's context; roles and access can be changed, with a guard against removing
+the last administrator.
 
 `NEXT_PUBLIC_SITE_URL` is the identity of the whole thing: it is what the
 discovery documents advertise and what tokens are bound to. It is inlined at

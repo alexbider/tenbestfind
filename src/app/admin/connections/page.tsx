@@ -9,7 +9,7 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { fullDate } from "@/lib/format";
 import { parseList } from "@/lib/json";
-import { TOOLS } from "@/lib/mcp-tools";
+import { TOOLS, TOOL_GROUPS } from "@/lib/mcp";
 import { absoluteUrl } from "@/lib/urls";
 import { db } from "@/lib/db";
 
@@ -32,7 +32,6 @@ export default async function ConnectionsPage() {
     }),
   ]);
 
-  const readTools = TOOLS.filter((tool) => !tool.write);
   const writeTools = TOOLS.filter((tool) => tool.write);
 
   return (
@@ -91,25 +90,37 @@ export default async function ConnectionsPage() {
           </p>
         </Panel>
 
-        <Panel title="What a connection can do" description="Read tools need mcp:read, write tools need mcp:write.">
-          <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 8px" }}>Read</p>
-          <ul style={{ display: "grid", gap: 6, fontSize: 13.5, color: "var(--text-secondary)", paddingLeft: 18, marginBottom: 18 }}>
-            {readTools.map((tool) => (
-              <li key={tool.name}>
-                <code>{tool.name}</code> — {tool.title.toLowerCase()}
-              </li>
+        <Panel
+          title="What a connection can do"
+          description="Read needs mcp:read. Write needs mcp:write and an editor. A few need an administrator."
+        >
+          <div style={{ display: "grid", gap: 18 }}>
+            {TOOL_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 6px" }}>{group.label}</p>
+                <ul
+                  style={{
+                    display: "grid",
+                    gap: 5,
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    paddingLeft: 18,
+                    margin: 0,
+                  }}
+                >
+                  {group.tools.map((tool) => (
+                    <li key={tool.name}>
+                      <code>{tool.name}</code>
+                      {tool.admin ? " · admin" : tool.write ? " · write" : ""}
+                      {tool.destructive ? " · deletes" : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
-          <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 8px" }}>Write</p>
-          <ul style={{ display: "grid", gap: 6, fontSize: 13.5, color: "var(--text-secondary)", paddingLeft: 18 }}>
-            {writeTools.map((tool) => (
-              <li key={tool.name}>
-                <code>{tool.name}</code> — {tool.title.toLowerCase()}
-                {tool.admin ? " (administrators only)" : ""}
-              </li>
-            ))}
-          </ul>
+          </div>
         </Panel>
+
       </div>
 
       <Panel title="Applications" padded={clients.length === 0}>
