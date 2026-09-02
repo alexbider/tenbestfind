@@ -30,6 +30,7 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
     label: "Directory",
     items: [
       { name: "Businesses", href: "/admin/businesses", icon: "store" },
+      { name: "Imports", href: "/admin/imports", icon: "refresh" },
       { name: "Claims & verification", href: "/admin/claims", icon: "key" },
       { name: "Reports & corrections", href: "/admin/submissions", icon: "flag" },
     ],

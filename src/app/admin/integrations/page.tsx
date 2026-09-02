@@ -1,10 +1,12 @@
 import { AdminHeader, EmptyState, Panel, StatRow } from "@/components/admin/shell";
 import { ApiKeyForm, ConnectorForm } from "@/components/admin/IntegrationForms";
+import { SecretForm } from "@/components/admin/SecretForm";
 import { deleteConnector, revokeApiKey, testConnector } from "@/app/actions/admin-system";
 import { Badge } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireAdmin } from "@/lib/auth";
 import { parseList } from "@/lib/json";
+import { secretStatus } from "@/lib/secrets";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Integrations & MCP" };
@@ -12,10 +14,16 @@ export const metadata = { title: "Integrations & MCP" };
 export default async function AdminIntegrationsPage() {
   await requireAdmin();
 
-  const [connectors, keys] = await Promise.all([
+  const [connectors, keys, secrets] = await Promise.all([
     db.mcpConnector.findMany({ orderBy: { createdAt: "asc" } }),
     db.apiKey.findMany({ orderBy: { createdAt: "desc" } }),
+    secretStatus(),
   ]);
+
+  const HINT: Record<string, string> = {
+    "apify.token": "Used to run the Google Maps scraper. Apify console, Settings, Integrations.",
+    "anthropic.apiKey": "Used to write the imported listings. console.anthropic.com, API keys.",
+  };
 
   const activeKeys = keys.filter((key) => !key.revokedAt);
 
@@ -131,6 +139,25 @@ export default async function AdminIntegrationsPage() {
             </table>
           </div>
         )}
+      </Panel>
+
+      <Panel
+        title="Outbound credentials"
+        description="Keys this platform uses to call other services. Stored encrypted, and only the last four characters are ever shown again."
+      >
+        <div className="panel-grid">
+          {secrets.map((secret) => (
+            <SecretForm
+              key={secret.key}
+              secretKey={secret.key}
+              label={secret.label}
+              hint={HINT[secret.key] ?? ""}
+              set={secret.set}
+              last4={secret.last4}
+              fromEnv={secret.fromEnv}
+            />
+          ))}
+        </div>
       </Panel>
 
       <div className="panel-grid">

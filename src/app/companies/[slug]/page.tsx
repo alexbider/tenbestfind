@@ -60,6 +60,7 @@ async function loadBusiness(slug: string) {
         },
       },
       placements: { where: { status: "ACTIVE" } },
+      faqs: { orderBy: { sortOrder: "asc" } },
     },
   });
 }
@@ -120,7 +121,10 @@ export default async function BusinessProfilePage({ params }: Props) {
 
   const totalReviews = Object.values(distribution).reduce((sum, value) => sum + value, 0);
 
+  // Questions written for this company come first; the standing ones about how
+  // the profile was built always follow, so the provenance is never dropped.
   const faqs = [
+    ...business.faqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
     {
       question: `Is ${business.name} licensed and insured?`,
       answer: business.credentials.length
@@ -163,11 +167,51 @@ export default async function BusinessProfilePage({ params }: Props) {
         data={{
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
+          "@id": absoluteUrl(`${routes.business(business.slug)}#business`),
           name: business.name,
           url: absoluteUrl(routes.business(business.slug)),
+          description: business.tagline ?? undefined,
           telephone: business.phone ?? undefined,
-          address: business.addressLine
-            ? { "@type": "PostalAddress", streetAddress: business.addressLine }
+          email: business.email ?? undefined,
+          image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
+          logo: business.logoUrl ?? undefined,
+          sameAs: business.website ? [business.website] : undefined,
+          foundingDate: business.yearFounded ? String(business.yearFounded) : undefined,
+          address:
+            business.addressLine || business.city
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: business.addressLine ?? undefined,
+                  addressLocality: business.city?.name,
+                  addressRegion: business.city?.region.code.toUpperCase(),
+                  postalCode: business.postalCode ?? undefined,
+                  addressCountry: business.city?.region.country.code.toUpperCase(),
+                }
+              : undefined,
+          geo:
+            business.latitude && business.longitude
+              ? { "@type": "GeoCoordinates", latitude: business.latitude, longitude: business.longitude }
+              : undefined,
+          areaServed: business.areas.length
+            ? business.areas.map((area) => ({ "@type": "City", name: area.city.name }))
+            : business.city
+              ? [{ "@type": "City", name: business.city.name }]
+              : undefined,
+          openingHoursSpecification: hours.some((row) => row.opens && row.closes)
+            ? hours
+                .filter((row) => !row.closed && row.opens && row.closes)
+                .map((row) => ({
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: row.day,
+                  opens: row.opens,
+                  closes: row.closes,
+                }))
+            : undefined,
+          makesOffer: business.services.length
+            ? business.services.map((entry) => ({
+                "@type": "Offer",
+                itemOffered: { "@type": "Service", name: entry.subservice.name },
+              }))
             : undefined,
           aggregateRating:
             business.googleRating && business.googleReviewCount
@@ -175,6 +219,8 @@ export default async function BusinessProfilePage({ params }: Props) {
                   "@type": "AggregateRating",
                   ratingValue: business.googleRating,
                   reviewCount: business.googleReviewCount,
+                  bestRating: 5,
+                  worstRating: 1,
                 }
               : undefined,
         }}

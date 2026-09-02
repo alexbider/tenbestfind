@@ -91,6 +91,7 @@ model City {
   serviceAreas BusinessArea[]
   placements   SponsoredPlacement[]
   costRows     CostRow[]
+  importItems  ImportItem[]
 
   @@unique([regionId, slug])
   @@index([regionId, published])
@@ -120,6 +121,7 @@ model Category {
   updatedAt   DateTime @updatedAt
 
   subservices Subservice[]
+  importBatches ImportBatch[]
   businesses  Business[]
   rankings    Ranking[]
   guides      Guide[]
@@ -181,6 +183,17 @@ model Business {
   financing      Boolean @default(false)
   freeEstimates  Boolean @default(false)
 
+  // Google Business Profile identity, written by the importer. placeId is the
+  // stable key: a business that moves or renames keeps it, so it is what the
+  // duplicate check trusts before falling back to name and address.
+  placeId    String? @unique
+  latitude   Float?
+  longitude  Float?
+  gmbRank    Int? // position in the Google Maps result the importer read
+  gmbQuery   String? // the search that found it, kept so a rank can be read in context
+  emailSource String? // gmb | website | none
+  importedAt  DateTime?
+
   googleRating       Float?
   googleReviewCount  Int?
   googleDataUpdated  DateTime?
@@ -211,6 +224,8 @@ model Business {
   claims        ClaimRequest[]
   events        AnalyticsEvent[]
   dailyStats    BusinessDailyStat[]
+  faqs          Faq[]
+  importItems   ImportItem[]
 
   @@index([categoryId, status])
   @@index([cityId, status])
@@ -525,14 +540,17 @@ model Faq {
   guideId   String?
   countryId String?
   pageId    String?
+  businessId String?
   sortOrder Int     @default(0)
 
-  ranking Ranking? @relation(fields: [rankingId], references: [id], onDelete: Cascade)
-  guide   Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  country Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  page    Page?    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  ranking  Ranking?  @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  guide    Guide?    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  country  Country?  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  page     Page?     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([scope, sortOrder])
+  @@index([businessId, sortOrder])
 }
 
 // ---------------------------------------------------------------- CMS
@@ -825,9 +843,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  businesses Business[]     @relation("BusinessOwner")
-  claims     ClaimRequest[]
-  auditLogs  AuditLog[]
+  businesses   Business[]     @relation("BusinessOwner")
+  claims       ClaimRequest[]
+  auditLogs    AuditLog[]
+  importBatches ImportBatch[]
 
   @@index([role])
 }
@@ -902,4 +921,102 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@index([entityType, createdAt])
+}
+
+// ---------------------------------------------------------------- importing
+
+/// One run of the scrape-and-write pipeline: a category, a set of cities, and
+/// the rules that decide what gets published. Stages advance in order and the
+/// worker picks up whatever is not terminal, so a restart resumes rather than
+/// starting over.
+model ImportBatch {
+  id     String @id @default(cuid())
+  name   String
+  status String @default("QUEUED") // QUEUED | SCRAPING | ENRICHING | WRITING | PUBLISHING | DONE | FAILED | PAUSED
+
+  // What to scrape.
+  categoryId    String
+  cityIds       String // JSON array of City ids
+  perCity       Int     @default(20)
+  minRating     Float?
+  minReviews    Int?
+  language      String  @default("en")
+
+  // What to do with the result.
+  autoPublishScore Int     @default(90) // publish at or above this, draft below
+  buildRanking     Boolean @default(true)
+  rankingSize      Int     @default(10)
+
+  // Progress, kept as counters so the list screen needs one query.
+  found      Int @default(0)
+  duplicates Int @default(0)
+  written    Int @default(0)
+  published  Int @default(0)
+  failed     Int @default(0)
+
+  apifyRunId String?
+  error      String?
+  note       String? // free text the operator wrote when queueing
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  category    Category @relation(fields: [categoryId], references: [id])
+  items       ImportItem[]
+
+  @@index([status, createdAt])
+}
+
+/// One scraped place. The raw payload is kept verbatim so a mapping change can
+/// be replayed without paying Apify again.
+model ImportItem {
+  id      String @id @default(cuid())
+  batchId String
+  cityId  String?
+
+  placeId String?
+  name    String
+  status  String @default("FOUND") // FOUND | DUPLICATE | SKIPPED | ENRICHED | WRITTEN | IMPORTED | FAILED
+  reason  String? // why it was skipped, duplicated or failed
+
+  gmbRank     Int?
+  rating      Float?
+  reviewCount Int?
+  website     String?
+  phone       String?
+  email       String?
+  emailSource String?
+  addressLine String?
+
+  raw       String? // JSON, the actor's record as returned
+  draft     String? // JSON, the written listing before it becomes a Business
+  seoScore  Int     @default(0)
+  attempts  Int     @default(0)
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  batch      ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  city       City?       @relation(fields: [cityId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([batchId, placeId])
+  @@index([batchId, status])
+  @@index([placeId])
+}
+
+/// API credentials for outbound services. Stored encrypted with a key derived
+/// from SESSION_SECRET rather than in plain text, so a database copy on its own
+/// does not hand over the keys. Only the last four characters are ever shown.
+model IntegrationSecret {
+  key       String   @id // apify.token | anthropic.apiKey
+  cipher    String // base64 iv:tag:ciphertext
+  last4     String
+  label     String?
+  updatedAt DateTime @updatedAt
 }

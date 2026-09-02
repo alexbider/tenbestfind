@@ -78,6 +78,35 @@ project with the same name is replaced.
 - The master switch on that screen ("Let search engines index this site") is
   the one to turn off on a staging copy and the one to check first if the site
   ever disappears from search.
+- To use the importer, put the Apify token and the Anthropic API key in
+  **Admin, Integrations**. They are encrypted with a key derived from
+  `SESSION_SECRET`, so rotating that secret invalidates them and they have to be
+  re-entered. An `APIFY_TOKEN` or `ANTHROPIC_API_KEY` environment variable wins
+  over the stored value, which is the better option if you would rather the keys
+  never went through a browser.
+
+## Database changes
+
+The schema is applied with `prisma migrate deploy`, not `db push`. A destructive
+change therefore fails the deploy instead of quietly dropping a column, which is
+the behaviour you want on a database holding real content. To change the schema:
+
+```
+npx prisma migrate dev --name what_changed   # locally, writes prisma/migrations/
+git push                                     # the deploy applies it
+```
+
+The first deploy after this change baselines the existing database by marking
+`0_init` as already applied, since the original schema was created with
+`db push`. That happens automatically and only once.
+
+## The import worker
+
+`scripts/import-worker.ts` runs in its own container. It polls for a queued
+batch and advances it one step at a time: scrape, deduplicate, find an email,
+write, publish. Running it apart from the web process is deliberate, so a batch
+survives a deploy and a long Apify run never sits inside an HTTP request. One
+batch runs at a time because both Apify and Anthropic charge per call.
 
 ## Running it locally
 
