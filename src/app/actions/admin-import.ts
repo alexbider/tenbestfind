@@ -5,6 +5,7 @@ import { z } from "zod";
 import { audit, requireAdmin, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { abortRun } from "@/lib/apify";
+import { resumeStage } from "@/lib/import-pipeline";
 import { putSecret, SECRET_KEYS, type SecretKey } from "@/lib/secrets";
 import type { ActionState } from "./admin-system";
 
@@ -89,8 +90,10 @@ export async function pauseBatch(formData: FormData) {
 }
 
 /**
- * Puts a paused or failed batch back in the queue at the stage its items imply,
- * so nothing already written is paid for twice.
+ * Puts a paused or failed batch back in the queue at the stage its items imply.
+ * Anything that failed to write is queued again, because the usual cause is
+ * outside the batch and gets fixed between the failure and the resume. Nothing
+ * already scraped is scraped again, so a resume costs nothing on Apify.
  */
 export async function resumeBatch(formData: FormData) {
   const user = await requireAdmin();
@@ -98,26 +101,16 @@ export async function resumeBatch(formData: FormData) {
   const batch = await db.importBatch.findUnique({ where: { id } });
   if (!batch) return;
 
-  const counts = await db.importItem.groupBy({
-    by: ["status"],
-    where: { batchId: id },
-    _count: true,
+  const status = await resumeStage(id);
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "importBatch",
+    entityId: id,
+    summary: `resumed at ${status.toLowerCase()}`,
   });
-  const has = (status: string) => counts.some((row) => row.status === status && row._count > 0);
-
-  const status = !has("FOUND") && !has("ENRICHED") && !has("WRITTEN")
-    ? counts.length === 0
-      ? "QUEUED"
-      : "PUBLISHING"
-    : has("FOUND")
-      ? "ENRICHING"
-      : has("ENRICHED")
-        ? "WRITING"
-        : "PUBLISHING";
-
-  await db.importBatch.update({ where: { id }, data: { status, error: null } });
-  await audit({ userId: user.id, action: "update", entityType: "importBatch", entityId: id, summary: `resumed at ${status.toLowerCase()}` });
   revalidatePath(`/admin/imports/${id}`);
+  revalidatePath("/admin/imports");
 }
 
 /** Sends one item back to be written again, for a listing that came out weak. */

@@ -35,6 +35,16 @@ export type PlaceRecord = {
 
 export class ApifyError extends Error {}
 
+/** A failure that a retry will not fix: a bad token, no plan, a missing actor. */
+export class ApifyPermanentError extends ApifyError {
+  constructor(
+    message: string,
+    readonly hint: string,
+  ) {
+    super(message);
+  }
+}
+
 async function call(path: string, token: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(`${API}${path}`, {
     ...init,
@@ -46,14 +56,41 @@ async function call(path: string, token: string, init?: RequestInit): Promise<Re
   });
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new ApifyError(`Apify ${init?.method ?? "GET"} ${path} returned ${response.status}. ${body.slice(0, 300)}`);
+
+    if (response.status === 401 || response.status === 403) {
+      throw new ApifyPermanentError(
+        "Apify rejected the token.",
+        "Check the Apify API token under Admin, Integrations. It may have been revoked, or it may belong to a different account.",
+      );
+    }
+    if (response.status === 404) {
+      throw new ApifyPermanentError(
+        "That Apify actor does not exist for this account.",
+        "The Google Maps scraper may need to be added to the account first at apify.com/store.",
+      );
+    }
+    if (response.status === 402) {
+      throw new ApifyPermanentError(
+        "The Apify account is out of credit.",
+        "Top it up at console.apify.com, then resume the batch.",
+      );
+    }
+
+    throw new ApifyError(
+      `Apify ${init?.method ?? "GET"} ${path} returned ${response.status}. ${body.slice(0, 300)}`,
+    );
   }
   return response;
 }
 
 export async function apifyToken(): Promise<string> {
   const token = await getSecret("apify.token");
-  if (!token) throw new ApifyError("No Apify token is set. Add one under Admin, Integrations.");
+  if (!token) {
+    throw new ApifyPermanentError(
+      "No Apify token is set.",
+      "Add one under Admin, Integrations, then resume the batch.",
+    );
+  }
   return token;
 }
 

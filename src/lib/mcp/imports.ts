@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { abortRun } from "../apify";
+import { resumeStage } from "../import-pipeline";
 import { fullDate } from "../format";
 import { parseList } from "../json";
 import { secretStatus } from "../secrets";
@@ -196,7 +197,7 @@ export const IMPORT_TOOLS: Tool[] = [
     name: "control_import_batch",
     title: "Pause, resume or finish a batch",
     description:
-      "Pausing also aborts the Apify run, which stops the meter. Resuming restarts at the stage the items imply, so nothing already written is paid for twice.",
+      "Pausing also aborts the Apify run, which stops the meter. Resuming queues everything that failed to write and restarts at the stage the items imply, so nothing already scraped is scraped again.",
     write: true,
     admin: true,
     schema: object({ id: str("The batch id."), action: str("pause, resume or publish_drafts.") }, ["id", "action"]),
@@ -220,18 +221,7 @@ export const IMPORT_TOOLS: Tool[] = [
       }
 
       if (action === "resume") {
-        const counts = await db.importItem.groupBy({ by: ["status"], where: { batchId: id }, _count: true });
-        const has = (status: string) => counts.some((row) => row.status === status && row._count > 0);
-        const status =
-          counts.length === 0
-            ? "QUEUED"
-            : has("FOUND")
-              ? "ENRICHING"
-              : has("ENRICHED")
-                ? "WRITING"
-                : "PUBLISHING";
-
-        await db.importBatch.update({ where: { id }, data: { status, error: null } });
+        const status = await resumeStage(id);
         await recordWrite(ctx, {
           action: "update",
           entityType: "importBatch",

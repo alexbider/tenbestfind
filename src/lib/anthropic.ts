@@ -10,6 +10,60 @@ export const DEFAULT_MODEL = "claude-opus-5";
 
 export class ContentError extends Error {}
 
+/**
+ * A failure that will happen again on the next call and on every call after
+ * that: no credits, a bad key, a model this account cannot use. Retrying is
+ * pointless and, when it is a paid call, wasteful. The pipeline stops the whole
+ * batch on one of these rather than working through the rest of the queue.
+ */
+export class PermanentError extends ContentError {
+  constructor(
+    message: string,
+    readonly hint: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Turns an SDK error into either a PermanentError or something retryable. */
+export function classify(error: unknown): Error {
+  if (error instanceof PermanentError) return error;
+
+  if (error instanceof Anthropic.AuthenticationError) {
+    return new PermanentError(
+      "The Anthropic API key was rejected.",
+      "Check the key under Admin, Integrations. It may have been revoked or mistyped.",
+    );
+  }
+  if (error instanceof Anthropic.PermissionDeniedError) {
+    return new PermanentError(
+      "This Anthropic key is not allowed to use that model.",
+      "Check the key's permissions, or set IMPORT_MODEL to a model the account can use.",
+    );
+  }
+  if (error instanceof Anthropic.BadRequestError) {
+    const message = error.message ?? "";
+    if (/credit balance is too low|insufficient.*credit|billing/i.test(message)) {
+      return new PermanentError(
+        "The Anthropic account has no credits left.",
+        "Add credits at console.anthropic.com under Plans and Billing, then resume the batch. Nothing needs scraping again.",
+      );
+    }
+    return new PermanentError(
+      `Anthropic rejected the request: ${message.slice(0, 200)}`,
+      "This will not fix itself on a retry. The request shape or the model name is wrong.",
+    );
+  }
+  if (error instanceof Anthropic.NotFoundError) {
+    return new PermanentError(
+      "That model does not exist for this account.",
+      "Clear IMPORT_MODEL to fall back to the default, or set it to a model the account has.",
+    );
+  }
+
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 let cached: { key: string; client: Anthropic } | null = null;
 
 export async function anthropic(): Promise<Anthropic> {
@@ -51,18 +105,25 @@ export async function askForJson<T extends z.ZodType>({
 }): Promise<z.infer<T>> {
   const client = await anthropic();
 
-  const response = await client.messages.parse({
-    model,
-    max_tokens: maxTokens,
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: prompt }],
-    output_config: {
-      effort,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the helper
-      // infers its result type from a literal schema; ours is built at runtime.
-      format: jsonSchemaOutputFormat(jsonSchema as any),
-    },
-  });
+  let response;
+  try {
+    response = await client.messages.parse({
+      model,
+      max_tokens: maxTokens,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: prompt }],
+      output_config: {
+        effort,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the helper
+        // infers its result type from a literal schema; ours is built at runtime.
+        format: jsonSchemaOutputFormat(jsonSchema as any),
+      },
+    });
+  } catch (error) {
+    // Rate limits and 5xx have already been retried by the SDK, so anything
+    // arriving here is either permanent or worth reporting as it stands.
+    throw classify(error);
+  }
 
   if (response.stop_reason === "refusal") {
     throw new ContentError(
@@ -82,4 +143,23 @@ export async function askForJson<T extends z.ZodType>({
   }
 
   return checked.data as z.infer<T>;
+}
+
+/**
+ * A single tiny call to prove the account can actually generate before a batch
+ * spends anything on scraping. It costs a fraction of a cent and turns "pay
+ * Apify for twenty places, then discover the writer is dead" into a failure
+ * that happens in two seconds for nothing.
+ */
+export async function preflight(model = DEFAULT_MODEL): Promise<void> {
+  const client = await anthropic();
+  try {
+    await client.messages.create({
+      model,
+      max_tokens: 1,
+      messages: [{ role: "user", content: "ok" }],
+    });
+  } catch (error) {
+    throw classify(error);
+  }
 }

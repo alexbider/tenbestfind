@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { readPlaces, runState, startPlacesRun, type PlaceRecord } from "./apify";
+import { ApifyPermanentError, readPlaces, runState, startPlacesRun, type PlaceRecord } from "./apify";
 import {
   findEmail,
   normalizeAddress,
@@ -13,7 +13,7 @@ import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
 import { stringify } from "./json";
 import { routes } from "./urls";
-import type { Effort } from "./anthropic";
+import { PermanentError, preflight, type Effort } from "./anthropic";
 
 // The batch state machine. Each call to `advance` does one unit of work and
 // returns, so the worker stays interruptible and a container restart resumes
@@ -48,12 +48,54 @@ export async function advanceBatch(batchId: string): Promise<Advance> {
 }
 
 async function fail(batchId: string, error: unknown): Promise<Advance> {
-  const message = error instanceof Error ? error.message : String(error);
+  // A permanent failure carries a sentence about what to do next; anything else
+  // gets its own message, which is at least honest about what broke.
+  const message =
+    error instanceof ApifyPermanentError || error instanceof PermanentError
+      ? `${error.message} ${error.hint}`
+      : error instanceof Error
+        ? error.message
+        : String(error);
+
   await db.importBatch.update({
     where: { id: batchId },
     data: { status: "FAILED", error: message.slice(0, 900), finishedAt: new Date() },
   });
   return { changed: true, note: `failed: ${message}` };
+}
+
+/**
+ * Where a paused or failed batch should pick up. Items that failed to write are
+ * put back in the queue first: the usual reason a batch failed is something
+ * outside it, a key or a credit balance, and once that is fixed the work should
+ * carry on rather than needing every item retried by hand.
+ */
+export async function resumeStage(batchId: string): Promise<string> {
+  const revived = await db.importItem.updateMany({
+    where: { batchId, status: "FAILED" },
+    data: { status: "ENRICHED", attempts: 0, reason: null },
+  });
+
+  const counts = await db.importItem.groupBy({ by: ["status"], where: { batchId }, _count: true });
+  const has = (status: string) => counts.some((row) => row.status === status && row._count > 0);
+
+  const status =
+    counts.length === 0
+      ? "QUEUED"
+      : has("FOUND")
+        ? "ENRICHING"
+        : has("ENRICHED") || revived.count > 0
+          ? "WRITING"
+          : has("WRITTEN")
+            ? "PUBLISHING"
+            : "PUBLISHING";
+
+  await db.importBatch.update({
+    where: { id: batchId },
+    data: { status, error: null, finishedAt: null, failed: 0 },
+  });
+
+  return status;
 }
 
 /* ------------------------------------------------------------------ scrape */
@@ -77,6 +119,11 @@ async function startScrape(batchId: string): Promise<Advance> {
       include: { region: true },
     });
     if (cities.length === 0) throw new Error("The batch names no cities that still exist.");
+
+    // Both credentials are proved before anything is spent. Scraping first and
+    // discovering the writer cannot run is how the first Dallas batch burned a
+    // scrape it could not use.
+    await preflight(process.env.IMPORT_MODEL || undefined);
 
     const runId = await startPlacesRun({
       queries: cities.map((city) => queryFor(batch.category.serviceName, city, city.region)),
@@ -362,6 +409,25 @@ async function writeSlice(batchId: string): Promise<Advance> {
       avoidOpenings.push(openingFingerprint(result.listing.description));
       ok += 1;
     } catch (error) {
+      // A permanent failure will hit every remaining item the same way, and
+      // each attempt is a paid call. Stop the batch, say why in one sentence,
+      // and leave the item ready to write so a resume costs nothing extra.
+      if (error instanceof PermanentError) {
+        await db.importItem.update({
+          where: { id: item.id },
+          data: { status: "ENRICHED", reason: error.message },
+        });
+        await db.importBatch.update({
+          where: { id: batchId },
+          data: {
+            status: "FAILED",
+            written: { increment: ok },
+            error: `${error.message} ${error.hint}`.slice(0, 900),
+          },
+        });
+        return { changed: true, note: `stopped: ${error.message}` };
+      }
+
       const message = error instanceof Error ? error.message : String(error);
       await db.importItem.update({
         where: { id: item.id },
@@ -478,6 +544,24 @@ async function finish(batchId: string): Promise<Advance> {
         data: { published: { increment: published } },
       });
       return { changed: true, note: `imported ${items.length}` };
+    }
+
+    // A batch that scraped places and wrote none of them has not finished, it
+    // has failed. Reporting "done" over an empty result is how a broken run
+    // looks like a working one.
+    const stuck = await db.importItem.count({ where: { batchId, status: "FAILED" } });
+    if (batch.written === 0 && stuck > 0) {
+      await db.importBatch.update({
+        where: { id: batchId },
+        data: {
+          status: "FAILED",
+          finishedAt: new Date(),
+          error:
+            batch.error ??
+            `All ${stuck} listings failed to write. Open one to see why, fix the cause, then resume.`,
+        },
+      });
+      return { changed: true, note: `failed: nothing written of ${stuck}` };
     }
 
     if (batch.buildRanking) await buildRankings(batchId);

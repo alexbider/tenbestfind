@@ -152,6 +152,27 @@ npx tsx scripts/purge-demo.ts --yes    # does it
 
 Running it twice is safe: the second run finds nothing and says so.
 
+## When a batch fails
+
+A batch checks both credentials before it spends anything, so a dead API key or
+an empty credit balance fails in seconds for nothing rather than after a paid
+scrape. If something breaks mid-run, the batch stops rather than working through
+the queue repeating the same failure, and the reason is written on the batch in
+a sentence with what to do about it.
+
+Failures are split in two. A **permanent** one, a rejected key, no credits, a
+missing actor, stops the batch immediately: retrying costs money and cannot
+work. A **transient** one, a rate limit or an overloaded model, is retried by
+the SDK and then by the item's own second attempt.
+
+**Resume** is the recovery path for both. It puts everything that failed to
+write back in the queue, clears the stale error, and restarts at the stage the
+items imply. Nothing already scraped is scraped again, so resuming after fixing
+a key costs nothing on Apify.
+
+A batch that scraped places and wrote none of them reports FAILED, not DONE. A
+broken run should not look like a working one.
+
 ## The import worker
 
 `scripts/import-worker.ts` runs in its own container. It polls for a queued
