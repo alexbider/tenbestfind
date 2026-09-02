@@ -136,6 +136,22 @@ discovery documents advertise and what tokens are bound to. It is inlined at
 build time, so changing it means a redeploy, and existing tokens stop working
 because they no longer match the audience.
 
+## Clearing the demo content
+
+`scripts/purge-demo.ts` removes the businesses the seed created and nothing
+else. The list comes from `prisma/data/businesses.ts` rather than a hard-coded
+copy, so anything added since, by hand or by an import, is left alone. It writes
+a JSON copy of everything it removes next to the database first, and it
+unpublishes any ranking left with no companies, because a live "10 Best" page
+with nothing on it is worse than no page at all.
+
+```
+npx tsx scripts/purge-demo.ts          # reports what would go
+npx tsx scripts/purge-demo.ts --yes    # does it
+```
+
+Running it twice is safe: the second run finds nothing and says so.
+
 ## The import worker
 
 `scripts/import-worker.ts` runs in its own container. It polls for a queued
