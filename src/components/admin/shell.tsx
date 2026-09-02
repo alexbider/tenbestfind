@@ -49,6 +49,7 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
       { name: "Global SEO", href: "/admin/seo", icon: "search" },
       { name: "Users & roles", href: "/admin/users", icon: "users" },
       { name: "Integrations & MCP", href: "/admin/integrations", icon: "plug" },
+      { name: "Connected apps", href: "/admin/connections", icon: "key" },
       { name: "Settings", href: "/admin/settings", icon: "gear" },
       { name: "Audit log", href: "/admin/audit", icon: "history" },
     ],

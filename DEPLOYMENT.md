@@ -100,6 +100,27 @@ The first deploy after this change baselines the existing database by marking
 `0_init` as already applied, since the original schema was created with
 `db push`. That happens automatically and only once.
 
+## Connecting Claude over MCP
+
+The platform is its own MCP server at `https://tenbestfind.com/api/mcp`, fronted
+by an OAuth 2.1 authorization server. Add it in Claude under Settings,
+Connectors, Add custom connector, and paste that URL. There is no key to copy:
+Claude registers itself (RFC 7591), you are sent to `/connect/` to sign in with
+your staff account and approve the scopes, and the token is bound to this server
+with a resource indicator (RFC 8707).
+
+A connected app acts as the person who approved it and can do nothing that
+account cannot. Read tools need `mcp:read`, write tools need `mcp:write` and an
+editor account, and queueing an import batch needs an administrator. Every write
+lands in the audit log with the application's name against it. **Admin,
+Connected apps** lists what is connected and revokes either one session or an
+application outright.
+
+`NEXT_PUBLIC_SITE_URL` is the identity of the whole thing: it is what the
+discovery documents advertise and what tokens are bound to. It is inlined at
+build time, so changing it means a redeploy, and existing tokens stop working
+because they no longer match the audience.
+
 ## The import worker
 
 `scripts/import-worker.ts` runs in its own container. It polls for a queued

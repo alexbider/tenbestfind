@@ -847,6 +847,8 @@ model User {
   claims       ClaimRequest[]
   auditLogs    AuditLog[]
   importBatches ImportBatch[]
+  oauthCodes   OAuthCode[]
+  oauthTokens  OAuthToken[]
 
   @@index([role])
 }
@@ -1019,4 +1021,73 @@ model IntegrationSecret {
   last4     String
   label     String?
   updatedAt DateTime @updatedAt
+}
+
+// -------------------------------------------------------------- MCP OAuth
+
+/// An OAuth client, almost always created by dynamic client registration
+/// (RFC 7591) when someone adds this site as a connector. Public clients hold
+/// no secret and rely on PKCE, which is what MCP clients use.
+model OAuthClient {
+  id           String  @id @default(cuid()) // the client_id
+  name         String
+  redirectUris String // JSON array
+  secretHash   String? // null for a public client
+  scope        String  @default("mcp")
+  softwareId   String?
+  logoUri      String?
+  clientUri    String?
+
+  disabledAt DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  codes  OAuthCode[]
+  tokens OAuthToken[]
+}
+
+/// A single-use authorization code. Stored hashed, bound to the PKCE challenge,
+/// the redirect it was issued for and the resource it may be exchanged for.
+model OAuthCode {
+  id            String   @id @default(cuid())
+  codeHash      String   @unique
+  clientId      String
+  userId        String
+  redirectUri   String
+  codeChallenge String
+  method        String   @default("S256")
+  scope         String
+  resource      String?
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+/// An issued access token and its refresh token, both stored hashed. One row is
+/// one connected session, which is what the admin screen lists and revokes.
+model OAuthToken {
+  id           String   @id @default(cuid())
+  accessHash   String   @unique
+  refreshHash  String?  @unique
+  clientId     String
+  userId       String
+  scope        String
+  resource     String?
+  expiresAt    DateTime
+  refreshUntil DateTime?
+  revokedAt    DateTime?
+  lastUsedAt   DateTime?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }

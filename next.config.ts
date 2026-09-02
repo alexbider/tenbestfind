@@ -13,7 +13,32 @@ const config: NextConfig = {
   // reservation is served by a normal route and mapped onto its well-known
   // address here.
   async rewrites() {
-    return [{ source: "/.well-known/tdmrep.json", destination: "/api/tdmrep/" }];
+    return [
+      { source: "/.well-known/tdmrep.json", destination: "/api/tdmrep/" },
+      // OAuth discovery. RFC 9728 also defines a path-suffixed form, so a client
+      // that appends the resource path finds the same document.
+      {
+        source: "/.well-known/oauth-protected-resource",
+        destination: "/api/wellknown/oauth-protected-resource/",
+      },
+      {
+        source: "/.well-known/oauth-protected-resource/:path*",
+        destination: "/api/wellknown/oauth-protected-resource/",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: "/api/wellknown/oauth-authorization-server/",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server/:path*",
+        destination: "/api/wellknown/oauth-authorization-server/",
+      },
+      // Some clients look for the OpenID document at the issuer instead.
+      {
+        source: "/.well-known/openid-configuration",
+        destination: "/api/wellknown/oauth-authorization-server/",
+      },
+    ];
   },
 };
 
