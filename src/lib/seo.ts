@@ -3,14 +3,54 @@ import { db } from "./db";
 import { parseJson, parseList } from "./json";
 import type { Resolved } from "./resolve";
 import type { SeoEntityType } from "./enums";
-import { absoluteUrl } from "./urls";
+import { loadSeoSettings, renderTemplate, type SeoSettings } from "./seo-settings";
+import { absoluteUrl, routes } from "./urls";
 
-const SITE_NAME = "TenBestFind";
+const FALLBACK_SITE_NAME = "TenBestFind";
+
+type Tokens = Record<string, string | null | undefined>;
+
+/**
+ * Resolves the robots directives for one page: the global defaults set at
+ * /admin/seo, plus anything the page's own SEO record adds on top. A directive
+ * switched on globally cannot be switched off per page, which matches how the
+ * site-wide switches are described in the admin.
+ */
+function robotsFor(
+  settings: SeoSettings,
+  record: {
+    robotsIndex: boolean;
+    robotsFollow: boolean;
+    robotsNoArchive: boolean;
+    robotsNoSnippet: boolean;
+    robotsNoImageIndex: boolean;
+    maxSnippet: number | null;
+    maxImagePreview: string | null;
+    maxVideoPreview: number | null;
+  } | null,
+  force?: { index?: boolean },
+): Metadata["robots"] {
+  if (!settings.bool("seo.searchEngineVisible")) return { index: false, follow: false };
+
+  const index = force?.index === false ? false : record ? record.robotsIndex : true;
+
+  return {
+    index,
+    follow: record ? record.robotsFollow : true,
+    noarchive: record?.robotsNoArchive || settings.bool("seo.robots.noarchive"),
+    nosnippet: record?.robotsNoSnippet || settings.bool("seo.robots.nosnippet"),
+    noimageindex: record?.robotsNoImageIndex || settings.bool("seo.robots.noimageindex"),
+    "max-snippet": record?.maxSnippet ?? settings.num("seo.robots.maxSnippet"),
+    "max-image-preview": (record?.maxImagePreview ??
+      settings.text("seo.robots.maxImagePreview")) as "none" | "standard" | "large",
+    "max-video-preview": record?.maxVideoPreview ?? settings.num("seo.robots.maxVideoPreview"),
+  };
+}
 
 /**
  * Per-entity SEO records written in the admin override anything computed here,
- * field by field. An empty field falls back to the derived default rather than
- * publishing a blank tag.
+ * field by field. An empty field falls back to the global template, and then to
+ * the derived default, rather than publishing a blank tag.
  */
 export async function seoFor(
   entityType: SeoEntityType,
@@ -23,55 +63,215 @@ export async function seoFor(
     type?: "website" | "article";
     publishedAt?: Date | null;
     modifiedAt?: Date | null;
+    /** Extra %tokens% the title template for this entity type can use. */
+    tokens?: Tokens;
+    /** Set false for a thin or empty page the archive rules should keep out. */
+    indexable?: boolean;
   },
 ): Promise<Metadata> {
-  const record = await db.seoMeta.findUnique({
-    where: { entityType_entityId: { entityType, entityId } },
-  });
+  const [record, settings] = await Promise.all([
+    db.seoMeta.findUnique({ where: { entityType_entityId: { entityType, entityId } } }),
+    loadSeoSettings(),
+  ]);
 
-  const title = record?.title?.trim() || fallback.title;
+  const siteName = settings.text("seo.siteName") || FALLBACK_SITE_NAME;
+  const sep = settings.text("seo.titleSeparator") || "|";
+  const template = settings.text(`seo.template.${entityType}`) || "%title% %sep% %sitename%";
+
   const description = record?.description?.trim() || fallback.description || undefined;
-  const canonical = record?.canonical?.trim() || absoluteUrl(fallback.path);
-  const image = record?.ogImage?.trim() || fallback.image || undefined;
 
-  const robots = record
-    ? {
-        index: record.robotsIndex,
-        follow: record.robotsFollow,
-        noarchive: record.robotsNoArchive,
-        nosnippet: record.robotsNoSnippet,
-        noimageindex: record.robotsNoImageIndex,
-        "max-snippet": record.maxSnippet ?? undefined,
-        "max-image-preview": (record.maxImagePreview as "none" | "standard" | "large") ?? undefined,
-        "max-video-preview": record.maxVideoPreview ?? undefined,
-      }
-    : { index: true, follow: true };
+  // A title written on the page is used exactly as typed; otherwise the global
+  // template for this entity type builds it.
+  const title =
+    record?.title?.trim() ||
+    renderTemplate(template, {
+      title: fallback.title,
+      sitename: siteName,
+      sep,
+      excerpt: description,
+      year: String(new Date().getFullYear()),
+      ...fallback.tokens,
+    }) ||
+    fallback.title;
+
+  const canonical = record?.canonical?.trim() || absoluteUrl(fallback.path);
+  const image =
+    record?.ogImage?.trim() || fallback.image || settings.text("seo.social.defaultImage") || undefined;
+  const twitterImage = record?.twitterImage?.trim() || image;
+  const twitterSite = settings.text("seo.social.twitterSite");
+  const facebookAppId = settings.text("seo.social.facebookAppId");
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: record?.focusKeyword
       ? [record.focusKeyword, ...parseList(record.extraKeywords)]
       : undefined,
     alternates: { canonical },
-    robots,
+    robots: robotsFor(settings, record, { index: fallback.indexable }),
+    ...(facebookAppId ? { other: { "fb:app_id": facebookAppId } } : {}),
     openGraph: {
       title: record?.ogTitle?.trim() || title,
       description: record?.ogDescription?.trim() || description,
       url: canonical,
-      siteName: SITE_NAME,
+      siteName,
+      locale: settings.text("seo.social.ogLocale") || undefined,
       type: fallback.type ?? "website",
       images: image ? [image] : undefined,
       publishedTime: fallback.publishedAt?.toISOString(),
       modifiedTime: fallback.modifiedAt?.toISOString(),
     },
     twitter: {
-      card: (record?.twitterCard as "summary_large_image" | "summary") ?? "summary_large_image",
+      card: (record?.twitterCard ||
+        settings.text("seo.social.twitterCard") ||
+        "summary_large_image") as "summary_large_image" | "summary",
+      site: twitterSite || undefined,
       title: record?.twitterTitle?.trim() || title,
       description: record?.twitterDescription?.trim() || description,
-      images: record?.twitterImage?.trim() || image ? [record?.twitterImage?.trim() || image!] : undefined,
+      images: twitterImage ? [twitterImage] : undefined,
     },
   };
+}
+
+/**
+ * The metadata the root layout publishes: the homepage title and description,
+ * the verification codes, and the AI opt-out tags when they are switched on.
+ */
+export async function globalMetadata(): Promise<Metadata> {
+  const settings = await loadSeoSettings();
+  const siteName = settings.text("seo.siteName") || FALLBACK_SITE_NAME;
+  const sep = settings.text("seo.titleSeparator") || "|";
+  const homeTitle = settings.text("seo.homeTitle") || siteName;
+  const description = settings.text("seo.homeDescription") || undefined;
+  const image = settings.text("seo.social.defaultImage");
+
+  const other: Record<string, string> = {};
+  for (const [key, name] of [
+    ["seo.verify.bing", "msvalidate.01"],
+    ["seo.verify.yandex", "yandex-verification"],
+    ["seo.verify.pinterest", "p:domain_verify"],
+    ["seo.verify.baidu", "baidu-site-verification"],
+    ["seo.verify.facebook", "facebook-domain-verification"],
+  ] as const) {
+    const code = settings.text(key);
+    if (code) other[name] = code;
+  }
+
+  const facebookAppId = settings.text("seo.social.facebookAppId");
+  if (facebookAppId) other["fb:app_id"] = facebookAppId;
+
+  // Opt-out signals rather than enforcement, so both are off by default and
+  // only published when someone asks for them. The noai pair goes out as its
+  // own robots tag: engines combine multiple robots meta tags, and the values
+  // Next generates for indexing have to stay untouched.
+  if (settings.bool("seo.ai.noaiMeta")) other.robots = "noai, noimageai";
+  if (settings.bool("seo.ai.tdmReservation")) other["tdm-reservation"] = "1";
+
+  const tdmPolicy = settings.text("seo.ai.tdmPolicy");
+  if (settings.bool("seo.ai.tdmReservation") && tdmPolicy) other["tdm-policy"] = tdmPolicy;
+
+  const google = settings.text("seo.verify.google");
+
+  return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+    title: { default: homeTitle, template: `%s ${sep} ${siteName}` },
+    description,
+    alternates: { canonical: absoluteUrl("/") },
+    robots: robotsFor(settings, null),
+    ...(google ? { verification: { google } } : {}),
+    ...(Object.keys(other).length > 0 ? { other } : {}),
+    openGraph: {
+      siteName,
+      type: "website",
+      locale: settings.text("seo.social.ogLocale") || undefined,
+      images: image ? [image] : undefined,
+    },
+    twitter: {
+      card: (settings.text("seo.social.twitterCard") || "summary_large_image") as
+        | "summary_large_image"
+        | "summary",
+      site: settings.text("seo.social.twitterSite") || undefined,
+    },
+  };
+}
+
+/**
+ * The publisher entity and, optionally, the sitelinks search box. Rendered once
+ * in the root layout so every page carries the same knowledge-graph node.
+ */
+export async function publisherSchema(): Promise<Record<string, unknown>[]> {
+  const settings = await loadSeoSettings();
+  if (!settings.bool("seo.searchEngineVisible")) return [];
+
+  const siteName = settings.text("seo.siteName") || FALLBACK_SITE_NAME;
+  const name = settings.text("seo.schema.name") || siteName;
+  const id = absoluteUrl("/#publisher");
+
+  const address: Record<string, string> = {};
+  const street = settings.text("seo.schema.streetAddress");
+  const locality = settings.text("seo.schema.locality");
+  const region = settings.text("seo.schema.region");
+  const postalCode = settings.text("seo.schema.postalCode");
+  const country = settings.text("seo.schema.country");
+  if (street) address.streetAddress = street;
+  if (locality) address.addressLocality = locality;
+  if (region) address.addressRegion = region;
+  if (postalCode) address.postalCode = postalCode;
+  if (country) address.addressCountry = country;
+
+  const publisher: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": settings.text("seo.schema.type") || "Organization",
+    "@id": id,
+    name,
+    url: absoluteUrl("/"),
+  };
+
+  const legalName = settings.text("seo.schema.legalName");
+  const logo = settings.text("seo.schema.logo");
+  const email = settings.text("seo.schema.email");
+  const phone = settings.text("seo.schema.phone");
+  const founded = settings.text("seo.schema.foundingDate");
+  const sameAs = settings.list("seo.schema.sameAs");
+
+  if (legalName) publisher.legalName = legalName;
+  if (logo) publisher.logo = { "@type": "ImageObject", url: absoluteUrl(logo) };
+  if (email) publisher.email = email;
+  if (phone) publisher.telephone = phone;
+  if (founded) publisher.foundingDate = founded;
+  if (Object.keys(address).length > 0) publisher.address = { "@type": "PostalAddress", ...address };
+  if (sameAs.length > 0) publisher.sameAs = sameAs;
+
+  const graph: Record<string, unknown>[] = [publisher];
+
+  const website: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": absoluteUrl("/#website"),
+    name: siteName,
+    url: absoluteUrl("/"),
+    publisher: { "@id": id },
+  };
+
+  if (settings.bool("seo.schema.searchbox")) {
+    website.potentialAction = {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${absoluteUrl(routes.search())}?service={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    };
+  }
+
+  graph.push(website);
+  return graph;
+}
+
+/** Whether a hub with nothing published under it should stay out of the index. */
+async function emptyArchivesHidden(): Promise<boolean> {
+  const settings = await loadSeoSettings();
+  return settings.bool("seo.noindexEmptyArchives");
 }
 
 /** Metadata for anything the catch-all route resolves. */
@@ -82,11 +282,16 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
     case "country": {
       const country = await db.country.findUnique({ where: { code: resolved.countryCode } });
       if (!country) return {};
+      const published = await db.ranking.count({
+        where: { status: "PUBLISHED", city: { region: { countryId: country.id } } },
+      });
       return seoFor("country", country.id, {
         title: `Home services in the ${country.name} — the ten best, city by city`,
         description: country.blurb,
         path,
         image: country.heroImage,
+        tokens: { country: country.name },
+        indexable: published > 0 || !(await emptyArchivesHidden()),
       });
     }
     case "region": {
@@ -96,6 +301,9 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
         where: { countryId_slug: { countryId: country.id, slug: resolved.regionSlug } },
       });
       if (!region) return {};
+      const published = await db.ranking.count({
+        where: { status: "PUBLISHED", city: { regionId: region.id } },
+      });
       return seoFor("region", region.id, {
         title: `The ten best local businesses in ${region.name}`,
         description:
@@ -103,6 +311,8 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
           `Published city rankings across ${region.name}, with licensing checked against the authority that issues it.`,
         path,
         image: region.heroImage,
+        tokens: { region: region.name, country: country.name },
+        indexable: published > 0 || !(await emptyArchivesHidden()),
       });
     }
     case "city": {
@@ -123,6 +333,10 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
           `Researched shortlists for ${city.name}, with credentials checked, sources cited and every ranking reviewed on a schedule.`,
         path,
         image: city.heroImage,
+        tokens: { city: city.name, region: region.name, country: country.name },
+        indexable:
+          (await db.ranking.count({ where: { status: "PUBLISHED", cityId: city.id } })) > 0 ||
+          !(await emptyArchivesHidden()),
       });
     }
     case "ranking": {
@@ -146,6 +360,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
         description: ranking.summary,
         path,
         image: city.heroImage,
+        tokens: { city: city.name, region: region.name, category: category.name },
         type: "article",
         publishedAt: ranking.publishedAt,
         modifiedAt: ranking.lastReviewedAt,
@@ -160,6 +375,10 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
           category.description ??
           `Researched shortlists of ${category.name.toLowerCase()} with credentials checked and the reasoning published.`,
         path,
+        tokens: { category: category.name },
+        indexable:
+          (await db.ranking.count({ where: { status: "PUBLISHED", categoryId: category.id } })) > 0 ||
+          !(await emptyArchivesHidden()),
       });
     }
     case "subservice": {

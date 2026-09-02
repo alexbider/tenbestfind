@@ -335,18 +335,9 @@ export const SETTINGS: { key: string; value: unknown; groupName: string; label: 
   },
   { key: "site.url", value: "https://tenbestfind.com", groupName: "general", label: "Site URL" },
   { key: "site.contactEmail", value: "hello@tenbestfind.com", groupName: "general", label: "Contact email" },
-  { key: "seo.titleSeparator", value: "|", groupName: "seo", label: "Title separator" },
-  {
-    key: "seo.defaultTitleTemplate",
-    value: "%title% %sep% %sitename%",
-    groupName: "seo",
-    label: "Default title template",
-  },
-  { key: "seo.noindexPaginated", value: true, groupName: "seo", label: "Noindex paginated archives" },
-  { key: "seo.noindexSearch", value: true, groupName: "seo", label: "Noindex search results" },
-  { key: "seo.organizationType", value: "Organization", groupName: "seo", label: "Organization schema type" },
-  { key: "seo.sitemapEnabled", value: true, groupName: "seo", label: "Generate XML sitemap" },
-  { key: "seo.sitemapPerPage", value: 200, groupName: "seo", label: "Sitemap entries per page" },
+  // Everything under `seo.` is owned by the Global SEO screen at /admin/seo:
+  // src/lib/seo-settings.ts holds the field list and the defaults, and the rows
+  // are written on first save. Seeding them here would fork that definition.
   { key: "rankings.methodologyVersion", value: "1.2", groupName: "editorial", label: "Methodology version" },
   { key: "rankings.reviewCadenceMonths", value: 6, groupName: "editorial", label: "Review cadence (months)" },
   { key: "rankings.entriesPerRanking", value: 10, groupName: "editorial", label: "Companies per ranking" },

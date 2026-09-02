@@ -9,6 +9,12 @@ const config: NextConfig = {
   skipTrailingSlashRedirect: true,
   images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
   eslint: { ignoreDuringBuilds: true },
+  // The app router skips any directory starting with a dot, so the TDM
+  // reservation is served by a normal route and mapped onto its well-known
+  // address here.
+  async rewrites() {
+    return [{ source: "/.well-known/tdmrep.json", destination: "/api/tdmrep/" }];
+  },
 };
 
 export default config;

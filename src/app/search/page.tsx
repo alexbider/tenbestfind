@@ -10,16 +10,24 @@ import { ArrowLink, Badge, Monogram, Section, SectionHead } from "@/components/u
 import { shortMonthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
+import { loadSeoSettings } from "@/lib/seo-settings";
 import { rankingUrl, routes } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Search",
-  description: "Search researched rankings, business profiles and guides.",
-  // Search result pages are not indexable: they are infinite and thin.
-  robots: { index: false, follow: true },
-};
+// Search result pages are thin and effectively infinite, so they are kept out
+// of the index by default. The switch is at /admin/seo.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await loadSeoSettings();
+  const indexable =
+    settings.bool("seo.searchEngineVisible") && !settings.bool("seo.noindexSearch");
+
+  return {
+    title: "Search",
+    description: "Search researched rankings, business profiles and guides.",
+    robots: { index: indexable, follow: true },
+  };
+}
 
 type Props = {
   searchParams: Promise<{ service?: string; location?: string; rating?: string; verified?: string }>;

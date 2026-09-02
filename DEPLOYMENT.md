@@ -68,6 +68,16 @@ project with the same name is replaced.
   put the signing secret in `STRIPE_WEBHOOK_SECRET`.
 - DNS for `tenbestfind.com` must have an A record on `2.25.139.87` before
   Traefik can get a certificate.
+- Open **Admin → Global SEO** and check the site-wide configuration before you
+  submit anything to Search Console. Nothing there lives in an environment
+  variable: the title templates, robots directives, schema, verification codes,
+  sitemap contents and AI crawler rules are all rows in the database, so they
+  survive a redeploy and can be changed without one. The screen links to the
+  four files it generates — `/robots.txt`, `/sitemap.xml`, `/llms.txt` and
+  `/.well-known/tdmrep.json` — so you can see what a crawler sees.
+- The master switch on that screen ("Let search engines index this site") is
+  the one to turn off on a staging copy and the one to check first if the site
+  ever disappears from search.
 
 ## Running it locally
 

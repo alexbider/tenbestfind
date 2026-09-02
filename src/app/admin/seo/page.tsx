@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { AdminHeader, EmptyState, Panel, StatRow } from "@/components/admin/shell";
+import { GlobalSeoEditor } from "@/components/admin/GlobalSeoEditor";
 import { RedirectForm } from "@/components/admin/RedirectForm";
 import { deleteRedirect } from "@/app/actions/admin-system";
 import { Badge } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
-import { parseJson } from "@/lib/json";
+import { AI_BOTS, loadSeoSettings } from "@/lib/seo-settings";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Global SEO" };
@@ -18,12 +19,12 @@ const EDIT_PATH: Record<string, string> = {
 };
 
 export default async function AdminSeoPage() {
-  await requireStaff();
+  const user = await requireStaff();
 
   const [records, redirects, settings, counts] = await Promise.all([
     db.seoMeta.findMany({ orderBy: { score: "asc" } }),
     db.redirect.findMany({ orderBy: { createdAt: "desc" } }),
-    db.setting.findMany({ where: { groupName: "seo" }, orderBy: { key: "asc" } }),
+    loadSeoSettings(),
     Promise.all([
       db.page.count({ where: { status: "PUBLISHED" } }),
       db.guide.count({ where: { status: "PUBLISHED" } }),
@@ -41,87 +42,138 @@ export default async function AdminSeoPage() {
   const noindex = records.filter((record) => !record.robotsIndex).length;
   const weak = records.filter((record) => record.score > 0 && record.score < 60);
 
+  const visible = settings.bool("seo.searchEngineVisible");
+  const blockedBots = settings.list("seo.ai.blockedBots").length;
+
   return (
     <>
       <AdminHeader
         title="Global SEO"
-        description="Site-wide defaults, the pages that have their own SEO record, and the redirect table."
+        description="The site-wide configuration, the pages that have their own SEO record, and the redirect table."
       />
+
+      {visible ? null : (
+        <p className="form-error" style={{ marginBottom: 24 }}>
+          Indexing is switched off. Every page publishes noindex, robots.txt disallows every crawler
+          and the sitemap is empty. Turn it back on under Search engine visibility below.
+        </p>
+      )}
 
       <StatRow
         stats={[
+          { label: "Indexing", value: visible ? "On" : "Off" },
           { label: "Published entities", value: publishedTotal },
           { label: "With SEO records", value: records.length, hint: `${publishedTotal - records.length} using defaults` },
           { label: "Avg content score", value: avgScore || "—" },
-          { label: "Noindex", value: noindex },
+          { label: "Page noindex", value: noindex },
+          { label: "AI crawlers blocked", value: `${blockedBots}/${AI_BOTS.length}` },
         ]}
       />
 
       <div className="panel-grid panel-grid--wide">
-        <Panel
-          title="Weakest content scores"
-          description="Pages with a focus keyword set but a score below 60."
-          padded={weak.length === 0}
-        >
-          {weak.length === 0 ? (
-            <EmptyState
-              title="Nothing flagged"
-              body="Every analyzed page scores 60 or above, or has no focus keyword set yet."
-            />
+        <Panel title="Global SEO" description="Applies to every page. A value set on a page always wins.">
+          {user.role === "ADMIN" ? (
+            <GlobalSeoEditor values={settings.raw} />
           ) : (
-            <div className="table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Entity</th>
-                    <th scope="col">Focus keyword</th>
-                    <th scope="col">Score</th>
-                    <th scope="col">Index</th>
-                    <th scope="col" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {weak.map((record) => (
-                    <tr key={record.id}>
-                      <td>
-                        <span className="admin-table__primary">{record.title ?? record.entityId}</span>
-                        <span className="admin-table__meta">{record.entityType}</span>
-                      </td>
-                      <td>{record.focusKeyword ?? "—"}</td>
-                      <td className="admin-table__num">{record.score}</td>
-                      <td>{record.robotsIndex ? "Index" : <Badge tone="warning">Noindex</Badge>}</td>
-                      <td>
-                        <div className="admin-table__actions">
-                          <Link
-                            href={`${EDIT_PATH[record.entityType] ?? "/admin"}/${record.entityId}`}
-                            className="btn btn--secondary btn--sm"
-                          >
-                            Edit
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <EmptyState
+              title="Administrators only"
+              body="The site-wide configuration is edited by an administrator. Per-page SEO is on each page's own editor."
+            />
           )}
         </Panel>
 
-        <Panel title="Site-wide defaults" description="Set in Settings; shown here for reference.">
-          <dl className="transparency__grid" style={{ background: "none", padding: 0 }}>
-            {settings.map((setting) => (
-              <div key={setting.key}>
-                <dt>{setting.label ?? setting.key}</dt>
-                <dd>{String(parseJson<unknown>(setting.value, ""))}</dd>
-              </div>
-            ))}
-          </dl>
-          <Link href="/admin/settings" className="btn btn--secondary btn--sm" style={{ marginTop: 18 }}>
-            Edit defaults
-          </Link>
+        <Panel title="What this publishes" description="Open each one to check what a crawler sees.">
+          <ul style={{ display: "grid", gap: 14, fontSize: 14.5, lineHeight: 1.6, color: "var(--text-secondary)" }}>
+            <li>
+              <a href="/robots.txt" target="_blank" rel="noreferrer">
+                /robots.txt
+              </a>
+              <span style={{ display: "block" }}>
+                Crawl rules, the AI crawler blocks and the sitemap pointer.
+              </span>
+            </li>
+            <li>
+              <a href="/sitemap.xml" target="_blank" rel="noreferrer">
+                /sitemap.xml
+              </a>
+              <span style={{ display: "block" }}>
+                Every published URL that is not excluded or set to noindex.
+              </span>
+            </li>
+            <li>
+              <a href="/llms.txt" target="_blank" rel="noreferrer">
+                /llms.txt
+              </a>
+              <span style={{ display: "block" }}>
+                A markdown map of the site written for language models, generated from published
+                content.
+              </span>
+            </li>
+            <li>
+              <a href="/.well-known/tdmrep.json" target="_blank" rel="noreferrer">
+                /.well-known/tdmrep.json
+              </a>
+              <span style={{ display: "block" }}>
+                The text and data mining reservation. Returns 404 until you switch it on.
+              </span>
+            </li>
+          </ul>
+          <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginTop: 18, lineHeight: 1.6 }}>
+            Blocking an answer engine also removes the site from its citations. The defaults block
+            the bulk training crawlers that send no traffic back and leave the answer engines alone.
+          </p>
         </Panel>
       </div>
+
+      <Panel
+        title="Weakest content scores"
+        description="Pages with a focus keyword set but a score below 60."
+        padded={weak.length === 0}
+      >
+        {weak.length === 0 ? (
+          <EmptyState
+            title="Nothing flagged"
+            body="Every analyzed page scores 60 or above, or has no focus keyword set yet."
+          />
+        ) : (
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">Entity</th>
+                  <th scope="col">Focus keyword</th>
+                  <th scope="col">Score</th>
+                  <th scope="col">Index</th>
+                  <th scope="col" />
+                </tr>
+              </thead>
+              <tbody>
+                {weak.map((record) => (
+                  <tr key={record.id}>
+                    <td>
+                      <span className="admin-table__primary">{record.title ?? record.entityId}</span>
+                      <span className="admin-table__meta">{record.entityType}</span>
+                    </td>
+                    <td>{record.focusKeyword ?? "—"}</td>
+                    <td className="admin-table__num">{record.score}</td>
+                    <td>{record.robotsIndex ? "Index" : <Badge tone="warning">Noindex</Badge>}</td>
+                    <td>
+                      <div className="admin-table__actions">
+                        <Link
+                          href={`${EDIT_PATH[record.entityType] ?? "/admin"}/${record.entityId}`}
+                          className="btn btn--secondary btn--sm"
+                        >
+                          Edit
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
 
       <div className="panel-grid">
         <Panel title="Redirects" description="Applied before routing, so a moved page keeps its inbound links." padded={redirects.length === 0}>

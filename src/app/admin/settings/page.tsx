@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminHeader, Panel } from "@/components/admin/shell";
 import { SettingsForm } from "@/components/admin/SettingsForm";
 import { requireAdmin } from "@/lib/auth";
@@ -9,7 +10,12 @@ export const metadata = { title: "Settings" };
 export default async function AdminSettingsPage() {
   await requireAdmin();
 
-  const settings = await db.setting.findMany({ orderBy: [{ groupName: "asc" }, { key: "asc" }] });
+  // Everything under `seo.` has its own screen at /admin/seo, which owns the
+  // field list. Showing it here as well would give the same key two editors.
+  const settings = await db.setting.findMany({
+    where: { NOT: { key: { startsWith: "seo." } } },
+    orderBy: [{ groupName: "asc" }, { key: "asc" }],
+  });
 
   return (
     <>
@@ -37,9 +43,9 @@ export default async function AdminSettingsPage() {
               Site name and contact address, used in structured data and the footer.
             </li>
             <li>
-              <strong style={{ display: "block", color: "var(--ink)" }}>SEO defaults</strong>
-              Title template, sitemap generation, and whether paginated archives and search results
-              are indexable. Per-page overrides always win.
+              <strong style={{ display: "block", color: "var(--ink)" }}>SEO</strong>
+              Titles, robots, schema, the sitemap and the AI crawler rules live on their own screen.{" "}
+              <Link href="/admin/seo">Open Global SEO</Link>.
             </li>
             <li>
               <strong style={{ display: "block", color: "var(--ink)" }}>Editorial</strong>
