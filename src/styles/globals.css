@@ -5,8 +5,9 @@
 @import "./components.css";
 @import "./header.css";
 @import "./footer.css";
-@import "./home.css";
 @import "./blocks.css";
+@import "./pages.css";
+@import "./home.css";
 @import "./hubs.css";
 @import "./ranking.css";
 @import "./forms.css";

@@ -58,3 +58,21 @@ export type FieldChange = {
   requested: string;
   immediate?: boolean;
 };
+
+/**
+ * A stored list of {title, body} notes. Anything that is not that shape is
+ * dropped rather than half-rendered, so a bad write shows as a missing
+ * section instead of an empty card.
+ */
+export function parseNotes(value: string | null | undefined): { title: string; body: string }[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item.title === "string" && typeof item.body === "string")
+      .map((item) => ({ title: item.title, body: item.body }));
+  } catch {
+    return [];
+  }
+}

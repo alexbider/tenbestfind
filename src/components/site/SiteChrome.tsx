@@ -17,7 +17,9 @@ export function SiteChrome({
         Skip to content
       </a>
       <SiteHeader active={active} />
-      <main id="main">{children}</main>
+      <main id="main" className="site-page">
+        {children}
+      </main>
       <SiteFooter />
     </div>
   );

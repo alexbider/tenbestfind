@@ -371,6 +371,10 @@ model Ranking {
   summary          String? // answer-first hero paragraph
   intro            String?
   methodologyNote  String?
+  /// JSON [{title, body}] of what is specific to this city and trade: the
+  /// weather, the permits, the seasons. Empty until an editor or the writer
+  /// fills it, and the section is left out rather than filled with filler.
+  localNotes       String?
   companiesReviewed Int    @default(0)
   readingMinutes   Int     @default(8)
 
