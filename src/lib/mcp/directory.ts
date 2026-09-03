@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { BUSINESS_STATUSES } from "../enums";
+import { LEAD_STATUSES } from "../leads";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
@@ -576,6 +577,122 @@ export const DIRECTORY_TOOLS: Tool[] = [
         paths: ["/"],
       });
       return { business: business.name, ranking: entry.ranking.title, position: landed };
+    },
+  },
+
+  /* ------------------------------------------------------------------ leads */
+
+  {
+    name: "list_leads",
+    title: "Read quote requests",
+    description:
+      "Enquiries sent through the site, newest first. Staff see them in full, including for companies whose own dashboard has the contact details masked.",
+    schema: object({
+      idOrSlug: str("Limit to one company."),
+      status: str("NEW, VIEWED, CONTACTED, QUOTED, WON, LOST or SPAM."),
+      sinceDays: int("Only enquiries from the last this many days."),
+      limit: int("Default 25."),
+    }),
+    handler: async (args) => {
+      const business = args.idOrSlug ? await findBusiness(reqStr(args, "idOrSlug")) : null;
+      const sinceDays = typeof args.sinceDays === "number" ? args.sinceDays : 0;
+
+      const rows = await db.lead.findMany({
+        where: {
+          ...(business ? { businessId: business.id } : {}),
+          ...(args.status ? { status: oneOf(String(args.status), LEAD_STATUSES, "status") } : {}),
+          ...(sinceDays > 0 ? { createdAt: { gte: new Date(Date.now() - sinceDays * 86_400_000) } } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limitOf(args, 25),
+        include: { business: { select: { name: true, slug: true } } },
+      });
+
+      return {
+        leads: rows.map((row) => ({
+          id: row.id,
+          business: row.business.name,
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          jobType: row.jobType,
+          urgency: row.urgency,
+          message: row.message,
+          status: row.status,
+          receivedAt: fullDate(row.createdAt),
+          // Whether the company could read the contact details when it landed,
+          // which is what the upgrade conversation turns on.
+          detailsVisibleToOwner: row.unlocked,
+          emailed: Boolean(row.emailedAt),
+          emailError: row.emailError,
+        })),
+      };
+    },
+  },
+
+  {
+    name: "set_lead_status",
+    title: "Move a lead along",
+    write: true,
+    description: "Sets where a quote request has got to.",
+    schema: object(
+      {
+        id: str("The lead id, from list_leads."),
+        status: str("NEW, VIEWED, CONTACTED, QUOTED, WON, LOST or SPAM."),
+        notes: str("Replaces the note held against it."),
+      },
+      ["id", "status"],
+    ),
+    handler: async (args, ctx) => {
+      const id = reqStr(args, "id");
+      const status = oneOf(reqStr(args, "status"), LEAD_STATUSES, "status");
+
+      const lead = await db.lead.update({
+        where: { id },
+        data: { status, ...(args.notes !== undefined ? { notes: String(args.notes) || null } : {}) },
+        include: { business: { select: { name: true } } },
+      });
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "lead",
+        entityId: id,
+        summary: `${lead.name} (${lead.business.name}) → ${status.toLowerCase()}`,
+        paths: [],
+      });
+      return { id, status, business: lead.business.name };
+    },
+  },
+
+  {
+    name: "resend_lead_email",
+    title: "Send a lead notification again",
+    write: true,
+    description:
+      "Emails a quote request to the company again. Used when the first send failed, usually because the sending domain was not verified yet.",
+    schema: object({ id: str("The lead id, from list_leads.") }, ["id"]),
+    handler: async (args, ctx) => {
+      const { notifyBusiness } = await import("../leads");
+      const id = reqStr(args, "id");
+
+      const before = await db.lead.findUnique({ where: { id }, select: { id: true } });
+      if (!before) throw new ToolError(`No lead matches ${id}.`);
+
+      await notifyBusiness(id);
+      const after = await db.lead.findUnique({
+        where: { id },
+        select: { emailedAt: true, emailError: true },
+      });
+      if (after?.emailError) throw new ToolError(after.emailError);
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "lead",
+        entityId: id,
+        summary: "notification resent",
+        paths: [],
+      });
+      return { id, sentAt: after?.emailedAt ? fullDate(after.emailedAt) : null };
     },
   },
 

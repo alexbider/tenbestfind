@@ -21,7 +21,9 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
 
   await createSession(user);
   await audit({ userId: user.id, action: "login", entityType: "user", entityId: user.id });
-  redirect("/admin");
+  // One sign-in form, two destinations. A company owner has no business in the
+  // editorial console and would only see it refuse them.
+  redirect(user.role === "BUSINESS_OWNER" ? "/portal" : "/admin");
 }
 
 export async function signOut() {

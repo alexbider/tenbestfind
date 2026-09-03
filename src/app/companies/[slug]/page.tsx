@@ -29,6 +29,7 @@ import {
   SectionHead,
   StatusPill,
 } from "@/components/ui/primitives";
+import { QuoteDialog } from "@/components/site/QuoteDialog";
 import { ReadMore } from "@/components/site/ReadMore";
 import { ReviewList } from "@/components/site/ReviewList";
 import { fullDate, monthYear } from "@/lib/format";
@@ -408,9 +409,13 @@ export default async function BusinessProfilePage({ params }: Props) {
               </TrackClick>
             ) : null}
             <TrackClick type="QUOTE_CLICK" businessId={business.id}>
-              <Link href={routes.contact()} className="btn btn--secondary btn--block" style={{ marginTop: 10 }}>
-                Request a quote
-              </Link>
+              <div style={{ marginTop: 10 }}>
+                <QuoteDialog
+                  businessId={business.id}
+                  businessName={business.name}
+                  services={business.services.map((entry) => entry.subservice.name)}
+                />
+              </div>
             </TrackClick>
             {business.phone ? (
               <TrackClick type="PHONE_CLICK" businessId={business.id}>

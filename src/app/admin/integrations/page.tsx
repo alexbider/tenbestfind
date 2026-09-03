@@ -23,6 +23,8 @@ export default async function AdminIntegrationsPage() {
   const HINT: Record<string, string> = {
     "apify.token": "Used to run the Google Maps scraper. Apify console, Settings, Integrations.",
     "anthropic.apiKey": "Used to write the imported listings. console.anthropic.com, API keys.",
+    "resend.apiKey":
+      "Used to email quote requests to companies. resend.com, API keys. The sending domain has to be verified there first.",
   };
 
   const activeKeys = keys.filter((key) => !key.revokedAt);

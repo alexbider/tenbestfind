@@ -71,6 +71,47 @@ export async function requireStaff(): Promise<SessionUser> {
   return session;
 }
 
+/**
+ * Gate for the company owner portal.
+ *
+ * Staff are let through so an editor can see exactly what an owner sees while
+ * helping them, but only for a company they name; an owner is limited to the
+ * companies actually attached to their account.
+ */
+export async function requireOwner(): Promise<SessionUser> {
+  const session = await getSession();
+  if (!session) redirect("/admin/login/");
+  return session;
+}
+
+/** The companies this session may act for. Empty means the portal has nothing to show. */
+export async function ownedBusinesses(user: SessionUser) {
+  if (user.role === "ADMIN" || user.role === "EDITOR") {
+    return db.business.findMany({
+      where: { claimed: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true, status: true },
+    });
+  }
+  return db.business.findMany({
+    where: { ownerId: user.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true, status: true },
+  });
+}
+
+/** Throws the owner out of a company that is not theirs. */
+export async function requireOwnedBusiness(user: SessionUser, businessId: string) {
+  const business = await db.business.findFirst({
+    where: {
+      id: businessId,
+      ...(user.role === "BUSINESS_OWNER" ? { ownerId: user.id } : {}),
+    },
+  });
+  if (!business) redirect("/portal");
+  return business;
+}
+
 export async function requireAdmin(): Promise<SessionUser> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/admin/login/");

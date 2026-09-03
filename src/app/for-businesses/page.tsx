@@ -66,6 +66,10 @@ export default async function ForBusinessesPage() {
               Advertising
             </Link>
           </div>
+          <p style={{ marginTop: 18, fontSize: 14.5 }}>
+            Already claimed?{" "}
+            <Link href="/portal">Sign in to your dashboard</Link> for your leads and your numbers.
+          </p>
         </div>
       </section>
 

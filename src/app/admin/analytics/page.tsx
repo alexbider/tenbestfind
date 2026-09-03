@@ -2,7 +2,17 @@ import Link from "next/link";
 import { AdminHeader, BarChart, Panel, StatRow, TrendChart } from "@/components/admin/shell";
 import { percentChange } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
-import { dailySeries, previousTotals, topBusinesses, totalsFor, type Window } from "@/lib/analytics";
+import {
+  breakdowns,
+  dailySeries,
+  leadPlaces,
+  leadSeries,
+  previousTotals,
+  topBusinesses,
+  totalsFor,
+  type Window,
+} from "@/lib/analytics";
+import { URGENCY_LABEL } from "@/lib/leads";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Analytics" };
@@ -16,7 +26,8 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
   const requested = Number((await searchParams).window);
   const window: Window = WINDOWS.includes(requested as Window) ? (requested as Window) : 30;
 
-  const [totals, previous, series, top, eventsByType, topRankings] = await Promise.all([
+  const [totals, previous, series, top, eventsByType, topRankings, mix, places, leadsPerDay, lockedLeads] =
+    await Promise.all([
     totalsFor(window),
     previousTotals(window),
     dailySeries(window),
@@ -31,6 +42,10 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
       },
       take: 10,
     }),
+    breakdowns(window),
+    leadPlaces(window),
+    leadSeries(window),
+    db.lead.count({ where: { unlocked: false } }),
   ]);
 
   const contacts = totals.websiteClicks + totals.phoneClicks + totals.quoteClicks;
@@ -80,8 +95,86 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
         ]}
       />
 
-      <Panel title={`Profile views, last ${window} days`}>
-        <TrendChart series={series} />
+      <StatRow
+        stats={[
+          { label: "Quote requests", value: totals.leads, delta: percentChange(totals.leads, previous.leads) },
+          { label: "Phone clicks", value: totals.phoneClicks, delta: percentChange(totals.phoneClicks, previous.phoneClicks) },
+          { label: "Website clicks", value: totals.websiteClicks, delta: percentChange(totals.websiteClicks, previous.websiteClicks) },
+          {
+            label: "Leads on locked listings",
+            value: lockedLeads,
+            hint: "All time. The sales pipeline, in one number",
+          },
+        ]}
+      />
+
+      <div className="panel-grid panel-grid--wide">
+        <Panel title={`Profile views, last ${window} days`}>
+          <TrendChart series={series} />
+        </Panel>
+        <Panel title={`Quote requests, last ${window} days`}>
+          <TrendChart series={leadsPerDay} />
+        </Panel>
+      </div>
+
+      <div className="panel-grid">
+        <Panel title="What people asked for" padded={places.jobs.length === 0}>
+          {places.jobs.length === 0 ? (
+            <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>
+              No quote requests in this period.
+            </p>
+          ) : (
+            <BarChart data={places.jobs} valueLabel="requests" />
+          )}
+        </Panel>
+        <Panel title="How soon they needed someone" padded={places.urgency.length === 0}>
+          {places.urgency.length === 0 ? (
+            <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>
+              No quote requests in this period.
+            </p>
+          ) : (
+            <BarChart
+              data={places.urgency.map((row) => ({
+                label: URGENCY_LABEL[row.label] ?? row.label,
+                value: row.value,
+              }))}
+              valueLabel="requests"
+            />
+          )}
+        </Panel>
+      </div>
+
+      <div className="panel-grid">
+        <Panel title="Devices" padded={mix.devices.length === 0}>
+          {mix.devices.length === 0 ? (
+            <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>Nothing recorded yet.</p>
+          ) : (
+            <BarChart
+              data={mix.devices.map((row) => ({
+                label: row.label[0].toUpperCase() + row.label.slice(1),
+                value: row.value,
+              }))}
+              valueLabel="events"
+            />
+          )}
+        </Panel>
+        <Panel title="Referring sites" padded={mix.sources.length === 0}>
+          {mix.sources.length === 0 ? (
+            <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>
+              Nobody arrived from another site in this period, or their browser did not say.
+            </p>
+          ) : (
+            <BarChart data={mix.sources} valueLabel="visits" />
+          )}
+        </Panel>
+      </div>
+
+      <Panel title="Busiest pages" padded={mix.pages.length === 0}>
+        {mix.pages.length === 0 ? (
+          <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>Nothing recorded yet.</p>
+        ) : (
+          <BarChart data={mix.pages} valueLabel="events" />
+        )}
       </Panel>
 
       <div className="panel-grid">

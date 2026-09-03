@@ -893,3 +893,30 @@
   color: #fff;
   border-color: var(--maple-600);
 }
+
+/* A value the plan does not cover yet. Held back rather than removed: the point
+   is that it is visibly there and waiting, not that it is gone. */
+.lead-locked {
+  background: var(--surface-sunken);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.lead-locked p {
+  margin: 0 0 14px;
+}
+
+.lead-locked__value {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 5px;
+  background: var(--border-subtle);
+  color: var(--text-muted);
+  filter: blur(0.6px);
+  user-select: none;
+  letter-spacing: 0.04em;
+}

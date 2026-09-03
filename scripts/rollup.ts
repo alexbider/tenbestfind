@@ -28,6 +28,7 @@ type Counts = {
   phoneClicks: number;
   quoteClicks: number;
   directionsClicks: number;
+  leads: number;
 };
 
 const empty = (): Counts => ({
@@ -37,6 +38,7 @@ const empty = (): Counts => ({
   phoneClicks: 0,
   quoteClicks: 0,
   directionsClicks: 0,
+  leads: 0,
 });
 
 async function main() {
@@ -54,7 +56,21 @@ async function main() {
     select: { businessId: true, type: true },
   });
 
+  // Leads are counted from their own table rather than the event log. A lead is
+  // a row, not a click, and counting the row makes this pass idempotent: a
+  // re-run for the same day writes the same number.
+  const leads = await db.lead.groupBy({
+    by: ["businessId"],
+    where: { createdAt: { gte: start, lt: end } },
+    _count: { _all: true },
+  });
+
   const byBusiness = new Map<string, Counts>();
+  for (const row of leads) {
+    const counts = empty();
+    counts.leads = row._count._all;
+    byBusiness.set(row.businessId, counts);
+  }
   for (const event of events) {
     if (!event.businessId) continue;
     const field = EVENT_TO_FIELD[event.type];
@@ -72,8 +88,9 @@ async function main() {
     });
   }
 
+  const leadTotal = leads.reduce((total, row) => total + row._count._all, 0);
   console.log(
-    `Rolled up ${events.length} events for ${byBusiness.size} businesses on ${start.toISOString().slice(0, 10)}.`,
+    `Rolled up ${events.length} events and ${leadTotal} leads for ${byBusiness.size} businesses on ${start.toISOString().slice(0, 10)}.`,
   );
 
   // Trim events past the retention window.

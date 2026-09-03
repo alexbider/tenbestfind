@@ -346,4 +346,12 @@ export const SETTINGS: { key: string; value: unknown; groupName: string; label: 
   { key: "billing.invoicePrefix", value: "TBF", groupName: "billing", label: "Invoice number prefix" },
   { key: "analytics.retentionDays", value: 400, groupName: "analytics", label: "Event retention (days)" },
   { key: "analytics.rollupHour", value: 3, groupName: "analytics", label: "Nightly rollup hour (UTC)" },
+  // Quote requests are sent from here. The domain has to be verified with
+  // Resend or the send is refused, so this is a setting rather than a constant.
+  {
+    key: "mail.from",
+    value: "TenBestFind <leads@tenbestfind.com>",
+    groupName: "mail",
+    label: "Lead notification sender",
+  },
 ];

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminHeader, BarChart, Panel, StatRow, TrendChart } from "@/components/admin/shell";
+import { AdminHeader, BarChart, EmptyState, Panel, StatRow, TrendChart } from "@/components/admin/shell";
 import { BusinessEditor } from "@/components/admin/BusinessEditor";
 import { BillingPortalButton } from "@/components/admin/BillingControls";
 import { SeoPanel } from "@/components/admin/SeoPanel";
+import { LEAD_STATUSES, URGENCY_LABEL } from "@/lib/leads";
+import { leadAccessFor } from "@/lib/entitlements";
 import {
   addToRanking,
   deleteBusiness,
@@ -12,6 +14,7 @@ import {
   removeFromRanking,
   setBusinessStatus,
   setCredentialStatus,
+  setLeadStatus,
   setRankingPosition,
 } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
@@ -32,6 +35,7 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: st
 
 const TABS = [
   { key: "profile", label: "Profile & verification" },
+  { key: "leads", label: "Leads" },
   { key: "billing", label: "Billing & plan" },
   { key: "analytics", label: "Listing analytics" },
   { key: "seo", label: "SEO" },
@@ -88,7 +92,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
     take: 20,
   });
 
-  const [seo, totals, previous, series, events] = await Promise.all([
+  const [seo, totals, previous, series, events, leads, leadAccess] = await Promise.all([
     db.seoMeta.findUnique({
       where: { entityType_entityId: { entityType: "business", entityId: business.id } },
     }),
@@ -100,6 +104,8 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
       orderBy: { createdAt: "desc" },
       take: 12,
     }),
+    db.lead.findMany({ where: { businessId: business.id }, orderBy: { createdAt: "desc" }, take: 60 }),
+    leadAccessFor(business.id),
   ]);
 
   const subscription = business.subscriptions[0];
@@ -567,6 +573,134 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
             </Panel>
           </div>
         </div>
+      ) : null}
+
+      {tab === "leads" ? (
+        <>
+          <StatRow
+            stats={[
+              { label: "Leads all time", value: leads.length },
+              {
+                label: "Last 30 days",
+                value: leads.filter(
+                  (lead) => lead.createdAt >= new Date(Date.now() - 30 * 86_400_000),
+                ).length,
+              },
+              { label: "New, not yet handled", value: leads.filter((lead) => lead.status === "NEW").length },
+              {
+                label: "Contact details",
+                value: leadAccess.unlocked ? "Visible to them" : "Hidden from them",
+                hint: leadAccess.planName ?? "No active plan",
+              },
+            ]}
+          />
+
+          <p
+            className={leadAccess.unlocked ? "form-success" : "form-error"}
+            style={{ marginBottom: 24 }}
+          >
+            {leadAccess.reason} Every lead is stored in full and emailed either way, and this screen
+            always shows all of it.
+          </p>
+
+          <Panel
+            title="Every enquiry for this company"
+            description="What the owner sees is masked when the listing has no plan. What you see here is not."
+            padded={leads.length === 0}
+          >
+            {leads.length === 0 ? (
+              <EmptyState
+                title="No enquiries yet"
+                body="They arrive when someone uses Request a quote on this profile."
+              />
+            ) : (
+              <div className="table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Who</th>
+                      <th scope="col">Job</th>
+                      <th scope="col">Contact</th>
+                      <th scope="col">Delivered</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => (
+                      <tr key={lead.id}>
+                        <td>
+                          <span className="admin-table__primary">{lead.name}</span>
+                          <span className="admin-table__meta">
+                            {fullDate(lead.createdAt)} · {lead.source.toLowerCase()} ·{" "}
+                            {lead.device ?? "unknown device"}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ display: "block", fontSize: 14 }}>
+                            {lead.jobType || "Not named"}
+                          </span>
+                          <span className="admin-table__meta">
+                            {URGENCY_LABEL[lead.urgency] ?? lead.urgency}
+                          </span>
+                          <span
+                            style={{
+                              display: "block",
+                              marginTop: 6,
+                              fontSize: 13.5,
+                              color: "var(--text-secondary)",
+                              lineHeight: 1.55,
+                              maxWidth: 380,
+                            }}
+                          >
+                            {lead.message.slice(0, 180)}
+                            {lead.message.length > 180 ? "…" : ""}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ display: "block", fontSize: 13.5 }}>{lead.email}</span>
+                          {lead.phone ? (
+                            <span style={{ display: "block", fontSize: 13.5, color: "var(--text-secondary)" }}>
+                              {lead.phone}
+                            </span>
+                          ) : null}
+                          {lead.unlocked ? null : (
+                            <span className="admin-table__meta">Hidden from the owner</span>
+                          )}
+                        </td>
+                        <td>
+                          {lead.emailedAt ? (
+                            fullDate(lead.emailedAt)
+                          ) : lead.emailError ? (
+                            <span style={{ color: "var(--maple-600)", fontSize: 13 }}>
+                              {lead.emailError}
+                            </span>
+                          ) : (
+                            "Not sent"
+                          )}
+                        </td>
+                        <td>
+                          <form action={setLeadStatus} className="admin-table__actions">
+                            <input type="hidden" name="id" value={lead.id} />
+                            <select name="status" defaultValue={lead.status} aria-label="Status">
+                              {LEAD_STATUSES.map((value) => (
+                                <option key={value} value={value}>
+                                  {value[0] + value.slice(1).toLowerCase()}
+                                </option>
+                              ))}
+                            </select>
+                            <button type="submit" className="btn btn--ghost btn--sm">
+                              Set
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+        </>
       ) : null}
 
       {tab === "billing" ? (

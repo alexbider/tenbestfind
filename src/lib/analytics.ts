@@ -16,6 +16,7 @@ export type Totals = {
   phoneClicks: number;
   quoteClicks: number;
   directionsClicks: number;
+  leads: number;
 };
 
 const EMPTY: Totals = {
@@ -25,6 +26,7 @@ const EMPTY: Totals = {
   phoneClicks: 0,
   quoteClicks: 0,
   directionsClicks: 0,
+  leads: 0,
 };
 
 /**
@@ -41,6 +43,7 @@ export async function totalsFor(window: Window, businessId?: string): Promise<To
       phoneClicks: true,
       quoteClicks: true,
       directionsClicks: true,
+      leads: true,
     },
   });
   return {
@@ -50,6 +53,7 @@ export async function totalsFor(window: Window, businessId?: string): Promise<To
     phoneClicks: rows._sum.phoneClicks ?? 0,
     quoteClicks: rows._sum.quoteClicks ?? 0,
     directionsClicks: rows._sum.directionsClicks ?? 0,
+    leads: rows._sum.leads ?? 0,
   };
 }
 
@@ -67,6 +71,7 @@ export async function previousTotals(window: Window, businessId?: string): Promi
       phoneClicks: true,
       quoteClicks: true,
       directionsClicks: true,
+      leads: true,
     },
   });
   return {
@@ -76,6 +81,7 @@ export async function previousTotals(window: Window, businessId?: string): Promi
     phoneClicks: rows._sum.phoneClicks ?? 0,
     quoteClicks: rows._sum.quoteClicks ?? 0,
     directionsClicks: rows._sum.directionsClicks ?? 0,
+    leads: rows._sum.leads ?? 0,
   };
 }
 
@@ -134,3 +140,96 @@ export async function monthlyRecurringRevenue() {
 }
 
 export const EMPTY_TOTALS = EMPTY;
+
+/* -------------------------------------------------------------- breakdowns */
+
+/**
+ * Where the traffic came from, read off the raw event log rather than the
+ * rollup, because these are dimensions the daily table does not carry. The
+ * window is short by design: this is a question you ask about recent weeks.
+ */
+export async function breakdowns(window: Window, businessId?: string) {
+  const events = await db.analyticsEvent.findMany({
+    where: { createdAt: { gte: startOf(window) }, ...(businessId ? { businessId } : {}) },
+    select: { device: true, referrer: true, path: true, type: true },
+    take: 20_000,
+  });
+
+  const tally = (values: (string | null)[]) => {
+    const counts = new Map<string, number>();
+    for (const value of values) {
+      const key = value?.trim();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, value]) => ({ label, value }));
+  };
+
+  return {
+    devices: tally(events.map((event) => event.device)),
+    // A referrer is a whole URL; the host is the part anyone reads.
+    sources: tally(
+      events.map((event) => {
+        if (!event.referrer) return null;
+        try {
+          return new URL(event.referrer).hostname.replace(/^www\./, "");
+        } catch {
+          return null;
+        }
+      }),
+    ).slice(0, 8),
+    pages: tally(events.filter((event) => event.type !== "IMPRESSION").map((event) => event.path)).slice(0, 8),
+    events: tally(events.map((event) => event.type)),
+  };
+}
+
+/** Where the people asking for quotes are, by the postal code they gave. */
+export async function leadPlaces(window: Window, businessId?: string) {
+  const leads = await db.lead.findMany({
+    where: { createdAt: { gte: startOf(window) }, ...(businessId ? { businessId } : {}) },
+    select: { postalCode: true, jobType: true, urgency: true, status: true },
+    take: 5_000,
+  });
+
+  const tally = (values: (string | null)[]) => {
+    const counts = new Map<string, number>();
+    for (const value of values) {
+      const key = value?.trim();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  };
+
+  return {
+    total: leads.length,
+    places: tally(leads.map((lead) => lead.postalCode)).slice(0, 8),
+    jobs: tally(leads.map((lead) => lead.jobType)).slice(0, 8),
+    urgency: tally(leads.map((lead) => lead.urgency)),
+    won: leads.filter((lead) => lead.status === "WON").length,
+  };
+}
+
+/** Leads per day over the window, for the same chart shape as profile views. */
+export async function leadSeries(window: Window, businessId?: string) {
+  const rows = await db.businessDailyStat.findMany({
+    where: { date: { gte: startOf(window) }, ...(businessId ? { businessId } : {}) },
+    orderBy: { date: "asc" },
+    select: { date: true, leads: true },
+  });
+
+  const byDate = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.date.toISOString().slice(0, 10);
+    byDate.set(key, (byDate.get(key) ?? 0) + row.leads);
+  }
+
+  const series: { date: string; value: number }[] = [];
+  for (let index = window - 1; index >= 0; index -= 1) {
+    const date = startOf(index).toISOString().slice(0, 10);
+    series.push({ date, value: byDate.get(date) ?? 0 });
+  }
+  return series;
+}

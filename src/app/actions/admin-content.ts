@@ -12,6 +12,7 @@ import { parseJson, stringify } from "@/lib/json";
 import { rankingUrl, routes } from "@/lib/urls";
 import { DEFAULT_RADIUS_KM, fillServiceAreas } from "@/lib/geo";
 import { queueRefresh } from "@/lib/reviews";
+import { LEAD_STATUSES, notifyBusiness } from "@/lib/leads";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
@@ -1327,6 +1328,70 @@ export async function setCredentialStatus(formData: FormData) {
     summary: `${credential.label} → ${status.toLowerCase()}`,
   });
   revalidatePath("/admin/businesses");
+}
+
+/* ----------------------------------------------------------------- leads */
+
+const leadStatusSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(LEAD_STATUSES),
+});
+
+/** Moves a lead along the pipeline. Staff see everything, so nothing is masked. */
+export async function setLeadStatus(formData: FormData) {
+  const user = await requireStaff();
+  const parsed = leadStatusSchema.safeParse({
+    id: String(formData.get("id")),
+    status: String(formData.get("status")),
+  });
+  if (!parsed.success) return;
+
+  const lead = await db.lead.update({
+    where: { id: parsed.data.id },
+    data: { status: parsed.data.status },
+    select: { businessId: true, name: true },
+  });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "lead",
+    entityId: parsed.data.id,
+    summary: `${lead.name} → ${parsed.data.status.toLowerCase()}`,
+  });
+  revalidatePath("/admin/leads");
+  revalidatePath(`/admin/businesses/${lead.businessId}`);
+}
+
+/** Notes staff keep against a lead, separate from anything the owner writes. */
+export async function saveLeadNote(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const notes = String(formData.get("notes") ?? "").slice(0, 4000);
+
+  const lead = await db.lead.update({
+    where: { id },
+    data: { notes: notes || null },
+    select: { businessId: true },
+  });
+  await audit({ userId: user.id, action: "update", entityType: "lead", entityId: id, summary: "note" });
+  revalidatePath("/admin/leads");
+  revalidatePath(`/admin/businesses/${lead.businessId}`);
+}
+
+/** Sends the notification again, for a lead whose first send failed. */
+export async function resendLead(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+
+  try {
+    await notifyBusiness(id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.lead.update({ where: { id }, data: { emailError: message.slice(0, 400) } });
+  }
+
+  await audit({ userId: user.id, action: "update", entityType: "lead", entityId: id, summary: "resent" });
+  revalidatePath("/admin/leads");
 }
 
 /* ---------------------------------------------------------------- claims */

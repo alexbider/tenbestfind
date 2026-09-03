@@ -10,6 +10,7 @@ import { db } from "./db";
 export const SECRET_KEYS = {
   apify: "apify.token",
   anthropic: "anthropic.apiKey",
+  resend: "resend.apiKey",
 } as const;
 
 export type SecretKey = (typeof SECRET_KEYS)[keyof typeof SECRET_KEYS];
@@ -17,7 +18,20 @@ export type SecretKey = (typeof SECRET_KEYS)[keyof typeof SECRET_KEYS];
 export const SECRET_LABEL: Record<SecretKey, string> = {
   "apify.token": "Apify API token",
   "anthropic.apiKey": "Anthropic API key",
+  "resend.apiKey": "Resend API key",
 };
+
+// Each key can also arrive as an environment variable, which wins over whatever
+// is stored, so a container can be handed its credentials without anyone typing
+// them into a browser.
+const ENV_NAME: Record<SecretKey, string> = {
+  "apify.token": "APIFY_TOKEN",
+  "anthropic.apiKey": "ANTHROPIC_API_KEY",
+  "resend.apiKey": "RESEND_API_KEY",
+};
+
+const fromEnvironment = (key: SecretKey): string | undefined =>
+  process.env[ENV_NAME[key]]?.trim() || undefined;
 
 function encryptionKey(): Buffer {
   const source = process.env.SESSION_SECRET;
@@ -49,8 +63,8 @@ export async function putSecret(key: SecretKey, value: string): Promise<void> {
  * at the container level without anyone typing it into a browser.
  */
 export async function getSecret(key: SecretKey): Promise<string | null> {
-  const fromEnv = key === "apify.token" ? process.env.APIFY_TOKEN : process.env.ANTHROPIC_API_KEY;
-  if (fromEnv?.trim()) return fromEnv.trim();
+  const fromEnv = fromEnvironment(key);
+  if (fromEnv) return fromEnv;
 
   const row = await db.integrationSecret.findUnique({ where: { key } });
   if (!row) return null;
@@ -75,9 +89,7 @@ export async function secretStatus(): Promise<
   const byKey = new Map(rows.map((row) => [row.key, row]));
 
   return (Object.values(SECRET_KEYS) as SecretKey[]).map((key) => {
-    const fromEnv = Boolean(
-      (key === "apify.token" ? process.env.APIFY_TOKEN : process.env.ANTHROPIC_API_KEY)?.trim(),
-    );
+    const fromEnv = Boolean(fromEnvironment(key));
     const row = byKey.get(key);
     return {
       key,

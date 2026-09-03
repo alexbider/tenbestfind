@@ -232,6 +232,7 @@ model Business {
   claims        ClaimRequest[]
   events        AnalyticsEvent[]
   dailyStats    BusinessDailyStat[]
+  leads         Lead[]
   faqs          Faq[]
   importItems   ImportItem[]
 
@@ -809,6 +810,53 @@ model Submission {
 
 // ---------------------------------------------------------------- analytics
 
+/// An enquiry a reader sent to one company.
+///
+/// It is stored whatever the company's plan is, and it is emailed to the
+/// company either way. What changes with the plan is how much of it the company
+/// can read: an unpaid listing sees who got in touch and what they want, with
+/// the phone number and the address held back. Nothing is deleted or degraded
+/// by that, so the day a company subscribes its whole history opens up.
+model Lead {
+  id         String @id @default(cuid())
+  businessId String
+
+  name       String
+  email      String
+  phone      String?
+  postalCode String?
+  jobType    String? // the subservice or a short label for the work
+  message    String
+  urgency    String  @default("PLANNING") // EMERGENCY | THIS_WEEK | PLANNING
+
+  // Where it came from, for the analytics and for spotting a bad source.
+  source   String  @default("PROFILE") // PROFILE | RANKING | CITY | SEARCH
+  path     String?
+  referrer String?
+  device   String?
+  // Hashed, never the address itself. Used only to rate limit a flood.
+  ipHash   String?
+
+  status      String    @default("NEW") // NEW | VIEWED | CONTACTED | QUOTED | WON | LOST | SPAM
+  // Whether the company could read the contact details when this arrived.
+  // Recorded on the row so the history stays honest after a plan changes.
+  unlocked    Boolean   @default(false)
+  notes       String?
+  valueCents  Int?
+  ownerReadAt DateTime?
+  emailedAt   DateTime?
+  emailError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@index([status, createdAt])
+  @@index([ipHash, createdAt])
+}
+
 model AnalyticsEvent {
   id         String   @id @default(cuid())
   type       String // PAGE_VIEW | PROFILE_VIEW | WEBSITE_CLICK | PHONE_CLICK | QUOTE_CLICK | DIRECTIONS_CLICK | IMPRESSION | SEARCH | RANKING_VIEW
@@ -840,6 +888,7 @@ model BusinessDailyStat {
   phoneClicks Int      @default(0)
   quoteClicks Int      @default(0)
   directionsClicks Int @default(0)
+  leads       Int      @default(0)
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
