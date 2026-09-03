@@ -289,6 +289,7 @@ const regionSchema = z.object({
   sortOrder: z.string().optional(),
   published: z.string().optional(),
   licensing: z.string().optional(),
+  conditions: z.string().optional(),
 });
 
 export async function saveRegion(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -319,6 +320,14 @@ export async function saveRegion(_prev: ActionState, formData: FormData): Promis
       note: row.note?.trim() ?? "",
     }));
 
+  const conditions = rows(data.conditions)
+    .filter((row) => row.title?.trim())
+    .map((row) => ({
+      title: row.title.trim(),
+      body: row.body?.trim() ?? "",
+      iconKey: row.iconKey?.trim() || undefined,
+    }));
+
   const payload = {
     countryId: data.countryId,
     code: data.code,
@@ -330,6 +339,7 @@ export async function saveRegion(_prev: ActionState, formData: FormData): Promis
     sortOrder: int(data.sortOrder) ?? 0,
     published: on(data.published),
     licensing: stringify(licensing),
+    conditions: stringify(conditions),
   };
 
   const region = data.id

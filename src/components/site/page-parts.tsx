@@ -136,9 +136,25 @@ export function Chevron({ size = 15, width = 2 }: { size?: number; width?: numbe
 }
 
 /** The gold rule and small caps that open a section. */
-export function Eyebrow({ children, tone }: { children: ReactNode; tone?: "gold" }) {
+export function Eyebrow({
+  children,
+  tone,
+  heroIn,
+  gap,
+}: {
+  children: ReactNode;
+  tone?: "gold";
+  /** Stagger slot for the hero entrance animation, when the design gives it one. */
+  heroIn?: string;
+  /** Space below the eyebrow, where the design sets it on the eyebrow itself. */
+  gap?: string;
+}) {
+  const style = {
+    ...(tone === "gold" ? { color: "var(--gold-ink)" } : null),
+    ...(gap ? { marginBottom: gap } : null),
+  };
   return (
-    <p data-eyebrow="" style={tone === "gold" ? { color: "var(--gold-ink)" } : undefined}>
+    <p data-eyebrow="" data-hero-in={heroIn} style={Object.keys(style).length ? style : undefined}>
       <span data-eyebrow-rule="" aria-hidden="true" />
       {children}
     </p>

@@ -243,6 +243,11 @@ export default async function AdminTaxonomyEditor({ params }: Props) {
                   licensed: row.licensed === false ? "no" : "yes",
                   note: row.note ?? "",
                 })),
+                conditions: parseJson<Condition[]>(region?.conditions, []).map((row) => ({
+                  title: row.title,
+                  body: row.body ?? "",
+                  iconKey: row.iconKey ?? "",
+                })),
               }}
               countries={countries.map((country) => ({ id: country.id, label: country.name }))}
             />

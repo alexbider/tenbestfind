@@ -353,6 +353,7 @@ export type RegionDraft = {
   sortOrder: string;
   published: boolean;
   licensing: Record<string, string>[];
+  conditions: Record<string, string>[];
 };
 
 export function RegionEditor({
@@ -455,6 +456,27 @@ export function RegionEditor({
             { key: "note", label: "Note", type: "textarea" },
           ]}
           initial={region.licensing}
+        />
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>Statewide conditions</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          What holds across the whole state or province rather than one city: the weather it plans
+          for, the housing stock, the permit regime. Leave it empty and the section stays off the
+          page.
+        </p>
+        <RepeatableEditor
+          name="conditions"
+          summaryKey="title"
+          addLabel="Add condition"
+          emptyLabel="No statewide conditions recorded."
+          fields={[
+            { key: "title", label: "Title", width: "half" },
+            { key: "iconKey", label: "Icon key", width: "half" },
+            { key: "body", label: "What it means for a homeowner", type: "textarea" },
+          ]}
+          initial={region.conditions}
         />
       </fieldset>
 

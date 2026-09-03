@@ -50,6 +50,11 @@ model Region {
   // Trade licensing notes rendered on the region hub, as JSON:
   // [{ trade, authority, licensed, note }]
   licensing String?
+  /// What holds across the whole state or province rather than one city: the
+  /// weather it plans for, the housing stock, the permit regime. Same shape as
+  /// City.conditions, [{ title, body, iconKey }], and the section is left out
+  /// rather than filled with filler when nobody has written it.
+  conditions String?
   sortOrder Int      @default(0)
   published Boolean  @default(true)
   createdAt DateTime @default(now())
