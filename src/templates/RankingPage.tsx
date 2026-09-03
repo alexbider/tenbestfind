@@ -21,7 +21,8 @@ import {
   SponsoredDisclosure,
 } from "@/components/site/disclosures";
 import { ArrowRight, Check, Icon } from "@/components/ui/Icon";
-import { ArrowLink, Badge, JsonLd, Monogram, Section, SectionHead } from "@/components/ui/primitives";
+import { ArrowLink, Badge, JsonLd, Section, SectionHead } from "@/components/ui/primitives";
+import { BusinessLogo } from "@/components/site/BusinessLogo";
 import { fullDate, monthYear } from "@/lib/format";
 import { parseList } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -247,7 +248,7 @@ export async function RankingPage({
                 <span className="sponsored-label">Sponsored</span>
               </div>
               <div className="partner-box__body">
-                <Monogram name={placement.business.name} size={56} radius={14} />
+                <BusinessLogo name={placement.business.name} url={placement.business.logoUrl} size={56} radius={14} />
                 <div style={{ minWidth: 0 }}>
                   <h3 style={{ fontSize: 20, marginBottom: 4 }}>{placement.business.name}</h3>
                   <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
@@ -294,7 +295,7 @@ export async function RankingPage({
               <li key={entry.id} className="rank-card">
                 <div className="rank-card__hairline" aria-hidden="true" />
                 <div className="rank-card__head">
-                  <Monogram name={business.name} size={64} />
+                  <BusinessLogo name={business.name} url={business.logoUrl} size={64} />
                   <div className="rank-card__identity">
                     <h3>
                       <Link href={routes.business(business.slug)}>{business.name}</Link>

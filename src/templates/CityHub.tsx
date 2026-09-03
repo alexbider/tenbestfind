@@ -10,11 +10,11 @@ import { ChevronRight, Icon } from "@/components/ui/Icon";
 import {
   ArrowLink,
   JsonLd,
-  Monogram,
   Section,
   SectionHead,
   TrustItem,
 } from "@/components/ui/primitives";
+import { BusinessLogo } from "@/components/site/BusinessLogo";
 import { compactNumber, monthYear, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, type ConditionRow } from "@/lib/json";
@@ -313,7 +313,7 @@ export async function CityHub({
             {businesses.map((business) => (
               <li key={business.id} className="card card--lift biz-card">
                 <div className="biz-card__head">
-                  <Monogram name={business.name} size={48} radius={12} />
+                  <BusinessLogo name={business.name} url={business.logoUrl} size={48} radius={12} />
                   <div style={{ minWidth: 0 }}>
                     <h3 style={{ fontSize: 17, lineHeight: 1.3 }}>
                       <Link href={routes.business(business.slug)} style={{ color: "var(--ink)" }}>
@@ -347,7 +347,7 @@ export async function CityHub({
                 <span className="sponsored-label">Sponsored</span>
               </div>
               <div className="partner-box__body">
-                <Monogram name={partner.business.name} size={56} radius={14} />
+                <BusinessLogo name={partner.business.name} url={partner.business.logoUrl} size={56} radius={14} />
                 <div>
                   <h3 style={{ fontSize: 19, marginBottom: 4 }}>{partner.business.name}</h3>
                   <p style={{ fontSize: 14.5, color: "var(--text-secondary)", marginBottom: 12 }}>

@@ -6,7 +6,8 @@ import { SearchForm } from "@/components/site/SearchForm";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { ResultsFilter } from "@/components/site/ResultsFilter";
 import { Icon } from "@/components/ui/Icon";
-import { ArrowLink, Badge, Monogram, Section, SectionHead } from "@/components/ui/primitives";
+import { ArrowLink, Badge, Section, SectionHead } from "@/components/ui/primitives";
+import { BusinessLogo } from "@/components/site/BusinessLogo";
 import { shortMonthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
@@ -182,7 +183,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <ul style={{ display: "grid", gap: 14 }}>
                   {businesses.map((business) => (
                     <li key={business.id} className="card card--lift result-card">
-                      <Monogram name={business.name} size={56} />
+                      <BusinessLogo name={business.name} url={business.logoUrl} size={56} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                           <h4 style={{ fontSize: 18 }}>

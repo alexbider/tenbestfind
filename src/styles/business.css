@@ -522,17 +522,33 @@
 
 /* --------------------------------------------------------------- the logo */
 
-/* A company logo arrives at whatever shape and background its designer chose,
-   so it is contained on white rather than cropped or stretched to fit. */
-.biz-hero__logo {
-  width: 72px;
-  height: 72px;
+/* One tile shape for every company, so a list reads as one list rather than as
+   ten different websites. White behind it because most logos are drawn for a
+   white page and lose their edges on anything else. The image inside is
+   contained, never cropped or stretched to fit. */
+.biz-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  object-fit: contain;
+  overflow: hidden;
   background: #fff;
   border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  padding: 8px;
+}
+
+.biz-logo--initials {
+  background: var(--surface-card);
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.biz-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* ------------------------------------------------------------- photo strip */
