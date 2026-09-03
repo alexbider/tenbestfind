@@ -989,6 +989,7 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
         status: ["VERIFIED", "REPORTED", "EXPIRED"].includes(row.status) ? row.status : "REPORTED",
         checkedAt: row.status === "VERIFIED" ? new Date() : null,
         sourceUrl: row.sourceUrl?.trim() || null,
+        imageUrl: row.imageUrl?.trim() || null,
         sortOrder: index,
       },
     });

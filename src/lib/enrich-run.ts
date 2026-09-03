@@ -67,7 +67,10 @@ export async function advanceEnrichment(runId: string): Promise<EnrichAdvance> {
       where: { id: runId },
       data: { status: "DONE", finishedAt: new Date() },
     });
-    return { changed: true, note: `done: ${run.fieldsFilled} fields, ${run.staffFound} people` };
+    return {
+      changed: true,
+      note: `done: ${run.fieldsFilled} fields, ${run.photosAdded} photos, ${run.staffFound} people across ${run.processed} companies`,
+    };
   }
 
   if (run.status === "QUEUED") {
@@ -134,7 +137,10 @@ export async function advanceEnrichment(runId: string): Promise<EnrichAdvance> {
     },
   });
 
-  return { changed: true, note: `${slice.length} read, ${fields} fields filled` };
+  return {
+    changed: true,
+    note: `${slice.length} read, ${fields} fields, ${photos} photos, ${staff} people`,
+  };
 }
 
 /**
@@ -154,7 +160,7 @@ export async function enrichBusiness(
       city: { select: { name: true } },
       photos: { select: { url: true } },
       staff: { select: { name: true } },
-      credentials: { select: { identifier: true } },
+      credentials: { select: { identifier: true, label: true } },
       services: { select: { subserviceId: true } },
     },
   });
@@ -211,10 +217,17 @@ export async function enrichBusiness(
     Object.keys(site.social).length > 0 ? stringify(site.social) : null,
     business.socialLinks,
   );
+  fill(
+    "paymentMethods",
+    extraction?.paymentMethods.length ? stringify(extraction.paymentMethods) : null,
+    business.paymentMethods,
+  );
+  fill("awards", extraction?.awards.length ? stringify(extraction.awards) : null, business.awards);
+  fill("brands", extraction?.brands.length ? stringify(extraction.brands) : null, business.brands);
 
   // The three service flags are false by default rather than null, so "already
   // set" cannot be told from "never asked". They are only ever turned on.
-  for (const flag of ["emergency", "financing", "freeEstimates"] as const) {
+  for (const flag of ["emergency", "financing", "freeEstimates", "insured"] as const) {
     if (extraction?.[flag] === true && business[flag] === false) {
       data[flag] = true;
       filled.push(flag);
@@ -229,14 +242,17 @@ export async function enrichBusiness(
 
   // ----------------------------------------------------------------- photos
   const have = new Set(business.photos.map((photo) => photo.url));
-  const room = Math.max(0, 8 - business.photos.length);
-  const newPhotos = site.images.filter((url) => !have.has(url)).slice(0, room);
+  const room = Math.max(0, 10 - business.photos.length);
+  const newPhotos = site.images.filter((image) => !have.has(image.url)).slice(0, room);
   if (newPhotos.length > 0) {
     await db.businessPhoto.createMany({
-      data: newPhotos.map((url, index) => ({
+      data: newPhotos.map((image, index) => ({
         businessId,
-        url,
-        alt: `${business.name}${business.city ? ` in ${business.city.name}` : ""}`,
+        url: image.url,
+        // The site's own caption describes what is in the picture. Falling back
+        // to the company name is honest but tells a screen reader nothing, so it
+        // is only used when the site gave no alt text at all.
+        alt: image.alt ?? `${business.name}${business.city ? ` in ${business.city.name}` : ""}`,
         sortOrder: business.photos.length + index,
       })),
     });
@@ -265,25 +281,69 @@ export async function enrichBusiness(
   }
 
   // ------------------------------------------------------------ credentials
-  // A licence number the site prints, recorded as reported rather than
-  // verified, and only when we do not already hold it.
-  if (extraction?.licenseNumbers.length) {
-    const held = new Set(
-      business.credentials.map((row) => (row.identifier ?? "").toUpperCase()).filter(Boolean),
+  // Licence numbers and named certifications, both recorded as reported rather
+  // than verified: the site printing it is a claim, not a register check.
+  const heldIds = new Set(
+    business.credentials.map((row) => (row.identifier ?? "").toUpperCase()).filter(Boolean),
+  );
+  const heldLabels = new Set(business.credentials.map((row) => normalizeName(row.label)));
+
+  const newCredentials: {
+    businessId: string;
+    label: string;
+    identifier?: string;
+    imageUrl?: string;
+    status: string;
+    sourceUrl: string | null;
+    sortOrder: number;
+  }[] = [];
+
+  // Both sources: the model reads them in context, the parser catches the ones
+  // printed in a footer the model never sees because the page was too long.
+  const licenceNumbers = [
+    ...new Set([...(extraction?.licenseNumbers ?? []), ...site.licenseNumbers]),
+  ];
+
+  for (const identifier of licenceNumbers) {
+    if (heldIds.has(identifier.toUpperCase())) continue;
+    heldIds.add(identifier.toUpperCase());
+    newCredentials.push({
+      businessId,
+      label: `${business.category.serviceName} licence`,
+      identifier,
+      status: "REPORTED",
+      sourceUrl: business.website,
+      sortOrder: business.credentials.length + newCredentials.length,
+    });
+  }
+
+  // A badge image whose alt text matches the certification is attached to it,
+  // so the mark and the words arrive as one thing rather than two.
+  for (const certification of extraction?.certifications ?? []) {
+    const key = normalizeName(certification);
+    if (heldLabels.has(key)) continue;
+    heldLabels.add(key);
+
+    const badge = site.badges.find((row) => {
+      const label = normalizeName(row.label);
+      return label.length > 2 && (label.includes(key) || key.includes(label));
+    });
+
+    newCredentials.push({
+      businessId,
+      label: certification,
+      imageUrl: badge?.url,
+      status: "REPORTED",
+      sourceUrl: business.website,
+      sortOrder: business.credentials.length + newCredentials.length,
+    });
+  }
+
+  if (newCredentials.length > 0) {
+    await db.credential.createMany({ data: newCredentials });
+    filled.push(
+      `${newCredentials.length} credential${newCredentials.length === 1 ? "" : "s"}`,
     );
-    const missing = extraction.licenseNumbers.filter((number) => !held.has(number.toUpperCase()));
-    if (missing.length > 0) {
-      await db.credential.createMany({
-        data: missing.map((identifier) => ({
-          businessId,
-          label: `${business.category.serviceName} licence`,
-          identifier,
-          status: "REPORTED",
-          sourceUrl: business.website,
-        })),
-      });
-      filled.push(`${missing.length} credential${missing.length === 1 ? "" : "s"}`);
-    }
   }
 
   // --------------------------------------------------------------- services

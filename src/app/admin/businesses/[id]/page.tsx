@@ -226,6 +226,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                   authority: credential.authority ?? "",
                   status: credential.status,
                   sourceUrl: credential.sourceUrl ?? "",
+                  imageUrl: credential.imageUrl ?? "",
                 })),
                 photos: business.photos.map((photo) => ({
                   url: photo.url,

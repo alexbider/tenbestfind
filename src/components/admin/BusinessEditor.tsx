@@ -389,6 +389,7 @@ export function BusinessEditor({
               ],
             },
             { key: "sourceUrl", label: "Source URL", width: "half" },
+            { key: "imageUrl", label: "Certification mark", type: "media" },
           ]}
           initial={business.credentials}
         />

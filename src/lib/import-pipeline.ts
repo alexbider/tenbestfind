@@ -654,8 +654,17 @@ async function createBusiness(
 
   // Photos from Google first, because they are of the work rather than of the
   // brand, then whatever the company publishes on its own site.
-  const photos = [...new Set([...(place.imageUrls ?? []), ...(site?.images ?? [])])].slice(0, 8);
-  const image = photos[0] ?? null;
+  // Google's photos first, because they are of the work rather than of the
+  // brand, then whatever the company publishes on its own site.
+  const photos = [
+    ...(place.imageUrls ?? []).map((url) => ({ url, alt: null as string | null })),
+    ...(site?.images ?? []),
+  ]
+    .filter(
+      (photo, index, all) => all.findIndex((other) => other.url === photo.url) === index,
+    )
+    .slice(0, 10);
+  const image = photos[0]?.url ?? null;
 
   const yearFounded = site?.yearFounded ?? null;
   const licenseNumber = site?.licenseNumbers[0] ?? null;
@@ -705,10 +714,10 @@ async function createBusiness(
   // Photos, matched to the subservices the writer named, then the FAQ block.
   if (photos.length > 0) {
     await db.businessPhoto.createMany({
-      data: photos.map((url, index) => ({
+      data: photos.map((photo, index) => ({
         businessId: business.id,
-        url,
-        alt: `${item.name} in ${place.city ?? ""}`.trim(),
+        url: photo.url,
+        alt: photo.alt ?? `${item.name} in ${place.city ?? ""}`.trim(),
         sortOrder: index,
       })),
     });

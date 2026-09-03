@@ -182,6 +182,11 @@ model Business {
   emergency      Boolean @default(false)
   financing      Boolean @default(false)
   freeEstimates  Boolean @default(false)
+  insured        Boolean @default(false)
+  // JSON arrays of strings, read off the company's own site.
+  paymentMethods String?
+  awards         String?
+  brands         String? // manufacturers they install or are certified for
 
   // Google Business Profile identity, written by the importer. placeId is the
   // stable key: a business that moves or renames keeps it, so it is what the
@@ -272,6 +277,9 @@ model Credential {
   status     String    @default("REPORTED") // VERIFIED | REPORTED | EXPIRED
   checkedAt  DateTime?
   sourceUrl  String?
+  // The certification mark itself, when the company publishes one. A reader
+  // recognises the GAF or BBB badge faster than they read the words.
+  imageUrl   String?
   sortOrder  Int       @default(0)
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)

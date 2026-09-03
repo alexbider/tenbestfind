@@ -519,3 +519,103 @@
   font-size: 12.5px;
   color: var(--text-secondary);
 }
+
+/* --------------------------------------------------------------- the logo */
+
+/* A company logo arrives at whatever shape and background its designer chose,
+   so it is contained on white rather than cropped or stretched to fit. */
+.biz-hero__logo {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 8px;
+}
+
+/* ------------------------------------------------------------- photo strip */
+
+.photo-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The first picture earns twice the room once there are enough to justify it. */
+.photo-strip[data-count="3"] .photo-strip__item:first-child,
+.photo-strip[data-count="4"] .photo-strip__item:first-child,
+.photo-strip[data-count="5"] .photo-strip__item:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.photo-strip__item {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+  aspect-ratio: 4 / 3;
+}
+
+.photo-strip__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 400ms var(--ease-out);
+}
+
+.photo-strip__item:hover img {
+  transform: scale(1.03);
+}
+
+@media (max-width: 700px) {
+  .photo-strip[data-count] .photo-strip__item:first-child {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+/* ------------------------------------------------------------ social links */
+
+.social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.social-row a {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: capitalize;
+}
+
+.social-row a:hover {
+  border-color: var(--color-primary);
+}
+
+/* --------------------------------------------------------- credential mark */
+
+.cred-badge {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+  flex-shrink: 0;
+}

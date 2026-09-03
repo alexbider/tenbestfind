@@ -24,11 +24,12 @@ import {
   ArrowLink,
   Badge,
   JsonLd,
-  Monogram,
   Section,
   SectionHead,
   StatusPill,
 } from "@/components/ui/primitives";
+import { BusinessLogo } from "@/components/site/BusinessLogo";
+import { PhotoStrip } from "@/components/site/PhotoStrip";
 import { QuoteDialog } from "@/components/site/QuoteDialog";
 import { ReadMore } from "@/components/site/ReadMore";
 import { ReviewList } from "@/components/site/ReviewList";
@@ -101,6 +102,13 @@ export default async function BusinessProfilePage({ params }: Props) {
   const hours = parseJson<HoursRow[]>(business.hours, []);
   const distribution = parseJson<Record<string, number>>(business.googleDistribution, {});
   const topEntry = business.entries[0];
+
+  // Profiles the company links to from its own site. Ordered so the ones people
+  // actually check come first.
+  const socialOrder = ["facebook", "instagram", "youtube", "linkedin", "x", "tiktok", "yelp", "bbb"];
+  const socials = Object.entries(parseJson<Record<string, string>>(business.socialLinks, {}))
+    .filter(([, url]) => typeof url === "string" && url.startsWith("http"))
+    .sort((a, b) => socialOrder.indexOf(a[0]) - socialOrder.indexOf(b[0]));
 
   // Five reviews with something written in them. A bare star tells a reader
   // nothing, and the count beside the rating already covers those.
@@ -196,7 +204,9 @@ export default async function BusinessProfilePage({ params }: Props) {
           email: business.email ?? undefined,
           image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
           logo: business.logoUrl ?? undefined,
-          sameAs: business.website ? [business.website] : undefined,
+          sameAs: [business.website, ...socials.map(([, url]) => url)].filter(Boolean).length
+            ? [business.website, ...socials.map(([, url]) => url)].filter(Boolean)
+            : undefined,
           foundingDate: business.yearFounded ? String(business.yearFounded) : undefined,
           address:
             business.addressLine || business.city
@@ -311,7 +321,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         >
           <div>
             <div style={{ display: "flex", gap: 18, alignItems: "flex-start", marginBottom: 20 }}>
-              <Monogram name={business.name} size={72} radius={18} />
+              <BusinessLogo name={business.name} url={business.logoUrl} size={72} />
               <div style={{ minWidth: 0 }}>
                 <p className="eyebrow" style={{ marginBottom: 8 }}>
                   {business.category.serviceName}
@@ -482,6 +492,18 @@ export default async function BusinessProfilePage({ params }: Props) {
                 </ul>
               </details>
             ) : null}
+
+            {socials.length > 0 ? (
+              <ul className="social-row">
+                {socials.map(([name, url]) => (
+                  <li key={name}>
+                    <a href={url} target="_blank" rel="noreferrer nofollow">
+                      {name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </aside>
         </div>
       </section>
@@ -503,6 +525,10 @@ export default async function BusinessProfilePage({ params }: Props) {
             { icon: "card" as const, label: "Financing", value: business.financing ? "Available" : null },
             { icon: "shield" as const, label: "Warranty", value: business.warrantyTerms },
             { icon: "badge" as const, label: "Credentials verified", value: String(business.credentials.filter((c) => c.status === "VERIFIED").length) },
+            { icon: "shield" as const, label: "Insured", value: business.insured ? "Says so" : null },
+            { icon: "card" as const, label: "Payment", value: parseList(business.paymentMethods).slice(0, 4).join(", ") || null },
+            { icon: "tools" as const, label: "Brands", value: parseList(business.brands).slice(0, 4).join(", ") || null },
+            { icon: "trophy" as const, label: "Awards", value: parseList(business.awards)[0] ?? null },
           ]
             .filter((item) => item.value)
             .map((item) => (
@@ -714,7 +740,29 @@ export default async function BusinessProfilePage({ params }: Props) {
         </div>
       </Section>
 
-      {/* -------------------------------------------------------- credentials */}
+      {/* ---------------------------------------------------------- pictures */}
+      {business.photos.length > 0 ? (
+        <Section tone="page" labelledBy="pics-h2">
+          <div style={{ maxWidth: 640, marginBottom: 28 }}>
+            <h2 id="pics-h2" className="h2">
+              Their work
+            </h2>
+            <p className="lead" style={{ marginTop: 14 }}>
+              Photographs published by {business.name} on its own website or its Google profile. We
+              have not visited these jobs, so treat them as the company&apos;s own portfolio.
+            </p>
+          </div>
+          <PhotoStrip
+            photos={business.photos.map((photo) => ({
+              id: photo.id,
+              url: photo.url,
+              alt: photo.alt,
+            }))}
+            name={business.name}
+          />
+        </Section>
+      ) : null}
+
       {/* ---------------------------------------------------------- the team */}
       {business.staff.length > 0 ? (
         <Section tone="page" labelledBy="team-h2">
@@ -732,6 +780,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         </Section>
       ) : null}
 
+      {/* -------------------------------------------------------- credentials */}
       {business.credentials.length > 0 ? (
         <Section tone="page" labelledBy="rep-h2">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 32 }}>
@@ -749,19 +798,26 @@ export default async function BusinessProfilePage({ params }: Props) {
           <ul className="credential-list">
             {business.credentials.map((credential) => (
               <li key={credential.id}>
-                <span className="credential-list__icon" aria-hidden="true">
-                  <Icon
-                    name={credential.status === "VERIFIED" ? "badge" : credential.status === "EXPIRED" ? "alert" : "doc"}
-                    size={20}
-                    color={
-                      credential.status === "VERIFIED"
-                        ? "var(--green-600)"
-                        : credential.status === "EXPIRED"
-                          ? "var(--maple-600)"
-                          : "var(--gray-400)"
-                    }
-                  />
-                </span>
+                {/* The certification's own mark when the company publishes
+                    one, since that is what a reader recognises. */}
+                {credential.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="cred-badge" src={credential.imageUrl} alt="" loading="lazy" />
+                ) : (
+                  <span className="credential-list__icon" aria-hidden="true">
+                    <Icon
+                      name={credential.status === "VERIFIED" ? "badge" : credential.status === "EXPIRED" ? "alert" : "doc"}
+                      size={20}
+                      color={
+                        credential.status === "VERIFIED"
+                          ? "var(--green-600)"
+                          : credential.status === "EXPIRED"
+                            ? "var(--maple-600)"
+                            : "var(--gray-400)"
+                      }
+                    />
+                  </span>
+                )}
                 <span>
                   <strong>{credential.label}</strong>
                   <span>
