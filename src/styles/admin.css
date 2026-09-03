@@ -1047,3 +1047,51 @@
   font-size: 19px;
   letter-spacing: normal;
 }
+
+/* --------------------------------------- profile strength, owner portal */
+
+.strength-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+
+.strength-bar h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.strength-bar p {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.strength-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+}
+
+.strength-ring > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  font-size: 14px;
+  font-weight: 700;
+}

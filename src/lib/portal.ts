@@ -13,6 +13,7 @@ export type PortalBusiness = {
   name: string;
   slug: string;
   status: string;
+  completeness: number;
 };
 
 export async function resolvePortalBusiness(

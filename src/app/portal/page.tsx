@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { AdminHeader, EmptyState, Panel, StatRow, TrendChart } from "@/components/admin/shell";
+import { AdminHeader, EmptyState, Panel, QueueList, StackedChart, StatRow } from "@/components/admin/shell";
 import { StatusPill } from "@/components/ui/primitives";
 import { fullDate, percentChange } from "@/lib/format";
 import { requireOwner } from "@/lib/auth";
-import { dailySeries, previousTotals, totalsFor } from "@/lib/analytics";
+import { dailyActionSeries, previousTotals, totalsFor } from "@/lib/analytics";
 import { leadAccessFor } from "@/lib/entitlements";
 import { URGENCY_LABEL } from "@/lib/leads";
 import { planFor, resolvePortalBusiness } from "@/lib/portal";
@@ -38,19 +38,40 @@ export default async function PortalOverview({ searchParams }: Props) {
     );
   }
 
-  const [totals, previous, series, access, plan, leads, newLeads, leadTotal] = await Promise.all([
+  const [totals, previous, series, access, plan, leads, newLeads, leadTotal, entries, photoCount] = await Promise.all([
     totalsFor(30, business.id),
     previousTotals(30, business.id),
-    dailySeries(30, business.id),
+    dailyActionSeries(14, business.id),
     leadAccessFor(business.id),
     planFor(business.id),
     db.lead.findMany({ where: { businessId: business.id }, orderBy: { createdAt: "desc" }, take: 5 }),
     db.lead.count({ where: { businessId: business.id, status: "NEW" } }),
     db.lead.count({ where: { businessId: business.id } }),
+    db.rankingEntry.findMany({
+      where: { businessId: business.id, ranking: { status: "PUBLISHED" } },
+      orderBy: { position: "asc" },
+      take: 4,
+      include: {
+        ranking: {
+          select: {
+            title: true,
+            slug: true,
+            lastReviewedAt: true,
+            publishedAt: true,
+            category: { select: { slug: true } },
+            city: { select: { name: true, slug: true, region: { select: { slug: true, country: { select: { code: true } } } } } },
+          },
+        },
+      },
+    }),
+    db.businessPhoto.count({ where: { businessId: business.id } }),
   ]);
 
   const contactActions = totals.phoneClicks + totals.websiteClicks + totals.quoteClicks;
   const previousContacts = previous.phoneClicks + previous.websiteClicks + previous.quoteClicks;
+  const topEntry = entries[0];
+  const strengthColor =
+    business.completeness >= 90 ? "#178054" : business.completeness >= 60 ? "#8A5F0B" : "#C32620";
 
   return (
     <>
@@ -80,7 +101,47 @@ export default async function PortalOverview({ searchParams }: Props) {
         </div>
       )}
 
+      <section className="strength-bar">
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <h2>
+            {business.completeness >= 90
+              ? "Your profile is complete"
+              : business.completeness >= 60
+                ? "Your profile is nearly there"
+                : "Your profile needs filling in"}
+          </h2>
+          <p>
+            {topEntry
+              ? `Ranked #${topEntry.position} on ${topEntry.ranking.title}. `
+              : ""}
+            {business.completeness >= 90
+              ? "Everything a customer needs to call you is published and current."
+              : "A fuller profile answers more of what a customer asks before they call."}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span
+            aria-hidden="true"
+            className="strength-ring"
+            style={{
+              background: `conic-gradient(${strengthColor} 0 ${business.completeness}%, var(--border-subtle) ${business.completeness}% 100%)`,
+            }}
+          >
+            <span style={{ color: strengthColor }}>{business.completeness}%</span>
+          </span>
+          <span style={{ display: "block" }}>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>
+              Profile strength
+            </span>
+            <Link href="/portal/profile" style={{ fontSize: 12.5, fontWeight: 600 }}>
+              {photoCount < 3 ? `Add ${3 - photoCount} more photo${3 - photoCount === 1 ? "" : "s"} →` : "Review your details →"}
+            </Link>
+          </span>
+        </div>
+      </section>
+
       <StatRow
+        compact
         stats={[
           {
             label: "Profile views",
@@ -96,16 +157,120 @@ export default async function PortalOverview({ searchParams }: Props) {
             label: "Contact actions",
             value: contactActions,
             delta: previousContacts ? percentChange(contactActions, previousContacts) : undefined,
-            hint: "Calls, website clicks and quote requests",
           },
           { label: "Enquiries", value: leadTotal, hint: `${newLeads} not yet handled` },
+          { label: "Rankings you are on", value: entries.length, hint: "Published lists" },
         ]}
       />
 
       <div className="panel-grid panel-grid--wide">
-        <Panel title="Profile views, last 30 days">
-          <TrendChart series={series} />
+        <Panel title="How customers found and contacted you" description="Last 14 days.">
+          <StackedChart
+            series={series}
+            topLabel="Profile views"
+            bottomLabel="Calls, clicks and quote requests"
+          />
         </Panel>
+
+        <Panel title="To do">
+          <QueueList
+            items={[
+              {
+                title: "Enquiries to answer",
+                sub: "Nobody has replied yet",
+                count: newLeads,
+                href: "/portal/leads?status=NEW",
+                icon: "mail",
+                tone: "amber",
+              },
+              {
+                title: "Photos on your profile",
+                sub: "Three or more reads as a real company",
+                count: photoCount,
+                href: "/portal/profile",
+                icon: "image",
+                tone: "blue",
+              },
+              {
+                title: "Rankings you appear on",
+                sub: "Published top ten lists",
+                count: entries.length,
+                href: "/portal/analytics",
+                icon: "trophy",
+                tone: "green",
+              },
+            ]}
+          />
+        </Panel>
+      </div>
+
+      <div className="panel-grid panel-grid--wide">
+        {entries.length > 0 ? (
+          <Panel title="Where you rank">
+            <ul style={{ display: "grid", gap: 11 }}>
+              {entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "11px 12px",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: 11,
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 34,
+                      height: 34,
+                      flexShrink: 0,
+                      borderRadius: 9,
+                      background: entry.position <= 3 ? "var(--amber-50)" : "var(--surface-page)",
+                      color: entry.position <= 3 ? "#8A5F0B" : "var(--text-secondary)",
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    #{entry.position}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                      {entry.ranking.city ? (
+                        <Link
+                          href={routes.ranking(
+                            entry.ranking.city.region.country.code,
+                            entry.ranking.city.region.slug,
+                            entry.ranking.city.slug,
+                            entry.ranking.category.slug,
+                          )}
+                        >
+                          {entry.ranking.title}
+                        </Link>
+                      ) : (
+                        entry.ranking.title
+                      )}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11.5, color: "var(--text-muted)" }}>
+                      Reviewed {fullDate(entry.ranking.lastReviewedAt ?? entry.ranking.publishedAt)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        ) : (
+          <Panel title="Where you rank">
+            <EmptyState
+              title="Not on a published list yet"
+              body="Rankings are editorial. When your market and trade are researched, any position you earn shows here."
+            />
+          </Panel>
+        )}
 
         <Panel title="Your plan">
           {plan ? (

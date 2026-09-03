@@ -90,13 +90,13 @@ export async function ownedBusinesses(user: SessionUser) {
     return db.business.findMany({
       where: { claimed: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true, status: true },
+      select: { id: true, name: true, slug: true, status: true, completeness: true },
     });
   }
   return db.business.findMany({
     where: { ownerId: user.id },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, slug: true, status: true },
+    select: { id: true, name: true, slug: true, status: true, completeness: true },
   });
 }
 
