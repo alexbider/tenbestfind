@@ -332,6 +332,7 @@ export async function saveGuide(_prev: ActionState, formData: FormData): Promise
         highPrice: int(row.high),
         typical: int(row.typical),
         unit: ["project", "sq_ft", "hour", "visit"].includes(row.unit) ? row.unit : "project",
+        group: row.group?.trim() || null,
         note: row.note?.trim() || null,
         sortOrder: index,
       },

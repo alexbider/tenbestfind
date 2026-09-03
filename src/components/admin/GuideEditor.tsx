@@ -228,6 +228,12 @@ export function GuideEditor({
           fields={[
             { key: "label", label: "Work", placeholder: "2,000 sq ft architectural shingle roof" },
             {
+              key: "group",
+              label: "Table",
+              width: "half",
+              placeholder: "By roof size",
+            },
+            {
               key: "unit",
               label: "Unit",
               type: "select",

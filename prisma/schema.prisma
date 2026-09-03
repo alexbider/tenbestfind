@@ -459,6 +459,9 @@ model CostRow {
   typical   Int?
   unit      String  @default("project") // project | sq_ft | hour | visit
   currency  String  @default("USD")
+  /// Which table this row belongs to on a cost guide, e.g. "By roof size" or
+  /// "By material". Rows without one render in a single unlabelled table.
+  group     String?
   note      String?
   sourceId  String?
   sortOrder Int     @default(0)

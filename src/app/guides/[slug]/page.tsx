@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { GuideBlock } from "../../../../prisma/data/editorial";
 import { GuideBody } from "@/components/site/blocks";
+import { CostEstimator, CostSummary, CostTables, priceModal } from "@/components/site/CostGuide";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { SiteChrome } from "@/components/site/SiteChrome";
@@ -149,10 +150,12 @@ export default async function GuidePage({ params }: Props) {
   // The contents rail: the design's own section anchors, plus every heading the
   // editor wrote, in the order they appear on the page.
   const toc = [
-    guide.shortAnswer ? { name: "The short answer", href: "#short-answer" } : null,
+    !isCost && guide.shortAnswer ? { name: "The short answer", href: "#short-answer" } : null,
     takeaways.length > 0 ? { name: "Key takeaways", href: "#takeaways" } : null,
     ...headings.map((heading) => ({ name: heading.text, href: `#${heading.id}` })),
-    guide.costs.length > 0 ? { name: "What it costs", href: "#cost" } : null,
+    isCost && guide.costs.length > 0 ? { name: "Cost at a glance", href: "#summary" } : null,
+    isCost && guide.unitLow && guide.unitHigh ? { name: "Estimate your cost", href: "#calculator" } : null,
+    !isCost && guide.costs.length > 0 ? { name: "What it costs", href: "#cost" } : null,
     faqs.length > 0 ? { name: "Frequently asked questions", href: "#faqs" } : null,
     guide.bottomLine ? { name: "Bottom line", href: "#bottom-line" } : null,
     guide.sources.length > 0 ? { name: "Sources and references", href: "#sources" } : null,
@@ -352,7 +355,7 @@ export default async function GuidePage({ params }: Props) {
               </details>
             ) : null}
 
-            {guide.shortAnswer ? (
+            {!isCost && guide.shortAnswer ? (
               <section
                 id="short-answer"
                 aria-labelledby="sa-h2"
@@ -425,9 +428,27 @@ export default async function GuidePage({ params }: Props) {
               </section>
             ) : null}
 
+            {isCost ? (
+              <section id="summary" aria-labelledby="sum-h2" style={{ ...GRID_BACKDROP, borderRadius: "20px", padding: "26px 24px 24px" }}>
+                <TenOutline style={{ right: "-30px", top: "-40px" }} />
+                <CostSummary guide={guide} title={guide.title} intro={guide.shortAnswer} />
+              </section>
+            ) : null}
+
+            {isCost && guide.costs.length > 0 ? <CostTables rows={guide.costs} anchorPrefix="cost" /> : null}
+
+            {isCost && guide.unitLow && guide.unitHigh ? (
+              <CostEstimator
+                title={guide.title}
+                unitLow={guide.unitLow}
+                unitHigh={guide.unitHigh}
+                unitLabel={guide.unitLabel ?? "units"}
+              />
+            ) : null}
+
             <GuideBody blocks={blocks} />
 
-            {guide.costs.length > 0 ? (
+            {!isCost && guide.costs.length > 0 ? (
               <section id="cost" aria-labelledby="cost-h2">
                 <h2 id="cost-h2" style={{ fontSize: "28px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
                   What {service.toLowerCase()} costs
@@ -486,19 +507,7 @@ export default async function GuidePage({ params }: Props) {
                   </table>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
-                  <InfoModal
-                    label="About these prices"
-                    title="About these prices"
-                    points={[
-                      "Figures are market ranges compiled from published contractor pricing and regional cost data",
-                      "Actual pricing depends on scope, materials, labour, permits and property condition",
-                      "Nothing here is an estimate or an offer from any company",
-                      "Ask for written estimates on identical scope before deciding",
-                    ]}
-                    link={{ href: routes.howWeRank(), label: "How we research costs" }}
-                  >
-                    These are figures for budgeting, not quotes.
-                  </InfoModal>
+                  {priceModal()}
                   <Link href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
                     View all cost guides →
                   </Link>

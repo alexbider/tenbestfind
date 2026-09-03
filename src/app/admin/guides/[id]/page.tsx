@@ -126,6 +126,7 @@ export default async function AdminGuideDetail({ params }: Props) {
               costs:
                 guide?.costs.map((row) => ({
                   label: row.label,
+                  group: row.group ?? "",
                   unit: row.unit,
                   low: row.lowPrice?.toString() ?? "",
                   high: row.highPrice?.toString() ?? "",
