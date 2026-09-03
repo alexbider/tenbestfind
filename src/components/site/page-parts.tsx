@@ -204,9 +204,9 @@ export const GRID_BACKDROP = {
 };
 
 /** Breadcrumbs, in the design's own shape. */
-export function Crumbs({ items }: { items: { label: string; href?: string }[] }) {
+export function Crumbs({ items, flush }: { items: { label: string; href?: string }[]; flush?: boolean }) {
   return (
-    <nav aria-label="Breadcrumb" style={{ marginBottom: "26px" }}>
+    <nav aria-label="Breadcrumb" style={{ marginBottom: flush ? undefined : "26px" }}>
       <ol
         style={{
           display: "flex",
