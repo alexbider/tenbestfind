@@ -20,6 +20,7 @@ export type GuideDraft = {
   reviewerId: string;
   excerpt: string;
   shortAnswer: string;
+  bottomLine: string;
   heroImage: string;
   readingMinutes: string;
   typicalLow: string;
@@ -144,6 +145,14 @@ export function GuideEditor({
         <textarea id="guide-answer" name="shortAnswer" rows={4} defaultValue={guide.shortAnswer} />
         <span className="field__hint">
           Answer the question in the title before anything else. This is what gets quoted.
+        </span>
+      </div>
+
+      <div className="field">
+        <label htmlFor="guide-bottom">The bottom line</label>
+        <textarea id="guide-bottom" name="bottomLine" rows={3} defaultValue={guide.bottomLine} />
+        <span className="field__hint">
+          What to do with everything above. Leave it empty and the closing panel stays off the page.
         </span>
       </div>
 

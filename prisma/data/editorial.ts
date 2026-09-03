@@ -374,7 +374,15 @@ export type GuideBlock =
   | { kind: "list"; items: string[] }
   | { kind: "steps"; items: { title: string; body: string }[] }
   | { kind: "callout"; tone: "note" | "alert" | "brand"; title: string; body: string }
-  | { kind: "quote"; text: string; attribution: string };
+  | { kind: "quote"; text: string; attribution: string }
+  // What to look for: a titled point with a short explanation, one per thing.
+  | { kind: "criteria"; items: { title: string; body: string; iconKey?: string }[] }
+  // A tick-box list the reader can work through before hiring.
+  | { kind: "checklist"; title: string; items: string[] }
+  // Factor / what to check / why it matters, for comparing two quotes.
+  | { kind: "compare"; title: string; intro?: string; rows: { factor: string; check: string; why: string }[] }
+  // The things that should end a conversation.
+  | { kind: "flags"; title: string; items: string[] };
 
 export const GUIDES: SeedGuide[] = [
   {

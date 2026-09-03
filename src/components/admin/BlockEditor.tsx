@@ -12,6 +12,10 @@ const KINDS: { value: GuideBlock["kind"]; label: string; hint: string }[] = [
   { value: "steps", label: "Numbered steps", hint: "Title and body per step" },
   { value: "callout", label: "Callout", hint: "Note, alert or brand-tinted box" },
   { value: "quote", label: "Pull quote", hint: "Attributed quote" },
+  { value: "criteria", label: "What to look for", hint: "A titled point and a short explanation, one per thing" },
+  { value: "checklist", label: "Checklist", hint: "Tick boxes the reader works through before hiring" },
+  { value: "compare", label: "Comparison table", hint: "Factor, what to check, why it matters" },
+  { value: "flags", label: "Red flags", hint: "The things that should end a conversation" },
 ];
 
 function emptyBlock(kind: GuideBlock["kind"]): GuideBlock {
@@ -26,6 +30,14 @@ function emptyBlock(kind: GuideBlock["kind"]): GuideBlock {
       return { kind: "callout", tone: "note", title: "", body: "" };
     case "quote":
       return { kind: "quote", text: "", attribution: "" };
+    case "criteria":
+      return { kind: "criteria", items: [{ title: "", body: "", iconKey: "" }] };
+    case "checklist":
+      return { kind: "checklist", title: "Checklist", items: [""] };
+    case "compare":
+      return { kind: "compare", title: "What to compare", rows: [{ factor: "", check: "", why: "" }] };
+    case "flags":
+      return { kind: "flags", title: "Red flags", items: [""] };
     default:
       return { kind: "paragraph", text: "" };
   }
@@ -44,6 +56,13 @@ function summarize(block: GuideBlock): string {
       return block.title;
     case "quote":
       return block.text;
+    case "criteria":
+      return block.items.map((item) => item.title).filter(Boolean).join(" · ");
+    case "checklist":
+    case "flags":
+      return block.items.filter(Boolean).join(" · ");
+    case "compare":
+      return block.rows.map((row) => row.factor).filter(Boolean).join(" · ");
     default:
       return "";
   }
@@ -268,6 +287,199 @@ export function BlockEditor({
                       value={block.body}
                       onChange={(event) => update(index, { ...block, body: event.target.value })}
                     />
+                  </div>
+                </>
+              ) : null}
+
+              {block.kind === "criteria" ? (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {block.items.map((item, itemIndex) => (
+                    <div key={itemIndex} style={{ display: "grid", gap: 8 }}>
+                      <div className="field-row" style={{ alignItems: "start", marginBottom: 0 }}>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label>Point {itemIndex + 1} title</label>
+                          <input
+                            type="text"
+                            value={item.title}
+                            onChange={(event) =>
+                              update(index, {
+                                ...block,
+                                items: block.items.map((row, i) =>
+                                  i === itemIndex ? { ...row, title: event.target.value } : row,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label>Icon key</label>
+                          <input
+                            type="text"
+                            value={item.iconKey ?? ""}
+                            onChange={(event) =>
+                              update(index, {
+                                ...block,
+                                items: block.items.map((row, i) =>
+                                  i === itemIndex ? { ...row, iconKey: event.target.value } : row,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="field" style={{ marginBottom: 0 }}>
+                        <label>What it means</label>
+                        <textarea
+                          rows={2}
+                          value={item.body}
+                          onChange={(event) =>
+                            update(index, {
+                              ...block,
+                              items: block.items.map((row, i) =>
+                                i === itemIndex ? { ...row, body: event.target.value } : row,
+                              ),
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() =>
+                        update(index, { ...block, items: [...block.items, { title: "", body: "", iconKey: "" }] })
+                      }
+                    >
+                      Add point
+                    </button>
+                    {block.items.length > 1 ? (
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() => update(index, { ...block, items: block.items.slice(0, -1) })}
+                      >
+                        Remove last
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {block.kind === "checklist" || block.kind === "flags" ? (
+                <>
+                  <div className="field">
+                    <label>Title</label>
+                    <input
+                      type="text"
+                      value={block.title}
+                      onChange={(event) => update(index, { ...block, title: event.target.value })}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Items, one per line</label>
+                    <textarea
+                      rows={5}
+                      value={block.items.join("\n")}
+                      onChange={(event) =>
+                        update(index, { ...block, items: event.target.value.split("\n") })
+                      }
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              {block.kind === "compare" ? (
+                <>
+                  <div className="field-row">
+                    <div className="field">
+                      <label>Title</label>
+                      <input
+                        type="text"
+                        value={block.title}
+                        onChange={(event) => update(index, { ...block, title: event.target.value })}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Intro</label>
+                      <input
+                        type="text"
+                        value={block.intro ?? ""}
+                        onChange={(event) => update(index, { ...block, intro: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {block.rows.map((row, rowIndex) => (
+                      <div key={rowIndex} className="field-row" style={{ alignItems: "start" }}>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label>Factor</label>
+                          <input
+                            type="text"
+                            value={row.factor}
+                            onChange={(event) =>
+                              update(index, {
+                                ...block,
+                                rows: block.rows.map((entry, i) =>
+                                  i === rowIndex ? { ...entry, factor: event.target.value } : entry,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label>What to check</label>
+                          <textarea
+                            rows={2}
+                            value={row.check}
+                            onChange={(event) =>
+                              update(index, {
+                                ...block,
+                                rows: block.rows.map((entry, i) =>
+                                  i === rowIndex ? { ...entry, check: event.target.value } : entry,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label>Why it matters</label>
+                          <textarea
+                            rows={2}
+                            value={row.why}
+                            onChange={(event) =>
+                              update(index, {
+                                ...block,
+                                rows: block.rows.map((entry, i) =>
+                                  i === rowIndex ? { ...entry, why: event.target.value } : entry,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() =>
+                          update(index, { ...block, rows: [...block.rows, { factor: "", check: "", why: "" }] })
+                        }
+                      >
+                        Add row
+                      </button>
+                      {block.rows.length > 1 ? (
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--sm"
+                          onClick={() => update(index, { ...block, rows: block.rows.slice(0, -1) })}
+                        >
+                          Remove last
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </>
               ) : null}

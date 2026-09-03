@@ -546,6 +546,9 @@ model Guide {
   categoryId String?
   excerpt    String?
   shortAnswer String?
+  /// The closing paragraph: what to do with everything above. Left out of the
+  /// page rather than padded when an editor has not written one.
+  bottomLine  String?
   // JSON array of strings
   keyTakeaways String?
   // Body as an array of blocks: [{ kind, ...props }]

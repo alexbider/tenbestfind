@@ -112,6 +112,7 @@ export default async function AdminGuideDetail({ params }: Props) {
               reviewerId: guide?.reviewerId ?? "",
               excerpt: guide?.excerpt ?? "",
               shortAnswer: guide?.shortAnswer ?? "",
+              bottomLine: guide?.bottomLine ?? "",
               heroImage: guide?.heroImage ?? "",
               readingMinutes: String(guide?.readingMinutes ?? 9),
               typicalLow: guide?.typicalLow?.toString() ?? "",
