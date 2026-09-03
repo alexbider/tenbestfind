@@ -9,6 +9,7 @@ import { leadAccessFor } from "@/lib/entitlements";
 import {
   addToRanking,
   deleteBusiness,
+  enrichFromWebsite,
   refillServiceAreas,
   refreshBusinessReviews,
   removeFromRanking,
@@ -53,6 +54,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
       city: { include: { region: { include: { country: true } } } },
       owner: true,
       credentials: { orderBy: { sortOrder: "asc" } },
+      staff: { orderBy: { sortOrder: "asc" } },
       photos: { orderBy: { sortOrder: "asc" } },
       services: { include: { subservice: true } },
       areas: { include: { city: true }, orderBy: { primary: "desc" } },
@@ -107,6 +109,18 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
     db.lead.findMany({ where: { businessId: business.id }, orderBy: { createdAt: "desc" }, take: 60 }),
     leadAccessFor(business.id),
   ]);
+
+  // The most recent website read that included this company, so the panel can
+  // say what it filled rather than only that it ran.
+  const lastEnrich = await db.enrichRun.findFirst({
+    where: { businessIds: { contains: business.id } },
+    orderBy: { createdAt: "desc" },
+  });
+  const enrichEntry = lastEnrich?.report
+    ? (JSON.parse(lastEnrich.report) as { business: string; filled: string[]; staff: number; photos: number; note: string | null }[]).find(
+        (row) => row.business === business.name,
+      )
+    : undefined;
 
   const subscription = business.subscriptions[0];
   const invoices = subscription?.invoices ?? [];
@@ -198,6 +212,14 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 })),
                 services: business.services.map((row) => row.subserviceId),
                 areas: business.areas.map((row) => row.cityId),
+                staff: business.staff.map((person) => ({
+                  name: person.name,
+                  role: person.role ?? "",
+                  bio: person.bio ?? "",
+                  photoUrl: person.photoUrl ?? "",
+                  credentials: parseList(person.credentials).join(", "),
+                  yearsExperience: person.yearsExperience?.toString() ?? "",
+                })),
                 credentials: business.credentials.map((credential) => ({
                   label: credential.label,
                   identifier: credential.identifier ?? "",
@@ -376,6 +398,82 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 Refresh many companies at once under{" "}
                 <Link href="/admin/reviews">Reviews</Link>.
               </p>
+            </Panel>
+
+            <Panel
+              title="Fill from the website"
+              description="Reads the company's own site and fills in whatever the listing is missing. It never overwrites anything already there."
+            >
+              <form
+                action={enrichFromWebsite}
+                style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}
+              >
+                <input type="hidden" name="id" value={business.id} />
+                <button
+                  type="submit"
+                  className="btn btn--primary btn--sm"
+                  disabled={!business.website}
+                >
+                  Read the website
+                </button>
+                <label
+                  style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13.5, color: "var(--text-secondary)" }}
+                >
+                  <input type="checkbox" name="useModel" value="yes" defaultChecked />
+                  Also read it for the team, the warranty and the services
+                </label>
+              </form>
+
+              <p style={{ marginTop: 14, fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
+                {business.website ? (
+                  <>
+                    Reads {business.website}. It looks for the logo, photos, the year they started, a
+                    licence number, social profiles, and with the box ticked the people, the
+                    warranty and the work they say they do.{" "}
+                    {business.siteCrawledAt
+                      ? `Last read ${fullDate(business.siteCrawledAt)}.`
+                      : "Never read yet."}
+                  </>
+                ) : (
+                  "No website on file, so there is nothing to read. Add one above and save first."
+                )}
+              </p>
+
+              {lastEnrich ? (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: "12px 14px",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: 10,
+                    fontSize: 13.5,
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong style={{ color: "var(--ink)" }}>
+                    Last run: {lastEnrich.status.toLowerCase()}
+                  </strong>
+                  {lastEnrich.status === "QUEUED" || lastEnrich.status === "RUNNING" ? (
+                    <span style={{ display: "block" }}>
+                      The worker picks it up within a few seconds. Reload this page to see the result.
+                    </span>
+                  ) : null}
+                  {lastEnrich.error ? (
+                    <span style={{ display: "block", color: "var(--maple-600)" }}>{lastEnrich.error}</span>
+                  ) : null}
+                  {enrichEntry ? (
+                    <span style={{ display: "block", marginTop: 4 }}>
+                      {enrichEntry.filled.length > 0
+                        ? `Filled ${enrichEntry.filled.join(", ")}.`
+                        : ""}
+                      {enrichEntry.staff > 0 ? ` Found ${enrichEntry.staff} people.` : ""}
+                      {enrichEntry.photos > 0 ? ` Added ${enrichEntry.photos} photos.` : ""}
+                      {enrichEntry.note ?? ""}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </Panel>
 
             <Panel

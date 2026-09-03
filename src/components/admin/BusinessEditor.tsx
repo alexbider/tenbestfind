@@ -45,6 +45,7 @@ export type BusinessDraft = {
   hours: Record<string, string>[];
   services: string[];
   areas: string[];
+  staff: Record<string, string>[];
   credentials: Record<string, string>[];
   photos: Record<string, string>[];
 };
@@ -390,6 +391,35 @@ export function BusinessEditor({
             { key: "sourceUrl", label: "Source URL", width: "half" },
           ]}
           initial={business.credentials}
+        />
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>The team</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          Named people at the company. The profile shows this section only when there is someone in
+          it, so leaving it empty costs nothing. Filling from the website adds anyone the site
+          introduces by name.
+        </p>
+        <RepeatableEditor
+          name="staff"
+          summaryKey="name"
+          addLabel="Add a person"
+          emptyLabel="No team recorded, so the profile shows no team section."
+          fields={[
+            { key: "name", label: "Name", placeholder: "Marcus Hall", width: "half" },
+            { key: "role", label: "Role", placeholder: "Owner and master plumber", width: "half" },
+            { key: "bio", label: "About them", type: "textarea" },
+            { key: "photoUrl", label: "Photo", type: "media" },
+            {
+              key: "credentials",
+              label: "What they hold",
+              width: "half",
+              hint: "Comma separated. Published as claimed, not as verified.",
+            },
+            { key: "yearsExperience", label: "Years in the trade", width: "half" },
+          ]}
+          initial={business.staff}
         />
       </fieldset>
 

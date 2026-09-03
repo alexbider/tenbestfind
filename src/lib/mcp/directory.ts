@@ -580,6 +580,184 @@ export const DIRECTORY_TOOLS: Tool[] = [
     },
   },
 
+  {
+    name: "enrich_from_website",
+    title: "Fill a listing from the company's own website",
+    write: true,
+    description:
+      "Reads a company's website and fills in what its listing is missing: the logo, photos, the year it started, a licence number, social profiles, and with the model also the people it names, the warranty and the services it offers. It never overwrites a field that already holds something. Queues the work in the import worker and returns straight away. Pass a batchId instead to do the same for every company one import created.",
+    schema: object({
+      idOrSlug: str("One company. Leave it out and pass batchId, or a selection, instead."),
+      batchId: str("Every company an import batch created."),
+      categoryId: str("Limit a directory selection to one service."),
+      cityId: str("Limit a directory selection to one city."),
+      onlyNever: bool("Selection only: skip companies whose site has already been read. Default true."),
+      useModel: bool("Also read the pages with the model for the team, warranty and services. Default true."),
+      limit: int("Selection only: how many companies at most. Default 25, maximum 200."),
+    }),
+    handler: async (args, ctx) => {
+      const { queueEnrichment } = await import("../enrich-run");
+      const useModel = args.useModel !== false;
+
+      let ids: string[];
+      let batchId: string | undefined;
+      let what: string;
+
+      if (args.idOrSlug !== undefined) {
+        const business = await findBusiness(reqStr(args, "idOrSlug"));
+        ids = [business.id];
+        what = business.name;
+      } else if (args.batchId !== undefined) {
+        batchId = reqStr(args, "batchId");
+        const batch = await db.importBatch.findUnique({
+          where: { id: batchId },
+          select: { name: true },
+        });
+        if (!batch) throw new ToolError(`No import batch matches ${batchId}.`);
+        const items = await db.importItem.findMany({
+          where: { batchId, businessId: { not: null } },
+          select: { businessId: true },
+        });
+        ids = [...new Set(items.map((row) => row.businessId).filter((id): id is string => Boolean(id)))];
+        what = `${ids.length} companies from ${batch.name}`;
+      } else {
+        const rows = await db.business.findMany({
+          where: {
+            website: { not: null },
+            status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
+            ...(args.categoryId ? { categoryId: String(args.categoryId) } : {}),
+            ...(args.cityId ? { cityId: String(args.cityId) } : {}),
+            ...(args.onlyNever === false ? {} : { siteCrawledAt: null }),
+          },
+          orderBy: { siteCrawledAt: { sort: "asc", nulls: "first" } },
+          select: { id: true },
+          take: Math.min(200, limitOf(args, 25)),
+        });
+        ids = rows.map((row) => row.id);
+        what = `${ids.length} companies`;
+      }
+
+      if (ids.length === 0) throw new ToolError("Nothing matched, so nothing was queued.");
+
+      const queued = await queueEnrichment({ businessIds: ids, batchId, useModel, userId: ctx.user.id });
+      if (queued.requested === 0) {
+        throw new ToolError("None of those companies has a website on file, so there is nothing to read.");
+      }
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: queued.id,
+        summary: `Website enrichment queued for ${what}`,
+        paths: [],
+      });
+      return {
+        runId: queued.id,
+        queued: queued.requested,
+        skippedWithoutWebsite: ids.length - queued.requested,
+        readWithModel: useModel,
+      };
+    },
+  },
+
+  {
+    name: "enrichment_status",
+    title: "Check a website enrichment pass",
+    description:
+      "Where a queued enrichment got to, and what it filled company by company.",
+    schema: object({ runId: str("From enrich_from_website. Leave it out for the most recent pass.") }),
+    handler: async (args) => {
+      const run = args.runId
+        ? await db.enrichRun.findUnique({ where: { id: reqStr(args, "runId") } })
+        : await db.enrichRun.findFirst({ orderBy: { createdAt: "desc" } });
+      if (!run) throw new ToolError("No enrichment pass has been run.");
+
+      const report = run.report
+        ? (JSON.parse(run.report) as { business: string; filled: string[]; staff: number; photos: number; note: string | null }[])
+        : [];
+
+      return {
+        id: run.id,
+        status: run.status,
+        read: run.processed,
+        of: run.requested,
+        fieldsFilled: run.fieldsFilled,
+        peopleFound: run.staffFound,
+        photosAdded: run.photosAdded,
+        error: run.error,
+        companies: report.slice(-40),
+      };
+    },
+  },
+
+  {
+    name: "set_staff",
+    title: "Replace the team on a listing",
+    write: true,
+    description:
+      "Sets the named people at a company. The profile shows a team section only when there is someone in it, so passing an empty list removes the section. This is what the company says about itself, not something we verified.",
+    schema: object(
+      {
+        idOrSlug: str("The business id or slug."),
+        staff: {
+          type: "array",
+          maxItems: 20,
+          description: "Replaces the whole list. Pass an empty array to remove the section.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["name"],
+            properties: {
+              name: { type: "string" },
+              role: { type: "string" },
+              bio: { type: "string" },
+              photoUrl: { type: "string" },
+              yearsExperience: { type: "integer" },
+              credentials: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      ["idOrSlug", "staff"],
+    ),
+    handler: async (args, ctx) => {
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+      const rows = Array.isArray(args.staff) ? (args.staff as Record<string, unknown>[]) : [];
+
+      await db.staffMember.deleteMany({ where: { businessId: business.id } });
+      const people = rows
+        .filter((row) => typeof row.name === "string" && row.name.trim().length > 1)
+        .slice(0, 20);
+
+      if (people.length > 0) {
+        await db.staffMember.createMany({
+          data: people.map((row, index) => ({
+            businessId: business.id,
+            name: String(row.name).trim(),
+            role: typeof row.role === "string" ? row.role.trim() || null : null,
+            bio: typeof row.bio === "string" ? row.bio.trim() || null : null,
+            photoUrl: typeof row.photoUrl === "string" ? row.photoUrl.trim() || null : null,
+            yearsExperience: typeof row.yearsExperience === "number" ? Math.trunc(row.yearsExperience) : null,
+            credentials: Array.isArray(row.credentials)
+              ? JSON.stringify(row.credentials.map(String).slice(0, 6))
+              : null,
+            sortOrder: index,
+            source: "MANUAL",
+          })),
+        });
+      }
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name}: team set to ${people.length} people`,
+        paths: [routes.business(business.slug)],
+      });
+      return { business: business.name, staff: people.length };
+    },
+  },
+
   /* ------------------------------------------------------------------ leads */
 
   {

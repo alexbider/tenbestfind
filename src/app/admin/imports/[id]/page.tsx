@@ -9,6 +9,7 @@ import {
   retryItem,
   skipItem,
 } from "@/app/actions/admin-import";
+import { enrichBatch } from "@/app/actions/admin-content";
 import { requireStaff } from "@/lib/auth";
 import { fullDate } from "@/lib/format";
 import { routes } from "@/lib/urls";
@@ -66,6 +67,17 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
     ? Math.round(scored.reduce((total, item) => total + item.seoScore, 0) / scored.length)
     : 0;
   const withEmail = batch.items.filter((item) => Boolean(item.email)).length;
+
+  // Companies this batch actually created, and how many still have a website
+  // nobody has read. That second number is what the enrichment pass is for.
+  const imported = batch.items.filter((item) => item.business);
+  const unread = imported.filter((item) => item.business?.website && !item.business.siteCrawledAt);
+  const enrichRuns = await db.enrichRun.findMany({
+    where: { batchId: batch.id },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+  const latestEnrich = enrichRuns[0];
 
   return (
     <>
@@ -218,6 +230,85 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
               </tbody>
             </table>
           </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Fill from the companies' own websites"
+        description="A second pass over everything this batch imported. It reads each company's site and fills what the listing is missing, never overwriting anything already there."
+      >
+        {imported.length === 0 ? (
+          <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>
+            This batch has not created any companies yet, so there is nothing to enrich.
+          </p>
+        ) : (
+          <>
+            <form
+              action={enrichBatch}
+              style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}
+            >
+              <input type="hidden" name="batchId" value={batch.id} />
+              <button type="submit" className="btn btn--primary btn--sm">
+                Read {imported.length} website{imported.length === 1 ? "" : "s"}
+              </button>
+              <label
+                style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13.5, color: "var(--text-secondary)" }}
+              >
+                <input type="checkbox" name="useModel" value="yes" defaultChecked />
+                Also read them for the team, the warranty and the services
+              </label>
+            </form>
+
+            <p style={{ marginTop: 14, fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
+              {unread.length > 0
+                ? `${unread.length} of these companies has a website nobody has read yet.`
+                : "Every company here with a website has been read at least once."}{" "}
+              Running it again is safe: a field that already holds something is never touched, so it
+              only ever picks up what was added to the site since.
+            </p>
+
+            {enrichRuns.length > 0 ? (
+              <div className="table-wrap" style={{ marginTop: 18 }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Run</th>
+                      <th scope="col">Read</th>
+                      <th scope="col">Fields</th>
+                      <th scope="col">People</th>
+                      <th scope="col">Photos</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrichRuns.map((run) => (
+                      <tr key={run.id}>
+                        <td>
+                          <span className="admin-table__primary">{fullDate(run.createdAt)}</span>
+                          {run.error ? <span className="admin-table__meta">{run.error}</span> : null}
+                        </td>
+                        <td className="admin-table__num">
+                          {run.processed} of {run.requested}
+                        </td>
+                        <td className="admin-table__num">{run.fieldsFilled}</td>
+                        <td className="admin-table__num">{run.staffFound}</td>
+                        <td className="admin-table__num">{run.photosAdded}</td>
+                        <td>{run.status.toLowerCase()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {latestEnrich && (latestEnrich.status === "QUEUED" || latestEnrich.status === "RUNNING") ? (
+              <p className="form-success" style={{ marginTop: 16 }}>
+                A pass is {latestEnrich.status.toLowerCase()}: {latestEnrich.processed} of{" "}
+                {latestEnrich.requested} read so far. It runs in the import worker, so it survives a
+                deploy and this page shows where it got to.
+              </p>
+            ) : null}
+          </>
         )}
       </Panel>
 

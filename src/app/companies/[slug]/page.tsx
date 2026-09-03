@@ -32,6 +32,7 @@ import {
 import { QuoteDialog } from "@/components/site/QuoteDialog";
 import { ReadMore } from "@/components/site/ReadMore";
 import { ReviewList } from "@/components/site/ReviewList";
+import { TeamSection } from "@/components/site/TeamSection";
 import { fullDate, monthYear } from "@/lib/format";
 import { parseJson, parseList, type HoursRow } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -50,6 +51,7 @@ async function loadBusiness(slug: string) {
       category: true,
       city: { include: { region: { include: { country: true } } } },
       credentials: { orderBy: { sortOrder: "asc" } },
+      staff: { orderBy: { sortOrder: "asc" } },
       photos: { orderBy: { sortOrder: "asc" } },
       reviews: { orderBy: { postedAt: "desc" }, take: 10 },
       services: { include: { subservice: true } },
@@ -242,6 +244,16 @@ export default async function BusinessProfilePage({ params }: Props) {
                   worstRating: 1,
                 }
               : undefined,
+          // The named people on the page, so a knowledge panel can attribute the
+          // work to someone rather than to a company name alone.
+          employee: business.staff.length
+            ? business.staff.map((person) => ({
+                "@type": "Person",
+                name: person.name,
+                jobTitle: person.role ?? undefined,
+                image: person.photoUrl ?? undefined,
+              }))
+            : undefined,
           // Only the reviews actually quoted on the page are described here.
           // Marking up reviews a reader cannot see is exactly what the
           // structured data guidelines forbid.
@@ -703,6 +715,23 @@ export default async function BusinessProfilePage({ params }: Props) {
       </Section>
 
       {/* -------------------------------------------------------- credentials */}
+      {/* ---------------------------------------------------------- the team */}
+      {business.staff.length > 0 ? (
+        <Section tone="page" labelledBy="team-h2">
+          <div style={{ maxWidth: 640, marginBottom: 32 }}>
+            <h2 id="team-h2" className="h2">
+              Who you would be dealing with
+            </h2>
+            <p className="lead" style={{ marginTop: 14 }}>
+              The people {business.name} names publicly. This comes from the company, so treat the
+              experience and the qualifications as claims rather than as anything we checked. The
+              credentials section below is the part we verify.
+            </p>
+          </div>
+          <TeamSection members={business.staff} />
+        </Section>
+      ) : null}
+
       {business.credentials.length > 0 ? (
         <Section tone="page" labelledBy="rep-h2">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 32 }}>

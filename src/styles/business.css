@@ -432,3 +432,90 @@
 .overview-card__toggle:hover {
   text-decoration: underline;
 }
+
+/* ---------------------------------------------------------------- the team */
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.team-card__photo {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-sunken);
+}
+
+/* No photo is the common case, so the fallback has to look deliberate. */
+.team-card__photo--blank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.team-card__body {
+  min-width: 0;
+}
+
+.team-card__name {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.team-card__role {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--color-primary);
+}
+
+.team-card__years {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.team-card__bio {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.team-card__creds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team-card__creds li {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--surface-sunken);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}

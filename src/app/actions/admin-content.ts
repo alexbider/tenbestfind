@@ -13,6 +13,7 @@ import { rankingUrl, routes } from "@/lib/urls";
 import { DEFAULT_RADIUS_KM, fillServiceAreas } from "@/lib/geo";
 import { queueRefresh } from "@/lib/reviews";
 import { LEAD_STATUSES, notifyBusiness } from "@/lib/leads";
+import { queueEnrichment } from "@/lib/enrich-run";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
@@ -874,6 +875,7 @@ const businessSchema = z.object({
   services: z.string().optional(),
   areas: z.string().optional(),
   credentials: z.string().optional(),
+  staff: z.string().optional(),
   photos: z.string().optional(),
 });
 
@@ -988,6 +990,42 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
         checkedAt: row.status === "VERIFIED" ? new Date() : null,
         sourceUrl: row.sourceUrl?.trim() || null,
         sortOrder: index,
+      },
+    });
+  }
+
+  // A person read off a website keeps their photo and their source when an
+  // editor saves the form without touching them, so a re-save does not quietly
+  // relabel the whole team as hand-entered.
+  const existingStaff = await db.staffMember.findMany({
+    where: { businessId: business.id },
+    select: { name: true, source: true, photoUrl: true },
+  });
+  const staffBefore = new Map(existingStaff.map((row) => [row.name.trim().toLowerCase(), row]));
+
+  await db.staffMember.deleteMany({ where: { businessId: business.id } });
+  for (const [index, row] of rows(data.staff)
+    .filter((row) => row.name?.trim())
+    .entries()) {
+    const name = row.name.trim();
+    const before = staffBefore.get(name.toLowerCase());
+    const years = row.yearsExperience?.trim() ? Number(row.yearsExperience) : null;
+    const held = (row.credentials ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    await db.staffMember.create({
+      data: {
+        businessId: business.id,
+        name,
+        role: row.role?.trim() || null,
+        bio: row.bio?.trim() || null,
+        photoUrl: row.photoUrl?.trim() || before?.photoUrl || null,
+        credentials: held.length > 0 ? stringify(held) : null,
+        yearsExperience: years !== null && Number.isFinite(years) && years >= 0 ? Math.trunc(years) : null,
+        sortOrder: index,
+        source: before?.source ?? "MANUAL",
       },
     });
   }
@@ -1289,6 +1327,105 @@ export async function refreshReviewsBatch(formData: FormData) {
     summary: `Review refresh queued for ${queued.requested} companies`,
   });
   revalidatePath("/admin/reviews");
+}
+
+/**
+ * Reads a company's own website and fills in whatever the listing is missing.
+ *
+ * It never overwrites: a field that already holds something is left alone, so
+ * this is safe to run on a profile an editor has worked on. The work happens in
+ * the import worker, because a crawl plus a model call is far too slow to sit
+ * inside a request.
+ */
+export async function enrichFromWebsite(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const useModel = formData.get("useModel") !== "no";
+
+  const business = await db.business.findUnique({
+    where: { id },
+    select: { name: true, website: true },
+  });
+  if (!business) return;
+
+  const queued = await queueEnrichment({ businessIds: [id], useModel, userId: user.id });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: id,
+    summary: queued.requested
+      ? `Website enrichment queued for ${business.name}`
+      : `Website enrichment skipped for ${business.name}: no website on file`,
+  });
+  revalidatePath(`/admin/businesses/${id}`);
+  revalidatePath("/admin/enrichment");
+}
+
+/** The same pass over every company one import batch created. */
+export async function enrichBatch(formData: FormData) {
+  const user = await requireStaff();
+  const batchId = String(formData.get("batchId"));
+  const useModel = formData.get("useModel") !== "no";
+
+  const batch = await db.importBatch.findUnique({ where: { id: batchId }, select: { name: true } });
+  if (!batch) return;
+
+  const items = await db.importItem.findMany({
+    where: { batchId, businessId: { not: null } },
+    select: { businessId: true },
+  });
+  const ids = [...new Set(items.map((row) => row.businessId).filter((id): id is string => Boolean(id)))];
+  if (ids.length === 0) return;
+
+  const queued = await queueEnrichment({ businessIds: ids, batchId, useModel, userId: user.id });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "import",
+    entityId: batchId,
+    summary: `Website enrichment queued for ${queued.requested} companies from ${batch.name}`,
+  });
+  revalidatePath(`/admin/imports/${batchId}`);
+  revalidatePath("/admin/enrichment");
+}
+
+/** A sweep across the directory, for listings that were never enriched. */
+export async function enrichSelection(formData: FormData) {
+  const user = await requireStaff();
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const cityId = String(formData.get("cityId") ?? "");
+  const onlyNever = formData.get("onlyNever") !== "no";
+  const limit = Math.min(200, Math.max(1, Number(formData.get("limit") ?? 25)));
+  const useModel = formData.get("useModel") !== "no";
+
+  const businesses = await db.business.findMany({
+    where: {
+      website: { not: null },
+      status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
+      ...(categoryId ? { categoryId } : {}),
+      ...(cityId ? { cityId } : {}),
+      ...(onlyNever ? { siteCrawledAt: null } : {}),
+    },
+    orderBy: { siteCrawledAt: { sort: "asc", nulls: "first" } },
+    select: { id: true },
+    take: limit,
+  });
+  if (businesses.length === 0) return;
+
+  const queued = await queueEnrichment({
+    businessIds: businesses.map((row) => row.id),
+    useModel,
+    userId: user.id,
+  });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: queued.id,
+    summary: `Website enrichment queued for ${queued.requested} companies`,
+  });
+  revalidatePath("/admin/enrichment");
 }
 
 /** Rebuilds a company's service areas from the radius around where it works. */

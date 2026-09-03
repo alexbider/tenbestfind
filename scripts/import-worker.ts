@@ -1,6 +1,7 @@
 import { db } from "../src/lib/db";
 import { advanceBatch } from "../src/lib/import-pipeline";
 import { advanceRefresh } from "../src/lib/reviews";
+import { advanceEnrichment } from "../src/lib/enrich-run";
 
 // The batch runner. It lives in its own container rather than inside a request
 // so a batch survives a deploy, a browser tab closing and a Next.js restart.
@@ -42,6 +43,27 @@ async function tickRefresh(): Promise<boolean> {
   }
 }
 
+/** Website enrichment: cheaper than an import, slower than a review refresh. */
+async function tickEnrichment(): Promise<boolean> {
+  const run = await db.enrichRun.findFirst({
+    where: { status: { in: REFRESHING } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, status: true },
+  });
+  if (!run) return false;
+
+  const before = run.status;
+  try {
+    const result = await advanceEnrichment(run.id);
+    if (result.changed) console.log(`[enrich] ${before.toLowerCase()} -> ${result.note}`);
+    return result.changed;
+  } catch (error) {
+    console.error("[enrich] unhandled:", error instanceof Error ? error.message : error);
+    await sleep(5_000);
+    return false;
+  }
+}
+
 async function tick(): Promise<boolean> {
   const batch = await db.importBatch.findFirst({
     where: { status: { in: ACTIVE } },
@@ -69,7 +91,7 @@ async function tick(): Promise<boolean> {
 async function main(): Promise<void> {
   console.log("==> import worker ready");
   while (!stopping) {
-    const busy = (await tickRefresh()) || (await tick());
+    const busy = (await tickRefresh()) || (await tickEnrichment()) || (await tick());
     // A step that changed something is followed immediately; an idle loop waits,
     // which is most of the time an Apify run is still going.
     await sleep(busy ? 250 : IDLE_MS);

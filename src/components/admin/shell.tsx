@@ -31,6 +31,7 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
     items: [
       { name: "Businesses", href: "/admin/businesses", icon: "store" },
       { name: "Imports", href: "/admin/imports", icon: "refresh" },
+      { name: "Website enrichment", href: "/admin/enrichment", icon: "globe" },
       { name: "Reviews", href: "/admin/reviews", icon: "star" },
       { name: "Leads", href: "/admin/leads", icon: "mail" },
       { name: "Claims & verification", href: "/admin/claims", icon: "key" },

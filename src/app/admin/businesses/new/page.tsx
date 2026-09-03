@@ -69,6 +69,7 @@ export default async function AdminNewBusiness() {
               hours: [],
               services: [],
               areas: [],
+              staff: [],
               credentials: [],
               photos: [],
             }}

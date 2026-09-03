@@ -225,6 +225,7 @@ model Business {
   areas         BusinessArea[]
   credentials   Credential[]
   photos        BusinessPhoto[]
+  staff         StaffMember[]
   reviews       Review[]
   entries       RankingEntry[]
   subscriptions Subscription[]
@@ -288,6 +289,33 @@ model BusinessPhoto {
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
+}
+
+/// A named person at a company: the owner, a master tradesperson, a lead
+/// estimator. Published only when there is something real to publish, so a
+/// listing with no team on file simply has no team section rather than an
+/// empty heading.
+model StaffMember {
+  id         String  @id @default(cuid())
+  businessId String
+  name       String
+  role       String? // "Master plumber", "Owner and lead estimator"
+  bio        String?
+  photoUrl   String?
+  // What they hold, as a JSON array of strings. Read off the company's own
+  // site, so it is what they claim rather than what a register confirms.
+  credentials String?
+  yearsExperience Int?
+  sortOrder  Int     @default(0)
+  // MANUAL when an editor typed it, WEBSITE when the crawler found it. The
+  // difference matters: a person may ask us to take down what we read.
+  source     String  @default("MANUAL")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, sortOrder])
 }
 
 // Third-party reviews shown with attribution. Never blended into one score.
@@ -914,6 +942,7 @@ model User {
   auditLogs    AuditLog[]
   importBatches ImportBatch[]
   reviewRefreshes ReviewRefresh[]
+  enrichRuns   EnrichRun[]
   oauthCodes   OAuthCode[]
   oauthTokens  OAuthToken[]
 
@@ -1036,6 +1065,7 @@ model ImportBatch {
   createdBy   User?    @relation(fields: [createdById], references: [id])
   category    Category @relation(fields: [categoryId], references: [id])
   items       ImportItem[]
+  enrichRuns  EnrichRun[]
 
   @@index([status, createdAt])
 }
@@ -1078,6 +1108,50 @@ model ImportItem {
   @@unique([batchId, placeId])
   @@index([batchId, status])
   @@index([placeId])
+}
+
+/// A request to re-read a company's own website and fill in what the listing is
+/// missing.
+///
+/// It never overwrites a field that already has something in it, so an editor's
+/// work is safe from it, and it says afterwards exactly which fields it filled.
+/// A row rather than a background promise, for the same reason the review
+/// refresh is: it survives a deploy and shows its progress.
+model EnrichRun {
+  id     String @id @default(cuid())
+  status String @default("QUEUED") // QUEUED | RUNNING | DONE | FAILED
+
+  // JSON array of Business ids. One id is the single-company run; a batch
+  // enrichment is the same machinery over everything that batch imported.
+  businessIds String
+  batchId     String?
+  // Whether to read the crawled pages with the model as well as the parser.
+  // Off, it still finds a logo, photos, a founding year and social profiles.
+  // On, it also pulls out the team, the warranty, and what they actually do.
+  useModel    Boolean @default(true)
+
+  requested  Int @default(0)
+  processed  Int @default(0)
+  fieldsFilled Int @default(0)
+  staffFound Int @default(0)
+  photosAdded Int @default(0)
+  skipped    Int @default(0)
+
+  // JSON: [{ business, filled: [field], staff: n, note }] so the screen can say
+  // what actually changed rather than just a count.
+  report String?
+  error  String?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  createdById String?
+  createdBy   User?        @relation(fields: [createdById], references: [id])
+  batch       ImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
 }
 
 /// A request to re-read reviews from Google for one company or many. It is a

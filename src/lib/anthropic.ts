@@ -68,7 +68,14 @@ let cached: { key: string; client: Anthropic } | null = null;
 
 export async function anthropic(): Promise<Anthropic> {
   const key = await getSecret("anthropic.apiKey");
-  if (!key) throw new ContentError("No Anthropic API key is set. Add one under Admin, Integrations.");
+  // Permanent, not merely an error: no amount of retrying conjures a key, and
+  // every attempt behind it has already paid for a website crawl or a scrape.
+  if (!key) {
+    throw new PermanentError(
+      "No Anthropic API key is set.",
+      "Add one under Admin, Integrations, then run this again.",
+    );
+  }
   if (cached?.key === key) return cached.client;
   // maxRetries covers 429 and 5xx; a batch of a few hundred will hit both.
   const client = new Anthropic({ apiKey: key, maxRetries: 4, timeout: 180_000 });
