@@ -368,6 +368,7 @@ export function RowLink({
   boxed,
   outline,
   compact,
+  tight,
 }: {
   href: string;
   children: ReactNode;
@@ -377,6 +378,8 @@ export function RowLink({
   outline?: boolean;
   /** The hubs sit a hair tighter than the profile does. */
   compact?: boolean;
+  /** The tightest variant, for long alphabetical index lists. */
+  tight?: boolean;
 }) {
   const style = outline
     ? {
@@ -420,8 +423,8 @@ export function RowLink({
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "8px",
-                padding: "10px 12px",
-                margin: "0 -12px",
+                padding: tight ? "8px 10px" : "10px 12px",
+                margin: tight ? "0 -10px" : "0 -12px",
                 borderRadius: "10px",
                 fontSize: "15px",
                 color: "var(--text-primary)",
