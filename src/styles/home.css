@@ -819,6 +819,12 @@
     animation-delay: 270ms;
   }
 
+  /* Held back until the row scrolls in, so the count animates up rather than
+     being read once and then replayed. */
+  .home-2026 [data-ledger][data-inview="0"] [data-count] {
+    opacity: 0;
+  }
+
   .home-2026 [data-ledger-bar] {
     transform: scaleX(0);
     transform-origin: left;
@@ -961,5 +967,183 @@
 
   .home-2026 [data-city-cols] {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ------------------------------------------------------------------ phones
+   The design's own 760px layer. It sits after the 700px block so it wins
+   where the two overlap, which is the order the design ships it in.
+
+   These selectors match on inline styles. React writes those without a space
+   after the colon, so they are spelled that way here; copied verbatim from the
+   design they would match nothing and fail silently.
+
+   The design's `body { padding-bottom }` is left out: it reserves space below
+   a page that ends at the last section, and this page ends at the footer, so
+   here it would only open a gap underneath it. */
+@media (max-width: 760px) {
+  .home-2026 [style*="max-width:var(--shell)"],
+  .home-2026 [style*="max-width:1240px"],
+  .home-2026 [style*="max-width:880px"],
+  .home-2026 [style*="max-width:900px"] {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .home-2026 [style*="padding:104px"],
+  .home-2026 [style*="padding:112px"],
+  .home-2026 [style*="padding:88px"],
+  .home-2026 [style*="padding:96px"],
+  .home-2026 [style*="padding:80px"],
+  .home-2026 [style*="padding:72px"] {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  .home-2026 [style*="padding:84px"],
+  .home-2026 [style*="padding:76px"],
+  .home-2026 [style*="padding:64px"],
+  .home-2026 [style*="padding:60px"] {
+    padding-top: 44px !important;
+    padding-bottom: 40px !important;
+  }
+
+  .home-2026 h1 {
+    font-size: clamp(30px, 8.6vw, 40px) !important;
+    line-height: 1.04 !important;
+  }
+
+  .home-2026 h2 {
+    font-size: clamp(25px, 7vw, 32px) !important;
+    line-height: 1.1 !important;
+  }
+
+  .home-2026 h3 {
+    font-size: 17px !important;
+  }
+
+  .home-2026 p[style*="font-size:19px"],
+  .home-2026 p[style*="font-size:18px"],
+  .home-2026 p[style*="font-size:17px"] {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+  }
+
+  .home-2026 [data-split],
+  .home-2026 [data-two],
+  .home-2026 [data-three],
+  .home-2026 [data-cat-grid],
+  .home-2026 [data-country-grid],
+  .home-2026 [data-steps],
+  .home-2026 [data-eeat-grid],
+  .home-2026 [data-ledger],
+  .home-2026 div[style*="grid-template-columns:repeat("],
+  .home-2026 ul[style*="grid-template-columns:repeat("],
+  .home-2026 ol[style*="grid-template-columns:repeat("],
+  .home-2026 div[style*="grid-template-columns:1fr 1fr"],
+  .home-2026 div[style*="grid-template-columns:minmax("],
+  .home-2026 div[style*="fr 1fr"],
+  .home-2026 div[style*="fr 0."],
+  .home-2026 div[style*="fr 1."] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-2026 [data-ledger] > li {
+    border-right: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 18px !important;
+    padding-bottom: 18px !important;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .home-2026 [data-steps] > li {
+    border-left: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .home-2026 aside[style*="position:sticky"],
+  .home-2026 div[style*="position:sticky"],
+  .home-2026 [data-faq-sticky] {
+    position: static !important;
+    top: auto !important;
+  }
+
+  .home-2026 [data-stack],
+  .home-2026 form[role="search"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .home-2026 [data-stack] > *,
+  .home-2026 form[role="search"] > * {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .home-2026 [data-divider] {
+    display: none !important;
+  }
+
+  .home-2026 form[role="search"] button {
+    height: 52px !important;
+  }
+
+  /* 16px is the size below which iOS zooms the page on focus. */
+  .home-2026 input,
+  .home-2026 select,
+  .home-2026 textarea {
+    font-size: 16px !important;
+  }
+
+  .home-2026 a[style*="border-radius:12px"],
+  .home-2026 a[style*="border-radius:999px"],
+  .home-2026 button {
+    min-height: 44px;
+  }
+
+  .home-2026 [style*="display:flex"][style*="flex-wrap:wrap"] > a[style*="height:52px"],
+  .home-2026 a[style*="height:52px"],
+  .home-2026 a[style*="height:48px"] {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-2026 [data-ten-outline] {
+    width: 170px !important;
+    height: 120px !important;
+    right: -50px !important;
+    top: -30px !important;
+    opacity: 0.7;
+  }
+
+  .home-2026 [data-index] {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding: 16px 14px !important;
+  }
+
+  .home-2026 [data-index] > svg {
+    display: none !important;
+  }
+
+  .home-2026 [data-index-meta] {
+    justify-self: start !important;
+  }
+
+  .home-2026 table {
+    min-width: 640px !important;
+  }
+
+  .home-2026 [data-hero-aside] {
+    display: none !important;
+  }
+
+  .home-2026 [style*="border-radius:24px"] {
+    border-radius: 18px !important;
+  }
+
+  .home-2026 img {
+    max-width: 100%;
   }
 }

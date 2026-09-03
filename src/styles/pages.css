@@ -7,7 +7,10 @@
    Scoped to .site-page so the admin console keeps its own look.
    ================================================================== */
 
-.site-page h1, .site-page h2 { font-weight: 800 !important; letter-spacing: -0.035em !important; }
+/* The home design is the one that does not carry this override: it sets its own
+   weight and tracking on each heading inline, and !important here would beat
+   them. Every other page design ships the rule, so only home is excluded. */
+.site-page h1:not(.home-2026 *), .site-page h2:not(.home-2026 *) { font-weight: 800 !important; letter-spacing: -0.035em !important; }
 
 .site-page h3 { letter-spacing: -0.02em; }
 
