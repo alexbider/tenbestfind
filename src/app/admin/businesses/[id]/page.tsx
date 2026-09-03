@@ -6,6 +6,7 @@ import { BillingPortalButton } from "@/components/admin/BillingControls";
 import { SeoPanel } from "@/components/admin/SeoPanel";
 import { LEAD_STATUSES, URGENCY_LABEL } from "@/lib/leads";
 import { leadAccessFor } from "@/lib/entitlements";
+import { GAP_BY_KEY, SCORE_SELECT, gapsFor, scoreOf } from "@/lib/completeness";
 import {
   addToRanking,
   deleteBusiness,
@@ -112,6 +113,12 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
 
   // The most recent website read that included this company, so the panel can
   // say what it filled rather than only that it ran.
+  // Scored live here rather than read off the row, so the panel is right even
+  // immediately after an edit that has not been rescored yet.
+  const scorable = await db.business.findUnique({ where: { id }, select: SCORE_SELECT });
+  const score = scorable ? scoreOf(scorable) : 0;
+  const gaps = scorable ? gapsFor(scorable) : [];
+
   const lastEnrich = await db.enrichRun.findFirst({
     where: { businessIds: { contains: business.id } },
     orderBy: { createdAt: "desc" },
@@ -424,6 +431,56 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                   Also read it for the team, the warranty and the services
                 </label>
               </form>
+
+              <div style={{ marginTop: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, marginBottom: 6 }}>
+                  <strong>Listing {score}% complete</strong>
+                  <span style={{ color: "var(--text-muted)" }}>
+                    {gaps.length === 0 ? "Nothing missing" : `${gaps.length} things missing`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 7,
+                    borderRadius: 999,
+                    background: "var(--surface-sunken)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${score}%`,
+                      height: "100%",
+                      background:
+                        score >= 80 ? "var(--green-600)" : score >= 60 ? "var(--amber-600)" : "var(--maple-600)",
+                    }}
+                  />
+                </div>
+
+                {gaps.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                    {gaps.map((key) => {
+                      const gap = GAP_BY_KEY.get(key);
+                      if (!gap) return null;
+                      return (
+                        <span
+                          key={key}
+                          className="chip chip--static"
+                          style={{ fontSize: 12.5, padding: "3px 10px" }}
+                          title={
+                            gap.fromWebsite
+                              ? "Reading the website may fill this"
+                              : "A website read will not fill this; it needs an editor or a scrape"
+                          }
+                        >
+                          {gap.label}
+                          {gap.fromWebsite ? "" : " ·"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
 
               <p style={{ marginTop: 14, fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
                 {business.website ? (

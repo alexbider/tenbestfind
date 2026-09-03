@@ -8,21 +8,25 @@ import { db } from "@/lib/db";
 
 export const metadata = { title: "Businesses" };
 
-type Props = { searchParams: Promise<{ status?: string; q?: string }> };
+type Props = { searchParams: Promise<{ status?: string; q?: string; sort?: string }> };
 
 export default async function AdminBusinessesList({ searchParams }: Props) {
   await requireStaff();
   const params = await searchParams;
   const status = params.status;
   const query = params.q?.trim();
+  const sort = params.sort;
 
-  const [businesses, counts, mrr] = await Promise.all([
+  const [businesses, counts, mrr, avgCompleteness] = await Promise.all([
     db.business.findMany({
       where: {
         ...(status ? { status } : {}),
         ...(query ? { name: { contains: query } } : {}),
       },
-      orderBy: [{ status: "asc" }, { name: "asc" }],
+      orderBy:
+        sort === "thinnest"
+          ? [{ completeness: "asc" }, { name: "asc" }]
+          : [{ status: "asc" }, { name: "asc" }],
       take: 100,
       include: {
         category: { select: { name: true } },
@@ -38,6 +42,7 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
       db.business.count({ where: { verified: true } }),
     ]),
     monthlyRecurringRevenue(),
+    db.business.aggregate({ _avg: { completeness: true } }),
   ]);
 
   const [total, claimed, verified] = counts;
@@ -68,6 +73,11 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
           { label: "Total profiles", value: total },
           { label: "Claimed", value: claimed, hint: `${Math.round((claimed / Math.max(1, total)) * 100)}% of profiles` },
           { label: "Verified details", value: verified },
+          {
+            label: "Average completeness",
+            value: `${Math.round(avgCompleteness._avg.completeness ?? 0)}%`,
+            hint: "How filled in the listings are",
+          },
           { label: "MRR", value: money(mrr) },
         ]}
       />
@@ -143,6 +153,21 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
                       {business.entries[0] ? `#${business.entries[0].position}` : "—"}
                     </td>
                     <td className="admin-table__num">{business.googleRating?.toFixed(1) ?? "—"}</td>
+                    <td className="admin-table__num">
+                      <span
+                        style={{
+                          color:
+                            business.completeness >= 80
+                              ? "var(--green-600)"
+                              : business.completeness >= 60
+                                ? "var(--text-secondary)"
+                                : "var(--maple-600)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {business.completeness}%
+                      </span>
+                    </td>
                     <td>
                       <StatusPill status={business.status} />
                     </td>

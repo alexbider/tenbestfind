@@ -11,6 +11,7 @@ import { focusKeywordFor, writeListing, type Brief } from "./listing-writer";
 import { crawlSite, type SiteData } from "./site-crawl";
 import { discoverCity, fillServiceAreas } from "./geo";
 import { saveReviews } from "./reviews";
+import { recomputeCompleteness } from "./completeness";
 import { openingFingerprint } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
@@ -802,6 +803,8 @@ async function createBusiness(
       analysis: JSON.stringify(analysis.checks),
     },
   });
+
+  await recomputeCompleteness(business.id);
 
   await db.importItem.update({
     where: { id: item.id },

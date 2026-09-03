@@ -589,11 +589,18 @@ export const DIRECTORY_TOOLS: Tool[] = [
     schema: object({
       idOrSlug: str("One company. Leave it out and pass batchId, or a selection, instead."),
       batchId: str("Every company an import batch created."),
-      categoryId: str("Limit a directory selection to one service."),
-      cityId: str("Limit a directory selection to one city."),
-      onlyNever: bool("Selection only: skip companies whose site has already been read. Default true."),
+      categoryId: str("Limit a selection to one service."),
+      cityId: str("Limit a selection to one city."),
+      status: str("PUBLISHED, DRAFT or PENDING. Default is all three."),
+      read: str("never, stale or any. Whether the site has been read before. Default any."),
+      staleDays: int("With read=stale, how long counts as stale. Default 30."),
+      maxScore: int("Only listings at or below this completeness score, 0 to 100."),
+      missing: arr(
+        "Gap keys a listing must all be missing: description, overview, photos, logo, services, credentials, phone, email, website, address, hours, areas, reviews, staff, faqs, social, yearFounded.",
+      ),
+      order: str("thinnest, oldest or newest. Default thinnest, least complete first."),
       useModel: bool("Also read the pages with the model for the team, warranty and services. Default true."),
-      limit: int("Selection only: how many companies at most. Default 25, maximum 200."),
+      limit: int("How many companies at most. Default 25, maximum 300."),
     }),
     handler: async (args, ctx) => {
       const { queueEnrichment } = await import("../enrich-run");
@@ -621,17 +628,26 @@ export const DIRECTORY_TOOLS: Tool[] = [
         ids = [...new Set(items.map((row) => row.businessId).filter((id): id is string => Boolean(id)))];
         what = `${ids.length} companies from ${batch.name}`;
       } else {
+        // The same filter the admin screen uses, so a selection described here
+        // and a selection ticked there mean exactly the same thing.
+        const { parseFilter, whereFor, orderFor } = await import("../enrich-filter");
+        const filter = parseFilter({
+          categoryId: args.categoryId ? String(args.categoryId) : undefined,
+          cityId: args.cityId ? String(args.cityId) : undefined,
+          status: args.status ? String(args.status).toUpperCase() : undefined,
+          read: args.read ? String(args.read) : "any",
+          staleDays: args.staleDays !== undefined ? String(args.staleDays) : undefined,
+          maxScore: args.maxScore !== undefined ? String(args.maxScore) : undefined,
+          missing: Array.isArray(args.missing) ? args.missing.map(String) : [],
+          order: args.order ? String(args.order) : "thinnest",
+          limit: String(Math.min(300, limitOf(args, 25))),
+        });
+
         const rows = await db.business.findMany({
-          where: {
-            website: { not: null },
-            status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
-            ...(args.categoryId ? { categoryId: String(args.categoryId) } : {}),
-            ...(args.cityId ? { cityId: String(args.cityId) } : {}),
-            ...(args.onlyNever === false ? {} : { siteCrawledAt: null }),
-          },
-          orderBy: { siteCrawledAt: { sort: "asc", nulls: "first" } },
+          where: whereFor(filter),
+          orderBy: orderFor(filter),
           select: { id: true },
-          take: Math.min(200, limitOf(args, 25)),
+          take: Math.min(300, limitOf(args, 25)),
         });
         ids = rows.map((row) => row.id);
         what = `${ids.length} companies`;
@@ -657,6 +673,58 @@ export const DIRECTORY_TOOLS: Tool[] = [
         skippedWithoutWebsite: ids.length - queued.requested,
         readWithModel: useModel,
       };
+    },
+  },
+
+  {
+    name: "listing_gaps",
+    title: "See what listings are missing",
+    description:
+      "How complete each listing is and exactly which parts are empty. Use it to decide what to enrich, or to check a single company before and after a pass.",
+    schema: object({
+      idOrSlug: str("One company. Leave it out for the thinnest listings across the directory."),
+      categoryId: str("Limit to one service."),
+      cityId: str("Limit to one city."),
+      maxScore: int("Only listings at or below this score."),
+      limit: int("Default 20."),
+    }),
+    handler: async (args) => {
+      const { SCORE_SELECT, gapsFor, scoreOf, GAP_BY_KEY } = await import("../completeness");
+
+      const describe = (row: { name: string; slug: string } & Record<string, unknown>) => {
+        const gaps = gapsFor(row as never);
+        return {
+          name: row.name,
+          slug: row.slug,
+          completeness: scoreOf(row as never),
+          missing: gaps.map((key) => GAP_BY_KEY.get(key)?.label ?? key),
+          fillableFromWebsite: gaps
+            .filter((key) => GAP_BY_KEY.get(key)?.fromWebsite)
+            .map((key) => GAP_BY_KEY.get(key)?.label ?? key),
+        };
+      };
+
+      if (args.idOrSlug !== undefined) {
+        const business = await findBusiness(reqStr(args, "idOrSlug"));
+        const row = await db.business.findUniqueOrThrow({
+          where: { id: business.id },
+          select: { name: true, slug: true, ...SCORE_SELECT },
+        });
+        return describe(row);
+      }
+
+      const rows = await db.business.findMany({
+        where: {
+          status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
+          ...(args.categoryId ? { categoryId: String(args.categoryId) } : {}),
+          ...(args.cityId ? { cityId: String(args.cityId) } : {}),
+          ...(args.maxScore !== undefined ? { completeness: { lte: Number(args.maxScore) } } : {}),
+        },
+        orderBy: { completeness: "asc" },
+        take: limitOf(args, 20),
+        select: { name: true, slug: true, ...SCORE_SELECT },
+      });
+      return { listings: rows.map(describe) };
     },
   },
 

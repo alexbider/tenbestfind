@@ -14,6 +14,8 @@ import { DEFAULT_RADIUS_KM, fillServiceAreas } from "@/lib/geo";
 import { queueRefresh } from "@/lib/reviews";
 import { LEAD_STATUSES, notifyBusiness } from "@/lib/leads";
 import { queueEnrichment } from "@/lib/enrich-run";
+import { recomputeCompleteness } from "@/lib/completeness";
+import { parseFilter, orderFor, whereFor } from "@/lib/enrich-filter";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
@@ -1045,6 +1047,8 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     });
   }
 
+  await recomputeCompleteness(business.id);
+
   await audit({
     userId: user.id,
     action: data.id ? "update" : "create",
@@ -1391,32 +1395,39 @@ export async function enrichBatch(formData: FormData) {
   revalidatePath("/admin/enrichment");
 }
 
-/** A sweep across the directory, for listings that were never enriched. */
+/**
+ * Queues whatever the enrichment screen has selected. It takes the same filter
+ * the screen previewed with, so the number on the button is the number that
+ * runs.
+ */
 export async function enrichSelection(formData: FormData) {
   const user = await requireStaff();
-  const categoryId = String(formData.get("categoryId") ?? "");
-  const cityId = String(formData.get("cityId") ?? "");
-  const onlyNever = formData.get("onlyNever") !== "no";
-  const limit = Math.min(200, Math.max(1, Number(formData.get("limit") ?? 25)));
-  const useModel = formData.get("useModel") !== "no";
+
+  const filter = parseFilter({
+    categoryId: String(formData.get("categoryId") ?? ""),
+    cityId: String(formData.get("cityId") ?? ""),
+    batchId: String(formData.get("batchId") ?? ""),
+    status: String(formData.get("status") ?? ""),
+    read: String(formData.get("read") ?? "any"),
+    staleDays: String(formData.get("staleDays") ?? ""),
+    maxScore: String(formData.get("maxScore") ?? ""),
+    missing: formData.getAll("missing").map(String),
+    limit: String(formData.get("limit") ?? "25"),
+    order: String(formData.get("order") ?? "thinnest"),
+  });
 
   const businesses = await db.business.findMany({
-    where: {
-      website: { not: null },
-      status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
-      ...(categoryId ? { categoryId } : {}),
-      ...(cityId ? { cityId } : {}),
-      ...(onlyNever ? { siteCrawledAt: null } : {}),
-    },
-    orderBy: { siteCrawledAt: { sort: "asc", nulls: "first" } },
+    where: whereFor(filter),
+    orderBy: orderFor(filter),
     select: { id: true },
-    take: limit,
+    take: Math.min(300, Math.max(1, filter.limit ?? 25)),
   });
   if (businesses.length === 0) return;
 
   const queued = await queueEnrichment({
     businessIds: businesses.map((row) => row.id),
-    useModel,
+    batchId: filter.batchId,
+    useModel: formData.get("useModel") !== null,
     userId: user.id,
   });
   await audit({
@@ -1427,6 +1438,21 @@ export async function enrichSelection(formData: FormData) {
     summary: `Website enrichment queued for ${queued.requested} companies`,
   });
   revalidatePath("/admin/enrichment");
+}
+
+/** Rescores every listing, for after a change to how completeness is measured. */
+export async function rescoreListings() {
+  const user = await requireStaff();
+  const { recomputeAll } = await import("@/lib/completeness");
+  const result = await recomputeAll();
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    summary: `Rescored ${result.scored} listings`,
+  });
+  revalidatePath("/admin/enrichment");
+  revalidatePath("/admin/businesses");
 }
 
 /** Rebuilds a company's service areas from the radius around where it works. */

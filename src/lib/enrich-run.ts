@@ -5,6 +5,7 @@ import { fillServiceAreas } from "./geo";
 import { normalizeName } from "./enrich";
 import { PermanentError, type Effort } from "./anthropic";
 import { stringify } from "./json";
+import { recomputeCompleteness } from "./completeness";
 
 // Filling in what a listing is missing from the company's own website.
 //
@@ -376,6 +377,10 @@ export async function enrichBusiness(
   // ------------------------------------------------------------------ areas
   const areas = await fillServiceAreas(businessId).catch(() => ({ added: 0, total: 0 }));
   if (areas.added > 0) filled.push(`${areas.added} area${areas.added === 1 ? "" : "s"}`);
+
+  // The stored score is what the selection filters read, so it has to move the
+  // moment the listing does.
+  await recomputeCompleteness(businessId);
 
   return {
     business: business.name,

@@ -213,6 +213,11 @@ model Business {
   socialLinks String?
   siteCrawledAt DateTime?
 
+  // How much of the listing is actually filled in, 0 to 100. Stored rather than
+  // computed on read so the admin can sort and filter on it, and recomputed
+  // whenever anything that feeds it changes.
+  completeness Int     @default(0)
+
   verified    Boolean  @default(false)
   claimed     Boolean  @default(false)
   stripeCustomerId String? @unique
@@ -242,6 +247,7 @@ model Business {
   faqs          Faq[]
   importItems   ImportItem[]
 
+  @@index([completeness])
   @@index([categoryId, status])
   @@index([cityId, status])
   @@index([status])
