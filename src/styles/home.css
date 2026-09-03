@@ -347,3 +347,622 @@
     height: 160px;
   }
 }
+
+/* ==================================================================
+   Home page, 2026 design.
+   Layout lives in inline styles on the page itself, the way the design
+   was drawn. What is here is the part CSS has to own: hover and focus
+   states, keyframes, the scroll-triggered entrances and the breakpoints.
+   Everything is scoped to .home-2026 or to a data attribute that only
+   the home page carries, so no other template is touched.
+   ================================================================== */
+
+.home-2026 {
+  /* The design draws on a slightly wider shell than the rest of the site. */
+  --shell: 1240px;
+  --paper: #f7f9fc;
+  background: var(--surface-card);
+}
+
+.home-2026 h1,
+.home-2026 h2,
+.home-2026 h3,
+.home-2026 h4 {
+  letter-spacing: -0.028em;
+  color: var(--ink);
+}
+
+.home-2026 p {
+  margin: 0;
+}
+
+.home-2026 ul,
+.home-2026 ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-2026 a {
+  color: var(--text-link);
+  text-decoration: none;
+}
+
+.home-2026 a:hover {
+  color: var(--color-primary-hover);
+}
+
+.home-2026 a:focus-visible,
+.home-2026 button:focus-visible,
+.home-2026 input:focus-visible,
+.home-2026 summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+
+.home-2026 .arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.home-2026 .arrow-link svg {
+  transition: transform 200ms var(--ease-out);
+}
+
+.home-2026 .arrow-link:hover svg {
+  transform: translateX(4px);
+}
+
+/* ---------------------------------------------- the search suggestions */
+
+.home-2026 [data-suggest] {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), visibility 200ms;
+}
+
+.home-2026 [data-searchbox]:focus-within [data-suggest] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.home-2026 [data-searchbox]:focus-within [data-searchform] {
+  box-shadow: 0 24px 60px -18px rgba(16, 31, 61, 0.35), 0 0 0 4px rgba(45, 116, 215, 0.18);
+}
+
+.home-2026 [data-searchform] {
+  transition: box-shadow 200ms var(--ease-out);
+}
+
+/* --------------------------------------------------- the category tiles */
+
+.home-2026 [data-tile] {
+  transition: transform 220ms var(--ease-out), background 220ms var(--ease-out),
+    border-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+
+.home-2026 [data-tile]:hover {
+  transform: translateY(-4px);
+  background: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 0 24px 48px -20px rgba(16, 31, 61, 0.45);
+}
+
+.home-2026 [data-tile]:hover [data-tname] {
+  color: #fff;
+}
+
+.home-2026 [data-tile]:hover [data-tsub] {
+  color: rgba(232, 237, 245, 0.68);
+}
+
+.home-2026 [data-tile]:hover [data-tico] {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--gold-ink);
+  border-color: transparent;
+}
+
+.home-2026 [data-tile]:hover [data-tarrow] {
+  opacity: 1;
+  transform: none;
+  color: var(--gold-ink);
+}
+
+.home-2026 [data-tarrow] {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+.home-2026 [data-tico] {
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+
+.home-2026 [data-tname],
+.home-2026 [data-tsub] {
+  transition: color 200ms var(--ease-out);
+}
+
+/* ---------------------------------------------------------- the cards */
+
+.home-2026 [data-card] {
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out),
+    border-color 220ms var(--ease-out);
+}
+
+.home-2026 [data-card]:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 56px -24px rgba(16, 31, 61, 0.35);
+  border-color: var(--blue-200);
+}
+
+.home-2026 [data-thumb] img {
+  transition: transform 600ms var(--ease-out);
+}
+
+.home-2026 [data-card]:hover [data-thumb] img,
+.home-2026 [data-ctry]:hover [data-thumb] img {
+  transform: scale(1.05);
+}
+
+.home-2026 [data-ctry] {
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+
+.home-2026 [data-ctry]:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 64px -24px rgba(16, 31, 61, 0.5);
+}
+
+.home-2026 [data-ctry]:hover [data-ctry-arrow] {
+  transform: translateX(4px);
+}
+
+.home-2026 [data-ctry-arrow] {
+  transition: transform 200ms var(--ease-out);
+}
+
+/* --------------------------------------------------- the city rows */
+
+.home-2026 [data-row] {
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.home-2026 [data-row]:hover {
+  color: var(--color-primary-hover);
+}
+
+.home-2026 [data-row]:hover [data-row-n] {
+  color: var(--color-primary);
+}
+
+.home-2026 [data-row-n] {
+  transition: color 160ms var(--ease-out);
+}
+
+/* ------------------------------------------------------------- chips */
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.home-2026 [data-chip] {
+  transition: transform 200ms var(--ease-out), background 200ms var(--ease-out),
+    border-color 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.home-2026 [data-chip]:hover {
+  transform: translateY(-2px);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff !important;
+}
+
+/* ------------------------------------------------- the index rows */
+
+.home-2026 [data-index] {
+  transition: background 160ms var(--ease-out);
+}
+
+.home-2026 [data-index]:hover {
+  background: var(--paper);
+}
+
+.home-2026 [data-index]:hover [data-index-arrow] {
+  opacity: 1;
+  transform: none;
+}
+
+.home-2026 [data-index-arrow] {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+/* ---------------------------------------------------------- the FAQ */
+
+.home-2026 [data-faq] > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.home-2026 [data-faq] > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-2026 [data-faq][open] [data-fq-ico] {
+  transform: rotate(45deg);
+  background: var(--ink);
+  color: #fff;
+}
+
+.home-2026 [data-fq-ico] {
+  transition: transform 220ms var(--ease-out), background 220ms var(--ease-out),
+    color 220ms var(--ease-out);
+}
+
+.home-2026 [data-faq] > summary:hover {
+  color: var(--color-primary);
+}
+
+/* --------------------------------------------------- the three steps */
+
+.home-2026 [data-step]:hover [data-step-n] {
+  color: var(--color-primary);
+  -webkit-text-stroke-color: var(--color-primary);
+}
+
+.home-2026 [data-step-n] {
+  transition: color 220ms var(--ease-out);
+}
+
+/* ----------------------------------------------------------- buttons */
+
+.home-2026 [data-btn-primary] {
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+.home-2026 [data-btn-primary]:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.home-2026 [data-btn-primary]:active {
+  transform: scale(0.98);
+}
+
+.home-2026 [data-btn-ghost] {
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.home-2026 [data-btn-ghost]:hover {
+  background: var(--paper);
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------- keyframes */
+
+@keyframes tenDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes tenDrift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(1deg);
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 184, 99, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(231, 184, 99, 0);
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes ledgerLine {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-2026 [data-trend-rail] [data-chip] {
+    opacity: 0;
+  }
+
+  .home-2026 [data-trend-rail][data-inview="1"] [data-chip] {
+    animation: chipIn 380ms var(--ease-out) both;
+  }
+
+  .home-2026 [data-ten-outline] path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: tenDraw 1.6s var(--ease-out) 200ms forwards;
+  }
+
+  .home-2026 [data-ten-outline] {
+    animation: tenDrift 9s ease-in-out infinite;
+  }
+
+  .home-2026 [data-ten-big] path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+
+  .home-2026 [data-ten-big][data-inview="1"] path {
+    animation: tenDraw 2.2s var(--ease-out) forwards;
+  }
+
+  .home-2026 [data-live-dot] {
+    animation: pulseDot 2.2s var(--ease-out) infinite;
+  }
+
+  .home-2026 [data-hero-row] {
+    opacity: 0;
+    animation: riseIn 520ms var(--ease-out) both;
+  }
+
+  .home-2026 [data-hero-row]:nth-child(1) {
+    animation-delay: 420ms;
+  }
+
+  .home-2026 [data-hero-row]:nth-child(2) {
+    animation-delay: 560ms;
+  }
+
+  .home-2026 [data-hero-row]:nth-child(3) {
+    animation-delay: 700ms;
+  }
+
+  .home-2026 [data-hero-in] {
+    opacity: 0;
+    animation: riseIn 600ms var(--ease-out) both;
+  }
+
+  .home-2026 [data-hero-in="1"] {
+    animation-delay: 60ms;
+  }
+
+  .home-2026 [data-hero-in="2"] {
+    animation-delay: 160ms;
+  }
+
+  .home-2026 [data-hero-in="3"] {
+    animation-delay: 260ms;
+  }
+
+  .home-2026 [data-hero-in="4"] {
+    animation-delay: 360ms;
+  }
+
+  .home-2026 [data-hero-in="5"] {
+    animation-delay: 460ms;
+  }
+
+  .home-2026 [data-hero-card] {
+    opacity: 0;
+    animation: riseIn 700ms var(--ease-out) 240ms both;
+  }
+
+  .home-2026 [data-ledger] > li {
+    position: relative;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] [data-count] {
+    animation: riseIn 500ms var(--ease-out) both;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] > li:nth-child(1) [data-count] {
+    animation-delay: 0ms;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] > li:nth-child(2) [data-count] {
+    animation-delay: 90ms;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] > li:nth-child(3) [data-count] {
+    animation-delay: 180ms;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] > li:nth-child(4) [data-count] {
+    animation-delay: 270ms;
+  }
+
+  .home-2026 [data-ledger-bar] {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .home-2026 [data-ledger][data-inview="1"] [data-ledger-bar] {
+    animation: ledgerLine 900ms var(--ease-out) 200ms forwards;
+  }
+
+  .home-2026 [data-badge-ten] {
+    transition: transform 300ms var(--ease-out);
+  }
+
+  .home-2026 [data-card]:hover [data-badge-ten] {
+    transform: rotate(-8deg) scale(1.06);
+  }
+
+  .home-2026 [data-step-n] {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 40%,
+      rgba(231, 184, 99, 0.9) 50%,
+      transparent 60%,
+      transparent 100%
+    );
+    background-size: 250% 100%;
+    background-position: 200% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .home-2026 [data-step]:hover [data-step-n] {
+    animation: shimmer 1.1s var(--ease-out) forwards;
+  }
+
+  .home-2026 [data-index]:hover [data-index-n] {
+    color: var(--color-primary);
+    transform: translateX(3px);
+  }
+
+  .home-2026 [data-index-n] {
+    transition: color 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-2026 * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------- breakpoints */
+
+@media (max-width: 1080px) {
+  .home-2026 [data-cat-grid] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .home-2026 [data-span2] {
+    grid-column: auto !important;
+  }
+
+  .home-2026 [data-ledger] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .home-2026 [data-ledger] > li {
+    border-right: 0 !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .home-2026 [data-split] {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  .home-2026 [data-hero-aside] {
+    display: none !important;
+  }
+
+  .home-2026 [data-cat-grid] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .home-2026 [data-country-grid] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-2026 [data-faq-sticky] {
+    position: static !important;
+  }
+
+  .home-2026 [data-steps] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-2026 [data-steps] > li {
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .home-2026 [data-eeat-grid] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-2026 [data-stack] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .home-2026 [data-stack] > * {
+    width: 100% !important;
+  }
+
+  .home-2026 [data-stack] [data-divider] {
+    display: none !important;
+  }
+
+  .home-2026 [data-cat-grid] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-2026 [data-index] {
+    grid-template-columns: 1fr !important;
+    row-gap: 6px !important;
+  }
+
+  .home-2026 [data-index-meta] {
+    justify-self: start !important;
+  }
+
+  .home-2026 [data-eeat-grid] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-2026 [data-city-cols] {
+    grid-template-columns: 1fr !important;
+  }
+}

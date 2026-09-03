@@ -109,3 +109,47 @@ export const getCountryStats = cache(async (countryCode: string) => {
   ]);
   return { country, cityCount, rankingCount, businessCount };
 });
+
+/**
+ * The list shown in the homepage hero, with enough of its top three to fill
+ * the preview card. The most recently reviewed one, since the card carries the
+ * review date and a stale date is worse than no card.
+ */
+export const getHeroRanking = cache(async () =>
+  db.ranking.findFirst({
+    where: { status: "PUBLISHED", cityId: { not: null }, entries: { some: {} } },
+    orderBy: [{ lastReviewedAt: "desc" }, { publishedAt: "desc" }],
+    select: {
+      ...rankingCardSelect,
+      entries: {
+        where: { business: { status: "PUBLISHED" } },
+        orderBy: { position: "asc" },
+        take: 3,
+        select: {
+          id: true,
+          position: true,
+          designation: true,
+          business: {
+            select: {
+              name: true,
+              verified: true,
+              yearFounded: true,
+              licenseNumber: true,
+              credentials: { orderBy: { sortOrder: "asc" }, take: 1, select: { label: true } },
+            },
+          },
+        },
+      },
+    },
+  }),
+);
+
+/** The four figures under the homepage hero. */
+export const getDirectoryCounts = cache(async () => {
+  const [cities, categories, businesses] = await Promise.all([
+    db.city.count({ where: { published: true, rankings: { some: { status: "PUBLISHED" } } } }),
+    db.category.count({ where: { published: true } }),
+    db.business.count({ where: { status: "PUBLISHED" } }),
+  ]);
+  return { cities, categories, businesses };
+});
