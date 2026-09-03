@@ -82,6 +82,7 @@ export default async function AdminEnrichmentPage({ searchParams }: Props) {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Listings", value: total, hint: `${withSite} have a website to read` },
           { label: "Average completeness", value: `${Math.round(average._avg.completeness ?? 0)}%` },

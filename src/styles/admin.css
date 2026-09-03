@@ -197,22 +197,21 @@
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 18px;
 }
 
 .stat-row__label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: var(--ls-wide);
-  text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 8px;
 }
 
 .stat-row__value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -221,8 +220,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 8px;
-  font-size: 12.5px;
+  margin-top: 6px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -245,7 +244,7 @@
 .panel {
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -256,12 +255,13 @@
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
-  padding: 18px 22px;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .panel__head h2 {
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .panel__head p {
@@ -278,7 +278,7 @@
 }
 
 .panel__body {
-  padding: 20px 22px;
+  padding: 20px;
 }
 
 .panel-grid {
@@ -302,20 +302,20 @@
 
 .admin-table th {
   text-align: left;
-  padding: 12px 22px;
-  font-size: 11px;
+  padding: 10px 14px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: var(--ls-wide);
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  background: var(--surface-page);
+  color: var(--text-muted);
+  background: #fafbfd;
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
 .admin-table td {
-  padding: 14px 22px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 11px 14px;
+  border-bottom: 1px solid #eef2f7;
   color: var(--text-primary);
   vertical-align: middle;
 }
@@ -325,7 +325,7 @@
 }
 
 .admin-table tbody tr:hover {
-  background: var(--surface-page);
+  background: #f8fafd;
 }
 
 .admin-table__primary {
@@ -919,4 +919,131 @@
   filter: blur(0.6px);
   user-select: none;
   letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------- attention queue rows */
+
+.queue-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: var(--surface-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+
+.queue-row:hover {
+  border-color: var(--blue-200);
+  transform: translateY(-1px);
+}
+
+.queue-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+}
+
+.queue-row__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.queue-row__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.queue-row__count {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------- stacked day columns */
+
+.stack-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 150px;
+}
+
+.stack-chart > li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+}
+
+.stack-chart__top {
+  display: block;
+  border-radius: 5px 5px 0 0;
+  background: var(--color-primary);
+}
+
+.stack-chart__bottom {
+  display: block;
+  border-radius: 0 0 5px 5px;
+  background: #bbd5f7;
+}
+
+.stack-chart__label {
+  display: block;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.stack-legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.stack-legend > li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stack-legend span[aria-hidden] {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* A denser stat row, for the strip above a list rather than a dashboard. */
+
+.stat-row--compact > li {
+  padding: 13px 15px;
+  border-radius: 12px;
+}
+
+.stat-row--compact .stat-row__label {
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+
+.stat-row--compact .stat-row__value {
+  font-size: 19px;
+  letter-spacing: normal;
 }

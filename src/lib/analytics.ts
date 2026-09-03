@@ -1,6 +1,6 @@
 import { db } from "./db";
 
-export type Window = 7 | 30 | 90;
+export type Window = 7 | 14 | 30 | 90;
 
 function startOf(daysAgo: number): Date {
   const date = new Date();
@@ -101,6 +101,34 @@ export async function dailySeries(window: Window, businessId?: string) {
   for (let index = window - 1; index >= 0; index -= 1) {
     const date = startOf(index).toISOString().slice(0, 10);
     series.push({ date, value: byDate.get(date) ?? 0 });
+  }
+  return series;
+}
+
+/**
+ * Views and contact actions per day, kept apart rather than summed: the ratio
+ * between them is the thing worth reading.
+ */
+export async function dailyActionSeries(window: Window, businessId?: string) {
+  const rows = await db.businessDailyStat.findMany({
+    where: { date: { gte: startOf(window) }, ...(businessId ? { businessId } : {}) },
+    orderBy: { date: "asc" },
+  });
+
+  const byDate = new Map<string, { top: number; bottom: number }>();
+  for (const row of rows) {
+    const key = row.date.toISOString().slice(0, 10);
+    const current = byDate.get(key) ?? { top: 0, bottom: 0 };
+    current.top += row.profileViews;
+    current.bottom += row.websiteClicks + row.phoneClicks + row.quoteClicks + row.directionsClicks;
+    byDate.set(key, current);
+  }
+
+  const series: { date: string; label: string; top: number; bottom: number }[] = [];
+  for (let index = window - 1; index >= 0; index -= 1) {
+    const date = startOf(index).toISOString().slice(0, 10);
+    const point = byDate.get(date) ?? { top: 0, bottom: 0 };
+    series.push({ date, label: date.slice(8), ...point });
   }
   return series;
 }

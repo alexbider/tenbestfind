@@ -52,6 +52,7 @@ export default async function AdminGuidesList() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Published", value: published },
           { label: "In review", value: inReview },

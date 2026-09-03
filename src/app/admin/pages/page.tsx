@@ -37,6 +37,7 @@ export default async function AdminPagesList() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Published", value: published },
           { label: "Drafts", value: drafts },

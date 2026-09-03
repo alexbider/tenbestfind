@@ -67,6 +67,7 @@ export default async function AdminSubscriptionsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Active", value: active.length },
           { label: "MRR", value: money(mrr) },

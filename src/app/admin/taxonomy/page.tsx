@@ -53,6 +53,7 @@ export default async function AdminTaxonomyPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Services", value: categories.length },
           { label: "Subservices", value: subserviceCount },

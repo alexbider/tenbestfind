@@ -58,6 +58,7 @@ export default async function ImportsPage() {
       ) : null}
 
       <StatRow
+        compact
         stats={[
           { label: "Batches", value: batches.length },
           { label: "Running", value: running },

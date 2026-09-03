@@ -129,11 +129,14 @@ export function AdminHeader({
 
 export function StatRow({
   stats,
+  compact,
 }: {
   stats: { label: string; value: string | number; delta?: number; hint?: string }[];
+  /** The denser strip a list page wants above its table. */
+  compact?: boolean;
 }) {
   return (
-    <ul className="stat-row">
+    <ul className={compact ? "stat-row stat-row--compact" : "stat-row"}>
       {stats.map((stat) => (
         <li key={stat.label}>
           <p className="stat-row__label">{stat.label}</p>
@@ -196,13 +199,90 @@ export function EmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
+/**
+ * The "needs your attention" list. Each row is a link to the queue it counts,
+ * because a number nobody can act on is decoration.
+ */
+export function QueueList({
+  items,
+}: {
+  items: { title: string; sub: string; count: number; href: string; icon: IconName; tone: "amber" | "blue" | "red" | "green" }[];
+}) {
+  const skin = {
+    amber: { background: "#FDF6E7", color: "#8A5F0B" },
+    blue: { background: "#EAF4FF", color: "#1E5FBF" },
+    red: { background: "#FDEDEC", color: "#C32620" },
+    green: { background: "#E9F8F0", color: "#178054" },
+  };
+  return (
+    <ul style={{ display: "grid", gap: 10 }}>
+      {items.map((item) => (
+        <li key={item.href}>
+          <Link className="queue-row" href={item.href}>
+            <span className="queue-row__icon" aria-hidden="true" style={skin[item.tone]}>
+              <Icon name={item.icon} size={16} strokeWidth={1.9} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="queue-row__title">{item.title}</span>
+              <span className="queue-row__sub">{item.sub}</span>
+            </span>
+            <span className="queue-row__count">{item.count}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Two series stacked per day: what people looked at, and what they then did
+ * about it. Reading them apart matters more than either total.
+ */
+export function StackedChart({
+  series,
+  topLabel,
+  bottomLabel,
+}: {
+  series: { date: string; label: string; top: number; bottom: number }[];
+  topLabel: string;
+  bottomLabel: string;
+}) {
+  const max = Math.max(1, ...series.map((point) => point.top + point.bottom));
+  return (
+    <>
+      <ul className="stack-chart">
+        {series.map((point) => (
+          <li key={point.date} title={`${point.date}: ${point.top} ${topLabel.toLowerCase()}, ${point.bottom} ${bottomLabel.toLowerCase()}`}>
+            <span className="stack-chart__top" style={{ height: `${(point.top / max) * 100}%` }} />
+            <span className="stack-chart__bottom" style={{ height: `${(point.bottom / max) * 100}%` }} />
+            <span className="stack-chart__label">{point.label}</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="stack-legend">
+        <li>
+          <span aria-hidden="true" style={{ background: "var(--color-primary)" }} />
+          {topLabel}
+        </li>
+        <li>
+          <span aria-hidden="true" style={{ background: "#BBD5F7" }} />
+          {bottomLabel}
+        </li>
+      </ul>
+    </>
+  );
+}
+
 /** A horizontal bar chart. Deliberately plain: it is read, not admired. */
 export function BarChart({
   data,
   valueLabel,
+  format,
 }: {
   data: { label: string; value: number; meta?: string }[];
   valueLabel?: string;
+  /** How to print the number. Counts compact; money needs its currency. */
+  format?: (value: number) => string;
 }) {
   const max = Math.max(1, ...data.map((row) => row.value));
   return (
@@ -214,7 +294,7 @@ export function BarChart({
             <span className="bar-chart__fill" style={{ width: `${(row.value / max) * 100}%` }} />
           </span>
           <span className="bar-chart__value">
-            {compactNumber(row.value)}
+            {format ? format(row.value) : compactNumber(row.value)}
             {valueLabel ? ` ${valueLabel}` : ""}
             {row.meta ? ` · ${row.meta}` : ""}
           </span>

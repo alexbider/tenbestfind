@@ -42,6 +42,7 @@ export default async function AdminSubmissionsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Open reports", value: open.length },
           { label: "Corrections, 30 days", value: corrections.length },

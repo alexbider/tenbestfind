@@ -42,6 +42,7 @@ export default async function ConnectionsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Applications", value: clients.length },
           { label: "Live sessions", value: sessions.length },

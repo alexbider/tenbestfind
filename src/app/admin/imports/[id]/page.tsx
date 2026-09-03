@@ -121,6 +121,7 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
       {batch.error ? <p className="form-error" style={{ marginBottom: 24 }}>{batch.error}</p> : null}
 
       <StatRow
+        compact
         stats={[
           { label: "Stage", value: batch.status.toLowerCase(), hint: STAGE_NOTE[batch.status] },
           { label: "To import", value: batch.found, hint: `${batch.duplicates} skipped or duplicate` },

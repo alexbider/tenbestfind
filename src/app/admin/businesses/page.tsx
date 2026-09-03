@@ -69,6 +69,7 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Total profiles", value: total },
           { label: "Claimed", value: claimed, hint: `${Math.round((claimed / Math.max(1, total)) * 100)}% of profiles` },

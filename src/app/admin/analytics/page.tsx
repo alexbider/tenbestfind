@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { AdminHeader, BarChart, Panel, StatRow, TrendChart } from "@/components/admin/shell";
+import { AdminHeader, BarChart, Panel, StackedChart, StatRow, TrendChart } from "@/components/admin/shell";
 import { percentChange } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import {
   breakdowns,
-  dailySeries,
+  dailyActionSeries,
   leadPlaces,
   leadSeries,
   previousTotals,
@@ -26,11 +26,11 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
   const requested = Number((await searchParams).window);
   const window: Window = WINDOWS.includes(requested as Window) ? (requested as Window) : 30;
 
-  const [totals, previous, series, top, eventsByType, topRankings, mix, places, leadsPerDay, lockedLeads] =
+  const [totals, previous, actionSeries, top, eventsByType, topRankings, mix, places, leadsPerDay, lockedLeads] =
     await Promise.all([
     totalsFor(window),
     previousTotals(window),
-    dailySeries(window),
+    dailyActionSeries(window),
     topBusinesses(window, 10),
     db.analyticsEvent.groupBy({ by: ["type"], _count: { _all: true } }),
     db.ranking.findMany({
@@ -109,8 +109,8 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
       />
 
       <div className="panel-grid panel-grid--wide">
-        <Panel title={`Profile views, last ${window} days`}>
-          <TrendChart series={series} />
+        <Panel title={`Views and contact actions, last ${window} days`}>
+          <StackedChart series={actionSeries} topLabel="Profile views" bottomLabel="Contact actions" />
         </Panel>
         <Panel title={`Quote requests, last ${window} days`}>
           <TrendChart series={leadsPerDay} />

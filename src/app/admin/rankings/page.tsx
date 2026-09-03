@@ -50,6 +50,7 @@ export default async function AdminRankingsList() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Live rankings", value: live.length },
           { label: "Due re-check", value: due.length, hint: `Older than ${cadence} months` },

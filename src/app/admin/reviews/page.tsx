@@ -59,6 +59,7 @@ export default async function AdminReviewsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Companies with a place id", value: withPlaceId },
           { label: "Never read", value: neverRead },

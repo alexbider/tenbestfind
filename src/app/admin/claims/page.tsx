@@ -46,6 +46,7 @@ export default async function AdminClaimsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Awaiting review", value: awaiting.length },
           { label: "Avg time to decide", value: avgHours ? `${avgHours}h` : "—" },

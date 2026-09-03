@@ -734,6 +734,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
       {tab === "leads" ? (
         <>
           <StatRow
+        compact
             stats={[
               { label: "Leads all time", value: leads.length },
               {

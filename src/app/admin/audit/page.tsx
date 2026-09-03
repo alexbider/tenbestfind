@@ -48,6 +48,7 @@ export default async function AdminAuditPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Entries, 24 hours", value: dayCount },
           { label: "Object types", value: byType.length },

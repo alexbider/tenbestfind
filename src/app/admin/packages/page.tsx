@@ -54,6 +54,7 @@ export default async function AdminPackagesPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Plans", value: plans.length },
           { label: "Active subscriptions", value: [...activeLookup.values()].reduce((a, b) => a + b, 0) },
@@ -65,6 +66,62 @@ export default async function AdminPackagesPage() {
           },
         ]}
       />
+
+      <ul
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 14,
+          marginBottom: 20,
+        }}
+      >
+        {plans.map((plan) => {
+          const active = activeLookup.get(plan.id) ?? 0;
+          return (
+            <li
+              key={plan.id}
+              style={{
+                background: "var(--surface-card)",
+                border: `1px solid ${plan.editorial ? "var(--border-subtle)" : "#EBCE95"}`,
+                borderRadius: 14,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700 }}>
+                  <Link href={`/admin/packages/${plan.id}`}>{plan.name}</Link>
+                </h2>
+                <Badge tone={plan.editorial ? "neutral" : "warning"}>
+                  {plan.editorial ? "Listing" : "Placement"}
+                </Badge>
+              </div>
+              <p style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 26, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+                  {plan.interval === "quote" ? "Quoted" : money(plan.priceCents, plan.currency)}
+                </span>
+                {plan.interval === "quote" ? null : (
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>/month</span>
+                )}
+              </p>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 16 }}>{plan.unitLabel}</p>
+              <dl style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, margin: 0 }}>
+                {[
+                  { label: "Active", value: String(active) },
+                  { label: "MRR", value: money(active * plan.priceCents, plan.currency) },
+                  { label: "Lifetime", value: String(plan._count.subscriptions) },
+                ].map((stat) => (
+                  <div key={stat.label}>
+                    <dt style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>{stat.label}</dt>
+                    <dd style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                      {stat.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          );
+        })}
+      </ul>
 
       <Panel padded={false}>
         <div className="table-wrap">

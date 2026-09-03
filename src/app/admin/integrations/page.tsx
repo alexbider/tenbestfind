@@ -37,6 +37,7 @@ export default async function AdminIntegrationsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Connections", value: connectors.length },
           { label: "Enabled", value: connectors.filter((connector) => connector.enabled).length },

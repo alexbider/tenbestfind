@@ -37,6 +37,7 @@ export default async function AdminUsersPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Staff accounts", value: staff.length },
           { label: "Business owners", value: users.length - staff.length },

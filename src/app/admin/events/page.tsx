@@ -35,6 +35,7 @@ export default async function AdminEventsPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Events today", value: todayCount },
           { label: "Event types", value: typeCount.length },

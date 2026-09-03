@@ -60,6 +60,7 @@ export default async function AdminSeoPage() {
       )}
 
       <StatRow
+        compact
         stats={[
           { label: "Indexing", value: visible ? "On" : "Off" },
           { label: "Published entities", value: publishedTotal },

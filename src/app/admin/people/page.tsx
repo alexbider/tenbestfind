@@ -44,6 +44,7 @@ export default async function AdminPeoplePage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "People", value: people.length },
           { label: "Expert panel", value: experts },

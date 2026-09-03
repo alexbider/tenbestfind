@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { AdminHeader, BarChart, EmptyState, Panel, StatRow, TrendChart } from "@/components/admin/shell";
+import { AdminHeader, BarChart, EmptyState, Panel, QueueList, StackedChart, StatRow } from "@/components/admin/shell";
 import { StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange, shortMonthYear } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
-import { dailySeries, monthlyRecurringRevenue, previousTotals, topBusinesses, totalsFor } from "@/lib/analytics";
+import { dailyActionSeries, monthlyRecurringRevenue, previousTotals, topBusinesses, totalsFor } from "@/lib/analytics";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Dashboard" };
@@ -11,11 +11,11 @@ export const metadata = { title: "Dashboard" };
 export default async function AdminDashboard() {
   await requireStaff();
 
-  const [totals, previous, series, top, mrr, counts, dueRankings, openClaims, openSubmissions, recentAudit] =
+  const [totals, previous, series, top, mrr, counts, dueRankings, openClaims, openSubmissions, recentAudit, activeSubscriptions] =
     await Promise.all([
       totalsFor(30),
       previousTotals(30),
-      dailySeries(30),
+      dailyActionSeries(14),
       topBusinesses(30, 6),
       monthlyRecurringRevenue(),
       Promise.all([
@@ -47,9 +47,27 @@ export default async function AdminDashboard() {
         take: 6,
         include: { user: { select: { name: true } } },
       }),
+      db.subscription.findMany({
+        where: { status: "ACTIVE" },
+        include: { plan: { select: { id: true, name: true, priceCents: true, currency: true, unitLabel: true } } },
+      }),
     ]);
 
   const [publishedBusinesses, pendingBusinesses, rankings, guides, pages, activeSubs] = counts;
+  const contactActions = totals.websiteClicks + totals.phoneClicks + totals.quoteClicks;
+  const previousActions = previous.websiteClicks + previous.phoneClicks + previous.quoteClicks;
+
+  // Revenue grouped by the package it came from, so a plan that is not paying
+  // for itself is visible rather than buried in the total.
+  const byPlan = new Map<string, { name: string; unit: string; count: number; cents: number }>();
+  for (const subscription of activeSubscriptions) {
+    const plan = subscription.plan;
+    const current = byPlan.get(plan.id) ?? { name: plan.name, unit: plan.unitLabel, count: 0, cents: 0 };
+    current.count += 1;
+    current.cents += plan.priceCents;
+    byPlan.set(plan.id, current);
+  }
+  const packages = [...byPlan.values()].sort((a, b) => b.cents - a.cents);
 
   return (
     <>
@@ -60,20 +78,13 @@ export default async function AdminDashboard() {
 
       <StatRow
         stats={[
-          {
-            label: "Profile views",
-            value: totals.profileViews,
-            delta: percentChange(totals.profileViews, previous.profileViews),
-          },
-          {
-            label: "Contact actions",
-            value: totals.websiteClicks + totals.phoneClicks + totals.quoteClicks,
-            delta: percentChange(
-              totals.websiteClicks + totals.phoneClicks + totals.quoteClicks,
-              previous.websiteClicks + previous.phoneClicks + previous.quoteClicks,
-            ),
-          },
           { label: "Monthly recurring revenue", value: money(mrr), hint: `${activeSubs} active subscriptions` },
+          { label: "Active subscriptions", value: activeSubs, hint: `across ${packages.length} packages` },
+          {
+            label: "Listing actions, 30 days",
+            value: contactActions,
+            delta: percentChange(contactActions, previousActions),
+          },
           {
             label: "Needs attention",
             value: openClaims.length + openSubmissions.length + pendingBusinesses,
@@ -83,11 +94,67 @@ export default async function AdminDashboard() {
       />
 
       <div className="panel-grid panel-grid--wide">
-        <Panel title="Profile views, last 30 days" description="Daily totals across every published listing.">
-          <TrendChart series={series} />
-          <p style={{ marginTop: 12, fontSize: 13, color: "var(--text-muted)" }}>
-            {series[0]?.date} to {series[series.length - 1]?.date}
-          </p>
+        <Panel
+          title="Listing actions, last 14 days"
+          description="Every event across published profiles."
+        >
+          <StackedChart series={series} topLabel="Profile views" bottomLabel="Contact actions" />
+        </Panel>
+
+        <Panel title="Needs your attention">
+          <QueueList
+            items={[
+              {
+                title: "Claims awaiting review",
+                sub: "Ownership verification",
+                count: openClaims.length,
+                href: "/admin/claims",
+                icon: "key",
+                tone: "amber",
+              },
+              {
+                title: "Rankings due a re-check",
+                sub: "Oldest review date first",
+                count: dueRankings.length,
+                href: "/admin/rankings",
+                icon: "trophy",
+                tone: "blue",
+              },
+              {
+                title: "Listings pending publication",
+                sub: "Submitted and not yet decided",
+                count: pendingBusinesses,
+                href: "/admin/businesses?status=PENDING",
+                icon: "store",
+                tone: "green",
+              },
+              {
+                title: "Reports and corrections",
+                sub: "Flagged by readers or owners",
+                count: openSubmissions.length,
+                href: "/admin/submissions",
+                icon: "flag",
+                tone: "red",
+              },
+            ]}
+          />
+        </Panel>
+      </div>
+
+      <div className="panel-grid panel-grid--wide">
+        <Panel title="Revenue by package" description="Active subscriptions only.">
+          {packages.length === 0 ? (
+            <EmptyState title="No active subscriptions" body="Revenue appears once a plan is bought." />
+          ) : (
+            <BarChart
+              format={(value) => money(value)}
+              data={packages.map((entry) => ({
+                label: entry.name,
+                value: entry.cents,
+                meta: `${entry.count} ${entry.unit}`,
+              }))}
+            />
+          )}
         </Panel>
 
         <Panel title="Directory at a glance">

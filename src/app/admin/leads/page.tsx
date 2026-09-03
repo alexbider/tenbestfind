@@ -67,6 +67,7 @@ export default async function AdminLeadsPage({ searchParams }: Props) {
       )}
 
       <StatRow
+        compact
         stats={[
           { label: "Total leads", value: total },
           { label: "Last 7 days", value: thisWeek },

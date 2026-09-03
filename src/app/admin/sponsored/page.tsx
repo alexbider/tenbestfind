@@ -43,6 +43,7 @@ export default async function AdminSponsoredPage() {
       />
 
       <StatRow
+        compact
         stats={[
           { label: "Slots defined", value: rankings, hint: "One per published ranking" },
           { label: "Sold", value: active.length },
