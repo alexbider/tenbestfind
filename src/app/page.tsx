@@ -585,7 +585,7 @@ export default async function HomePage() {
                     data-thumb=""
                     style={{ position: "relative", height: "176px", background: "#1B2D55", overflow: "hidden" }}
                   >
-                    <Media src={hero.city?.heroImage} alt="" />
+                    <Media src={hero.city?.heroImage} alt="" tone="dark" />
                     <span
                       aria-hidden="true"
                       style={{
@@ -1405,7 +1405,7 @@ export default async function HomePage() {
                     data-thumb=""
                     style={{ position: "absolute", inset: "0", background: "#1B2D55", overflow: "hidden" }}
                   >
-                    <Media src={country.heroImage} alt="" />
+                    <Media src={country.heroImage} alt="" tone="dark" />
                   </div>
                   <span
                     aria-hidden="true"

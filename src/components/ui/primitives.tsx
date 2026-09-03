@@ -269,12 +269,19 @@ export function Media({
   height,
   monogram,
   radius = 0,
+  tone,
 }: {
   src?: string | null;
   alt: string;
   height?: number | string;
   monogram?: string;
   radius?: number;
+  /**
+   * "dark" for a slot on a dark card. The placeholder then keeps whatever the
+   * wrapper is painted rather than covering it with the light sunken surface,
+   * which on navy reads as a white panel rather than an empty photo.
+   */
+  tone?: "dark";
 }) {
   if (src) {
     // Photos come from arbitrary hosts, so this stays a plain img rather than
@@ -292,8 +299,8 @@ export function Media({
         width: "100%",
         height: height ?? "100%",
         borderRadius: radius,
-        background: "var(--surface-sunken)",
-        color: "var(--gray-400)",
+        background: tone === "dark" ? "transparent" : "var(--surface-sunken)",
+        color: tone === "dark" ? "rgba(232,237,245,0.38)" : "var(--gray-400)",
         fontSize: monogram ? 20 : 13,
         fontWeight: 700,
         letterSpacing: monogram ? "0.02em" : undefined,
