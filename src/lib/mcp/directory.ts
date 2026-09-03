@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { BUSINESS_STATUSES } from "../enums";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
@@ -24,7 +25,7 @@ import {
 // Businesses and the people who write about them, plus the two inboxes: claims
 // from owners and corrections from readers.
 
-const BUSINESS_STATUS = ["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "ARCHIVED"] as const;
+
 
 async function findBusiness(key: string) {
   const business = await db.business.findFirst({ where: { OR: [{ id: key }, { slug: key }] } });
@@ -74,7 +75,7 @@ export const DIRECTORY_TOOLS: Tool[] = [
         throw new ToolError(`A business already uses the slug ${slug}. Pass a different slug.`);
       }
 
-      const status = args.status ? oneOf(String(args.status), BUSINESS_STATUS, "status") : "DRAFT";
+      const status = args.status ? oneOf(String(args.status), BUSINESS_STATUSES, "status") : "DRAFT";
       const business = await db.business.create({
         data: {
           name,
@@ -201,14 +202,15 @@ export const DIRECTORY_TOOLS: Tool[] = [
     name: "set_business_status",
     title: "Publish or unpublish a business",
     write: true,
-    description: "Moves a listing between DRAFT, PENDING, PUBLISHED, REJECTED and ARCHIVED.",
+    description:
+      "Moves a listing between DRAFT, PENDING, PUBLISHED, SUSPENDED, REJECTED and ARCHIVED. SUSPENDED means taken down for a reason that may end; ARCHIVED means retired for good.",
     schema: object({ idOrSlug: str("The business id or slug."), status: str("The new status.") }, [
       "idOrSlug",
       "status",
     ]),
     handler: async (args, ctx) => {
       const existing = await findBusiness(reqStr(args, "idOrSlug"));
-      const status = oneOf(reqStr(args, "status"), BUSINESS_STATUS, "status");
+      const status = oneOf(reqStr(args, "status"), BUSINESS_STATUSES, "status");
 
       const business = await db.business.update({
         where: { id: existing.id },

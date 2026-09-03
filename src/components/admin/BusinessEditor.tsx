@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { saveBusiness, type ActionState } from "@/app/actions/admin-content";
 import { IdListEditor, RepeatableEditor, StringListEditor } from "./RepeatableEditor";
 import { MediaField } from "./MediaField";
@@ -79,9 +79,18 @@ export function BusinessEditor({
   business: BusinessDraft;
   categories: Option[];
   cities: Option[];
-  subservices: { id: string; label: string; group?: string }[];
+  subservices: { id: string; label: string; group?: string; categoryId: string }[];
 }) {
   const [state, action, pending] = useActionState(saveBusiness, initial);
+
+  // Only the work this service actually covers is offered. Picking a plumbing
+  // subservice for a roofer was possible before and produced listings on pages
+  // the company has no business being on.
+  const [categoryId, setCategoryId] = useState(business.categoryId);
+  const offered = useMemo(
+    () => subservices.filter((sub) => sub.categoryId === categoryId),
+    [subservices, categoryId],
+  );
 
   return (
     <form action={action}>
@@ -106,6 +115,7 @@ export function BusinessEditor({
             <option value="DRAFT">Draft</option>
             <option value="PENDING">Pending review</option>
             <option value="PUBLISHED">Published</option>
+            <option value="SUSPENDED">Suspended</option>
             <option value="REJECTED">Rejected</option>
             <option value="ARCHIVED">Archived</option>
           </select>
@@ -122,7 +132,13 @@ export function BusinessEditor({
         </div>
         <div className="field">
           <label htmlFor="biz-category">Primary service</label>
-          <select id="biz-category" name="categoryId" defaultValue={business.categoryId} required>
+          <select
+            id="biz-category"
+            name="categoryId"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            required
+          >
             <option value="">Pick a service</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -316,9 +332,13 @@ export function BusinessEditor({
         <IdListEditor
           name="services"
           label="Subservices"
-          options={subservices}
+          options={offered}
           initial={business.services}
-          hint="What this company actually does. It decides which subservice pages list them."
+          hint={
+            offered.length > 0
+              ? "What this company actually does. It decides which subservice pages list them. Only the work under the service above is offered."
+              : "The service above has no subservices yet. Add some under Services and locations."
+          }
         />
         <div style={{ marginBottom: 0 }}>
           <IdListEditor

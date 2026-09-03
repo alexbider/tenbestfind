@@ -142,26 +142,52 @@ export function AiAssistanceDisclosure() {
   );
 }
 
-export function BadgeDisclosure() {
+/**
+ * Explains the badges shown alongside it. On a company profile only the badges
+ * that company actually holds are described, and the whole disclosure
+ * disappears when it holds none, so nobody is invited to look for a "Featured
+ * Partner" mark that is not on the page. The explainer pages pass nothing and
+ * get all four.
+ */
+export function BadgeDisclosure({
+  verified = true,
+  ranked = true,
+  claimed = true,
+  sponsored = true,
+}: {
+  verified?: boolean;
+  ranked?: boolean;
+  claimed?: boolean;
+  sponsored?: boolean;
+} = {}) {
+  if (!verified && !ranked && !claimed && !sponsored) return null;
   return (
     <Disclosure label="What do these badges mean?" title="Badge definitions">
-      <p>
-        <strong>Verified details</strong> means we checked the company&apos;s registration and
-        credentials against a primary source on the date shown.
-      </p>
-      <p>
-        <strong>Top 10 ranked</strong> means the company holds an editorial position on a published
-        ranking. It cannot be bought.
-      </p>
-      <p>
-        <strong>Claimed profile</strong> means the owner has verified ownership and manages the
-        listing. Claiming never affects ranking position.
-      </p>
-      <p>
-        <strong>Featured Partner</strong> is a paid, labelled placement. A Featured Partner never
-        earns a ranking position by paying, and a company holding this badge may hold no editorial
-        position at all.
-      </p>
+      {verified ? (
+        <p>
+          <strong>Verified details</strong> means we checked the company&apos;s registration and
+          credentials against a primary source on the date shown.
+        </p>
+      ) : null}
+      {ranked ? (
+        <p>
+          <strong>Top 10 ranked</strong> means the company holds an editorial position on a
+          published ranking. It cannot be bought.
+        </p>
+      ) : null}
+      {claimed ? (
+        <p>
+          <strong>Claimed profile</strong> means the owner has verified ownership and manages the
+          listing. Claiming never affects ranking position.
+        </p>
+      ) : null}
+      {sponsored ? (
+        <p>
+          <strong>Featured Partner</strong> is a paid, labelled placement. A Featured Partner never
+          earns a ranking position by paying, and a company holding this badge may hold no
+          editorial position at all.
+        </p>
+      ) : null}
     </Disclosure>
   );
 }

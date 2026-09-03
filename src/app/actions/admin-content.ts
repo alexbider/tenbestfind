@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { refundAndCancel } from "@/lib/billing";
@@ -8,8 +9,8 @@ import { db } from "@/lib/db";
 import { recordMove } from "@/lib/redirects";
 import { analyzeSeo } from "@/lib/seo";
 import { parseJson, stringify } from "@/lib/json";
-import { routes } from "@/lib/urls";
-import type { SeoEntityType } from "@/lib/enums";
+import { rankingUrl, routes } from "@/lib/urls";
+import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
 
@@ -841,7 +842,7 @@ const businessSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers and hyphens"),
   categoryId: z.string().min(1, "Pick a service"),
   cityId: z.string().optional(),
-  status: z.enum(["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "ARCHIVED"]),
+  status: z.enum(BUSINESS_STATUSES),
   tagline: z.string().max(240).optional(),
   description: z.string().max(4000).optional(),
   bestFor: z.string().max(200).optional(),
@@ -1044,6 +1045,169 @@ export async function deleteBusiness(formData: FormData) {
     });
   }
   revalidatePath("/admin/businesses");
+  // The page this was submitted from no longer describes anything.
+  redirect("/admin/businesses");
+}
+
+/**
+ * Suspends, restores or otherwise moves a business between statuses without
+ * opening the full editor. Suspension is the reversible one: the profile stops
+ * being published but everything about it survives, so a dispute or an unpaid
+ * invoice can be resolved and the listing put straight back.
+ */
+export async function setBusinessStatus(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const parsed = z.enum(BUSINESS_STATUSES).safeParse(String(formData.get("status")));
+  if (!parsed.success) return;
+
+  const business = await db.business.update({
+    where: { id },
+    data: {
+      status: parsed.data,
+      publishedAt: parsed.data === "PUBLISHED" ? new Date() : undefined,
+    },
+  });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: id,
+    summary: `${business.name} → ${parsed.data.toLowerCase()}`,
+  });
+  revalidatePath("/admin/businesses");
+  revalidatePath(`/admin/businesses/${id}`);
+  revalidatePath(routes.business(business.slug));
+}
+
+/**
+ * Moves a company to a chosen place on one of its rankings. Everything between
+ * the old and the new place shifts by one so the list stays 1..n with no gaps
+ * and no two companies sharing a number.
+ */
+export async function setRankingPosition(formData: FormData) {
+  const user = await requireStaff();
+  const entryId = String(formData.get("entryId"));
+  const wanted = Number(formData.get("position"));
+  if (!Number.isInteger(wanted) || wanted < 1) return;
+
+  const entry = await db.rankingEntry.findUnique({
+    where: { id: entryId },
+    include: {
+      business: { select: { name: true, slug: true, id: true } },
+      ranking: { include: { category: { select: { slug: true } }, city: { include: { region: { include: { country: true } } } } } },
+    },
+  });
+  if (!entry) return;
+
+  const siblings = await db.rankingEntry.findMany({
+    where: { rankingId: entry.rankingId },
+    orderBy: { position: "asc" },
+    select: { id: true },
+  });
+
+  const order = siblings.map((row) => row.id).filter((rowId) => rowId !== entryId);
+  order.splice(Math.min(wanted, order.length + 1) - 1, 0, entryId);
+
+  // Positions are unique per ranking, so the rewrite runs in two passes: park
+  // everything on negative numbers first, then write the real ones.
+  await db.$transaction([
+    ...order.map((rowId, index) =>
+      db.rankingEntry.update({ where: { id: rowId }, data: { position: -(index + 1) } }),
+    ),
+    ...order.map((rowId, index) =>
+      db.rankingEntry.update({ where: { id: rowId }, data: { position: index + 1 } }),
+    ),
+  ]);
+
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "ranking",
+    entityId: entry.rankingId,
+    summary: `${entry.business.name} moved to #${order.indexOf(entryId) + 1} on ${entry.ranking.title}`,
+  });
+  revalidatePath(`/admin/businesses/${entry.businessId}`);
+  revalidatePath(`/admin/rankings/${entry.rankingId}`);
+  revalidatePath(rankingUrl(entry.ranking));
+}
+
+/** Adds a company to a ranking at the bottom, ready to be moved up. */
+export async function addToRanking(formData: FormData) {
+  const user = await requireStaff();
+  const businessId = String(formData.get("businessId"));
+  const rankingId = String(formData.get("rankingId"));
+  if (!businessId || !rankingId) return;
+
+  const existing = await db.rankingEntry.findUnique({
+    where: { rankingId_businessId: { rankingId, businessId } },
+  });
+  if (existing) return;
+
+  const last = await db.rankingEntry.findFirst({
+    where: { rankingId },
+    orderBy: { position: "desc" },
+    select: { position: true },
+  });
+  await db.rankingEntry.create({
+    data: { rankingId, businessId, position: (last?.position ?? 0) + 1 },
+  });
+
+  const business = await db.business.findUnique({ where: { id: businessId }, select: { name: true } });
+  await audit({
+    userId: user.id,
+    action: "create",
+    entityType: "ranking",
+    entityId: rankingId,
+    summary: `${business?.name ?? businessId} added to the list`,
+  });
+  revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/admin/rankings/${rankingId}`);
+}
+
+/** Takes a company off a ranking and closes the gap it leaves behind. */
+export async function removeFromRanking(formData: FormData) {
+  const user = await requireStaff();
+  const entryId = String(formData.get("entryId"));
+  const entry = await db.rankingEntry.findUnique({
+    where: { id: entryId },
+    include: {
+      business: { select: { name: true } },
+      ranking: {
+        include: {
+          category: { select: { slug: true } },
+          city: { include: { region: { include: { country: true } } } },
+        },
+      },
+    },
+  });
+  if (!entry) return;
+
+  await db.rankingEntry.delete({ where: { id: entryId } });
+  const rest = await db.rankingEntry.findMany({
+    where: { rankingId: entry.rankingId },
+    orderBy: { position: "asc" },
+    select: { id: true },
+  });
+  await db.$transaction([
+    ...rest.map((row, index) =>
+      db.rankingEntry.update({ where: { id: row.id }, data: { position: -(index + 1) } }),
+    ),
+    ...rest.map((row, index) =>
+      db.rankingEntry.update({ where: { id: row.id }, data: { position: index + 1 } }),
+    ),
+  ]);
+
+  await audit({
+    userId: user.id,
+    action: "delete",
+    entityType: "ranking",
+    entityId: entry.rankingId,
+    summary: `${entry.business.name} removed from ${entry.ranking.title}`,
+  });
+  revalidatePath(`/admin/businesses/${entry.businessId}`);
+  revalidatePath(`/admin/rankings/${entry.rankingId}`);
+  revalidatePath(rankingUrl(entry.ranking));
 }
 
 export async function setCredentialStatus(formData: FormData) {

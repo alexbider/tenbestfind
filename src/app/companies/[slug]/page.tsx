@@ -292,7 +292,12 @@ export default async function BusinessProfilePage({ params }: Props) {
                   ) : null}
                   {business.claimed ? <Badge tone="brand">Claimed profile</Badge> : null}
                   {isSponsored ? <Badge tone="neutral">Featured partner</Badge> : null}
-                  <BadgeDisclosure />
+                  <BadgeDisclosure
+                    verified={business.verified}
+                    ranked={Boolean(topEntry)}
+                    claimed={business.claimed}
+                    sponsored={isSponsored}
+                  />
                 </div>
               </div>
             </div>

@@ -97,6 +97,10 @@ export async function RankingPage({
       sources: { orderBy: { sortOrder: "asc" } },
       faqs: { orderBy: { sortOrder: "asc" } },
       entries: {
+        // A suspended or archived company drops off the list while it is out.
+        // The numbers on screen come from the surviving order, so the list still
+        // reads 01, 02, 03 with nothing missing in between.
+        where: { business: { status: "PUBLISHED" } },
         orderBy: { position: "asc" },
         include: {
           business: {
@@ -154,9 +158,9 @@ export async function RankingPage({
           name: ranking.title,
           url: absoluteUrl(routes.ranking(country.code, region.slug, city.slug, category.slug)),
           numberOfItems: ranking.entries.length,
-          itemListElement: ranking.entries.map((entry) => ({
+          itemListElement: ranking.entries.map((entry, index) => ({
             "@type": "ListItem",
-            position: entry.position,
+            position: index + 1,
             name: entry.business.name,
             url: absoluteUrl(routes.business(entry.business.slug)),
           })),
@@ -282,7 +286,7 @@ export async function RankingPage({
           lead={ranking.intro ?? undefined}
         />
         <ol className="rank-list">
-          {ranking.entries.map((entry) => {
+          {ranking.entries.map((entry, index) => {
             const business = entry.business;
             const likes = parseList(entry.likes);
             const concerns = parseList(entry.concerns);
@@ -316,7 +320,7 @@ export async function RankingPage({
                   </div>
                   <div className="rank-card__mark" aria-hidden="true">
                     <span>Rank</span>
-                    <strong>{String(entry.position).padStart(2, "0")}</strong>
+                    <strong>{String(index + 1).padStart(2, "0")}</strong>
                   </div>
                 </div>
 
@@ -442,10 +446,10 @@ export async function RankingPage({
                 </tr>
               </thead>
               <tbody>
-                {ranking.entries.map((entry) => (
+                {ranking.entries.map((entry, index) => (
                   <tr key={entry.id}>
                     <td data-label="Rank" style={{ fontVariantNumeric: "tabular-nums", fontWeight: 700, color: "var(--gold)" }}>
-                      {String(entry.position).padStart(2, "0")}
+                      {String(index + 1).padStart(2, "0")}
                     </td>
                     <td data-label="Company" style={{ fontWeight: 600 }}>
                       <Link href={routes.business(entry.business.slug)}>{entry.business.name}</Link>

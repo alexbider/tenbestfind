@@ -879,3 +879,17 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/* The one button in the console that destroys something. Kept quiet until it is
+   hovered so it does not shout from every panel it appears in. */
+.btn--danger {
+  background: transparent;
+  color: var(--maple-600);
+  border: 1.5px solid var(--maple-600);
+}
+
+.btn--danger:hover {
+  background: var(--maple-600);
+  color: #fff;
+  border-color: var(--maple-600);
+}

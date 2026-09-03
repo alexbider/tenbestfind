@@ -4,7 +4,15 @@ import { AdminHeader, BarChart, Panel, StatRow, TrendChart } from "@/components/
 import { BusinessEditor } from "@/components/admin/BusinessEditor";
 import { BillingPortalButton } from "@/components/admin/BillingControls";
 import { SeoPanel } from "@/components/admin/SeoPanel";
-import { setCredentialStatus } from "@/app/actions/admin-content";
+import {
+  addToRanking,
+  deleteBusiness,
+  removeFromRanking,
+  setBusinessStatus,
+  setCredentialStatus,
+  setRankingPosition,
+} from "@/app/actions/admin-content";
+import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { publishListing } from "@/app/actions/admin-billing";
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange } from "@/lib/format";
@@ -60,9 +68,22 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
     }),
     db.subservice.findMany({
       orderBy: [{ category: { name: "asc" } }, { sortOrder: "asc" }],
-      select: { id: true, name: true, category: { select: { name: true } } },
+      select: { id: true, name: true, categoryId: true, category: { select: { name: true } } },
     }),
   ]);
+
+  // The lists this company could be added to: same trade, and either the city
+  // it sits in or a list with no city of its own.
+  const joinable = await db.ranking.findMany({
+    where: {
+      categoryId: business.categoryId,
+      ...(business.cityId ? { OR: [{ cityId: business.cityId }, { cityId: null }] } : {}),
+      entries: { none: { businessId: business.id } },
+    },
+    orderBy: { title: "asc" },
+    select: { id: true, title: true, status: true },
+    take: 20,
+  });
 
   const [seo, totals, previous, series, events] = await Promise.all([
     db.seoMeta.findUnique({
@@ -188,6 +209,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 id: sub.id,
                 label: sub.name,
                 group: sub.category.name,
+                categoryId: sub.categoryId,
               }))}
             />
           </Panel>
@@ -284,6 +306,158 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                   {parseList(business.strengths).length} strengths and{" "}
                   {parseList(business.considerations).length} considerations recorded for the ranking
                   card.
+                </p>
+              ) : null}
+            </Panel>
+
+            <Panel
+              title="Ranking positions"
+              description="Set where this company sits on each list. Everything else shifts to keep the order 1 upwards."
+              padded={business.entries.length === 0}
+            >
+              {business.entries.length === 0 ? (
+                <p style={{ fontSize: 14.5, color: "var(--text-secondary)" }}>
+                  Not on any list yet.
+                </p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">List</th>
+                        <th scope="col">Position</th>
+                        <th scope="col" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {business.entries.map((entry) => (
+                        <tr key={entry.id}>
+                          <td>
+                            <Link
+                              href={`/admin/rankings/${entry.rankingId}`}
+                              className="admin-table__primary"
+                            >
+                              {entry.ranking.title}
+                            </Link>
+                            <span className="admin-table__meta">
+                              {entry.ranking.city?.name ?? "No city"} · {entry.ranking.status.toLowerCase()}
+                              {entry.sponsored ? " · sponsored" : ""}
+                            </span>
+                          </td>
+                          <td>
+                            <form action={setRankingPosition} className="admin-table__actions">
+                              <input type="hidden" name="entryId" value={entry.id} />
+                              <input
+                                type="number"
+                                name="position"
+                                min={1}
+                                max={50}
+                                defaultValue={entry.position}
+                                aria-label={`Position on ${entry.ranking.title}`}
+                                style={{ width: 72 }}
+                              />
+                              <button type="submit" className="btn btn--secondary btn--sm">
+                                Move
+                              </button>
+                            </form>
+                          </td>
+                          <td>
+                            <form action={removeFromRanking} className="admin-table__actions">
+                              <input type="hidden" name="entryId" value={entry.id} />
+                              <ConfirmButton
+                                question={`Take ${business.name} off ${entry.ranking.title}?`}
+                              >
+                                Remove
+                              </ConfirmButton>
+                            </form>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {joinable.length > 0 ? (
+                <form
+                  action={addToRanking}
+                  className="panel__body"
+                  style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}
+                >
+                  <input type="hidden" name="businessId" value={business.id} />
+                  <label className="field" style={{ flex: "1 1 220px", margin: 0 }}>
+                    <span>Add to a list</span>
+                    <select name="rankingId" defaultValue={joinable[0].id}>
+                      {joinable.map((ranking) => (
+                        <option key={ranking.id} value={ranking.id}>
+                          {ranking.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="submit" className="btn btn--secondary btn--sm">
+                    Add at the bottom
+                  </button>
+                </form>
+              ) : null}
+            </Panel>
+
+            <Panel
+              title="Status and removal"
+              description="Suspending hides the profile but keeps everything. Deleting only works when nothing depends on the company."
+            >
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {business.status === "SUSPENDED" ? (
+                  <form action={setBusinessStatus}>
+                    <input type="hidden" name="id" value={business.id} />
+                    <input type="hidden" name="status" value="PUBLISHED" />
+                    <button type="submit" className="btn btn--primary btn--sm">
+                      Lift the suspension
+                    </button>
+                  </form>
+                ) : (
+                  <form action={setBusinessStatus}>
+                    <input type="hidden" name="id" value={business.id} />
+                    <input type="hidden" name="status" value="SUSPENDED" />
+                    <ConfirmButton
+                      className="btn btn--secondary btn--sm"
+                      question={`Suspend ${business.name}? The profile stops showing on the site until you lift it.`}
+                    >
+                      Suspend
+                    </ConfirmButton>
+                  </form>
+                )}
+
+                {business.status === "ARCHIVED" ? null : (
+                  <form action={setBusinessStatus}>
+                    <input type="hidden" name="id" value={business.id} />
+                    <input type="hidden" name="status" value="ARCHIVED" />
+                    <ConfirmButton
+                      question={`Archive ${business.name}? Use this when the company has closed for good.`}
+                    >
+                      Archive
+                    </ConfirmButton>
+                  </form>
+                )}
+
+                <form action={deleteBusiness}>
+                  <input type="hidden" name="id" value={business.id} />
+                  <ConfirmButton
+                    className="btn btn--danger btn--sm"
+                    question={`Delete ${business.name} permanently? This cannot be undone.`}
+                  >
+                    Delete
+                  </ConfirmButton>
+                </form>
+              </div>
+
+              {business.entries.length > 0 || business.subscriptions.length > 0 ? (
+                <p style={{ marginTop: 14, fontSize: 13.5, color: "var(--text-muted)" }}>
+                  This company is on {business.entries.length} list
+                  {business.entries.length === 1 ? "" : "s"} and has{" "}
+                  {business.subscriptions.length} billing record
+                  {business.subscriptions.length === 1 ? "" : "s"}, so deleting archives it instead.
+                  Take it off the lists first if you want it gone completely.
                 </p>
               ) : null}
             </Panel>

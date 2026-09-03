@@ -47,6 +47,7 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
     { label: "Published", value: "PUBLISHED" },
     { label: "Pending", value: "PENDING" },
     { label: "Draft", value: "DRAFT" },
+    { label: "Suspended", value: "SUSPENDED" },
     { label: "Archived", value: "ARCHIVED" },
   ];
 

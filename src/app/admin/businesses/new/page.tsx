@@ -17,7 +17,7 @@ export default async function AdminNewBusiness() {
     }),
     db.subservice.findMany({
       orderBy: [{ category: { name: "asc" } }, { sortOrder: "asc" }],
-      select: { id: true, name: true, category: { select: { name: true } } },
+      select: { id: true, name: true, categoryId: true, category: { select: { name: true } } },
     }),
   ]);
 
@@ -80,6 +80,7 @@ export default async function AdminNewBusiness() {
               id: sub.id,
               label: sub.name,
               group: sub.category.name,
+              categoryId: sub.categoryId,
             }))}
           />
         </Panel>

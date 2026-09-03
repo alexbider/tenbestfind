@@ -9,6 +9,9 @@ export const BUSINESS_STATUSES = [
   "DRAFT",
   "PENDING",
   "PUBLISHED",
+  // Taken down for a reason that may end: a dispute, a complaint, unpaid
+  // invoices. Distinct from ARCHIVED, which means retired for good.
+  "SUSPENDED",
   "REJECTED",
   "ARCHIVED",
 ] as const;
@@ -96,6 +99,7 @@ export const STATUS_TONES: Record<string, "positive" | "warning" | "neutral" | "
   APPROVED: "positive",
   RESOLVED: "positive",
   REVIEW: "warning",
+  SUSPENDED: "danger",
   PENDING: "warning",
   VERIFYING: "warning",
   SUBMITTED: "warning",
