@@ -366,18 +366,38 @@ export function RowLink({
   href,
   children,
   boxed,
+  outline,
 }: {
   href: string;
   children: ReactNode;
+  /** The heavier card row the ranking page uses for related services. */
   boxed?: boolean;
+  /** The lighter outlined row the profile page uses for its service list. */
+  outline?: boolean;
 }) {
+  const style = outline
+    ? {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "8px",
+        padding: "12px 14px",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "12px",
+        fontSize: "15px",
+        fontWeight: "600",
+        color: "var(--blue-900)",
+        textDecoration: "none",
+      }
+    : undefined;
   return (
     <li>
       <Link
         data-row=""
         href={href}
         style={
-          boxed
+          style ??
+          (boxed
             ? {
                 display: "flex",
                 alignItems: "center",
@@ -403,7 +423,7 @@ export function RowLink({
                 fontSize: "15px",
                 color: "var(--text-primary)",
                 textDecoration: "none",
-              }
+              })
         }
       >
         {children}
@@ -526,4 +546,78 @@ export function initials(name: string) {
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join("");
+}
+
+/**
+ * The small "i" disclosure the design puts beside anything a reader might
+ * reasonably ask where it came from. Open on click, dark card, always with a
+ * link to the fuller explanation.
+ */
+export function InfoPopover({
+  label,
+  align = "left",
+  width = "min(420px, 80vw)",
+  above,
+  children,
+  link,
+  style,
+}: {
+  label: string;
+  align?: "left" | "right";
+  width?: string;
+  above?: boolean;
+  children: ReactNode;
+  link?: { href: string; label: string };
+  style?: React.CSSProperties;
+}) {
+  return (
+    <details data-pop="" style={{ position: "relative", ...style }}>
+      <summary
+        aria-label={label}
+        style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)" }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "18px",
+            height: "18px",
+            borderRadius: "50%",
+            border: "1.5px solid var(--border-strong)",
+            fontSize: "11px",
+            fontWeight: "700",
+            color: "var(--color-primary)",
+          }}
+        >
+          i
+        </span>
+        {label}
+      </summary>
+      <div
+        role="note"
+        style={{
+          position: "absolute",
+          ...(above ? { bottom: "calc(100% + 10px)" } : { top: "calc(100% + 10px)" }),
+          [align]: "0",
+          zIndex: "180",
+          width,
+          background: "var(--blue-900)",
+          color: "var(--text-on-ink)",
+          borderRadius: "16px",
+          boxShadow: "var(--shadow-xl)",
+          padding: "18px 20px",
+        }}
+      >
+        <p style={{ fontSize: "13px", lineHeight: "1.65", color: "rgba(232,237,245,0.88)" }}>{children}</p>
+        {link ? (
+          <p style={{ marginTop: "12px" }}>
+            <Link href={link.href} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
+              {link.label} →
+            </Link>
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
 }
