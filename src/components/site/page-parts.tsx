@@ -367,13 +367,16 @@ export function RowLink({
   children,
   boxed,
   outline,
+  compact,
 }: {
   href: string;
   children: ReactNode;
   /** The heavier card row the ranking page uses for related services. */
   boxed?: boolean;
-  /** The lighter outlined row the profile page uses for its service list. */
+  /** The lighter outlined row the profile and hub pages use for their lists. */
   outline?: boolean;
+  /** The hubs sit a hair tighter than the profile does. */
+  compact?: boolean;
 }) {
   const style = outline
     ? {
@@ -381,7 +384,7 @@ export function RowLink({
         alignItems: "center",
         justifyContent: "space-between",
         gap: "8px",
-        padding: "12px 14px",
+        padding: compact ? "11px 14px" : "12px 14px",
         border: "1px solid var(--border-subtle)",
         borderRadius: "12px",
         fontSize: "15px",
