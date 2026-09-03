@@ -6,6 +6,23 @@ import { getSecret } from "./secrets";
 const DEFAULT_ACTOR = "compass~crawler-google-places";
 const API = "https://api.apify.com/v2";
 
+// How many reviews to pull per company. Ten gives the profile five to show and
+// a few in reserve for the ones that turn out to be a bare star with no words.
+export const REVIEWS_PER_PLACE = 10;
+
+export type PlaceReview = {
+  externalId: string | null;
+  author: string;
+  authorPhoto: string | null;
+  rating: number;
+  body: string;
+  postedAt: Date | null;
+  url: string | null;
+  ownerReply: string | null;
+  ownerRepliedAt: Date | null;
+  likes: number;
+};
+
 export type PlaceRecord = {
   placeId: string | null;
   title: string;
@@ -26,6 +43,7 @@ export type PlaceRecord = {
   reviewDistribution: Record<string, number> | null;
   openingHours: { day: string; hours: string }[] | null;
   imageUrls: string[];
+  reviews: PlaceReview[];
   rank: number | null;
   searchString: string | null;
   permanentlyClosed: boolean;
@@ -99,6 +117,7 @@ export async function startPlacesRun(input: {
   queries: string[];
   perQuery: number;
   language: string;
+  maxReviews?: number;
   actor?: string;
 }): Promise<string> {
   const token = await apifyToken();
@@ -108,12 +127,13 @@ export async function startPlacesRun(input: {
     searchStringsArray: input.queries,
     maxCrawledPlacesPerSearch: input.perQuery,
     language: input.language,
-    // Ratings and counts are enough: the site shows the aggregate with a
-    // disclosure and never republishes anyone's review text.
-    maxReviews: 0,
-    // A few photos, because a listing with no image cannot reach a full SEO
-    // score and the profile page has a gallery to fill.
-    maxImages: 3,
+    // Reviews are quoted on the profile with the reviewer's name, the date and
+    // a link back to Google, never blended into a score of our own.
+    maxReviews: input.maxReviews ?? REVIEWS_PER_PLACE,
+    reviewsSort: "newest",
+    // Enough photos for the gallery. A listing with no image cannot reach a
+    // full SEO score and the profile page has a row to fill.
+    maxImages: 8,
     scrapePlaceDetailPage: true,
     scrapeContacts: true,
     skipClosedPlaces: true,
@@ -183,6 +203,70 @@ const num = (value: unknown): number | null => {
 };
 
 /**
+ * Re-reads a set of places by their Google place id. Used by the review
+ * refresh, which needs current reviews for companies already in the directory
+ * rather than a fresh search.
+ */
+export async function startPlaceIdsRun(input: {
+  placeIds: string[];
+  maxReviews?: number;
+  language?: string;
+  actor?: string;
+}): Promise<string> {
+  const token = await apifyToken();
+  const actor = input.actor ?? DEFAULT_ACTOR;
+
+  const body = {
+    // The actor accepts a Maps URL carrying the place id, which is the form
+    // that works whether or not the company still appears in search.
+    startUrls: input.placeIds.map((placeId) => ({
+      url: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
+    })),
+    maxReviews: input.maxReviews ?? REVIEWS_PER_PLACE,
+    reviewsSort: "newest",
+    maxImages: 0,
+    scrapePlaceDetailPage: true,
+    scrapeContacts: false,
+    language: input.language ?? "en",
+  };
+
+  const response = await call(`/acts/${actor}/runs`, token, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  const json = (await response.json()) as { data?: { id?: string } };
+  if (!json.data?.id) throw new ApifyError("Apify accepted the run but returned no run id.");
+  return json.data.id;
+}
+
+const date = (value: unknown): Date | null => {
+  const text = str(value);
+  if (!text) return null;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/** One review from the actor's `reviews` array, tolerant of its field names. */
+function mapReview(row: Record<string, unknown>): PlaceReview | null {
+  const body = str(row.text) ?? str(row.reviewText) ?? "";
+  const rating = num(row.stars) ?? num(row.rating) ?? null;
+  if (rating === null) return null;
+
+  return {
+    externalId: str(row.reviewId) ?? str(row.id) ?? null,
+    author: str(row.name) ?? str(row.reviewerName) ?? "A Google user",
+    authorPhoto: str(row.reviewerPhotoUrl) ?? str(row.reviewerAvatar) ?? null,
+    rating,
+    body,
+    postedAt: date(row.publishedAtDate) ?? date(row.publishAt) ?? date(row.reviewedAt),
+    url: str(row.reviewUrl) ?? str(row.url) ?? null,
+    ownerReply: str(row.responseFromOwnerText) ?? null,
+    ownerRepliedAt: date(row.responseFromOwnerDate),
+    likes: num(row.likesCount) ?? 0,
+  };
+}
+
+/**
  * The actor's field names have drifted over versions, so each value is read
  * from the spellings seen in the wild rather than a single key.
  */
@@ -247,7 +331,10 @@ export function mapPlace(row: Record<string, unknown>): PlaceRecord {
           .map((entry) => ({ day: str(entry.day) ?? "", hours: str(entry.hours) ?? "" }))
           .filter((entry) => entry.day.length > 0)
       : null,
-    imageUrls: [...new Set(images)].slice(0, 3),
+    imageUrls: [...new Set(images)].slice(0, 8),
+    reviews: (Array.isArray(row.reviews) ? (row.reviews as Record<string, unknown>[]) : [])
+      .map(mapReview)
+      .filter((review): review is PlaceReview => review !== null),
     rank: pickNum("rank", "position", "searchPageRank"),
     searchString: pick("searchString", "searchQuery"),
     permanentlyClosed: row.permanentlyClosed === true,

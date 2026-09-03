@@ -98,6 +98,7 @@ export const STATUS_TONES: Record<string, "positive" | "warning" | "neutral" | "
   VERIFIED: "positive",
   APPROVED: "positive",
   RESOLVED: "positive",
+  DONE: "positive",
   REVIEW: "warning",
   SUSPENDED: "danger",
   PENDING: "warning",
@@ -107,6 +108,8 @@ export const STATUS_TONES: Record<string, "positive" | "warning" | "neutral" | "
   PAST_DUE: "warning",
   OPEN: "warning",
   NEW: "warning",
+  QUEUED: "warning",
+  RUNNING: "warning",
   SELF_REPORTED: "neutral",
   REPORTED: "neutral",
   DRAFT: "neutral",
@@ -115,5 +118,6 @@ export const STATUS_TONES: Record<string, "positive" | "warning" | "neutral" | "
   EXPIRED: "danger",
   REJECTED: "danger",
   CANCELED: "danger",
+  FAILED: "danger",
   VOID: "danger",
 };

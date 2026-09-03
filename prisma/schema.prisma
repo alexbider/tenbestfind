@@ -199,6 +199,14 @@ model Business {
   googleDataUpdated  DateTime?
   // Star distribution as JSON: { "5": 240, "4": 52, ... }
   googleDistribution String?
+  reviewsUpdatedAt   DateTime?
+
+  // A short summary for the top of the profile, written from the Google
+  // profile and the company's own site. The long description stays below it.
+  overview    String?
+  // Profiles found on the company's website, as JSON: { facebook, instagram, ... }
+  socialLinks String?
+  siteCrawledAt DateTime?
 
   verified    Boolean  @default(false)
   claimed     Boolean  @default(false)
@@ -286,14 +294,23 @@ model Review {
   id         String   @id @default(cuid())
   businessId String
   source     String   @default("GOOGLE") // GOOGLE | BBB | OTHER
+  // The id the source gave this review. It is what a refresh matches on, so a
+  // review that is edited updates in place instead of arriving twice.
+  externalId String?
   author     String
+  authorPhoto String?
   rating     Float
   body       String
   postedAt   DateTime
   sourceUrl  String?
+  ownerReply String?
+  ownerRepliedAt DateTime?
+  likes      Int      @default(0)
+  fetchedAt  DateTime @default(now())
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@unique([businessId, source, externalId])
   @@index([businessId, postedAt])
 }
 
@@ -847,6 +864,7 @@ model User {
   claims       ClaimRequest[]
   auditLogs    AuditLog[]
   importBatches ImportBatch[]
+  reviewRefreshes ReviewRefresh[]
   oauthCodes   OAuthCode[]
   oauthTokens  OAuthToken[]
 
@@ -995,6 +1013,7 @@ model ImportItem {
   addressLine String?
 
   raw       String? // JSON, the actor's record as returned
+  site      String? // JSON, what the crawl read off the company's own website
   draft     String? // JSON, the written listing before it becomes a Business
   seoScore  Int     @default(0)
   attempts  Int     @default(0)
@@ -1010,6 +1029,37 @@ model ImportItem {
   @@unique([batchId, placeId])
   @@index([batchId, status])
   @@index([placeId])
+}
+
+/// A request to re-read reviews from Google for one company or many. It is a
+/// row rather than a background promise so a refresh survives a deploy, shows
+/// its progress on screen and can be retried after an Apify outage without
+/// anyone having to remember which companies were in it.
+model ReviewRefresh {
+  id     String @id @default(cuid())
+  status String @default("QUEUED") // QUEUED | RUNNING | DONE | FAILED
+
+  // JSON array of Business ids. One id is the single-company refresh; the batch
+  // refresh is the same machinery with a longer list.
+  businessIds String
+  maxReviews  Int    @default(10)
+
+  requested Int @default(0)
+  updated   Int @default(0)
+  added     Int @default(0)
+
+  apifyRunId String?
+  error      String?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  @@index([status, createdAt])
 }
 
 /// API credentials for outbound services. Stored encrypted with a key derived

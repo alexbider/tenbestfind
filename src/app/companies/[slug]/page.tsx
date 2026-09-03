@@ -29,6 +29,8 @@ import {
   SectionHead,
   StatusPill,
 } from "@/components/ui/primitives";
+import { ReadMore } from "@/components/site/ReadMore";
+import { ReviewList } from "@/components/site/ReviewList";
 import { fullDate, monthYear } from "@/lib/format";
 import { parseJson, parseList, type HoursRow } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -48,7 +50,7 @@ async function loadBusiness(slug: string) {
       city: { include: { region: { include: { country: true } } } },
       credentials: { orderBy: { sortOrder: "asc" } },
       photos: { orderBy: { sortOrder: "asc" } },
-      reviews: { orderBy: { postedAt: "desc" }, take: 3 },
+      reviews: { orderBy: { postedAt: "desc" }, take: 10 },
       services: { include: { subservice: true } },
       areas: { include: { city: { include: { region: true } } } },
       entries: {
@@ -96,6 +98,22 @@ export default async function BusinessProfilePage({ params }: Props) {
   const hours = parseJson<HoursRow[]>(business.hours, []);
   const distribution = parseJson<Record<string, number>>(business.googleDistribution, {});
   const topEntry = business.entries[0];
+
+  // Five reviews with something written in them. A bare star tells a reader
+  // nothing, and the count beside the rating already covers those.
+  const shownReviews = business.reviews
+    .filter((review) => review.body.trim().length > 40)
+    .slice(0, 5);
+
+  // The long description, split into paragraphs, sits behind Read more. The
+  // overview above it is written to stand alone, and older listings that have
+  // none fall back to the description's first paragraph.
+  const descriptionParts = (business.description ?? "")
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const overview = business.overview?.trim() || descriptionParts[0] || "";
+  const rest = business.overview?.trim() ? descriptionParts : descriptionParts.slice(1);
   const isSponsored = business.placements.length > 0;
   const yearsInBusiness = business.yearFounded ? new Date().getFullYear() - business.yearFounded : null;
 
@@ -223,6 +241,24 @@ export default async function BusinessProfilePage({ params }: Props) {
                   worstRating: 1,
                 }
               : undefined,
+          // Only the reviews actually quoted on the page are described here.
+          // Marking up reviews a reader cannot see is exactly what the
+          // structured data guidelines forbid.
+          review: shownReviews.length
+            ? shownReviews.map((entry) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: entry.author },
+                datePublished: entry.postedAt.toISOString().slice(0, 10),
+                reviewBody: entry.body,
+                reviewRating: {
+                  "@type": "Rating",
+                  ratingValue: entry.rating,
+                  bestRating: 5,
+                  worstRating: 1,
+                },
+                url: entry.sourceUrl ?? undefined,
+              }))
+            : undefined,
         }}
       />
       <FaqJsonLd faqs={faqs} />
@@ -308,18 +344,26 @@ export default async function BusinessProfilePage({ params }: Props) {
                 <h2>Quick overview</h2>
                 <BusinessProvidedDisclosure />
               </div>
-              <p>
-                {business.name} is {/^[aeiou]/i.test(business.category.singular) ? "an" : "a"}{" "}
-                {business.category.singular.toLowerCase()}
-                {city ? ` working in ${city.name} and the surrounding area` : ""}
-                {yearsInBusiness ? `, ${yearsInBusiness} years in business` : ""}.{" "}
-                {business.description ?? ""}{" "}
-                {business.warrantyTerms ? `Workmanship is covered by a ${business.warrantyTerms.toLowerCase()}. ` : ""}
-                {business.emergency ? "Emergency service is listed. " : ""}
-                {business.googleRating
-                  ? `On Google the company holds ${business.googleRating.toFixed(1)} from ${business.googleReviewCount?.toLocaleString()} reviews.`
-                  : ""}
-              </p>
+              {/* A written overview stands on its own. Without one, the card is
+                  assembled from the fields on the record, which is all an older
+                  listing or a hand-entered one has. */}
+              {business.overview?.trim() ? (
+                <p>{overview}</p>
+              ) : (
+                <p>
+                  {business.name} is {/^[aeiou]/i.test(business.category.singular) ? "an" : "a"}{" "}
+                  {business.category.singular.toLowerCase()}
+                  {city ? ` working in ${city.name} and the surrounding area` : ""}
+                  {yearsInBusiness ? `, ${yearsInBusiness} years in business` : ""}.{" "}
+                  {overview}{" "}
+                  {business.warrantyTerms ? `Workmanship is covered by a ${business.warrantyTerms.toLowerCase()}. ` : ""}
+                  {business.emergency ? "Emergency service is listed. " : ""}
+                  {business.googleRating
+                    ? `On Google the company holds ${business.googleRating.toFixed(1)} from ${business.googleReviewCount?.toLocaleString()} reviews.`
+                    : ""}
+                </p>
+              )}
+              {rest.length > 0 ? <ReadMore paragraphs={rest} /> : null}
               <ul className="overview-card__fit">
                 {business.bestFor ? (
                   <li>
@@ -544,6 +588,20 @@ export default async function BusinessProfilePage({ params }: Props) {
               })}
             </ul>
           </div>
+
+          {shownReviews.length > 0 ? (
+            <>
+              <h3 className="related-heading" style={{ marginTop: 40 }}>
+                What reviewers wrote
+              </h3>
+              <p style={{ fontSize: 14.5, color: "var(--text-secondary)", marginTop: 8 }}>
+                The most recent reviews carrying written feedback, quoted as published and read on{" "}
+                {monthYear(business.reviewsUpdatedAt ?? business.googleDataUpdated)}. Reviews are not
+                selected for how positive they are.
+              </p>
+              <ReviewList reviews={shownReviews} />
+            </>
+          ) : null}
         </Section>
       ) : null}
 
@@ -616,15 +674,24 @@ export default async function BusinessProfilePage({ params }: Props) {
               <CoverageDisclosure />
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {business.areas.map((area) => (
-                <Link
-                  key={area.cityId}
-                  className="chip"
-                  href={routes.city(country!.code, area.city.region.slug, area.city.slug)}
-                >
-                  {area.city.name}
-                </Link>
-              ))}
+              {business.areas.map((area) =>
+                // A town that has its own hub page is a link. One picked up from
+                // a scrape and not published yet is still an area the company
+                // covers, so it is named rather than linked to nothing.
+                area.city.published ? (
+                  <Link
+                    key={area.cityId}
+                    className="chip"
+                    href={routes.city(country!.code, area.city.region.slug, area.city.slug)}
+                  >
+                    {area.city.name}
+                  </Link>
+                ) : (
+                  <span key={area.cityId} className="chip chip--static">
+                    {area.city.name}
+                  </span>
+                ),
+              )}
             </div>
           </div>
         </div>

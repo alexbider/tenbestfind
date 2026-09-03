@@ -11,6 +11,11 @@ import { slugify } from "./format";
 export const MIN_WORDS = 620; // the content-length check in analyzeSeo wants 600
 export const TARGET_WORDS = 750;
 
+// The Quick overview at the top of a profile. Short enough to read in full
+// before deciding whether to open the rest.
+export const OVERVIEW_MIN = 120;
+export const OVERVIEW_MAX = 170;
+
 const faqSchema = z.object({
   question: z.string().min(8).max(160),
   answer: z.string().min(40).max(900),
@@ -18,6 +23,7 @@ const faqSchema = z.object({
 
 export const listingSchema = z.object({
   tagline: z.string().min(15).max(110),
+  overview: z.string().min(500).max(1300),
   description: z.string().min(1500),
   editorialTake: z.string().min(120).max(900),
   bestFor: z.string().min(8).max(120),
@@ -40,6 +46,7 @@ const listingJsonSchema = {
   additionalProperties: false,
   required: [
     "tagline",
+    "overview",
     "description",
     "editorialTake",
     "bestFor",
@@ -53,6 +60,10 @@ const listingJsonSchema = {
   ],
   properties: {
     tagline: { type: "string", description: "One line, 15 to 110 characters, no full stop." },
+    overview: {
+      type: "string",
+      description: `The Quick overview at the top of the profile. ${OVERVIEW_MIN} to ${OVERVIEW_MAX} words, two short paragraphs at most, and it must stand on its own: a reader who stops here should know what the company does, who it suits and what the evidence for that is. Do not repeat the tagline. Do not open with the company name.`,
+    },
     description: {
       type: "string",
       description: `The main profile copy. At least ${MIN_WORDS} words, ideally around ${TARGET_WORDS}. Plain paragraphs separated by a blank line. No markdown headings, no bullet characters.`,
@@ -109,6 +120,9 @@ HARD RULES
 ACCURACY
 Everything verifiable must trace to the brief. Rating and review counts come from the Google Business Profile and must be described that way, with the date. Anything uncertain is written as uncertain. A thin brief produces a shorter, plainer profile, not a padded one.
 
+THE QUICK OVERVIEW
+A short summary that sits above the full profile, and the only thing many readers will read. Say what the company does, the range it covers, who it suits, and the one or two facts that back that up. Write it from everything in the brief, including what the company says on its own website, but describe the company rather than quoting its marketing. It must read as a finished piece of writing, not as the opening of the longer description, and it must not repeat the longer description's first paragraph.
+
 THE DESCRIPTION
 This is the substance of the page. Cover, in whatever order suits the company: what they do and the range of jobs they take; who they are a good fit for and who they are not; how they work day to day, drawn from what the brief supports; what the location means for the work, using real local detail about the city and the trade; what a reader should ask before hiring; and how they compare to the alternatives in that market in general terms. Ground it in the trade. A roofer profile should discuss hail, decking and warranty transfers. A plumber profile should discuss repipes, permits and after-hours call-out pricing.
 
@@ -136,6 +150,14 @@ export type Brief = {
   gmbRank: number | null;
   gmbCategory: string | null;
   hours: { day: string; hours: string }[] | null;
+  /** What the company's own website says, read by the crawler. */
+  site?: {
+    summary: string | null;
+    text: string;
+    yearFounded: number | null;
+    licenseNumbers: string[];
+    social: string[];
+  } | null;
   /** Openings already used in this batch, so profiles do not rhyme. */
   avoidOpenings: string[];
   /** What a previous attempt got wrong, on a retry. */
@@ -169,6 +191,13 @@ export function buildPrompt(brief: Brief): string {
   if (brief.hours?.length) {
     known.push(`Published hours: ${brief.hours.map((row) => `${row.day} ${row.hours}`).join("; ")}`);
   }
+  if (brief.site?.yearFounded) known.push(`Trading since ${brief.site.yearFounded}, per its own website`);
+  if (brief.site?.licenseNumbers.length) {
+    known.push(`Licence numbers published on its website: ${brief.site.licenseNumbers.join(", ")}`);
+  }
+  if (brief.site?.social.length) {
+    known.push(`Social profiles it links to: ${brief.site.social.join(", ")}`);
+  }
 
   const parts = [
     "Write the profile for this company.",
@@ -177,7 +206,17 @@ export function buildPrompt(brief: Brief): string {
     known.map((line) => `- ${line}`).join("\n"),
     "",
     `The description must be at least ${MIN_WORDS} words. Aim for about ${TARGET_WORDS}.`,
+    `The quick overview must be between ${OVERVIEW_MIN} and ${OVERVIEW_MAX} words.`,
   ];
+
+  if (brief.site?.summary || brief.site?.text) {
+    parts.push(
+      "",
+      "FROM THE COMPANY'S OWN WEBSITE. This is what it says about itself, so treat claims in it as claims, not as verified fact. Use it for what the company actually does, the range of work, and how it presents itself. Do not copy a sentence of it.",
+      brief.site.summary ? `Its own summary: ${brief.site.summary}` : "",
+      brief.site.text ? brief.site.text.slice(0, 6000) : "",
+    );
+  }
 
   if (brief.avoidOpenings.length > 0) {
     parts.push(
@@ -213,6 +252,7 @@ export function reviewListing(listing: Listing, brief: Brief, path: string): { l
   const cleaned: Listing = {
     ...listing,
     tagline: clean(listing.tagline),
+    overview: clean(listing.overview),
     description: clean(listing.description),
     editorialTake: clean(listing.editorialTake),
     bestFor: clean(listing.bestFor),
@@ -226,6 +266,7 @@ export function reviewListing(listing: Listing, brief: Brief, path: string): { l
   };
 
   const body = [
+    cleaned.overview,
     cleaned.description,
     cleaned.editorialTake,
     ...cleaned.strengths,
@@ -239,6 +280,12 @@ export function reviewListing(listing: Listing, brief: Brief, path: string): { l
 
   if (words < MIN_WORDS) {
     problems.push(`The description is ${words} words. It must be at least ${MIN_WORDS}.`);
+  }
+  const overviewWords = wordCount(cleaned.overview);
+  if (overviewWords < OVERVIEW_MIN || overviewWords > OVERVIEW_MAX) {
+    problems.push(
+      `The quick overview is ${overviewWords} words. It must be between ${OVERVIEW_MIN} and ${OVERVIEW_MAX}.`,
+    );
   }
   if (!cleaned.seoTitle.toLowerCase().includes(keyword)) {
     problems.push(`The SEO title must contain "${brief.focusKeyword}" exactly.`);

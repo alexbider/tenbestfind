@@ -43,6 +43,7 @@ export default async function AdminNewBusiness() {
               cityId: "",
               status: "DRAFT",
               tagline: "",
+              overview: "",
               description: "",
               bestFor: "",
               editorialTake: "",

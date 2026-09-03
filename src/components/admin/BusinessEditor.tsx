@@ -19,6 +19,7 @@ export type BusinessDraft = {
   cityId: string;
   status: string;
   tagline: string;
+  overview: string;
   description: string;
   bestFor: string;
   editorialTake: string;
@@ -203,8 +204,17 @@ export function BusinessEditor({
       <fieldset className="fieldset">
         <legend>Business provided</legend>
         <div className="field">
+          <label htmlFor="biz-overview">Quick overview</label>
+          <textarea id="biz-overview" name="overview" rows={5} defaultValue={business.overview} />
+          <span className="field__hint">
+            About 150 words, shown at the top of the profile. The description below it sits behind
+            Read more. Leave this empty and the profile falls back to the description&apos;s first
+            paragraph.
+          </span>
+        </div>
+        <div className="field">
           <label htmlFor="biz-description">Description</label>
-          <textarea id="biz-description" name="description" rows={4} defaultValue={business.description} />
+          <textarea id="biz-description" name="description" rows={8} defaultValue={business.description} />
           <span className="field__hint">Their words, published as their words.</span>
         </div>
         <div className="field-row">

@@ -52,7 +52,8 @@ export const DIRECTORY_TOOLS: Tool[] = [
         addressLine: str("Street address."),
         postalCode: str("Postal or ZIP code."),
         tagline: str("One line."),
-        description: str("The main profile copy."),
+        overview: str("The Quick overview at the top of the profile, about 150 words."),
+        description: str("The main profile copy, shown behind Read more."),
         editorialTake: str("The site's own assessment."),
         bestFor: str("Short phrase."),
         status: str("Defaults to DRAFT."),
@@ -153,6 +154,7 @@ export const DIRECTORY_TOOLS: Tool[] = [
         categoryId: "string",
         cityId: "string",
         tagline: "string",
+        overview: "string",
         description: "string",
         editorialTake: "string",
         bestFor: "string",
@@ -394,6 +396,186 @@ export const DIRECTORY_TOOLS: Tool[] = [
         summary: `${business.name}, removed from ${entries} rankings`,
       });
       return { deleted: business.name, removedFromRankings: entries };
+    },
+  },
+
+  /* ------------------------------------------------- reviews and coverage */
+
+  {
+    name: "list_reviews",
+    title: "Read a company's stored reviews",
+    description:
+      "The Google reviews held for one company, newest first. These are the ones quoted on its profile.",
+    schema: object({ idOrSlug: str("The business id or slug."), limit: int("Default 10.") }, ["idOrSlug"]),
+    handler: async (args) => {
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+      const rows = await db.review.findMany({
+        where: { businessId: business.id },
+        orderBy: { postedAt: "desc" },
+        take: limitOf(args, 10),
+      });
+      return {
+        business: business.name,
+        rating: business.googleRating,
+        reviewCount: business.googleReviewCount,
+        lastRead: business.reviewsUpdatedAt ? fullDate(business.reviewsUpdatedAt) : null,
+        reviews: rows.map((row) => ({
+          author: row.author,
+          rating: row.rating,
+          body: row.body,
+          postedAt: fullDate(row.postedAt),
+          ownerReply: row.ownerReply,
+          url: row.sourceUrl,
+        })),
+      };
+    },
+  },
+
+  {
+    name: "refresh_reviews",
+    title: "Re-read reviews from Google",
+    write: true,
+    description:
+      "Queues a re-read of Google reviews through Apify, for one company or for a slice of the directory. The work runs in the import worker, so this returns as soon as it is queued. Each company costs one Apify place lookup.",
+    schema: object({
+      idOrSlug: str("One company. Leave it out to refresh a selection instead."),
+      categoryId: str("Limit the selection to one service."),
+      cityId: str("Limit the selection to one city."),
+      staleDays: int("Only companies whose reviews were last read this many days ago or longer."),
+      limit: int("How many companies at most. Default 50, maximum 200."),
+    }),
+    handler: async (args, ctx) => {
+      const { queueRefresh } = await import("../reviews");
+
+      let ids: string[];
+      let what: string;
+
+      if (args.idOrSlug !== undefined) {
+        const business = await findBusiness(reqStr(args, "idOrSlug"));
+        ids = [business.id];
+        what = business.name;
+      } else {
+        const staleDays = typeof args.staleDays === "number" ? args.staleDays : 0;
+        const stale = staleDays > 0 ? new Date(Date.now() - staleDays * 86_400_000) : null;
+        const rows = await db.business.findMany({
+          where: {
+            placeId: { not: null },
+            status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
+            ...(args.categoryId ? { categoryId: String(args.categoryId) } : {}),
+            ...(args.cityId ? { cityId: String(args.cityId) } : {}),
+            ...(stale ? { OR: [{ reviewsUpdatedAt: null }, { reviewsUpdatedAt: { lt: stale } }] } : {}),
+          },
+          orderBy: { reviewsUpdatedAt: { sort: "asc", nulls: "first" } },
+          select: { id: true },
+          take: Math.min(200, limitOf(args, 50)),
+        });
+        ids = rows.map((row) => row.id);
+        what = `${rows.length} companies`;
+      }
+
+      if (ids.length === 0) throw new ToolError("Nothing matched, so nothing was queued.");
+
+      const queued = await queueRefresh({ businessIds: ids, userId: ctx.user.id });
+      if (queued.requested === 0) {
+        throw new ToolError(
+          "None of those companies has a Google place id on file, so there is nothing to look up.",
+        );
+      }
+
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: queued.id,
+        summary: `Review refresh queued for ${what}`,
+        paths: [],
+      });
+      return { refreshId: queued.id, queued: queued.requested, skippedWithoutPlaceId: queued.skipped };
+    },
+  },
+
+  {
+    name: "fill_service_areas",
+    title: "Fill a company's service areas from a radius",
+    write: true,
+    description:
+      "Adds every town within the radius of where the company works to its coverage list, keeping anything already there. Needs coordinates on the company or on its city.",
+    schema: object(
+      {
+        idOrSlug: str("The business id or slug."),
+        km: int("The radius in kilometres. Default 20."),
+      },
+      ["idOrSlug"],
+    ),
+    handler: async (args, ctx) => {
+      const { fillServiceAreas, DEFAULT_RADIUS_KM } = await import("../geo");
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+      const km = typeof args.km === "number" && args.km > 0 ? args.km : DEFAULT_RADIUS_KM;
+
+      const result = await fillServiceAreas(business.id, km);
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "business",
+        entityId: business.id,
+        summary: `${business.name}: ${result.added} areas added within ${km} km`,
+        paths: [routes.business(business.slug)],
+      });
+      return { business: business.name, added: result.added, total: result.total, radiusKm: km };
+    },
+  },
+
+  {
+    name: "set_ranking_position",
+    title: "Move a company on a ranking",
+    write: true,
+    description:
+      "Puts a company at a chosen place on one of its rankings. Everything between the old and the new place shifts by one, so the list stays 1 upwards with no gaps and no ties.",
+    schema: object(
+      {
+        idOrSlug: str("The business id or slug."),
+        rankingId: str("The ranking to move it on."),
+        position: int("Where it should sit, counting from 1."),
+      },
+      ["idOrSlug", "rankingId", "position"],
+    ),
+    handler: async (args, ctx) => {
+      const business = await findBusiness(reqStr(args, "idOrSlug"));
+      const rankingId = reqStr(args, "rankingId");
+      const wanted = typeof args.position === "number" ? Math.floor(args.position) : 0;
+      if (wanted < 1) throw new ToolError("The position must be 1 or higher.");
+
+      const entry = await db.rankingEntry.findUnique({
+        where: { rankingId_businessId: { rankingId, businessId: business.id } },
+        include: { ranking: { select: { title: true } } },
+      });
+      if (!entry) throw new ToolError(`${business.name} is not on that ranking.`);
+
+      const siblings = await db.rankingEntry.findMany({
+        where: { rankingId },
+        orderBy: { position: "asc" },
+        select: { id: true },
+      });
+      const order = siblings.map((row) => row.id).filter((id) => id !== entry.id);
+      order.splice(Math.min(wanted, order.length + 1) - 1, 0, entry.id);
+
+      // Positions are unique per ranking, so they are parked on negatives first.
+      await db.$transaction([
+        ...order.map((id, index) =>
+          db.rankingEntry.update({ where: { id }, data: { position: -(index + 1) } }),
+        ),
+        ...order.map((id, index) =>
+          db.rankingEntry.update({ where: { id }, data: { position: index + 1 } }),
+        ),
+      ]);
+
+      const landed = order.indexOf(entry.id) + 1;
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "ranking",
+        entityId: rankingId,
+        summary: `${business.name} moved to #${landed} on ${entry.ranking.title}`,
+        paths: ["/"],
+      });
+      return { business: business.name, ranking: entry.ranking.title, position: landed };
     },
   },
 

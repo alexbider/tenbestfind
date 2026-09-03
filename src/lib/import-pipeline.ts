@@ -8,6 +8,9 @@ import {
   websiteHost,
 } from "./enrich";
 import { focusKeywordFor, writeListing, type Brief } from "./listing-writer";
+import { crawlSite, type SiteData } from "./site-crawl";
+import { discoverCity, fillServiceAreas } from "./geo";
+import { saveReviews } from "./reviews";
 import { openingFingerprint } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
@@ -169,10 +172,27 @@ async function collectScrape(batchId: string): Promise<Advance> {
     let duplicates = 0;
     const rankPerCity = new Map<string, number>();
 
+    let discovered = 0;
+
     for (const place of places) {
       const city = (place.searchString && byQuery.get(place.searchString)) || cities[0];
       const rank = (rankPerCity.get(city.id) ?? 0) + 1;
       rankPerCity.set(city.id, rank);
+
+      // A search for one city returns companies from the towns around it. Those
+      // towns become places in their own right, unpublished until an editor
+      // says otherwise, which is what gives the service-area radius something
+      // to find beyond the handful of metros that were seeded by hand.
+      if (place.city && place.latitude !== null && place.longitude !== null) {
+        const suburb = await discoverCity({
+          name: place.city,
+          regionId: city.regionId,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          near: { latitude: city.latitude, longitude: city.longitude },
+        });
+        if (suburb?.created) discovered += 1;
+      }
 
       const verdict = await classify(place, city.id, batch);
       if (verdict.status === "DUPLICATE" || verdict.status === "SKIPPED") duplicates += 1;
@@ -212,7 +232,10 @@ async function collectScrape(batchId: string): Promise<Advance> {
       where: { id: batchId },
       data: { status: "ENRICHING", found, duplicates },
     });
-    return { changed: true, note: `${found} to import, ${duplicates} skipped` };
+    return {
+      changed: true,
+      note: `${found} to import, ${duplicates} skipped${discovered ? `, ${discovered} new areas` : ""}`,
+    };
   } catch (error) {
     return fail(batchId, error);
   }
@@ -299,9 +322,15 @@ async function enrichSlice(batchId: string): Promise<Advance> {
 
   await Promise.all(
     items.map(async (item) => {
+      // One pass over the company's own site does both jobs: it finds the
+      // address Google did not publish, and it collects the logo, the photos
+      // and the facts a Maps record never carries.
+      const site = await crawlSite(item.website);
+
       const found = item.email
         ? { email: item.email, source: item.emailSource === "gmb" ? ("gmb" as const) : ("website" as const) }
-        : await findEmail({ gmbEmail: null, website: item.website });
+        : (await findEmail({ gmbEmail: null, website: item.website })) ??
+          (site.emails[0] ? { email: site.emails[0], source: "website" as const } : null);
 
       await db.importItem.update({
         where: { id: item.id },
@@ -309,12 +338,14 @@ async function enrichSlice(batchId: string): Promise<Advance> {
           status: "ENRICHED",
           email: found?.email ?? null,
           emailSource: found?.source ?? "none",
+          site: site.pagesRead > 0 ? JSON.stringify(site) : null,
         },
       });
     }),
   );
 
-  return { changed: true, note: `enriched ${items.length}` };
+  const read = items.length;
+  return { changed: true, note: `enriched ${read}` };
 }
 
 /* ------------------------------------------------------------------- write */
@@ -368,6 +399,8 @@ async function writeSlice(batchId: string): Promise<Advance> {
       const slug = await uniqueSlug(name, city.slug);
       const path = routes.business(slug);
 
+      const site = item.site ? (JSON.parse(item.site) as SiteData) : null;
+
       const brief: Brief = {
         name,
         focusKeyword,
@@ -386,6 +419,15 @@ async function writeSlice(batchId: string): Promise<Advance> {
         gmbRank: item.gmbRank,
         gmbCategory: place.categoryName ?? null,
         hours: place.openingHours ?? null,
+        site: site
+          ? {
+              summary: site.summary,
+              text: site.text,
+              yearFounded: site.yearFounded,
+              licenseNumbers: site.licenseNumbers,
+              social: Object.values(site.social),
+            }
+          : null,
         avoidOpenings,
       };
 
@@ -581,6 +623,7 @@ type Draft = {
   focusKeyword: string;
   path: string;
   tagline: string;
+  overview: string;
   description: string;
   editorialTake: string;
   bestFor: string;
@@ -599,7 +642,7 @@ async function createBusiness(
     id: string;
     categoryId: string;
     autoPublishScore: number;
-    category: { subservices: { id: string; name: string }[] };
+    category: { serviceName: string; subservices: { id: string; name: string }[] };
   },
 ): Promise<{ published: boolean }> {
   const item = await db.importItem.findUnique({ where: { id: itemId } });
@@ -607,7 +650,15 @@ async function createBusiness(
 
   const draft = JSON.parse(item.draft) as Draft;
   const place = JSON.parse(item.raw ?? "{}") as PlaceRecord;
-  const image = place.imageUrls?.[0] ?? null;
+  const site = item.site ? (JSON.parse(item.site) as SiteData) : null;
+
+  // Photos from Google first, because they are of the work rather than of the
+  // brand, then whatever the company publishes on its own site.
+  const photos = [...new Set([...(place.imageUrls ?? []), ...(site?.images ?? [])])].slice(0, 8);
+  const image = photos[0] ?? null;
+
+  const yearFounded = site?.yearFounded ?? null;
+  const licenseNumber = site?.licenseNumbers[0] ?? null;
 
   const publish = item.seoScore >= batch.autoPublishScore;
 
@@ -618,6 +669,7 @@ async function createBusiness(
       categoryId: batch.categoryId,
       cityId: item.cityId,
       tagline: draft.tagline,
+      overview: draft.overview,
       description: draft.description,
       editorialTake: draft.editorialTake,
       bestFor: draft.bestFor,
@@ -639,6 +691,11 @@ async function createBusiness(
       googleReviewCount: item.reviewCount,
       googleDistribution: place.reviewDistribution ? stringify(place.reviewDistribution) : null,
       googleDataUpdated: new Date(),
+      logoUrl: site?.logo ?? null,
+      socialLinks: site && Object.keys(site.social).length > 0 ? stringify(site.social) : null,
+      siteCrawledAt: site ? new Date(site.crawledAt) : null,
+      yearFounded,
+      licenseNumber,
       importedAt: new Date(),
       status: publish ? "PUBLISHED" : "DRAFT",
       publishedAt: publish ? new Date() : null,
@@ -646,9 +703,9 @@ async function createBusiness(
   });
 
   // Photos, matched to the subservices the writer named, then the FAQ block.
-  if (place.imageUrls?.length) {
+  if (photos.length > 0) {
     await db.businessPhoto.createMany({
-      data: place.imageUrls.slice(0, 3).map((url, index) => ({
+      data: photos.map((url, index) => ({
         businessId: business.id,
         url,
         alt: `${item.name} in ${place.city ?? ""}`.trim(),
@@ -656,6 +713,27 @@ async function createBusiness(
       })),
     });
   }
+
+  // A licence read off the company's own site is what it claims, not what a
+  // register confirms, so it is recorded as reported and waits for a check.
+  if (licenseNumber) {
+    await db.credential.create({
+      data: {
+        businessId: business.id,
+        label: `${batch.category.serviceName} licence`,
+        identifier: licenseNumber,
+        status: "REPORTED",
+        sourceUrl: item.website,
+      },
+    });
+  }
+
+  // Reviews Google returned with the place, and the areas the company can
+  // reach. Both are best-effort: a listing is still a listing without them.
+  if (place.reviews?.length) {
+    await saveReviews(business.id, place.reviews).catch(() => undefined);
+  }
+  await fillServiceAreas(business.id).catch(() => undefined);
 
   const wanted = draft.services.map((service) => normalizeName(service));
   const matched = batch.category.subservices.filter((subservice) =>
@@ -681,6 +759,7 @@ async function createBusiness(
   });
 
   const body = [
+    draft.overview,
     draft.description,
     draft.editorialTake,
     ...draft.strengths,

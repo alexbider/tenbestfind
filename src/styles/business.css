@@ -324,3 +324,111 @@
     text-align: left;
   }
 }
+
+/* ------------------------------------------------------------------ reviews */
+
+.review-list {
+  display: grid;
+  gap: 14px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-xs);
+}
+
+.review-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.review-card__author {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.review-card__date {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.review-card__stars {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.review-card__body {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* The company's own answer, set apart so it never reads as the reviewer. */
+.review-card__reply {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 3px solid var(--border-subtle);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.review-card__link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .review-card__head {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* --------------------------------------------------------- quick overview */
+
+.overview-card__more {
+  margin-top: 16px;
+}
+
+.overview-card__full {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+/* `display: grid` outranks the browser's own rule for the hidden attribute, so
+   the collapsed state has to be spelled out. */
+.overview-card__full[hidden] {
+  display: none;
+}
+
+.overview-card__toggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.overview-card__toggle:hover {
+  text-decoration: underline;
+}

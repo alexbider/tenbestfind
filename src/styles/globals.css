@@ -398,6 +398,16 @@ summary:focus-visible,
   color: var(--color-primary-hover);
 }
 
+/* A chip that names something rather than linking to it. */
+.chip--static,
+.chip--static:hover {
+  transform: none;
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
 .chip[aria-pressed="true"],
 .chip--active {
   background: var(--blue-50);

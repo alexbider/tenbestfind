@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { CATEGORIES } from "./data/taxonomy";
 import { COUNTRIES } from "./data/geography";
+import { CITY_COORDINATES, coordinateKey } from "./data/coordinates";
 import { ALL_BUSINESSES, type SeedBusiness } from "./data/businesses";
 import { GLOBAL_CRITERIA, GUIDES, HOME_FAQS, PEOPLE, RANKINGS } from "./data/editorial";
 import { PAGES, PLANS, SETTINGS } from "./data/pages";
@@ -101,6 +102,8 @@ async function main() {
       regionIds.set(`${country.code}:${region.slug}`, regionRow.id);
 
       for (const [cityIndex, city] of region.cities.entries()) {
+        const [latitude, longitude] =
+          CITY_COORDINATES[coordinateKey(country.code, region.code, city.slug)] ?? [null, null];
         const cityRow = await db.city.upsert({
           where: { regionId_slug: { regionId: regionRow.id, slug: city.slug } },
           create: {
@@ -112,6 +115,8 @@ async function main() {
             blurb: city.blurb,
             conditions: J(city.conditions),
             neighborhoods: J(city.neighborhoods),
+            latitude,
+            longitude,
             topMetro: city.topMetro ?? false,
             sortOrder: cityIndex,
           },
@@ -122,6 +127,8 @@ async function main() {
             blurb: city.blurb,
             conditions: J(city.conditions),
             neighborhoods: J(city.neighborhoods),
+            latitude,
+            longitude,
             topMetro: city.topMetro ?? false,
             sortOrder: cityIndex,
           },

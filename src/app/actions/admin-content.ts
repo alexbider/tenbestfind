@@ -10,6 +10,8 @@ import { recordMove } from "@/lib/redirects";
 import { analyzeSeo } from "@/lib/seo";
 import { parseJson, stringify } from "@/lib/json";
 import { rankingUrl, routes } from "@/lib/urls";
+import { DEFAULT_RADIUS_KM, fillServiceAreas } from "@/lib/geo";
+import { queueRefresh } from "@/lib/reviews";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
@@ -844,7 +846,8 @@ const businessSchema = z.object({
   cityId: z.string().optional(),
   status: z.enum(BUSINESS_STATUSES),
   tagline: z.string().max(240).optional(),
-  description: z.string().max(4000).optional(),
+  overview: z.string().max(1600).optional(),
+  description: z.string().max(8000).optional(),
   bestFor: z.string().max(200).optional(),
   editorialTake: z.string().max(4000).optional(),
   strengths: z.string().optional(),
@@ -906,6 +909,7 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     cityId: data.cityId || null,
     status: data.status,
     tagline: data.tagline || null,
+    overview: data.overview || null,
     description: data.description || null,
     bestFor: data.bestFor || null,
     editorialTake: data.editorialTake || null,
@@ -1208,6 +1212,103 @@ export async function removeFromRanking(formData: FormData) {
   revalidatePath(`/admin/businesses/${entry.businessId}`);
   revalidatePath(`/admin/rankings/${entry.rankingId}`);
   revalidatePath(rankingUrl(entry.ranking));
+}
+
+/**
+ * Queues a re-read of one company's Google reviews. The work happens in the
+ * import worker rather than here, so the page comes back straight away and a
+ * slow Apify run cannot time the request out.
+ */
+export async function refreshBusinessReviews(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const business = await db.business.findUnique({
+    where: { id },
+    select: { name: true, placeId: true },
+  });
+  if (!business) return;
+
+  const queued = await queueRefresh({ businessIds: [id], userId: user.id });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: id,
+    summary: queued.requested
+      ? `Review refresh queued for ${business.name}`
+      : `Review refresh skipped for ${business.name}: no Google place id on file`,
+  });
+  revalidatePath(`/admin/businesses/${id}`);
+  revalidatePath("/admin/reviews");
+}
+
+/**
+ * Queues a refresh for a whole slice of the directory. The selection is by
+ * status, category and city rather than by ticking boxes, because the useful
+ * case is "everything published in Dallas", not a hand-picked twelve.
+ */
+export async function refreshReviewsBatch(formData: FormData) {
+  const user = await requireStaff();
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const cityId = String(formData.get("cityId") ?? "");
+  const staleDays = Number(formData.get("staleDays") ?? 0);
+  const limit = Math.min(200, Math.max(1, Number(formData.get("limit") ?? 50)));
+
+  const stale =
+    staleDays > 0
+      ? new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000)
+      : null;
+
+  const businesses = await db.business.findMany({
+    where: {
+      placeId: { not: null },
+      status: { in: ["PUBLISHED", "DRAFT", "PENDING"] },
+      ...(categoryId ? { categoryId } : {}),
+      ...(cityId ? { cityId } : {}),
+      ...(stale
+        ? { OR: [{ reviewsUpdatedAt: null }, { reviewsUpdatedAt: { lt: stale } }] }
+        : {}),
+    },
+    orderBy: { reviewsUpdatedAt: { sort: "asc", nulls: "first" } },
+    select: { id: true },
+    take: limit,
+  });
+
+  if (businesses.length === 0) return;
+
+  const queued = await queueRefresh({
+    businessIds: businesses.map((row) => row.id),
+    userId: user.id,
+  });
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: queued.id,
+    summary: `Review refresh queued for ${queued.requested} companies`,
+  });
+  revalidatePath("/admin/reviews");
+}
+
+/** Rebuilds a company's service areas from the radius around where it works. */
+export async function refillServiceAreas(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const km = Number(formData.get("km") ?? DEFAULT_RADIUS_KM) || DEFAULT_RADIUS_KM;
+
+  const result = await fillServiceAreas(id, km);
+  const business = await db.business.findUnique({ where: { id }, select: { name: true, slug: true } });
+  if (!business) return;
+
+  await audit({
+    userId: user.id,
+    action: "update",
+    entityType: "business",
+    entityId: id,
+    summary: `${business.name}: ${result.added} areas added within ${km} km, ${result.total} in total`,
+  });
+  revalidatePath(`/admin/businesses/${id}`);
+  revalidatePath(routes.business(business.slug));
 }
 
 export async function setCredentialStatus(formData: FormData) {

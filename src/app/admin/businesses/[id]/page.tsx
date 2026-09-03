@@ -7,6 +7,8 @@ import { SeoPanel } from "@/components/admin/SeoPanel";
 import {
   addToRanking,
   deleteBusiness,
+  refillServiceAreas,
+  refreshBusinessReviews,
   removeFromRanking,
   setBusinessStatus,
   setCredentialStatus,
@@ -49,7 +51,8 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
       credentials: { orderBy: { sortOrder: "asc" } },
       photos: { orderBy: { sortOrder: "asc" } },
       services: { include: { subservice: true } },
-      areas: { include: { city: true } },
+      areas: { include: { city: true }, orderBy: { primary: "desc" } },
+      reviews: { orderBy: { postedAt: "desc" }, take: 10 },
       entries: { include: { ranking: { include: { category: true, city: true } } }, orderBy: { position: "asc" } },
       subscriptions: {
         include: { plan: true, invoices: { orderBy: { issuedAt: "desc" } } },
@@ -158,6 +161,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 cityId: business.cityId ?? "",
                 status: business.status,
                 tagline: business.tagline ?? "",
+                overview: business.overview ?? "",
                 description: business.description ?? "",
                 bestFor: business.bestFor ?? "",
                 editorialTake: business.editorialTake ?? "",
@@ -306,6 +310,106 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                   {parseList(business.strengths).length} strengths and{" "}
                   {parseList(business.considerations).length} considerations recorded for the ranking
                   card.
+                </p>
+              ) : null}
+            </Panel>
+
+            <Panel
+              title="Google reviews"
+              description="Read through Apify from the company's Google Business Profile. Refreshing rewrites the rating, the count and the reviews in one pass."
+              padded={business.reviews.length === 0}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <form action={refreshBusinessReviews}>
+                  <input type="hidden" name="id" value={business.id} />
+                  <button
+                    type="submit"
+                    className="btn btn--secondary btn--sm"
+                    disabled={!business.placeId}
+                  >
+                    Refresh reviews
+                  </button>
+                </form>
+                <span style={{ fontSize: 13.5, color: "var(--text-muted)" }}>
+                  {business.placeId
+                    ? business.reviewsUpdatedAt
+                      ? `${business.reviews.length} stored, last read ${fullDate(business.reviewsUpdatedAt)}`
+                      : "Never refreshed"
+                    : "No Google place id on file, so there is nothing to look up."}
+                </span>
+              </div>
+
+              {business.reviews.length > 0 ? (
+                <ul style={{ display: "grid", gap: 12, marginTop: 18, padding: 0, listStyle: "none" }}>
+                  {business.reviews.slice(0, 5).map((review) => (
+                    <li
+                      key={review.id}
+                      style={{
+                        padding: "12px 14px",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: 10,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                        <strong style={{ fontSize: 14 }}>{review.author}</strong>
+                        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                          {review.rating.toFixed(1)} · {fullDate(review.postedAt)}
+                        </span>
+                      </div>
+                      <p style={{ marginTop: 6, fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                        {review.body.slice(0, 220) || "No written feedback."}
+                        {review.body.length > 220 ? "…" : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <p style={{ marginTop: 16, fontSize: 13.5, color: "var(--text-muted)" }}>
+                The profile quotes the five most recent reviews that have something written in them.
+                Refresh many companies at once under{" "}
+                <Link href="/admin/reviews">Reviews</Link>.
+              </p>
+            </Panel>
+
+            <Panel
+              title="Service areas"
+              description="Filled from the towns within the radius of where the company actually works."
+            >
+              <form
+                action={refillServiceAreas}
+                style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}
+              >
+                <input type="hidden" name="id" value={business.id} />
+                <label className="field" style={{ margin: 0, width: 130 }}>
+                  <span>Radius (km)</span>
+                  <input type="number" name="km" min={1} max={200} defaultValue={20} />
+                </label>
+                <button type="submit" className="btn btn--secondary btn--sm">
+                  Fill from radius
+                </button>
+              </form>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+                {business.areas.length === 0 ? (
+                  <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+                    No areas recorded yet.
+                  </span>
+                ) : (
+                  business.areas.map((area) => (
+                    <span key={area.cityId} className="chip chip--static">
+                      {area.city.name}
+                      {area.primary ? " (base)" : ""}
+                      {area.city.published ? "" : " · unpublished"}
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {business.latitude === null && business.city?.latitude === null ? (
+                <p style={{ marginTop: 14, fontSize: 13.5, color: "var(--text-muted)" }}>
+                  Neither this company nor its city has coordinates on file, so there is nothing to
+                  measure a radius from. Set them on the city under Taxonomy.
                 </p>
               ) : null}
             </Panel>
