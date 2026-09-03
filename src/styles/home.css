@@ -358,9 +358,6 @@
    ================================================================== */
 
 .home-2026 {
-  /* The design draws on a slightly wider shell than the rest of the site. */
-  --shell: 1240px;
-  --paper: #f7f9fc;
   background: var(--surface-card);
 }
 

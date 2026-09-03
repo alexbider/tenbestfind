@@ -4,7 +4,7 @@ import { routes } from "./urls";
 import type { IconName } from "@/lib/icon-paths";
 import { hasIcon } from "@/lib/icon-paths";
 
-export type NavItem = { name: string; href: string; icon?: IconName };
+export type NavItem = { name: string; href: string; icon?: IconName; count?: number };
 export type NavGroup = { title: string; items: NavItem[] };
 
 export type CountryNav = {
@@ -19,6 +19,10 @@ export type CountryNav = {
 };
 
 export type SiteNav = {
+  /** Cities with a published ranking, quoted in the header's utility bar. */
+  cityCount: number;
+  /** Published trades, quoted in the services mega panel. */
+  serviceCount: number;
   serviceGroups: NavGroup[];
   mostSearched: NavItem[];
   countries: CountryNav[];
@@ -37,7 +41,7 @@ function icon(key: string | null | undefined, fallback: IconName = "house"): Ico
  * taxonomy stays crawlable without JavaScript.
  */
 export const getSiteNav = cache(async (): Promise<SiteNav> => {
-  const [categories, countries, guides, trending] = await Promise.all([
+  const [categories, countries, guides, trending, cityCount] = await Promise.all([
     db.category.findMany({
       where: { published: true },
       orderBy: [{ navOrder: "asc" }, { sortOrder: "asc" }],
@@ -53,6 +57,7 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
             cities: {
               where: { published: true },
               orderBy: { sortOrder: "asc" },
+              include: { _count: { select: { rankings: true } } },
             },
           },
         },
@@ -67,9 +72,10 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
     db.subservice.findMany({
       where: { trending: true },
       orderBy: { sortOrder: "asc" },
-      take: 3,
+      take: 4,
       include: { category: true },
     }),
+    db.city.count({ where: { published: true, rankings: { some: { status: "PUBLISHED" } } } }),
   ]);
 
   const groupOrder = ["Repair & emergency", "Remodel & interior", "Exterior & structure", "Outdoor & property"];
@@ -104,6 +110,7 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
           metros.push({
             name: `${city.name}, ${region.code.toUpperCase()}`,
             href: routes.city(country.code, region.slug, city.slug),
+            count: city._count.rankings,
           });
         }
       }
@@ -139,6 +146,8 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
   const pick = guides[0];
 
   return {
+    cityCount,
+    serviceCount: categories.length,
     serviceGroups,
     mostSearched: trending.map((sub) => ({
       name: sub.name,
