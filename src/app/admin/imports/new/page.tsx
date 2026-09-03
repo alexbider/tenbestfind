@@ -10,7 +10,7 @@ export const metadata = { title: "New import batch" };
 export default async function NewBatchPage() {
   await requireAdmin();
 
-  const [categories, cities, secrets] = await Promise.all([
+  const [categories, cities, secrets, counts] = await Promise.all([
     db.category.findMany({ where: { published: true }, orderBy: { sortOrder: "asc" } }),
     db.city.findMany({
       where: { published: true },
@@ -18,7 +18,13 @@ export default async function NewBatchPage() {
       include: { region: true },
     }),
     secretStatus(),
+    // One row per service and city, so the form can say how much ground a batch
+    // would be going over again before anyone spends the credits.
+    db.business.groupBy({ by: ["categoryId", "cityId"], _count: { _all: true } }),
   ]);
+
+  const existing: Record<string, number> = {};
+  for (const row of counts) existing[`${row.categoryId}:${row.cityId}`] = row._count._all;
 
   const missing = secrets.filter((secret) => !secret.set);
 
@@ -56,6 +62,7 @@ export default async function NewBatchPage() {
               region: city.region.name,
               regionId: city.regionId,
             }))}
+            existing={existing}
           />
         </Panel>
 

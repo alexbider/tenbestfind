@@ -173,6 +173,11 @@ async function collectScrape(batchId: string): Promise<Advance> {
     let duplicates = 0;
     const rankPerCity = new Map<string, number>();
 
+    // Keys already taken by an earlier place in this same run. Google returns
+    // the same company twice often enough, and two rows that both look new to
+    // the database would otherwise both be written.
+    const claimed = new Set<string>();
+
     let discovered = 0;
 
     for (const place of places) {
@@ -195,7 +200,20 @@ async function collectScrape(batchId: string): Promise<Advance> {
         if (suburb?.created) discovered += 1;
       }
 
-      const verdict = await classify(place, city.id, batch);
+      let verdict = await classify(place, city.id, batch);
+
+      const keys = claimKeys(
+        { placeId: place.placeId, name: place.title, website: place.website, phone: place.phone, addressLine: place.address },
+        city.id,
+      );
+      if (verdict.status === "FOUND") {
+        if (keys.some((key) => claimed.has(key))) {
+          verdict = { status: "DUPLICATE", reason: "already in this batch", businessId: null };
+        } else {
+          for (const key of keys) claimed.add(key);
+        }
+      }
+
       if (verdict.status === "DUPLICATE" || verdict.status === "SKIPPED") duplicates += 1;
       else found += 1;
 
@@ -270,18 +288,50 @@ export async function classify(
     };
   }
 
-  if (place.placeId) {
-    const byPlace = await db.business.findUnique({ where: { placeId: place.placeId } });
-    if (byPlace) return { status: "DUPLICATE", reason: "same Google place id", businessId: byPlace.id };
+  const match = await findDuplicate(
+    { placeId: place.placeId, name: place.title, website: place.website, phone: place.phone, addressLine: place.address },
+    cityId,
+  );
+  if (match) return { status: "DUPLICATE", reason: match.reason, businessId: match.businessId };
+
+  return { status: "FOUND", reason: null, businessId: null };
+}
+
+export type Candidate = {
+  placeId?: string | null;
+  name: string;
+  website?: string | null;
+  phone?: string | null;
+  addressLine?: string | null;
+};
+
+/**
+ * Whether this company is already in the directory. The place id is checked
+ * everywhere because Google's id is the same company wherever it was found;
+ * everything softer is checked only inside the city, since the same chain in
+ * two cities is two listings, which is the point of the site.
+ *
+ * Called both when a scrape is read and again immediately before the row is
+ * written, because a batch takes long enough that another run, or an editor,
+ * can add the company in between.
+ */
+export async function findDuplicate(
+  candidate: Candidate,
+  cityId: string,
+): Promise<{ reason: string; businessId: string } | null> {
+  if (candidate.placeId) {
+    const byPlace = await db.business.findUnique({
+      where: { placeId: candidate.placeId },
+      select: { id: true },
+    });
+    if (byPlace) return { reason: "same Google place id", businessId: byPlace.id };
   }
 
-  const host = websiteHost(place.website);
-  const phone = normalizePhone(place.phone);
-  const name = normalizeName(place.title);
-  const address = normalizeAddress(place.address);
+  const host = websiteHost(candidate.website ?? null);
+  const phone = normalizePhone(candidate.phone ?? null);
+  const name = normalizeName(candidate.name);
+  const address = normalizeAddress(candidate.addressLine ?? null);
 
-  // Only businesses already in this city can be duplicates of this one: the
-  // same chain in two cities is two listings, which is the point of the site.
   const local = await db.business.findMany({
     where: { cityId },
     select: { id: true, name: true, website: true, phone: true, addressLine: true },
@@ -289,22 +339,37 @@ export async function classify(
 
   for (const existing of local) {
     if (host && websiteHost(existing.website) === host) {
-      return { status: "DUPLICATE", reason: "same website", businessId: existing.id };
+      return { reason: "same website", businessId: existing.id };
     }
     if (phone && normalizePhone(existing.phone) === phone) {
-      return { status: "DUPLICATE", reason: "same phone number", businessId: existing.id };
+      return { reason: "same phone number", businessId: existing.id };
     }
     if (normalizeName(existing.name) === name) {
       const sameAddress = address && normalizeAddress(existing.addressLine) === address;
       return {
-        status: "DUPLICATE",
         reason: sameAddress ? "same name and address" : "same name in this city",
         businessId: existing.id,
       };
     }
   }
 
-  return { status: "FOUND", reason: null, businessId: null };
+  return null;
+}
+
+/**
+ * The keys one scraped place occupies, so a second place in the same run that
+ * lands on any of them is caught before both are written. The database check
+ * cannot see them: neither row exists yet.
+ */
+function claimKeys(candidate: Candidate, cityId: string): string[] {
+  const keys: string[] = [];
+  if (candidate.placeId) keys.push(`place:${candidate.placeId}`);
+  const host = websiteHost(candidate.website ?? null);
+  if (host) keys.push(`host:${host}`);
+  const phone = normalizePhone(candidate.phone ?? null);
+  if (phone) keys.push(`phone:${phone}`);
+  keys.push(`name:${cityId}:${normalizeName(candidate.name)}`);
+  return keys;
 }
 
 /* ------------------------------------------------------------------ enrich */
@@ -648,6 +713,33 @@ async function createBusiness(
 ): Promise<{ published: boolean }> {
   const item = await db.importItem.findUnique({ where: { id: itemId } });
   if (!item?.draft) return { published: false };
+
+  // The scrape decided this was new, but writing happens minutes to hours
+  // later, and in that time a parallel batch or an editor can have added the
+  // company. Ask again against the state that actually exists now.
+  if (item.cityId) {
+    const clash = await findDuplicate(
+      {
+        placeId: item.placeId,
+        name: item.name,
+        website: item.website,
+        phone: item.phone,
+        addressLine: item.addressLine,
+      },
+      item.cityId,
+    );
+    if (clash) {
+      await db.importItem.update({
+        where: { id: item.id },
+        data: { status: "DUPLICATE", reason: clash.reason, businessId: clash.businessId },
+      });
+      await db.importBatch.update({
+        where: { id: batch.id },
+        data: { duplicates: { increment: 1 } },
+      });
+      return { published: false };
+    }
+  }
 
   const draft = JSON.parse(item.draft) as Draft;
   const place = JSON.parse(item.raw ?? "{}") as PlaceRecord;

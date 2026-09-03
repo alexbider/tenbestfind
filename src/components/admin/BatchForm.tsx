@@ -9,6 +9,8 @@ const initial: ActionState = { status: "idle" };
 
 export type CityOption = { id: string; name: string; region: string; regionId: string };
 export type CategoryOption = { id: string; name: string; serviceName: string };
+/** How many listings already exist, keyed `categoryId:cityId`. */
+export type ExistingCounts = Record<string, number>;
 
 /**
  * Defining a batch. The estimate is shown as it is built because the cost of a
@@ -18,9 +20,11 @@ export type CategoryOption = { id: string; name: string; serviceName: string };
 export function BatchForm({
   categories,
   cities,
+  existing,
 }: {
   categories: CategoryOption[];
   cities: CityOption[];
+  existing: ExistingCounts;
 }) {
   const [state, action, pending] = useActionState(createBatch, initial);
   const [selected, setSelected] = useState<string[]>([]);
@@ -40,10 +44,34 @@ export function BatchForm({
   const category = categories.find((entry) => entry.id === categoryId);
   const ceiling = selected.length * perCity;
 
+  /** How many of this trade are already listed in that city. */
+  const done = (cityId: string) => existing[`${categoryId}:${cityId}`] ?? 0;
+
   const toggle = (id: string) =>
     setSelected((current) =>
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
     );
+
+  // Select-all works on what the filter is showing, not on every city there is.
+  // Typing "tx" and pressing it should take Texas, which is what someone means.
+  const shownIds = visible.map((city) => city.id);
+  const allShownSelected =
+    shownIds.length > 0 && shownIds.every((id) => selected.includes(id));
+
+  const toggleAllShown = () =>
+    setSelected((current) =>
+      allShownSelected
+        ? current.filter((id) => !shownIds.includes(id))
+        : [...new Set([...current, ...shownIds])],
+    );
+
+  // The ones with nothing listed yet, which is usually where a new batch should
+  // go rather than over ground already covered.
+  const selectUncovered = () =>
+    setSelected([...new Set([...selected, ...shownIds.filter((id) => done(id) === 0)])]);
+
+  const uncoveredCount = shownIds.filter((id) => done(id) === 0).length;
+  const alreadyCovered = selected.filter((id) => done(id) > 0);
 
   return (
     <form action={action}>
@@ -127,6 +155,38 @@ export function BatchForm({
           />
         </div>
 
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", margin: "0 0 12px" }}>
+          <button
+            type="button"
+            className="btn btn--secondary btn--sm"
+            onClick={toggleAllShown}
+            disabled={shownIds.length === 0}
+          >
+            {allShownSelected ? "Clear" : "Select"} all {filter.trim() ? `${shownIds.length} shown` : "cities"}
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--sm"
+            onClick={selectUncovered}
+            disabled={uncoveredCount === 0}
+          >
+            Select the {uncoveredCount} with no {category ? category.name.toLowerCase() : "listings"} yet
+          </button>
+          {selected.length > 0 ? (
+            <button type="button" className="btn btn--secondary btn--sm" onClick={() => setSelected([])}>
+              Clear selection
+            </button>
+          ) : null}
+        </div>
+
+        {alreadyCovered.length > 0 ? (
+          <p style={{ fontSize: 13.5, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.6 }}>
+            {alreadyCovered.length} of the selected cities already has listings for this service.
+            Anything the scraper finds again is skipped as a duplicate rather than written twice, so
+            this only costs the search itself.
+          </p>
+        ) : null}
+
         <div
           style={{
             display: "grid",
@@ -137,19 +197,25 @@ export function BatchForm({
             padding: 4,
           }}
         >
-          {visible.map((city) => (
-            <label key={city.id} className="radio-row" style={{ margin: 0, padding: "8px 12px" }}>
-              <input
-                type="checkbox"
-                checked={selected.includes(city.id)}
-                onChange={() => toggle(city.id)}
-              />
-              <span>
-                <strong>{city.name}</strong>
-                <span>{city.region}</span>
-              </span>
-            </label>
-          ))}
+          {visible.map((city) => {
+            const listed = done(city.id);
+            return (
+              <label key={city.id} className="radio-row" style={{ margin: 0, padding: "8px 12px" }}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(city.id)}
+                  onChange={() => toggle(city.id)}
+                />
+                <span>
+                  <strong>{city.name}</strong>
+                  <span>
+                    {city.region}
+                    {listed > 0 ? ` · ${listed} listed` : ""}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
           {visible.length === 0 ? (
             <p style={{ fontSize: 13.5, color: "var(--text-secondary)" }}>No city matches that.</p>
           ) : null}
