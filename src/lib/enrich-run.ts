@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { crawlSite } from "./site-crawl";
+import { crawlSite, type SiteData } from "./site-crawl";
 import { extractFromSite } from "./site-extract";
-import { fillServiceAreas } from "./geo";
+import { fillServiceAreas, recordNamedAreas } from "./geo";
+import { channelIdFor, latestChannelVideos, videoMeta } from "./youtube";
 import { normalizeName } from "./enrich";
 import { PermanentError, type Effort } from "./anthropic";
 import { stringify } from "./json";
@@ -158,7 +159,8 @@ export async function enrichBusiness(
     where: { id: businessId },
     include: {
       category: { select: { serviceName: true, id: true } },
-      city: { select: { name: true } },
+      city: { select: { name: true, regionId: true } },
+      videos: { select: { videoId: true } },
       photos: { select: { url: true } },
       staff: { select: { name: true } },
       credentials: { select: { identifier: true, label: true } },
@@ -225,6 +227,20 @@ export async function enrichBusiness(
   );
   fill("awards", extraction?.awards.length ? stringify(extraction.awards) : null, business.awards);
   fill("brands", extraction?.brands.length ? stringify(extraction.brands) : null, business.brands);
+  fill("tagline", extraction?.tagline ?? null, business.tagline);
+  fill("postalCode", extraction?.postalCode ?? null, business.postalCode);
+  fill("bestFor", extraction?.bestFor ?? null, business.bestFor);
+  fill("serviceRadiusKm", extraction?.serviceRadiusKm ?? null, business.serviceRadiusKm);
+  fill("bbbRating", extraction?.bbbRating ?? null, business.bbbRating);
+  fill("bbbAccreditedSince", extraction?.bbbAccreditedSince ?? null, business.bbbAccreditedSince);
+  fill("inspectionFee", extraction?.inspectionFee ?? null, business.inspectionFee);
+  fill("manufacturerWarranty", extraction?.manufacturerWarranty ?? null, business.manufacturerWarranty);
+  fill("youtubeChannel", site.social.youtube ?? null, business.youtubeChannel);
+  fill(
+    "hours",
+    extraction?.hours.length ? stringify(extraction.hours) : null,
+    business.hours,
+  );
 
   // The three service flags are false by default rather than null, so "already
   // set" cannot be told from "never asked". They are only ever turned on.
@@ -348,35 +364,75 @@ export async function enrichBusiness(
   }
 
   // --------------------------------------------------------------- services
-  // Matched against the subservices this category actually offers, so a listing
-  // never claims work that is not on the site's own taxonomy.
+  // Matched against the subservices this category actually offers, so the
+  // services list stays a taxonomy the whole directory can be searched on. A
+  // job the site names that has no subservice is not thrown away: it becomes a
+  // specialty chip, which is where work too specific for the taxonomy belongs.
+  const unmatchedServices: string[] = [];
   if (extraction?.services.length) {
     const offered = await db.subservice.findMany({
       where: { categoryId: business.category.id },
       select: { id: true, name: true },
     });
     const already = new Set(business.services.map((row) => row.subserviceId));
-    const wanted = extraction.services.map((service) => normalizeName(service));
 
-    const matched = offered.filter((subservice) => {
-      if (already.has(subservice.id)) return false;
-      const target = normalizeName(subservice.name);
-      return wanted.some(
-        (service) => service === target || service.includes(target) || target.includes(service),
-      );
-    });
-
-    if (matched.length > 0) {
-      await db.businessService.createMany({
-        data: matched.map((subservice) => ({ businessId, subserviceId: subservice.id })),
+    const matched = new Map<string, { id: string; name: string }>();
+    for (const service of extraction.services) {
+      const wanted = normalizeName(service);
+      const hit = offered.find((subservice) => {
+        const target = normalizeName(subservice.name);
+        return wanted === target || wanted.includes(target) || target.includes(wanted);
       });
-      filled.push(`${matched.length} service${matched.length === 1 ? "" : "s"}`);
+      if (!hit) {
+        unmatchedServices.push(service);
+        continue;
+      }
+      if (!already.has(hit.id)) matched.set(hit.id, hit);
+    }
+
+    if (matched.size > 0) {
+      await db.businessService.createMany({
+        data: [...matched.keys()].map((subserviceId) => ({ businessId, subserviceId })),
+      });
+      filled.push(`${matched.size} service${matched.size === 1 ? "" : "s"}`);
+    }
+  }
+
+  // ----------------------------------------------------------- specialties
+  if (!business.specialties) {
+    const chips = [...new Set([...(extraction?.specialties ?? []), ...unmatchedServices])].slice(0, 8);
+    if (chips.length > 0) {
+      await db.business.update({
+        where: { id: businessId },
+        data: { specialties: stringify(chips) },
+      });
+      filled.push("specialties");
     }
   }
 
   // ------------------------------------------------------------------ areas
+  // The towns the site names come first, because a company that lists its
+  // suburbs is telling us its coverage directly. The radius then fills in
+  // whatever it did not mention, which is what a listing with no such page has
+  // to fall back on.
+  let areasAdded = 0;
+  if (extraction?.areasServed.length && business.city?.regionId) {
+    const named = await recordNamedAreas(
+      businessId,
+      business.city.regionId,
+      extraction.areasServed,
+    ).catch(() => ({ added: 0, created: 0 }));
+    areasAdded += named.added;
+  }
   const areas = await fillServiceAreas(businessId).catch(() => ({ added: 0, total: 0 }));
-  if (areas.added > 0) filled.push(`${areas.added} area${areas.added === 1 ? "" : "s"}`);
+  areasAdded += areas.added;
+  if (areasAdded > 0) filled.push(`${areasAdded} area${areasAdded === 1 ? "" : "s"}`);
+
+  // ----------------------------------------------------------------- videos
+  const videosAdded = await addVideos(businessId, business.name, business.videos, site, {
+    channel: business.youtubeChannel ?? site.social.youtube ?? null,
+  });
+  if (videosAdded > 0) filled.push(`${videosAdded} video${videosAdded === 1 ? "" : "s"}`);
 
   // The stored score is what the selection filters read, so it has to move the
   // moment the listing does.
@@ -392,4 +448,70 @@ export async function enrichBusiness(
         ? "Read the site, but everything it carries was already on the listing."
         : null,
   };
+}
+
+/**
+ * Fills the Project Videos section from the two places a small company's work
+ * actually shows up: the clips it embeds on its own pages, and its YouTube
+ * channel.
+ *
+ * The channel comes first because its feed carries a real title and a date,
+ * which is what the section prints under each card. A clip found on the site
+ * has neither unless the iframe was given a title, so it is added afterwards
+ * and only to fill the row out. Nothing already on the listing is touched, and
+ * the same video met twice is one video.
+ */
+async function addVideos(
+  businessId: string,
+  businessName: string,
+  existing: { videoId: string }[],
+  site: SiteData,
+  options: { channel: string | null },
+): Promise<number> {
+  const ROOM = 6;
+  const room = ROOM - existing.length;
+  if (room <= 0) return 0;
+
+  const have = new Set(existing.map((row) => row.videoId));
+  const rows: { videoId: string; title: string; meta: string | null }[] = [];
+
+  if (options.channel) {
+    const channelId = await channelIdFor(options.channel).catch(() => null);
+    if (channelId) {
+      const latest = await latestChannelVideos(channelId, 3).catch(() => []);
+      for (const video of latest) {
+        if (have.has(video.videoId)) continue;
+        have.add(video.videoId);
+        rows.push({
+          videoId: video.videoId,
+          title: video.title,
+          meta: videoMeta(video.publishedAt),
+        });
+      }
+    }
+  }
+
+  for (const video of site.videos) {
+    if (have.has(video.videoId) || rows.length >= room) continue;
+    have.add(video.videoId);
+    rows.push({
+      videoId: video.videoId,
+      title: video.title?.trim() || `${businessName} video`,
+      meta: "Embedded on the company's website",
+    });
+  }
+
+  const wanted = rows.slice(0, room);
+  if (wanted.length === 0) return 0;
+
+  await db.businessVideo.createMany({
+    data: wanted.map((row, index) => ({
+      businessId,
+      videoId: row.videoId,
+      title: row.title,
+      meta: row.meta,
+      sortOrder: existing.length + index,
+    })),
+  });
+  return wanted.length;
 }

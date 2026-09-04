@@ -161,7 +161,93 @@ export async function fillServiceAreas(
 // hyphen or an apostrophe, or the word "county" is a description rather than a
 // name and is left alone.
 const PLACE_NAME = /^[A-Za-z][A-Za-z .'-]{1,38}$/;
+
+/** The slug a town is filed under, which is how a duplicate is recognised. */
+function citySlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const NOT_A_TOWN = /\b(county|metro|metroplex|greater|area|region|district|township of)\b/i;
+
+/**
+ * Matches the town names a website claims against the directory, creating the
+ * ones that are not in it yet, and records them all as service areas.
+ *
+ * A company that lists seven suburbs on its own site should show seven, not
+ * whatever happens to fall inside a circle drawn round its city. Names it
+ * invents for itself ("Greater Metro Area", "Dallas County") are not towns and
+ * are dropped by the same guards `discoverCity` uses.
+ *
+ * A town created here has no coordinates, because nothing in the crawl gives
+ * any. It shows on the profile as a coverage chip and is left off the map until
+ * an editor positions it, which is the honest picture rather than a pin in the
+ * wrong field.
+ */
+export async function recordNamedAreas(
+  businessId: string,
+  regionId: string,
+  names: string[],
+  limit = 14,
+): Promise<{ added: number; created: number }> {
+  const seen = new Set<string>();
+  const wanted: string[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!PLACE_NAME.test(name) || NOT_A_TOWN.test(name)) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    wanted.push(name);
+    if (wanted.length >= limit) break;
+  }
+  if (wanted.length === 0) return { added: 0, created: 0 };
+
+  const known = await db.city.findMany({
+    where: { regionId, name: { in: wanted } },
+    select: { id: true, name: true },
+  });
+  const byName = new Map(known.map((city) => [city.name.toLowerCase(), city.id]));
+
+  let created = 0;
+  for (const name of wanted) {
+    if (byName.has(name.toLowerCase())) continue;
+    const slug = citySlug(name);
+    if (!slug) continue;
+    const existing = await db.city.findUnique({
+      where: { regionId_slug: { regionId, slug } },
+      select: { id: true },
+    });
+    if (existing) {
+      byName.set(name.toLowerCase(), existing.id);
+      continue;
+    }
+    const row = await db.city.create({
+      data: { name, slug, regionId, published: false, sortOrder: 900 },
+      select: { id: true },
+    });
+    byName.set(name.toLowerCase(), row.id);
+    created += 1;
+  }
+
+  const have = new Set(
+    (await db.businessArea.findMany({ where: { businessId }, select: { cityId: true } })).map(
+      (row) => row.cityId,
+    ),
+  );
+  const missing = [...new Set(byName.values())].filter((cityId) => !have.has(cityId));
+  if (missing.length > 0) {
+    await db.businessArea.createMany({
+      data: missing.map((cityId) => ({ businessId, cityId })),
+    });
+  }
+
+  return { added: missing.length, created };
+}
 
 /**
  * Records a suburb that turned up in a scrape but is not in the directory yet.
@@ -186,12 +272,7 @@ export async function discoverCity(input: {
   const distance = distanceKm(input.near, { latitude: input.latitude, longitude: input.longitude });
   if (distance === null || distance > (input.km ?? DEFAULT_RADIUS_KM)) return null;
 
-  const slug = name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const slug = citySlug(name);
   if (!slug) return null;
 
   const existing = await db.city.findUnique({

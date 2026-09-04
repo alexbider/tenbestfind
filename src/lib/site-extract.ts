@@ -31,8 +31,27 @@ export const extractionSchema = z.object({
   brands: z.array(z.string().min(2).max(60)).max(12),
   insured: z.boolean().nullable(),
   warrantyTerms: z.string().max(200).nullable(),
-  services: z.array(z.string().min(3).max(70)).max(20),
+  services: z.array(z.string().min(3).max(70)).max(24),
+  specialties: z.array(z.string().min(3).max(60)).max(8),
   areasServed: z.array(z.string().min(2).max(60)).max(30),
+  serviceRadiusKm: z.number().int().min(1).max(400).nullable(),
+  hours: z
+    .array(
+      z.object({
+        day: z.string().min(3).max(12),
+        opens: z.string().max(8).nullable(),
+        closes: z.string().max(8).nullable(),
+        closed: z.boolean(),
+      }),
+    )
+    .max(7),
+  bbbRating: z.string().max(4).nullable(),
+  bbbAccreditedSince: z.number().int().min(1900).max(2100).nullable(),
+  inspectionFee: z.string().max(120).nullable(),
+  manufacturerWarranty: z.string().max(160).nullable(),
+  bestFor: z.string().max(90).nullable(),
+  tagline: z.string().max(120).nullable(),
+  postalCode: z.string().max(12).nullable(),
   emergency: z.boolean().nullable(),
   financing: z.boolean().nullable(),
   freeEstimates: z.boolean().nullable(),
@@ -64,7 +83,17 @@ const extractionJsonSchema = {
     "insured",
     "warrantyTerms",
     "services",
+    "specialties",
     "areasServed",
+    "serviceRadiusKm",
+    "hours",
+    "bbbRating",
+    "bbbAccreditedSince",
+    "inspectionFee",
+    "manufacturerWarranty",
+    "bestFor",
+    "tagline",
+    "postalCode",
     "emergency",
     "financing",
     "freeEstimates",
@@ -145,10 +174,62 @@ const extractionJsonSchema = {
     ),
     services: {
       type: "array",
-      maxItems: 20,
+      maxItems: 24,
       items: { type: "string" },
-      description: "The jobs they say they do, as short noun phrases.",
+      description:
+        "Every job they say they do, as short noun phrases: one per service, taken from the services menu and the service pages, not only the three on the home page.",
     },
+    specialties: {
+      type: "array",
+      maxItems: 8,
+      items: { type: "string" },
+      description:
+        "The work they present themselves as specialists in, where the site singles something out: 'storm damage', 'standing seam metal', 'insurance restoration'. Empty when the site makes no such claim.",
+    },
+    serviceRadiusKm: {
+      type: ["integer", "null"],
+      description:
+        "How far they say they travel from their base, in kilometres. Convert from miles when the site uses miles. Null unless the site states a distance.",
+    },
+    hours: {
+      type: "array",
+      maxItems: 7,
+      description:
+        "Opening hours, one row per day the site lists. Times in 24-hour HH:MM. A day the site marks closed has closed true and null times. Empty when the site gives no hours.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["day", "opens", "closes", "closed"],
+        properties: {
+          day: { type: "string", description: "The full English day name, for example 'Monday'." },
+          opens: nullableString("Opening time as HH:MM.", 8),
+          closes: nullableString("Closing time as HH:MM.", 8),
+          closed: { type: "boolean", description: "True when the site says they are closed that day." },
+        },
+      },
+    },
+    bbbRating: nullableString(
+      "Their Better Business Bureau grade if the site shows one, as the grade alone: 'A+', 'B'.",
+      4,
+    ),
+    bbbAccreditedSince: {
+      type: ["integer", "null"],
+      description: "The year BBB accreditation started, only when the site states it.",
+    },
+    inspectionFee: nullableString(
+      "What they say an inspection, estimate or call-out costs, in a short phrase such as 'Free, including storm inspections' or '$89, credited against the work'.",
+      120,
+    ),
+    manufacturerWarranty: nullableString(
+      "The materials or manufacturer warranty, which is separate from their own workmanship warranty. A short phrase such as 'Up to 50 years by system'.",
+      160,
+    ),
+    bestFor: nullableString(
+      "The one job this company is most clearly set up for, as a short phrase in lower case such as 'residential roof replacement'. Null unless the site makes it obvious.",
+      90,
+    ),
+    tagline: nullableString("Their own strapline, as printed, when they have one.", 120),
+    postalCode: nullableString("The postcode or ZIP of the address, alone.", 12),
     areasServed: {
       type: "array",
       maxItems: 30,
@@ -176,7 +257,10 @@ RULES
 - Rewrite bios and the summary in your own plain words. Do not copy sentences from the site, and do not carry over its marketing voice.
 - Never use an em dash or an en dash.
 - Services and areas are short plain names, not sentences.
-- The three booleans are true only when the site advertises that thing. Absence of a claim is null, not false.`;
+- The three booleans are true only when the site advertises that thing. Absence of a claim is null, not false.
+- List every service the site offers, not a sample. Look at the services menu and the service pages, not only the home page.
+- Specialties are what the site singles out as its own strength. If it singles nothing out, return an empty array rather than repeating the service list.
+- A distance, a warranty length, a grade or a fee is reported only when the site prints it.`;
 
 /**
  * Reads the pages the crawler collected. Returns null when there is not enough

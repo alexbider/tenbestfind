@@ -3084,7 +3084,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     Project Videos
                   </h2>
                   <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    From the company&apos;s YouTube channel. Loads only when you press play.
+                    From the company&apos;s own channel and website. Loads only when you press play.
                   </p>
                 </div>
                 {business.youtubeChannel ? (

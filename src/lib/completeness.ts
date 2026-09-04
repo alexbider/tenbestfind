@@ -32,11 +32,12 @@ export const GAPS: Gap[] = [
   { key: "email", label: "Email address", points: 6, fromWebsite: true },
   { key: "website", label: "Website", points: 4, fromWebsite: false },
   { key: "address", label: "Address", points: 4, fromWebsite: true },
-  { key: "hours", label: "Opening hours", points: 4, fromWebsite: false },
+  { key: "hours", label: "Opening hours", points: 4, fromWebsite: true },
   { key: "areas", label: "Service areas", points: 4, fromWebsite: true },
   { key: "reviews", label: "Google reviews", points: 4, fromWebsite: false },
   { key: "staff", label: "The team", points: 4, fromWebsite: true },
   { key: "faqs", label: "Questions", points: 4, fromWebsite: false },
+  { key: "videos", label: "Videos", points: 2, fromWebsite: true },
   { key: "social", label: "Social profiles", points: 2, fromWebsite: true },
   { key: "yearFounded", label: "Year founded", points: 2, fromWebsite: true },
 ];
@@ -66,6 +67,7 @@ export type Scorable = {
     staff: number;
     faqs: number;
     reviews: number;
+    videos: number;
   };
 };
 
@@ -90,6 +92,7 @@ export const SCORE_SELECT = {
       staff: true,
       faqs: true,
       reviews: true,
+      videos: true,
     },
   },
 } as const;
@@ -118,6 +121,7 @@ export function gapsFor(business: Scorable): string[] {
     reviews: business._count.reviews > 0 || (business.googleReviewCount ?? 0) > 0,
     staff: business._count.staff > 0,
     faqs: business._count.faqs > 0,
+    videos: business._count.videos > 0,
     social: Object.keys(parseJson<Record<string, string>>(business.socialLinks, {})).length > 0,
     yearFounded: (business.yearFounded ?? 0) > 1800,
   };
@@ -190,6 +194,8 @@ export function whereMissing(key: string): Record<string, unknown> | null {
       return { staff: { none: {} } };
     case "faqs":
       return { faqs: { none: {} } };
+    case "videos":
+      return { videos: { none: {} } };
     case "social":
       return { OR: [{ socialLinks: null }, { socialLinks: "" }] };
     case "yearFounded":

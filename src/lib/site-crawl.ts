@@ -42,6 +42,8 @@ export type SiteData = {
   /** Plain text lifted from the pages, for the writer to work from. */
   text: string;
   social: Record<string, string>;
+  /** YouTube videos the site embeds or links to, in the order they were met. */
+  videos: { videoId: string; title: string | null }[];
   yearFounded: number | null;
   licenseNumbers: string[];
   phones: string[];
@@ -58,6 +60,7 @@ export const EMPTY_SITE: SiteData = {
   summary: null,
   text: "",
   social: {},
+  videos: [],
   yearFounded: null,
   licenseNumbers: [],
   phones: [],
@@ -65,6 +68,15 @@ export const EMPTY_SITE: SiteData = {
   pagesRead: 0,
   crawledAt: new Date(0).toISOString(),
 };
+
+// The four shapes a YouTube video is referenced in: the privacy-mode embed, the
+// ordinary embed, a share link, and a watch URL anywhere in the markup. Shorts
+// are deliberately absent, since a company's shorts are rarely the job.
+const VIDEO_PATTERNS = [
+  /youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})/gi,
+  /youtu\.be\/([A-Za-z0-9_-]{11})/gi,
+  /youtube\.com\/watch\?(?:[^"'&\s]*&)*v=([A-Za-z0-9_-]{11})/gi,
+];
 
 const SOCIAL_HOSTS: Record<string, string> = {
   "facebook.com": "facebook",
@@ -325,6 +337,9 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
   const candidates = new Map<string, Candidate>();
   const badges: { url: string; label: string }[] = [];
   const social: Record<string, string> = {};
+  // Keyed by id so the same video embedded on three pages is one video, and the
+  // first title found for it is kept.
+  const videos = new Map<string, string | null>();
 
   /**
    * Records one picture. The same image usually turns up on several pages at
@@ -487,6 +502,23 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
       offer(src, alt, width, height, fromGallery + describedWell, path);
     }
 
+    // ---- embedded video
+    // The iframe is read first so its title, which is usually the video's own,
+    // is what gets stored; a bare link elsewhere then adds nothing but the id.
+    for (const tag of html.match(/<iframe[^>]+>/gi) ?? []) {
+      const src = attr(tag, "src") ?? attr(tag, "data-src") ?? "";
+      for (const pattern of VIDEO_PATTERNS) {
+        pattern.lastIndex = 0;
+        const found = pattern.exec(src);
+        if (found && !videos.has(found[1])) videos.set(found[1], attr(tag, "title"));
+      }
+    }
+    for (const pattern of VIDEO_PATTERNS) {
+      for (const match of html.matchAll(pattern)) {
+        if (!videos.has(match[1])) videos.set(match[1], null);
+      }
+    }
+
     // ---- social profiles linked in the footer
     for (const tag of html.match(/<a[^>]+href\s*=\s*["'][^"']+["'][^>]*>/gi) ?? []) {
       const href = attr(tag, "href");
@@ -529,6 +561,7 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
     summary: summary ? summary.slice(0, 600) : null,
     text: texts.join("\n\n").slice(0, 12_000),
     social,
+    videos: [...videos.entries()].slice(0, 12).map(([videoId, title]) => ({ videoId, title })),
     yearFounded,
     licenseNumbers: [...licences].slice(0, 3),
     phones: [...phones].slice(0, 3),
