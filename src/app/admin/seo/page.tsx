@@ -8,6 +8,7 @@ import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { AI_BOTS, loadSeoSettings } from "@/lib/seo-settings";
 import { db } from "@/lib/db";
+import { buildSeoReport } from "@/lib/seo-report";
 
 export const metadata = { title: "Global SEO" };
 
@@ -21,7 +22,7 @@ const EDIT_PATH: Record<string, string> = {
 export default async function AdminSeoPage() {
   const user = await requireStaff();
 
-  const [records, redirects, settings, counts] = await Promise.all([
+  const [records, redirects, settings, counts, report] = await Promise.all([
     db.seoMeta.findMany({ orderBy: { score: "asc" } }),
     db.redirect.findMany({ orderBy: { createdAt: "desc" } }),
     loadSeoSettings(),
@@ -31,6 +32,7 @@ export default async function AdminSeoPage() {
       db.ranking.count({ where: { status: "PUBLISHED" } }),
       db.business.count({ where: { status: "PUBLISHED" } }),
     ]),
+    buildSeoReport(),
   ]);
 
   const [pages, guides, rankings, businesses] = counts;
@@ -41,6 +43,14 @@ export default async function AdminSeoPage() {
     : 0;
   const noindex = records.filter((record) => !record.robotsIndex).length;
   const weak = records.filter((record) => record.score > 0 && record.score < 60);
+
+  // Blocking first: a page that cannot be indexed at all matters more than one
+  // that could be better.
+  const findings = [
+    ...report.companies.findings,
+    ...report.rankings.findings,
+    ...report.contradictions,
+  ].sort((a, b) => Number(b.severity === "blocking") - Number(a.severity === "blocking"));
 
   const visible = settings.bool("seo.searchEngineVisible");
   const blockedBots = settings.list("seo.ai.blockedBots").length;
@@ -83,6 +93,69 @@ export default async function AdminSeoPage() {
           )}
         </Panel>
 
+        <Panel
+          title="What is holding pages back"
+          description="Checked against the live data every time this page loads. Nothing here is fixed automatically: each one is a decision with an editor's name on it."
+        >
+          <StatRow
+            compact
+            stats={[
+              {
+                label: "Profiles fit to index",
+                value: `${report.companies.indexable}/${report.companies.total}`,
+                hint: report.companies.findings.length
+                  ? `${report.companies.findings.length} too thin to publish`
+                  : "every published profile passes",
+              },
+              {
+                label: "Complete Top 10s",
+                value: `${report.rankings.complete}/${report.rankings.total}`,
+                hint: "a list of nine cannot call itself a Top 10",
+              },
+              {
+                label: "Contradictions",
+                value: report.contradictions.length,
+                hint: "the same fact, said twice, differently",
+              },
+            ]}
+          />
+
+          {findings.length === 0 ? (
+            <EmptyState
+              title="Nothing to fix"
+              body="Every published page passes the checks: enough on it to be worth landing on, nothing claimed that the data does not support, and no fact that disagrees with itself."
+            />
+          ) : (
+            <ul style={{ display: "grid", gap: 12, marginTop: 18, fontSize: 14.5, lineHeight: 1.55 }}>
+              {findings.slice(0, 25).map((finding) => (
+                <li key={`${finding.path}-${finding.problem}`} style={{ display: "grid", gap: 3 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <Badge tone={finding.severity === "blocking" ? "danger" : "warning"}>
+                      {finding.severity === "blocking" ? "Blocking" : "Worth fixing"}
+                    </Badge>
+                    {finding.editHref ? (
+                      <Link href={finding.editHref} style={{ fontWeight: 600 }}>
+                        {finding.label}
+                      </Link>
+                    ) : (
+                      <strong>{finding.label}</strong>
+                    )}
+                    <a href={finding.path} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                      view
+                    </a>
+                  </span>
+                  <span style={{ color: "var(--text-secondary)" }}>{finding.problem}</span>
+                </li>
+              ))}
+              {findings.length > 25 ? (
+                <li style={{ color: "var(--text-secondary)" }}>
+                  and {findings.length - 25} more.
+                </li>
+              ) : null}
+            </ul>
+          )}
+        </Panel>
+
         <Panel title="What this publishes" description="Open each one to check what a crawler sees.">
           <ul style={{ display: "grid", gap: 14, fontSize: 14.5, lineHeight: 1.6, color: "var(--text-secondary)" }}>
             <li>
@@ -98,7 +171,8 @@ export default async function AdminSeoPage() {
                 /sitemap.xml
               </a>
               <span style={{ display: "block" }}>
-                Every published URL that is not excluded or set to noindex.
+                An index of one file per kind of page. Only URLs that are allowed in the index are
+                offered, so a city with nothing published under it is not in it.
               </span>
             </li>
             <li>

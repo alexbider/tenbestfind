@@ -8,7 +8,7 @@ import { shortMonthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { rankingsArchiveCopy } from "@/lib/seo-copy";
+import { rankingsArchiveCopy, rankingCardTitle } from "@/lib/seo-copy";
 
 export const revalidate = 60;
 
@@ -85,7 +85,7 @@ export default async function RankingsIndexPage() {
                   {ranking.city?.region.code.toUpperCase()}
                 </span>
                 <span style={{ display: "block", minWidth: 0 }}>
-                  <span className="index-row__title">{ranking.title}</span>
+                  <span className="index-row__title">{rankingCardTitle(ranking)}</span>
                   <span className="index-row__summary">{ranking.summary}</span>
                 </span>
                 <span className="index-row__meta">Updated {shortMonthYear(ranking.lastReviewedAt)}</span>

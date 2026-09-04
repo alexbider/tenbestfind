@@ -31,7 +31,7 @@ import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { cityCopy } from "@/lib/seo-copy";
+import { cityCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, cityCrumbs } from "@/lib/breadcrumbs";
 
 /** The five steps the methodology band walks through, same on every hub. */
@@ -551,7 +551,7 @@ export async function CityHub({
                   <span style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
                     <h3 style={{ fontSize: "18px", lineHeight: "1.3", fontWeight: "700" }}>
                       <Link href={rankingUrl(entry)} style={{ color: "var(--blue-900)" }}>
-                        {entry.title}
+                        {rankingCardTitle(entry)}
                       </Link>
                     </h3>
                     <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
@@ -936,7 +936,7 @@ export async function CityHub({
                 <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
                   {rankings.slice(0, 4).map((entry) => (
                     <RowLink key={entry.id} href={rankingUrl(entry)} outline compact>
-                      {entry.title}
+                      {rankingCardTitle(entry)}
                     </RowLink>
                   ))}
                 </ul>

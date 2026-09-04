@@ -7,10 +7,15 @@ export const rankingCardSelect = {
   title: true,
   summary: true,
   slug: true,
+  status: true,
   publishedAt: true,
   lastReviewedAt: true,
   companiesReviewed: true,
-  category: { select: { name: true, slug: true, serviceName: true, iconKey: true } },
+  // How many published companies are actually on the list. A card that says
+  // "10 best" while the list holds seven is the same lie as a title that does,
+  // so the card is built from this rather than from the stored heading.
+  _count: { select: { entries: { where: { business: { status: "PUBLISHED" } } } } },
+  category: { select: { name: true, singular: true, pluralName: true, slug: true, serviceName: true, iconKey: true } },
   city: {
     select: {
       name: true,

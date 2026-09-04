@@ -293,6 +293,28 @@ export function rankingCopy(
   };
 }
 
+/**
+ * What a card, a list row or a link calls a ranking.
+ *
+ * The same heading the ranking page itself uses, so an archive cannot promise
+ * ten while the list holds seven. Cards carry no year: they sit next to a
+ * review date already, and a year in a grid of twenty headings is noise.
+ */
+export function rankingCardTitle(ranking: {
+  category: Trade;
+  city: { name: string; region: { code: string } } | null;
+  _count?: { entries: number };
+  title: string;
+}): string {
+  if (!ranking.city) return ranking.title;
+  const published = ranking._count?.entries ?? 0;
+  const service = tradePlural(ranking.category);
+  const place = placeLabel(ranking.city, ranking.city.region);
+  return published === TOP_TEN
+    ? `${TOP_TEN} Best ${service} in ${place}`
+    : `Best ${service} in ${place}`;
+}
+
 /* ---------------------------------------------------------- the companies */
 
 /**

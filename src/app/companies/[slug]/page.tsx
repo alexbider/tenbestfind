@@ -17,6 +17,7 @@ import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { companyCopy } from "@/lib/seo-copy";
+import { companyGate } from "@/lib/seo-report";
 import { breadcrumbSchema, companyCrumbs } from "@/lib/breadcrumbs";
 import { Crumbs } from "@/components/site/page-parts";
 
@@ -389,13 +390,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     business.category,
     profileFacts(business),
   );
+  // A profile that cannot answer the questions a reader arrived with stays on
+  // the site and stays out of the index. It is not hidden: it is linked from
+  // its ranking and its city, and it goes into the index when it is filled in.
+  const gate = companyGate({
+    ...business,
+    _count: {
+      services: business.services.length,
+      credentials: business.credentials.length,
+      photos: business.photos.length,
+    },
+  });
+
   return seoFor("business", business.id, {
     title: copy.title,
     titleIsFinal: true,
     description: copy.description,
     path: routes.business(business.slug),
     image: business.logoUrl,
-    indexable: copy.indexable,
+    indexable: copy.indexable && gate.ok,
   });
 }
 
