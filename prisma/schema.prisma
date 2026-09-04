@@ -214,7 +214,9 @@ model Business {
   /// The at-a-glance facts panel, as JSON: [{ group, iconKey, label, value }].
   /// Flat rows rather than nested groups so one editor can reorder the whole
   /// panel; rows are gathered under their group in the order they first
-  /// appear. The panel is left out rather than half-filled when empty.
+  /// appear. Left empty the profile builds the panel from the structured
+  /// fields instead, so every listing has one; writing rows here replaces the
+  /// whole panel rather than adding to it.
   factGroups String?
 
   /// The company's own YouTube channel, linked above the project videos.
@@ -246,6 +248,8 @@ model Business {
 
   // A short summary for the top of the profile, written from the Google
   // profile and the company's own site. The long description stays below it.
+  // Left empty the profile composes one from the record, so the panel is
+  // never missing; anything written here wins over that.
   overview    String?
   // Profiles found on the company's website, as JSON: { facebook, instagram, ... }
   socialLinks String?

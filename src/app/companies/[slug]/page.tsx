@@ -285,6 +285,20 @@ function formatAddress(street: string | null, place: string, postalCode: string 
   return [line, tail].filter(Boolean).join(", ");
 }
 
+/** "a" or "an", including for the numbers these sentences start clauses with. */
+function articleFor(text: string): string {
+  const first = text.trim().toLowerCase();
+  const number = /^\d+/.exec(first)?.[0];
+  if (number) return number.startsWith("8") || number === "11" || number === "18" ? "an" : "a";
+  return "aeiou".includes(first.charAt(0)) ? "an" : "a";
+}
+
+/** "a, b and c", which is how every list in this page's prose is written. */
+function sentenceList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 const NUMBER_WORDS = [
   "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
 ];
@@ -390,6 +404,69 @@ export default async function BusinessProfilePage({ params }: Props) {
   const topEntry = business.entries[0] ?? null;
   const topRanking = topEntry?.ranking ?? null;
 
+  // The Quick Overview, composed from the record for the profiles nobody has
+  // written one for, which is most of them. Every clause is dropped rather
+  // than guessed at when the field behind it is empty, so the paragraph says
+  // only what the profile can show elsewhere. This is what the panel's own
+  // note means by "generated from the verified data on this profile".
+  const composedOverview = (() => {
+    const trade = business.category.singular.toLowerCase();
+    const age = yearsInBusiness ? `${yearsInBusiness}-year-old ` : "";
+    const opening = `${business.name} is ${articleFor(age || trade)} ${age}${trade}`;
+    const based = placeLabel ? ` based in ${placeLabel}` : "";
+    const others = business.areas
+      .map((area) => area.city.name)
+      .filter((name) => name !== city?.name);
+    const serving = others.length > 0 ? `, also serving ${sentenceList(others.slice(0, 4))}` : "";
+
+    const sentences = [`${opening}${based}${serving}.`];
+
+    const work = business.services.map((row) => row.subservice.name.toLowerCase());
+    if (work.length > 0) sentences.push(`It handles ${sentenceList(work.slice(0, 8))}.`);
+
+    const verified = business.credentials.filter((row) => row.status === "VERIFIED").length;
+    const holds: string[] = [];
+    if (verified > 0) {
+      holds.push(`${countWord(verified)} verified ${verified === 1 ? "credential" : "credentials"}`);
+    }
+    if (business.bbbRating) {
+      holds.push(`${articleFor(business.bbbRating)} ${business.bbbRating} rating with the BBB`);
+    }
+
+    const offers = [
+      business.freeEstimates ? "free estimates" : null,
+      business.financing ? "financing" : null,
+      business.emergency ? "24/7 emergency response" : null,
+    ].filter(Boolean) as string[];
+
+    const clauses = [
+      holds.length > 0 ? `holds ${sentenceList(holds)}` : null,
+      business.warrantyTerms
+        ? `carries ${articleFor(business.warrantyTerms)} ${business.warrantyTerms.toLowerCase()}` +
+          (/warranty/i.test(business.warrantyTerms) ? "" : " warranty")
+        : null,
+      offers.length > 0 ? `offers ${sentenceList(offers)}` : null,
+      business.googleRating && business.googleReviewCount
+        ? `holds ${business.googleRating} out of 5 across ${business.googleReviewCount} Google reviews`
+        : null,
+    ].filter(Boolean) as string[];
+    if (clauses.length > 0) {
+      const body = [`It ${clauses[0]}`, ...clauses.slice(1)];
+      const tail = body.length > 1 ? `${body.slice(0, -1).join(", ")}, and ${body[body.length - 1]}` : body[0];
+      sentences.push(`${tail}.`);
+    }
+
+    if (topEntry && topRanking && topRanking.city) {
+      sentences.push(
+        `TenBestFind ranks it #${topEntry.position} among ` +
+          `${tradePlural(business.category.name, business.category.serviceName).toLowerCase()} ` +
+          `in ${topRanking.city.name} as of ${monthYear(topRanking.lastReviewedAt ?? business.updatedAt)}.`,
+      );
+    }
+
+    return sentences.join(" ");
+  })();
+
   // What recurs across the reviews, as an editor summarised it. Kept apart
   // from strengths and considerations, which are our own assessment.
   const themes = parseRows(business.reviewThemes);
@@ -419,11 +496,16 @@ export default async function BusinessProfilePage({ params }: Props) {
     .split(/\n{2,}/)
     .map((part) => part.trim())
     .filter(Boolean);
-  const overview = business.overview?.trim() || descriptionParts[0] || "";
-  const aboutParas = business.overview?.trim() ? descriptionParts : descriptionParts.slice(1);
+  // Written when someone has written one, and otherwise composed below from
+  // the record, which is what the panel's own note says it is.
+  const overview = business.overview?.trim() || composedOverview || descriptionParts[0] || "";
+  const aboutParas =
+    business.overview?.trim() || composedOverview ? descriptionParts : descriptionParts.slice(1);
 
-  // Our editorial take, in its own paragraphs.
-  const takeParas = (business.editorialTake ?? "")
+  // Our editorial take, in its own paragraphs. An editor's take wins; failing
+  // that the ranking's own reasoning is the same judgement in the same voice,
+  // and it is no longer printed in the ranking section.
+  const takeParas = (business.editorialTake?.trim() || topEntry?.whyPicked?.trim() || "")
     .split(/\n{2,}/)
     .map((part) => part.trim())
     .filter(Boolean);
@@ -442,6 +524,58 @@ export default async function BusinessProfilePage({ params }: Props) {
     }
     if (!group.iconKey && row.iconKey?.trim()) group.iconKey = row.iconKey.trim();
     group.items.push({ label: row.label, value: row.value });
+  }
+
+  // Nobody has written the panel for most profiles, so it is built from the
+  // fields the record already holds. A row appears only where there is a value
+  // behind it, and a group only where it has rows, so the panel is short
+  // rather than padded on a thin listing. Written rows replace all of this.
+  if (factGroups.length === 0) {
+    const coverage = business.serviceRadiusKm
+      ? `Within ${business.serviceRadiusKm} km of ${city?.name ?? "base"}`
+      : business.areas.length > 1
+        ? `${business.areas.length} cities`
+        : (city?.name ?? "");
+    const derived: { title: string; iconKey: string; items: { label: string; value: string }[] }[] = [
+      {
+        title: "The work",
+        iconKey: "wrench",
+        items: [
+          business.bestFor ? { label: "Best for", value: business.bestFor } : null,
+          { label: "Primary service", value: business.category.serviceName },
+          business.employeeCount ? { label: "Team size", value: business.employeeCount } : null,
+        ].filter(Boolean) as { label: string; value: string }[],
+      },
+      {
+        title: "Where",
+        iconKey: "pin",
+        items: [
+          placeLabel ? { label: "Headquarters", value: placeLabel } : null,
+          coverage ? { label: "Service area", value: coverage } : null,
+          { label: "Emergency service", value: business.emergency ? "Yes, 24/7" : "Business hours only" },
+        ].filter(Boolean) as { label: string; value: string }[],
+      },
+      {
+        title: "Money and guarantees",
+        iconKey: "shield",
+        items: [
+          { label: "Free estimates", value: business.freeEstimates ? "Yes" : "Not advertised" },
+          { label: "Financing", value: business.financing ? "Available" : "Not advertised" },
+          business.warrantyTerms
+            ? {
+                label: "Workmanship warranty",
+                // The label already says workmanship, so a term written as
+                // "15-year workmanship" is trimmed back to "15-year" rather
+                // than read out twice across the dotted leader.
+                value:
+                  business.warrantyTerms.replace(/\s*workmanship(\s+warranty)?\s*$/i, "").trim() ||
+                  business.warrantyTerms,
+              }
+            : null,
+        ].filter(Boolean) as { label: string; value: string }[],
+      },
+    ];
+    factGroups.push(...derived.filter((group) => group.items.length > 0));
   }
 
   // The three numbers on the dark card. Each is dropped rather than shown as a

@@ -14,53 +14,6 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 const slug = process.argv[2] ?? "lone-star-roofing";
 
-/**
- * The overview the design shows, with every figure in it read back off the
- * record rather than typed in. An overview that says 4.8 while the rating field
- * says 4.9 is worse than no overview, and that is exactly what a hard-coded
- * paragraph drifts into the first time the review data is refreshed.
- */
-function overviewFor(business: {
-  name: string;
-  yearFounded: number | null;
-  warrantyTerms: string | null;
-  bbbRating: string | null;
-  googleRating: number | null;
-  googleReviewCount: number | null;
-  city: { name: string; region: { code: string } } | null;
-  entries: { position: number; ranking: { city: { name: string } | null } }[];
-}): string {
-  const place = business.city
-    ? `${business.city.name}, ${business.city.region.code.toUpperCase()}`
-    : "the metro";
-  const age = business.yearFounded ? `${new Date().getFullYear() - business.yearFounded}-year-old ` : "";
-  const credentials = [
-    "Texas registration",
-    "verified liability insurance",
-    "manufacturer certification",
-    business.bbbRating ? `BBB accreditation at ${business.bbbRating}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ")
-    .replace(/, ([^,]*)$/, " and $1");
-  const warranty = business.warrantyTerms ? `carries a written ${business.warrantyTerms.toLowerCase()} warranty, ` : "";
-  const rating =
-    business.googleRating && business.googleReviewCount
-      ? `, and holds ${business.googleRating} out of 5 across ${business.googleReviewCount} Google reviews`
-      : "";
-  const top = business.entries.find((entry) => entry.position === 1);
-  const rank = top
-    ? ` TenBestFind ranks it #1 among ${top.ranking.city?.name ?? place} roofing companies as of ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}.`
-    : "";
-
-  return (
-    `${business.name} is an ${age}family-owned roofing contractor based in ${place}, serving Dallas County ` +
-    "and the northern suburbs. It handles roof repair, full replacement, inspections, storm and hail damage, " +
-    "metal roofing and light commercial work, using in-house crews rather than subcontractors. " +
-    `It holds ${credentials}, ${warranty}offers free estimates, financing and 24/7 emergency response${rating}.${rank}`
-  );
-}
-
 const DESCRIPTION = [
   "Founded in 2008 and family owned, Lone Star Roofing works across Dallas County and the northern suburbs on residential roofing, with a smaller commercial division handling low-slope and multi-unit work. The company employs its own installation crews rather than brokering jobs to subcontractors, and runs a dedicated storm response team during hail season.",
   "Its work is concentrated in asphalt shingle replacement, with growing volume in Class 4 impact-resistant systems and standing seam metal. The company also handles insurance restoration and will document damage for claims.",
@@ -200,7 +153,6 @@ async function main() {
     }
   };
 
-  setIfEmpty("overview", overviewFor(business));
   setIfEmpty("factGroups", JSON.stringify(FACT_ROWS));
   setIfEmpty("reviewThemes", JSON.stringify(THEMES));
   setIfEmpty("specialties", JSON.stringify(SPECIALTIES));
