@@ -96,7 +96,7 @@ function rebuild(local: string, domain: string): string {
 }
 
 /** True when the address is a real one somebody reads. */
-function plausible(email: string): boolean {
+export function plausibleEmail(email: string): boolean {
   const [local, domain] = email.split("@");
   if (!local || !domain) return false;
   if (email.length > 120) return false;
@@ -143,7 +143,7 @@ export function collectEmails(html: string, host: string | null, path: string): 
   const found = new Map<string, number>();
   const offer = (raw: string) => {
     const email = raw.trim().toLowerCase().replace(/^mailto:/, "").split("?")[0]!;
-    if (!plausible(email)) return;
+    if (!plausibleEmail(email)) return;
     const score = scoreOf(email, host, path);
     if ((found.get(email) ?? -1) < score) found.set(email, score);
   };

@@ -124,7 +124,16 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
         compact
         stats={[
           { label: "Stage", value: batch.status.toLowerCase(), hint: STAGE_NOTE[batch.status] },
-          { label: "To import", value: batch.found, hint: `${batch.duplicates} skipped or duplicate` },
+          {
+            label: "To import",
+            value: batch.found,
+            hint: [
+              batch.duplicates ? `${batch.duplicates} already known` : "",
+              batch.skipped ? `${batch.skipped} failed the quality gate` : "",
+            ]
+              .filter(Boolean)
+              .join(", "),
+          },
           { label: "Written", value: batch.written },
           { label: "Published", value: batch.published, hint: `${drafts.length} waiting as drafts` },
           { label: "Avg SEO score", value: avgScore || "—" },

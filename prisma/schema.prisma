@@ -1133,6 +1133,18 @@ model ImportBatch {
   minReviews    Int?
   language      String  @default("en")
 
+  /// The quality gate. A listing nobody can be contacted through and nobody can
+  /// read about is not worth the page it would get, so by default the batch
+  /// drops it rather than importing a stub. Each check can be turned off for a
+  /// run where coverage matters more than depth.
+  ///
+  /// The website check runs before anything is spent on the company at all,
+  /// which is the point: it costs nothing to skip, and every later stage costs
+  /// something.
+  requireWebsite  Boolean @default(true)
+  requireLiveSite Boolean @default(true)
+  requireEmail    Boolean @default(true)
+
   // What to do with the result.
   autoPublishScore Int     @default(90) // publish at or above this, draft below
   buildRanking     Boolean @default(true)
@@ -1141,6 +1153,9 @@ model ImportBatch {
   // Progress, kept as counters so the list screen needs one query.
   found      Int @default(0)
   duplicates Int @default(0)
+  /// Dropped by the quality gate rather than by the duplicate check. Counted
+  /// apart so a run that finds nothing tells you which of the two it was.
+  skipped    Int @default(0)
   written    Int @default(0)
   published  Int @default(0)
   failed     Int @default(0)

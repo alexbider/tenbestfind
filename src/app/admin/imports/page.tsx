@@ -114,8 +114,15 @@ export default async function ImportsPage() {
                     </td>
                     <td className="admin-table__num">
                       {batch.found}
-                      {batch.duplicates ? (
-                        <span className="admin-table__meta">{batch.duplicates} skipped</span>
+                      {batch.duplicates || batch.skipped ? (
+                        <span className="admin-table__meta">
+                          {[
+                            batch.duplicates ? `${batch.duplicates} known` : "",
+                            batch.skipped ? `${batch.skipped} gated` : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
                       ) : null}
                     </td>
                     <td className="admin-table__num">{batch.written}</td>

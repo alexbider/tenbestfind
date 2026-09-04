@@ -19,6 +19,11 @@ const batchSchema = z.object({
   autoPublishScore: z.coerce.number().int().min(0).max(100),
   rankingSize: z.coerce.number().int().min(3).max(20),
   buildRanking: z.string().optional(),
+  // Checkboxes, so an unticked box is absent rather than "off". The gate is on
+  // unless the operator turned it off, which is why these are read as opt-out.
+  allowNoWebsite: z.string().optional(),
+  allowDeadSite: z.string().optional(),
+  allowNoEmail: z.string().optional(),
   language: z.string().trim().min(2).max(8).optional(),
   note: z.string().trim().max(600).optional(),
 });
@@ -56,6 +61,9 @@ export async function createBatch(_prev: ActionState, formData: FormData): Promi
       autoPublishScore: data.autoPublishScore,
       rankingSize: data.rankingSize,
       buildRanking: data.buildRanking === "on",
+      requireWebsite: data.allowNoWebsite !== "on",
+      requireLiveSite: data.allowDeadSite !== "on",
+      requireEmail: data.allowNoEmail !== "on",
       language: data.language || "en",
       note: data.note || null,
       createdById: user.id,

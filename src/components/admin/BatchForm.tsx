@@ -239,6 +239,51 @@ export function BatchForm({
       </fieldset>
 
       <fieldset className="fieldset">
+        <legend>Quality gate</legend>
+        <p className="field__hint" style={{ marginBottom: 12 }}>
+          Everything a listing shows comes off the company\u2019s own site: the description, the
+          services, the photos, the credentials and the address to write to. A company that gives us
+          none of that is a stub, so the batch drops it rather than importing it. Each check is on
+          unless you turn it off here, and every drop is recorded against the company with the
+          reason.
+        </p>
+
+        <label className="radio-row" style={{ marginBottom: 10, padding: "12px 14px" }}>
+          <input type="checkbox" name="allowNoWebsite" />
+          <span>
+            <strong>Import companies with no website of their own</strong>
+            <span>
+              Off by default. A company with no site, or only a Facebook or Yelp page, is skipped
+              before anything is spent on it.
+            </span>
+          </span>
+        </label>
+
+        <label className="radio-row" style={{ marginBottom: 10, padding: "12px 14px" }}>
+          <input type="checkbox" name="allowDeadSite" />
+          <span>
+            <strong>Import companies whose website does not answer</strong>
+            <span>
+              Off by default. A site that is down, blocks crawlers, or carries nothing but a
+              navigation bar is skipped.
+            </span>
+          </span>
+        </label>
+
+        <label className="radio-row" style={{ marginBottom: 10, padding: "12px 14px" }}>
+          <input type="checkbox" name="allowNoEmail" />
+          <span>
+            <strong>Import companies with no email address</strong>
+            <span>
+              Off by default. The address is read from Google, then from the site: mailto links,
+              plain text, entity-encoded, spelled out, and Cloudflare-protected. If none of that
+              finds one, the company is skipped.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
+      <fieldset className="fieldset">
         <legend>What happens after writing</legend>
         <div className="field-row">
           <div className="field">

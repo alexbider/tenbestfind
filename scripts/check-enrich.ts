@@ -9,6 +9,8 @@
  *   npx tsx scripts/check-enrich.ts http://127.0.0.1:3300/index.html
  */
 import { collectEmails, decodeCloudflareEmail, rankEmails } from "../src/lib/emails";
+import { isOwnWebsite } from "../src/lib/enrich";
+import { classify } from "../src/lib/import-pipeline";
 import { crawlSite } from "../src/lib/site-crawl";
 import { extractionJsonSchema, extractionSchema } from "../src/lib/site-extract";
 import { channelIdFor, latestChannelVideos } from "../src/lib/youtube";
@@ -118,8 +120,62 @@ function checkEmails(): void {
   }
 }
 
+/** The website check, which is the one that decides what gets paid for. */
+async function checkGate(): Promise<void> {
+  const own: [string | null, boolean][] = [
+    ["https://lonestarroofing.com", true],
+    ["lonestarroofing.co.uk", true],
+    ["https://sites.google.com/view/lonestar", true],
+    ["https://www.facebook.com/lonestarroofing", false],
+    ["https://m.facebook.com/lonestarroofing", false],
+    ["https://www.yelp.com/biz/lone-star-roofing", false],
+    ["https://linktr.ee/lonestar", false],
+    ["", false],
+    [null, false],
+  ];
+  for (const [value, expected] of own) {
+    const got = isOwnWebsite(value);
+    console.log(`  ${got === expected ? "ok  " : "WRONG"} isOwnWebsite(${JSON.stringify(value)}) = ${got}`);
+  }
+
+  const place = {
+    placeId: null,
+    title: "Nowhere Roofing",
+    website: null,
+    phone: null,
+    address: null,
+    rating: 4.9,
+    reviewCount: 100,
+    permanentlyClosed: false,
+    temporarilyClosed: false,
+  };
+  const city = (await import("../src/lib/db")).db.city.findFirst({ select: { id: true } });
+  const cityId = (await city)?.id;
+  if (!cityId) return console.log("  no city in the database, skipping the classify checks");
+
+  const gated = { minRating: null, minReviews: null, requireWebsite: true };
+  const ungated = { minRating: null, minReviews: null, requireWebsite: false };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const run = (p: Record<string, unknown>, b: typeof gated) => classify(p as any, cityId, b);
+
+  console.log("  no website, gate on: ", (await run(place, gated)).reason);
+  console.log("  no website, gate off:", (await run(place, ungated)).status);
+  console.log(
+    "  facebook only, gate on:",
+    (await run({ ...place, website: "https://facebook.com/nowhere" }, gated)).reason,
+  );
+  console.log(
+    "  real website, gate on: ",
+    (await run({ ...place, website: "https://nowhereroofing.example.org" }, gated)).status,
+  );
+}
+
 async function main(): Promise<void> {
   checkEmails();
+  console.log("\nimport gate:");
+  await checkGate();
+  console.log();
 
   const unions = unionFields(extractionJsonSchema);
   console.log("union-typed fields in the tool schema:", unions.length, unions.slice(0, 6));

@@ -2,6 +2,7 @@ import { db } from "./db";
 import { ApifyPermanentError, readPlaces, runState, startPlacesRun, type PlaceRecord } from "./apify";
 import {
   findEmail,
+  isOwnWebsite,
   normalizeAddress,
   normalizeName,
   normalizePhone,
@@ -171,6 +172,7 @@ async function collectScrape(batchId: string): Promise<Advance> {
 
     let found = 0;
     let duplicates = 0;
+    let skipped = 0;
     const rankPerCity = new Map<string, number>();
 
     // Keys already taken by an earlier place in this same run. Google returns
@@ -214,7 +216,8 @@ async function collectScrape(batchId: string): Promise<Advance> {
         }
       }
 
-      if (verdict.status === "DUPLICATE" || verdict.status === "SKIPPED") duplicates += 1;
+      if (verdict.status === "DUPLICATE") duplicates += 1;
+      else if (verdict.status === "SKIPPED") skipped += 1;
       else found += 1;
 
       // placeId is the unique key inside a batch; a result Apify returned twice
@@ -249,11 +252,18 @@ async function collectScrape(batchId: string): Promise<Advance> {
 
     await db.importBatch.update({
       where: { id: batchId },
-      data: { status: "ENRICHING", found, duplicates },
+      data: { status: "ENRICHING", found, duplicates, skipped },
     });
     return {
       changed: true,
-      note: `${found} to import, ${duplicates} skipped${discovered ? `, ${discovered} new areas` : ""}`,
+      note: [
+        `${found} to import`,
+        duplicates ? `${duplicates} already known` : "",
+        skipped ? `${skipped} skipped` : "",
+        discovered ? `${discovered} new areas` : "",
+      ]
+        .filter(Boolean)
+        .join(", "),
     };
   } catch (error) {
     return fail(batchId, error);
@@ -270,12 +280,24 @@ type Verdict = { status: "FOUND" | "DUPLICATE" | "SKIPPED"; reason: string | nul
 export async function classify(
   place: PlaceRecord,
   cityId: string,
-  batch: { minRating: number | null; minReviews: number | null },
+  batch: { minRating: number | null; minReviews: number | null; requireWebsite?: boolean },
 ): Promise<Verdict> {
   if (place.permanentlyClosed) return { status: "SKIPPED", reason: "permanently closed", businessId: null };
   if (place.temporarilyClosed) return { status: "SKIPPED", reason: "temporarily closed", businessId: null };
   if (!place.title || place.title === "Unnamed") {
     return { status: "SKIPPED", reason: "no business name", businessId: null };
+  }
+  // Before anything else costs money. A company with no website gives the
+  // crawl nothing to read, which means no email, no description, no photos and
+  // no credentials: a listing that would be a stub whatever else was spent on
+  // it.
+  if (batch.requireWebsite !== false && !isOwnWebsite(place.website ?? null)) {
+    const host = websiteHost(place.website ?? null);
+    return {
+      status: "SKIPPED",
+      reason: host ? `no website of its own, only ${host}` : "no website",
+      businessId: null,
+    };
   }
   if (batch.minRating !== null && (place.rating ?? 0) < batch.minRating) {
     return { status: "SKIPPED", reason: `rating ${place.rating ?? 0} below ${batch.minRating}`, businessId: null };
@@ -374,7 +396,20 @@ function claimKeys(candidate: Candidate, cityId: string): string[] {
 
 /* ------------------------------------------------------------------ enrich */
 
+/**
+ * Below this a page is a navigation bar and a cookie notice. A site that gives
+ * the crawl less than this has nothing for the writer to work from and nothing
+ * for the profile to show.
+ */
+const MIN_READABLE_TEXT = 300;
+
 async function enrichSlice(batchId: string): Promise<Advance> {
+  const batch = await db.importBatch.findUnique({
+    where: { id: batchId },
+    select: { requireLiveSite: true, requireEmail: true },
+  });
+  if (!batch) return { changed: false, note: "gone" };
+
   const items = await db.importItem.findMany({
     where: { batchId, status: "FOUND" },
     orderBy: { gmbRank: "asc" },
@@ -386,17 +421,51 @@ async function enrichSlice(batchId: string): Promise<Advance> {
     return { changed: true, note: "enriched" };
   }
 
-  await Promise.all(
+  const outcomes = await Promise.all(
     items.map(async (item) => {
       // One pass over the company's own site does both jobs: it finds the
       // address Google did not publish, and it collects the logo, the photos
       // and the facts a Maps record never carries.
       const site = await crawlSite(item.website);
 
+      // The gate, in the order the checks cost. A site that does not answer is
+      // the cheapest thing to find out and the most decisive: everything the
+      // listing would carry comes from it.
+      if (batch.requireLiveSite && site.pagesRead === 0) {
+        await db.importItem.update({
+          where: { id: item.id },
+          data: { status: "SKIPPED", reason: "website did not respond" },
+        });
+        return "skipped" as const;
+      }
+      if (batch.requireLiveSite && site.text.trim().length < MIN_READABLE_TEXT) {
+        await db.importItem.update({
+          where: { id: item.id },
+          data: { status: "SKIPPED", reason: "website carries nothing readable" },
+        });
+        return "skipped" as const;
+      }
+
+      // The crawl already happened, and its addresses are scored against the
+      // company's own domain, so they are read first. findEmail is the fallback
+      // that fetches a couple of extra paths of its own.
       const found = item.email
         ? { email: item.email, source: item.emailSource === "gmb" ? ("gmb" as const) : ("website" as const) }
-        : (await findEmail({ gmbEmail: null, website: item.website })) ??
-          (site.emails[0] ? { email: site.emails[0], source: "website" as const } : null);
+        : site.emails[0]
+          ? { email: site.emails[0], source: "website" as const }
+          : await findEmail({ gmbEmail: null, website: item.website });
+
+      if (batch.requireEmail && !found) {
+        await db.importItem.update({
+          where: { id: item.id },
+          data: {
+            status: "SKIPPED",
+            reason: `no email on the website (${site.pagesRead} page${site.pagesRead === 1 ? "" : "s"} read)`,
+            site: JSON.stringify(site),
+          },
+        });
+        return "skipped" as const;
+      }
 
       await db.importItem.update({
         where: { id: item.id },
@@ -407,11 +476,25 @@ async function enrichSlice(batchId: string): Promise<Advance> {
           site: site.pagesRead > 0 ? JSON.stringify(site) : null,
         },
       });
+      return "enriched" as const;
     }),
   );
 
-  const read = items.length;
-  return { changed: true, note: `enriched ${read}` };
+  const dropped = outcomes.filter((outcome) => outcome === "skipped").length;
+  const kept = outcomes.length - dropped;
+  if (dropped > 0) {
+    // The counters move with the items: a company that fails the gate here was
+    // counted as found when the scrape was read.
+    await db.importBatch.update({
+      where: { id: batchId },
+      data: { found: { decrement: dropped }, skipped: { increment: dropped } },
+    });
+  }
+
+  return {
+    changed: true,
+    note: dropped > 0 ? `enriched ${kept}, skipped ${dropped}` : `enriched ${kept}`,
+  };
 }
 
 /* ------------------------------------------------------------------- write */

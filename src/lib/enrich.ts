@@ -2,6 +2,8 @@
 // carry one. It reads the site's own pages only, follows nothing off-domain,
 // and gives up quickly: a listing without an email is better than a slow batch.
 
+import { plausibleEmail } from "./emails";
+
 const CANDIDATE_PATHS = ["", "/contact", "/contact-us", "/about", "/about-us", "/get-a-quote", "/quote"];
 const TIMEOUT_MS = 8000;
 const MAX_BYTES = 400_000;
@@ -47,7 +49,9 @@ function usable(email: string): boolean {
   const lower = email.toLowerCase();
   const [local, domain] = lower.split("@");
   if (!local || !domain) return false;
-  if (ASSET_SUFFIX.test(lower)) return false;
+  // One rule for what counts as a real address, shared with the crawler, so
+  // the fallback path cannot let through something the main one rejects.
+  if (!plausibleEmail(lower)) return false;
   if (JUNK_LOCAL.some((junk) => local.startsWith(junk))) return false;
   if (JUNK_DOMAINS.some((junk) => domain === junk || domain.endsWith(`.${junk}`))) return false;
   if (domain.length > 60 || local.length > 64) return false;
@@ -154,6 +158,21 @@ export function websiteHost(value: string | null): string {
   } catch {
     return "";
   }
+}
+
+/**
+ * Hosts that are somebody's profile on somebody else's platform. Google often
+ * gives one of these as a company's "website", and a listing built from one has
+ * no email to find, no description to read and no photos of its own, which is
+ * exactly what the import gate exists to keep out.
+ */
+const NOT_A_WEBSITE =
+  /^(m\.)?(facebook|instagram|twitter|x|tiktok|linkedin|pinterest|youtube|yelp|nextdoor|angi|angieslist|homeadvisor|thumbtack|houzz|porch|bark|checkatrade|trustpilot|bbb|mapquest|foursquare|linktr)\.(com|co|ee|org|net|uk)$/i;
+
+/** True when the address is the company's own site rather than a profile on one. */
+export function isOwnWebsite(value: string | null): boolean {
+  const host = websiteHost(value);
+  return host.length > 0 && !NOT_A_WEBSITE.test(host);
 }
 
 export function normalizePhone(value: string | null): string {
