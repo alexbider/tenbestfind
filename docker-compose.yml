@@ -138,6 +138,12 @@ services:
         echo "==> filling in city coordinates"
         npx tsx scripts/backfill-coordinates.ts --yes || echo "coordinate backfill skipped"
 
+        # Puts every company profile at its location-aware URL. Idempotent: a
+        # profile already there is left alone, so this is a no-op after the
+        # first run and a safety net for anything the seed created by hand.
+        echo "==> checking company profile URLs"
+        npx tsx scripts/relocate-company-slugs.ts --write || echo "profile URL check skipped"
+
         # Rescores how complete each listing is. The enrichment filters select on
         # this number, so it has to be right after any change to how it is
         # weighted. Cheap, and safe to repeat.

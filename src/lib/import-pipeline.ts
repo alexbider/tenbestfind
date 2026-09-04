@@ -22,6 +22,7 @@ import { recomputeCompleteness } from "./completeness";
 import { openingFingerprint } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
+import { uniqueCompanySlug } from "./company-slug";
 import { stringify } from "./json";
 import { routes } from "./urls";
 import {
@@ -842,7 +843,7 @@ async function collectWave(batch: WriteBatch, waveId: string): Promise<Advance> 
 
     try {
       const brief = buildBrief(item, batch, avoidOpenings);
-      const slug = await uniqueSlug(brief.name, item.city!.slug, claimed);
+      const slug = await uniqueSlug(brief.name, item.city!, item.city!.region, claimed);
       const path = routes.business(slug);
 
       let checked = reviewListing(outcome.value, brief, path);
@@ -919,20 +920,24 @@ async function collectWave(batch: WriteBatch, waveId: string): Promise<Advance> 
   return { changed: true, note: `wrote ${ok}${extra.length ? `, ${extra.join(", ")}` : ""}` };
 }
 
-/** Slugs are global, so a clash falls back to the city and then to a counter. */
-async function uniqueSlug(name: string, citySlug: string, claimed = new Set<string>()): Promise<string> {
-  const base = slugify(name) || "business";
-  const candidates = [base, `${base}-${citySlug}`];
-  for (let index = 2; index <= 40; index += 1) candidates.push(`${base}-${citySlug}-${index}`);
-
-  for (const candidate of candidates) {
-    // Two companies of the same name in one wave are both still drafts, so the
-    // database cannot tell them apart yet; the set can.
-    if (claimed.has(candidate)) continue;
-    const taken = await db.business.findUnique({ where: { slug: candidate }, select: { id: true } });
-    if (!taken) return candidate;
-  }
-  return `${base}-${Date.now().toString(36)}`;
+/**
+ * The profile's address. Location-aware, because a profile is one location of
+ * one company: see company-slug.ts for why that is the shape.
+ */
+async function uniqueSlug(
+  name: string,
+  city: { slug: string },
+  region: { code: string },
+  claimed = new Set<string>(),
+): Promise<string> {
+  return uniqueCompanySlug(
+    name,
+    city,
+    region,
+    async (slug) =>
+      (await db.business.findUnique({ where: { slug }, select: { id: true } })) !== null,
+    claimed,
+  );
 }
 
 

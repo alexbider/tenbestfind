@@ -6,7 +6,7 @@
 //   /us/fl/                              region hub
 //   /us/fl/miami/                        city hub
 //   /us/fl/miami/plumbers/               ranking
-//   /companies/lone-star-roofing/        business profile
+//   /companies/lone-star-roofing-dallas-tx/   business profile, one location
 //   /guides/how-to-choose-a-plumber/     guide
 //   /experts/marcus-reed/                expert profile
 

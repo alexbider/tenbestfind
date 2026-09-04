@@ -12,7 +12,7 @@
 import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
-const slug = process.argv[2] ?? "lone-star-roofing";
+const slug = process.argv[2] ?? "lone-star-roofing-co-dallas-tx";
 
 const DESCRIPTION = [
   "Founded in 2008 and family owned, Lone Star Roofing works across Dallas County and the northern suburbs on residential roofing, with a smaller commercial division handling low-slope and multi-unit work. The company employs its own installation crews rather than brokering jobs to subcontractors, and runs a dedicated storm response team during hail season.",
