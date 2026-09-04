@@ -1158,7 +1158,20 @@ export default async function HomePage() {
                   </div>
                 </article>
 
-                <ul style={{ display: "grid", gap: "14px" }}>
+                {/* The column is as tall as the lead card beside it, and the
+                    design fills it with three cards of about 202px. Capping the
+                    row at that height keeps those three identical while stopping
+                    a shorter list from stretching one card down the whole
+                    column, which is what a market with one published ranking
+                    would otherwise get. */}
+                <ul
+                  style={{
+                    display: "grid",
+                    gap: "14px",
+                    gridAutoRows: "minmax(min-content, 202px)",
+                    alignContent: "start",
+                  }}
+                >
                   {sideRankings.map((ranking) => (
                     <li
                       key={ranking.id}
@@ -1220,7 +1233,21 @@ export default async function HomePage() {
                             {ranking.title}
                           </Link>
                         </h3>
-                        <span style={{ fontSize: "14px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            lineHeight: "1.5",
+                            color: "var(--text-secondary)",
+                            // Two lines is what the design gives this card. An
+                            // editor's summary is written for the full ranking
+                            // page and runs longer, so it is cut here rather
+                            // than allowed to push the card out of shape.
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 2,
+                            overflow: "hidden",
+                          }}
+                        >
                           {ranking.summary}
                         </span>
                         <span style={{ marginTop: "auto", fontSize: "12.5px", color: "var(--text-muted)" }}>
@@ -2474,7 +2501,19 @@ function CityColumn({
                 color: "var(--ink)",
               }}
             >
-              <span style={{ flex: "1" }}>
+              {/* One line per city, so every row is the same height and the
+                  counts line up down the column. A name too long for the column
+                  is cut with an ellipsis rather than wrapping and knocking the
+                  row out of step, which is what "Mississauga, ON" was doing. */}
+              <span
+                style={{
+                  flex: "0 1 auto",
+                  minWidth: "0",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {city.name}, {city.region.code.toUpperCase()}
               </span>
               <span
