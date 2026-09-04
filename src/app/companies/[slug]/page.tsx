@@ -16,6 +16,9 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { companyCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, companyCrumbs } from "@/lib/breadcrumbs";
+import { Crumbs } from "@/components/site/page-parts";
 
 export const revalidate = 60;
 
@@ -318,6 +321,30 @@ function initialsOf(name: string): string {
     .join("");
 }
 
+type LoadedBusiness = NonNullable<Awaited<ReturnType<typeof loadBusiness>>>;
+
+/**
+ * What the profile can honestly say about itself, which decides how it is
+ * described. A company with no review data must not be offered as "Reviews &
+ * Services", and a profile with almost nothing on it must not be described as
+ * though it were complete.
+ */
+function profileFacts(business: LoadedBusiness): { hasReviews: boolean; thin: boolean } {
+  const hasReviews = Boolean(business.googleRating && business.googleReviewCount);
+  // Four of the things a reader came for. Below that the page is a name, an
+  // address and a link, whatever else is technically on it.
+  const substance = [
+    Boolean(business.overview ?? business.description),
+    business.services.length > 0,
+    business.credentials.length > 0,
+    hasReviews,
+    Boolean(business.phone || business.website),
+    business.photos.length > 0,
+  ].filter(Boolean).length;
+
+  return { hasReviews, thin: substance < 4 };
+}
+
 async function loadBusiness(slug: string) {
   return db.business.findUnique({
     where: { slug },
@@ -355,15 +382,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const business = await loadBusiness(slug);
   if (!business) return {};
-  const place = business.city ? `${business.city.name}, ${business.city.region.code.toUpperCase()}` : "";
+  const copy = companyCopy(
+    business,
+    business.city,
+    business.city?.region ?? null,
+    business.category,
+    profileFacts(business),
+  );
   return seoFor("business", business.id, {
-    title: `${business.name} — ${business.category.serviceName}${place ? ` in ${place}` : ""}`,
-    description:
-      business.overview ??
-      business.description ??
-      `Profile for ${business.name}: services, credentials, coverage area, contact details and our editorial take.`,
+    title: copy.title,
+    titleIsFinal: true,
+    description: copy.description,
     path: routes.business(business.slug),
     image: business.logoUrl,
+    indexable: copy.indexable,
   });
 }
 
@@ -391,6 +423,14 @@ export default async function BusinessProfilePage({ params }: Props) {
         business.placeId ? `&query_place_id=${encodeURIComponent(business.placeId)}` : ""
       }`
     : null;
+  const copy = companyCopy(business, city, region ?? null, business.category, profileFacts(business));
+  // The full trail, rather than Home > City > Company: a profile sits inside a
+  // country, a region, a city and a trade, and the schema has to say the same.
+  const crumbs =
+    country && region && city
+      ? companyCrumbs(country, region, city, business.category, business)
+      : [{ label: "Home", href: "/" }, { label: business.name }];
+
   const hours = parseJson<HoursRow[]>(business.hours, []);
   // Empty when every day is closed or the rows carry no times, which is the
   // signal to leave the whole line off rather than print a blank one.
@@ -704,34 +744,63 @@ export default async function BusinessProfilePage({ params }: Props) {
 
   return (
     <SiteChrome active="none">
+      {/* The page belongs to TenBestFind; the company is the thing the page is
+          about. Saying it this way keeps the two apart: a profile we wrote is
+          not the company's own site, and nothing here should imply we run it. */}
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "LocalBusiness",
-          name: business.name,
+          "@type": "WebPage",
+          "@id": absoluteUrl(routes.business(business.slug)),
           url: absoluteUrl(routes.business(business.slug)),
-          image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
-          logo: business.logoUrl ?? undefined,
-          telephone: business.phone ?? undefined,
-          address: city
-            ? {
-                "@type": "PostalAddress",
-                streetAddress: business.addressLine ?? undefined,
-                addressLocality: city.name,
-                addressRegion: region!.code.toUpperCase(),
-                postalCode: business.postalCode ?? undefined,
-                addressCountry: country!.code.toUpperCase(),
-              }
-            : undefined,
-          aggregateRating: business.googleRating
-            ? {
-                "@type": "AggregateRating",
-                ratingValue: business.googleRating,
-                reviewCount: business.googleReviewCount ?? undefined,
-              }
-            : undefined,
+          name: copy.title,
+          description: copy.description,
+          isPartOf: { "@id": absoluteUrl("/#website") },
+          publisher: { "@id": absoluteUrl("/#publisher") },
+          dateModified: business.updatedAt.toISOString(),
+          mainEntity: {
+            "@type": "LocalBusiness",
+            name: business.name,
+            url: business.website ?? absoluteUrl(routes.business(business.slug)),
+            image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
+            logo: business.logoUrl ?? undefined,
+            telephone: business.phone ?? undefined,
+            email: business.email ?? undefined,
+            address: city
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: business.addressLine ?? undefined,
+                  addressLocality: city.name,
+                  addressRegion: region!.code.toUpperCase(),
+                  postalCode: business.postalCode ?? undefined,
+                  addressCountry: country!.code.toUpperCase(),
+                }
+              : undefined,
+            geo:
+              business.latitude !== null && business.longitude !== null
+                ? {
+                    "@type": "GeoCoordinates",
+                    latitude: business.latitude,
+                    longitude: business.longitude,
+                  }
+                : undefined,
+            // Where it works, which is not where it is. The canonical profile
+            // is the physical location; these are the places it serves from it.
+            areaServed:
+              areaCities.length > 0
+                ? areaCities.map((entry) => ({ "@type": "City", name: entry.name }))
+                : undefined,
+            aggregateRating: business.googleRating
+              ? {
+                  "@type": "AggregateRating",
+                  ratingValue: business.googleRating,
+                  reviewCount: business.googleReviewCount ?? undefined,
+                }
+              : undefined,
+          },
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs.map((faq, index) => ({ id: String(index), ...faq }))} />
       <TrackView type="PROFILE_VIEW" businessId={business.id} />
 
@@ -777,45 +846,7 @@ export default async function BusinessProfilePage({ params }: Props) {
           </svg>
 
           <div style={{ ...SHELL, padding: "20px 24px 56px" }}>
-            <nav aria-label="Breadcrumb" style={{ marginBottom: "26px" }}>
-              <ol
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                  fontSize: "14px",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <li>
-                  <Link href="/" style={{ color: "var(--text-secondary)" }}>
-                    Home
-                  </Link>
-                </li>
-                <li aria-hidden="true" style={{ color: "var(--text-secondary)" }}>
-                  ›
-                </li>
-                {city ? (
-                  <>
-                    <li>
-                      <Link
-                        href={routes.city(country!.code, region!.slug, city.slug)}
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {city.name}
-                      </Link>
-                    </li>
-                    <li aria-hidden="true" style={{ color: "var(--text-secondary)" }}>
-                      ›
-                    </li>
-                  </>
-                ) : null}
-                <li aria-current="page" style={{ color: "var(--blue-900)", fontWeight: "600" }}>
-                  {business.name}
-                </li>
-              </ol>
-            </nav>
+            <Crumbs items={crumbs} />
 
             <div
               data-split=""
@@ -882,27 +913,29 @@ export default async function BusinessProfilePage({ params }: Props) {
                     >
                       {business.name}
                     </h1>
+                    {/* The line directly under the name says what the company
+                        is and where it is based, in that order. Where it works
+                        is a different fact and follows as its own clause. */}
                     <p data-hero-in="3" style={{ fontSize: "17px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
                       <Link href={routes.category(business.category.slug)} style={{ fontWeight: "600" }}>
-                        {business.category.singular}
+                        {business.category.serviceName} Company
                       </Link>
                       {city ? (
                         <>
-                          {" "}
-                          serving{" "}
+                          {" in "}
                           <Link
                             href={routes.city(country!.code, region!.slug, city.slug)}
                             style={{ fontWeight: "600" }}
                           >
-                            {city.name}
+                            {city.name}, {region!.name}
                           </Link>
                           {areaCities.length > 1
-                            ? `, ${areaCities
+                            ? `. Serving ${areaCities
                                 .filter((entry) => entry.id !== city.id)
                                 .slice(0, 2)
                                 .map((entry) => entry.name)
-                                .join(", ")} and surrounding areas`
-                            : " and surrounding areas"}
+                                .join(", ")} and surrounding areas.`
+                            : " and surrounding areas."}
                         </>
                       ) : null}
                     </p>

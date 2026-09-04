@@ -31,6 +31,8 @@ import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { cityCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, cityCrumbs } from "@/lib/breadcrumbs";
 
 /** The five steps the methodology band walks through, same on every hub. */
 const RESEARCH_STEPS = [
@@ -128,6 +130,10 @@ export async function CityHub({
   const businessCount = await db.business.count({ where: { status: "PUBLISHED", cityId: city.id } });
   const partner = placements[0];
   const cityLabel = `${city.name}, ${region.code.toUpperCase()}`;
+  // The heading, the title and the description all come from one place, so the
+  // page cannot promise one thing in the tab and another on the page.
+  const copy = cityCopy(city, region, { publishedRankings: rankings.length });
+  const crumbs = cityCrumbs(country, region, city);
 
   const faqs = [
     {
@@ -180,24 +186,19 @@ export async function CityHub({
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          name: `Home services in ${cityLabel}`,
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(routes.city(country.code, region.slug, city.slug)),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs.map((faq, index) => ({ id: String(index), ...faq }))} />
 
       {/* ------------------------------------------------------------- hero */}
       <section style={GRID_BACKDROP}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "20px 24px 48px" }}>
-          <Crumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Locations", href: routes.locationsIndex() },
-              { label: region.name, href: routes.region(country.code, region.slug) },
-              { label: cityLabel },
-            ]}
-          />
+          <Crumbs items={crumbs} />
 
           <div style={{ maxWidth: "820px" }}>
             <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "16px" }}>
@@ -214,7 +215,7 @@ export async function CityHub({
                 textWrap: "balance",
               }}
             >
-              The best home service companies in {cityLabel}
+              {copy.h1}
             </h1>
             <p data-hero-in="3" style={{ ...LEAD, marginTop: "20px", fontSize: "18px", maxWidth: "700px", textWrap: "pretty" }}>
               {city.blurb ??

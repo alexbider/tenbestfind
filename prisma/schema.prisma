@@ -109,6 +109,11 @@ model Category {
   id          String   @id @default(cuid())
   name        String // "Plumbers"
   singular    String // "Plumber"
+  /// What a heading calls several of them: "Plumbers", "Roofing companies".
+  /// Derived from the singular when it is empty, which is right for every
+  /// trade here; the column exists so one awkward plural on a new category can
+  /// be fixed without it appearing in every title for that trade.
+  pluralName  String?
   serviceName String // "Plumbing"
   slug        String   @unique
   iconKey     String   @default("wrench")
@@ -141,6 +146,11 @@ model Subservice {
   name        String
   slug        String
   categoryId  String
+  /// How people search for this, when that is not the name it is filed under.
+  /// "Emergency Plumbing" is the internal name and "Emergency Plumbers" is what
+  /// gets typed, and the heading should be the second one. Left empty the page
+  /// falls back to the name, which is right more often than not.
+  searchTerm  String?
   description String?
   iconKey     String?
   trending    Boolean  @default(false)

@@ -20,13 +20,15 @@ import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
 import { getGlobalFaqs, rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { homeServicesCopy } from "@/lib/seo-copy";
 
 export const revalidate = 60;
 
+const copy = homeServicesCopy();
+
 export const metadata: Metadata = {
-  title: "Home services — every trade we research",
-  description:
-    "The full home services taxonomy, from plumbing and roofing to moving and restoration. Pick a trade to see the researched top ten for your city.",
+  title: { absolute: copy.title },
+  description: copy.description,
   alternates: { canonical: "/home-services/" },
 };
 
@@ -316,7 +318,7 @@ export default async function ServicesIndexPage() {
                 textWrap: "balance",
               }}
             >
-              Find the best home service professionals near you
+              {copy.h1}
             </h1>
             <p
               data-hero-in="3"

@@ -16,6 +16,8 @@ import {
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
+import { regionCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, regionCrumbs } from "@/lib/breadcrumbs";
 import { compactNumber, fullDate, monthYear, priceRange, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, type ConditionRow, type LicensingRow } from "@/lib/json";
@@ -118,6 +120,9 @@ export async function RegionHub({
     }),
   ]);
 
+  const copy = regionCopy(region, { publishedRankings: allRankings.length });
+  const crumbs = regionCrumbs(country, region);
+
   const licensing = parseJson<LicensingRow[]>(region.licensing, []);
   const conditions = parseJson<ConditionRow[]>(region.conditions, []);
   const unitLabel = country.regionLabel === "provinces" ? "province" : "state";
@@ -219,23 +224,19 @@ export async function RegionHub({
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          name: `Home services in ${region.name}`,
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(routes.region(country.code, region.slug)),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
       <section style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
-          <Crumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Locations", href: routes.locationsIndex() },
-              { label: region.name },
-            ]}
-          />
+          <Crumbs items={crumbs} />
           <div
             data-split=""
             style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: "40px", alignItems: "start" }}
@@ -254,7 +255,7 @@ export async function RegionHub({
                   textWrap: "balance",
                 }}
               >
-                The best home service companies in {region.name}
+                {copy.h1}
               </h1>
               <p
                 data-hero-in="3"

@@ -32,6 +32,8 @@ import { parseList, parseNotes } from "@/lib/json";
 import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { rankingCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, rankingCrumbs } from "@/lib/breadcrumbs";
 
 const HIRING_STEPS = [
   {
@@ -166,6 +168,14 @@ export async function RankingPage({
     notFound();
   }
 
+  // The entries are already filtered to published companies, so this count is
+  // exactly what the page shows, which is the only thing the heading is allowed
+  // to claim.
+  const copy = rankingCopy(ranking, category, city, region, {
+    publishedEntries: ranking.entries.length,
+  });
+  const crumbs = rankingCrumbs(country, region, city, category);
+
   const [placement, relatedRankings, guides, nearbyRankings] = await Promise.all([
     db.sponsoredPlacement.findFirst({
       where: { status: "ACTIVE", cityId: city.id, categoryId: category.id },
@@ -226,7 +236,8 @@ export async function RankingPage({
         data={{
           "@context": "https://schema.org",
           "@type": "ItemList",
-          name: ranking.title,
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(path4),
           numberOfItems: ranking.entries.length,
           itemListElement: ranking.entries.map((entry, index) => ({
@@ -237,6 +248,7 @@ export async function RankingPage({
           })),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
       <TrackView type="RANKING_VIEW" rankingId={ranking.id} />
 
@@ -245,12 +257,7 @@ export async function RankingPage({
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "20px 24px 48px" }}>
           <Crumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Home Services", href: routes.servicesIndex() },
-              { label: category.name, href: routes.category(category.slug) },
-              { label: cityLabel },
-            ]}
+            items={crumbs}
           />
 
           <div
@@ -273,7 +280,7 @@ export async function RankingPage({
                   textWrap: "balance",
                 }}
               >
-                {ranking.title}
+                {copy.h1}
               </h1>
               <p
                 data-hero-in="3"

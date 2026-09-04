@@ -7,13 +7,15 @@ import { ChevronRight } from "@/components/ui/Icon";
 import { JsonLd, Section, SectionHead } from "@/components/ui/primitives";
 import { db } from "@/lib/db";
 import { absoluteUrl, routes } from "@/lib/urls";
+import { locationsCopy } from "@/lib/seo-copy";
 
 export const revalidate = 60;
 
+const copy = locationsCopy();
+
 export const metadata: Metadata = {
-  title: "All locations — every market we cover",
-  description:
-    "Every country, state, province and city with published research. Licensing rules and typical pricing change at each level, so the research does too.",
+  title: { absolute: copy.title },
+  description: copy.description,
   alternates: { canonical: "/locations/" },
 };
 
@@ -47,7 +49,7 @@ export default async function LocationsIndexPage() {
       <section aria-labelledby="hero-h1" className="index-hero">
         <div className="shell" style={{ padding: "52px var(--gutter) 44px" }}>
           <h1 id="hero-h1" className="hero__title" style={{ fontSize: "clamp(32px, 3.8vw, 46px)" }}>
-            Every market we cover
+            {copy.h1}
           </h1>
           <p className="hero__lead" style={{ maxWidth: 660 }}>
             Research is organized by country, then by state or province, then by city. Licensing

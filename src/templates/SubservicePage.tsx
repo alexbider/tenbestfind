@@ -12,6 +12,8 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { subserviceCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, subserviceCrumbs } from "@/lib/breadcrumbs";
 
 export async function SubservicePage({
   categorySlug,
@@ -57,6 +59,14 @@ export async function SubservicePage({
     }),
   ]);
 
+  // businesses is capped at six for the grid, so the gate counts separately.
+  const offering = await db.businessService.count({ where: { subserviceId: subservice.id } });
+  const copy = subserviceCopy(subservice, category, {
+    businesses: offering,
+    publishedRankings: rankings.length,
+  });
+  const crumbs = subserviceCrumbs(category, subservice);
+
   const faqs = [
     {
       question: `Who handles ${subservice.name.toLowerCase()}?`,
@@ -79,22 +89,18 @@ export async function SubservicePage({
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "Service",
-          name: subservice.name,
-          serviceType: category.serviceName,
+          // A collection of companies that do this work, which is what the
+          // page is. Service schema described an offer nobody here makes.
+          "@type": "CollectionPage",
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(routes.subservice(category.slug, subservice.slug)),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
 
-      <CrumbBar
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Home services", href: routes.servicesIndex() },
-          { label: category.name, href: routes.category(category.slug) },
-          { label: subservice.name },
-        ]}
-      />
+      <CrumbBar items={crumbs} />
 
       <section
         aria-labelledby="hero-h1"
@@ -112,7 +118,7 @@ export async function SubservicePage({
             />
           </span>
           <h1 id="hero-h1" className="hero__title" style={{ fontSize: "clamp(32px, 4vw, 48px)", maxWidth: 820 }}>
-            {subservice.name}
+            {copy.h1}
           </h1>
           <p className="hero__lead" style={{ maxWidth: 640 }}>
             {subservice.description ??

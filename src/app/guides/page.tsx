@@ -6,13 +6,15 @@ import { JsonLd, Media, Section, SectionHead } from "@/components/ui/primitives"
 import { monthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { absoluteUrl, routes } from "@/lib/urls";
+import { guidesCopy } from "@/lib/seo-copy";
 
 export const revalidate = 60;
 
+const copy = guidesCopy();
+
 export const metadata: Metadata = {
-  title: "Guides — what to ask before you hire",
-  description:
-    "Short guides on comparing quotes, verifying a licence, and what a fair price looks like. Written by named editors and reviewed by people who have done the work.",
+  title: { absolute: copy.title },
+  description: copy.description,
   alternates: { canonical: "/guides/" },
 };
 
@@ -50,7 +52,7 @@ export default async function GuidesIndexPage() {
       <section aria-labelledby="hero-h1" className="index-hero">
         <div className="shell" style={{ padding: "52px var(--gutter) 44px" }}>
           <h1 id="hero-h1" className="hero__title" style={{ fontSize: "clamp(32px, 3.8vw, 46px)" }}>
-            Know what to ask before you call
+            {copy.h1}
           </h1>
           <p className="hero__lead" style={{ maxWidth: 640 }}>
             Guides on comparing quotes, verifying a licence, and what a fair price looks like.

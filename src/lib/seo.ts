@@ -5,6 +5,15 @@ import type { Resolved } from "./resolve";
 import type { SeoEntityType } from "./enums";
 import { loadSeoSettings, renderTemplate, type SeoSettings } from "./seo-settings";
 import { absoluteUrl, routes } from "./urls";
+import {
+  cityCopy,
+  countryCopy,
+  rankingCopy,
+  regionCopy,
+  serviceCopy,
+  subserviceCopy,
+  type PageCopy,
+} from "./seo-copy";
 
 const FALLBACK_SITE_NAME = "TenBestFind";
 
@@ -67,6 +76,13 @@ export async function seoFor(
     tokens?: Tokens;
     /** Set false for a thin or empty page the archive rules should keep out. */
     indexable?: boolean;
+    /**
+     * The title is already final and must not go through the global template.
+     * Everything built in seo-copy sets this: half those titles carry the brand
+     * deliberately and half deliberately do not, and a template that appends it
+     * either way would undo the decision.
+     */
+    titleIsFinal?: boolean;
   },
 ): Promise<Metadata> {
   const [record, settings] = await Promise.all([
@@ -84,6 +100,7 @@ export async function seoFor(
   // template for this entity type builds it.
   const title =
     record?.title?.trim() ||
+    (fallback.titleIsFinal ? fallback.title : "") ||
     renderTemplate(template, {
       title: fallback.title,
       sitename: siteName,
@@ -274,6 +291,33 @@ async function emptyArchivesHidden(): Promise<boolean> {
   return settings.bool("seo.noindexEmptyArchives");
 }
 
+/**
+ * Hands one PageCopy to seoFor. The title and description are already final, so
+ * the global template is bypassed and only an admin override can replace them.
+ */
+function fromCopy(
+  copy: PageCopy,
+  entityType: SeoEntityType,
+  entityId: string,
+  rest: {
+    path: string;
+    image?: string | null;
+    tokens?: Tokens;
+    type?: "website" | "article";
+    publishedAt?: Date | null;
+    modifiedAt?: Date | null;
+    indexable?: boolean;
+  },
+): Promise<Metadata> {
+  return seoFor(entityType, entityId, {
+    title: copy.title,
+    titleIsFinal: true,
+    description: copy.description,
+    indexable: rest.indexable ?? copy.indexable,
+    ...rest,
+  });
+}
+
 /** Metadata for anything the catch-all route resolves. */
 export async function buildMetadata(resolved: Resolved, segments: string[]): Promise<Metadata> {
   const path = `/${segments.join("/")}/`;
@@ -285,13 +329,12 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       const published = await db.ranking.count({
         where: { status: "PUBLISHED", city: { region: { countryId: country.id } } },
       });
-      return seoFor("country", country.id, {
-        title: `Home services in the ${country.name} — the ten best, city by city`,
-        description: country.blurb,
+      const copy = countryCopy(country, { publishedRankings: published });
+      return fromCopy(copy, "country", country.id, {
         path,
         image: country.heroImage,
         tokens: { country: country.name },
-        indexable: published > 0 || !(await emptyArchivesHidden()),
+        indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
     }
     case "region": {
@@ -304,15 +347,12 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       const published = await db.ranking.count({
         where: { status: "PUBLISHED", city: { regionId: region.id } },
       });
-      return seoFor("region", region.id, {
-        title: `The ten best local businesses in ${region.name}`,
-        description:
-          region.blurb ??
-          `Published city rankings across ${region.name}, with licensing checked against the authority that issues it.`,
+      const copy = regionCopy(region, { publishedRankings: published });
+      return fromCopy(copy, "region", region.id, {
         path,
         image: region.heroImage,
         tokens: { region: region.name, country: country.name },
-        indexable: published > 0 || !(await emptyArchivesHidden()),
+        indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
     }
     case "city": {
@@ -326,17 +366,13 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
         where: { regionId_slug: { regionId: region.id, slug: resolved.citySlug } },
       });
       if (!city) return {};
-      return seoFor("city", city.id, {
-        title: `The ten best local businesses in ${city.name}, ${region.code.toUpperCase()}`,
-        description:
-          city.blurb ??
-          `Researched shortlists for ${city.name}, with credentials checked, sources cited and every ranking reviewed on a schedule.`,
+      const published = await db.ranking.count({ where: { status: "PUBLISHED", cityId: city.id } });
+      const copy = cityCopy(city, region, { publishedRankings: published });
+      return fromCopy(copy, "city", city.id, {
         path,
         image: city.heroImage,
         tokens: { city: city.name, region: region.name, country: country.name },
-        indexable:
-          (await db.ranking.count({ where: { status: "PUBLISHED", cityId: city.id } })) > 0 ||
-          !(await emptyArchivesHidden()),
+        indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
     }
     case "ranking": {
@@ -355,30 +391,33 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
         where: { categoryId_cityId: { categoryId: category.id, cityId: city.id } },
       });
       if (!ranking) return {};
-      return seoFor("ranking", ranking.id, {
-        title: ranking.title,
-        description: ranking.summary,
+      // The count is of published companies actually on the list, because that
+      // is what the page shows and what the title is allowed to claim.
+      const publishedEntries = await db.rankingEntry.count({
+        where: { rankingId: ranking.id, business: { status: "PUBLISHED" } },
+      });
+      const copy = rankingCopy(ranking, category, city, region, { publishedEntries });
+      return fromCopy(copy, "ranking", ranking.id, {
         path,
         image: city.heroImage,
         tokens: { city: city.name, region: region.name, category: category.name },
         type: "article",
         publishedAt: ranking.publishedAt,
         modifiedAt: ranking.lastReviewedAt,
+        indexable: copy.indexable,
       });
     }
     case "category": {
       const category = await db.category.findUnique({ where: { slug: resolved.categorySlug } });
       if (!category) return {};
-      return seoFor("category", category.id, {
-        title: `The ten best ${category.name.toLowerCase()}, city by city`,
-        description:
-          category.description ??
-          `Researched shortlists of ${category.name.toLowerCase()} with credentials checked and the reasoning published.`,
+      const published = await db.ranking.count({
+        where: { status: "PUBLISHED", categoryId: category.id },
+      });
+      const copy = serviceCopy(category, { publishedRankings: published });
+      return fromCopy(copy, "category", category.id, {
         path,
         tokens: { category: category.name },
-        indexable:
-          (await db.ranking.count({ where: { status: "PUBLISHED", categoryId: category.id } })) > 0 ||
-          !(await emptyArchivesHidden()),
+        indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
     }
     case "subservice": {
@@ -388,13 +427,16 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       });
       const subservice = category?.subservices.find((item) => item.slug === resolved.subserviceSlug);
       if (!category || !subservice) return {};
-      return {
-        title: `${subservice.name} — ${category.serviceName}`,
-        description:
-          subservice.description ??
-          `${subservice.name} sits within ${category.serviceName.toLowerCase()}. Who does it, what to check, and where we have published a shortlist.`,
-        alternates: { canonical: absoluteUrl(path) },
-      };
+      const [businesses, publishedRankings] = await Promise.all([
+        db.businessService.count({ where: { subserviceId: subservice.id } }),
+        db.ranking.count({ where: { status: "PUBLISHED", categoryId: category.id } }),
+      ]);
+      const copy = subserviceCopy(subservice, category, { businesses, publishedRankings });
+      return fromCopy(copy, "subservice", subservice.id, {
+        path,
+        tokens: { category: category.name, subservice: subservice.name },
+        indexable: copy.indexable,
+      });
     }
     case "page": {
       const page = await db.page.findUnique({ where: { slug: resolved.slug } });

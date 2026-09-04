@@ -17,11 +17,15 @@ import {
   getTrendingSubservices,
 } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { homeCopy } from "@/lib/seo-copy";
+
+const copy = homeCopy();
 
 export const metadata: Metadata = {
-  title: "TenBestFind — the ten best local businesses, researched",
-  description:
-    "We research local service companies one city at a time, then publish a short list of the ones worth calling. Independent research, never paid placement.",
+  // Absolute, because the copy module decides where the brand goes rather than
+  // the global title template appending it to everything.
+  title: { absolute: copy.title },
+  description: copy.description,
   alternates: { canonical: "/" },
 };
 

@@ -8,13 +8,15 @@ import { shortMonthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { rankingsArchiveCopy } from "@/lib/seo-copy";
 
 export const revalidate = 60;
 
+const copy = rankingsArchiveCopy();
+
 export const metadata: Metadata = {
-  title: "All rankings — every researched top ten",
-  description:
-    "Every published TenBestFind ranking, newest first. Each list carries its criteria, its sources and the date an editor last reviewed it.",
+  title: { absolute: copy.title },
+  description: copy.description,
   alternates: { canonical: "/rankings/" },
 };
 
@@ -46,7 +48,7 @@ export default async function RankingsIndexPage() {
       <section aria-labelledby="hero-h1" className="index-hero">
         <div className="shell" style={{ padding: "52px var(--gutter) 44px" }}>
           <h1 id="hero-h1" className="hero__title" style={{ fontSize: "clamp(32px, 3.8vw, 46px)" }}>
-            Every ranking we have published
+            {copy.h1}
           </h1>
           <p className="hero__lead" style={{ maxWidth: 640 }}>
             {rankings.length} researched shortlists across {categories.length}{" "}

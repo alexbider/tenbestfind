@@ -78,6 +78,10 @@ export const SEO_ENTITY_TYPES = [
   "guide",
   "business",
   "category",
+  // A subservice page is editable in the admin like any other landing page, so
+  // it gets the same per-entity SEO record rather than being the one template
+  // whose title nobody can override.
+  "subservice",
   "city",
   "region",
   "country",

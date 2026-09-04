@@ -14,6 +14,8 @@ import {
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
+import { countryCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, countryCrumbs } from "@/lib/breadcrumbs";
 import { compactNumber, monthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
@@ -258,6 +260,9 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
   const icon = (key: string | null | undefined): IconName =>
     key && hasIcon(key) ? (key as IconName) : "house";
 
+  const copy = countryCopy(country, { publishedRankings: allRankings.length });
+  const crumbs = countryCrumbs(country);
+
   const heroCard = rankings[0];
   const [leadRanking, ...restRankings] = rankings;
   const sideRankings = restRankings.slice(0, 3);
@@ -277,24 +282,19 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          name: `Home services in ${country.name}`,
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(routes.country(country.code)),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
       <section aria-labelledby="hero-h1" style={GRID_BACKDROP}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "20px 24px 0" }}>
-          <Crumbs
-            flush
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Locations", href: routes.locationsIndex() },
-              { label: country.name },
-            ]}
-          />
+          <Crumbs flush items={crumbs} />
         </div>
 
         <div
@@ -354,7 +354,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 textWrap: "balance",
               }}
             >
-              The ten best local businesses in {country.name}
+              {copy.h1}
             </h1>
             <p
               data-hero-in="3"

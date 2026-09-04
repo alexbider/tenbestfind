@@ -29,6 +29,8 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { serviceCopy } from "@/lib/seo-copy";
+import { breadcrumbSchema, serviceCrumbs } from "@/lib/breadcrumbs";
 
 /** The checks that separate a company worth calling from one worth avoiding. */
 const CHOOSE_STEPS = [
@@ -86,6 +88,9 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
     }),
   ]);
 
+  const copy = serviceCopy(category, { publishedRankings: rankings.length });
+  const crumbs = serviceCrumbs(category);
+
   const singular = category.singular.toLowerCase();
   const faqs = [
     {
@@ -132,23 +137,19 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          name: category.name,
+          name: copy.h1,
+          description: copy.description,
           url: absoluteUrl(routes.category(category.slug)),
         }}
       />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs.map((faq, index) => ({ id: String(index), ...faq }))} />
 
       {/* ------------------------------------------------------------- hero */}
       <section style={GRID_BACKDROP}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "20px 24px 64px" }}>
-          <Crumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Home Services", href: routes.servicesIndex() },
-              { label: category.name },
-            ]}
-          />
+          <Crumbs items={crumbs} />
           <div data-split="" style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: "56px", alignItems: "start" }}>
             <div>
               <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "16px" }}>
@@ -165,7 +166,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                   textWrap: "balance",
                 }}
               >
-                Find the best {category.name.toLowerCase()} near you
+                {copy.h1}
               </h1>
               <p data-hero-in="3" style={{ ...LEAD, marginTop: "20px", fontSize: "18px", maxWidth: "600px", textWrap: "pretty" }}>
                 Compare TenBestFind rankings of local {category.name.toLowerCase()}, explore common{" "}
