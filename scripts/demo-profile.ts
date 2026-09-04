@@ -14,8 +14,52 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 const slug = process.argv[2] ?? "lone-star-roofing";
 
-const OVERVIEW =
-  "Lone Star Roofing Co. is an 18-year-old family-owned roofing contractor based in Dallas, TX, serving Dallas County and the northern suburbs. It handles roof repair, full replacement, inspections, storm and hail damage, metal roofing and light commercial work, using in-house crews rather than subcontractors. It holds Texas registration, verified liability insurance and manufacturer certification, carries a written 10-year workmanship warranty, offers free estimates, financing and 24/7 emergency response.";
+/**
+ * The overview the design shows, with every figure in it read back off the
+ * record rather than typed in. An overview that says 4.8 while the rating field
+ * says 4.9 is worse than no overview, and that is exactly what a hard-coded
+ * paragraph drifts into the first time the review data is refreshed.
+ */
+function overviewFor(business: {
+  name: string;
+  yearFounded: number | null;
+  warrantyTerms: string | null;
+  bbbRating: string | null;
+  googleRating: number | null;
+  googleReviewCount: number | null;
+  city: { name: string; region: { code: string } } | null;
+  entries: { position: number; ranking: { city: { name: string } | null } }[];
+}): string {
+  const place = business.city
+    ? `${business.city.name}, ${business.city.region.code.toUpperCase()}`
+    : "the metro";
+  const age = business.yearFounded ? `${new Date().getFullYear() - business.yearFounded}-year-old ` : "";
+  const credentials = [
+    "Texas registration",
+    "verified liability insurance",
+    "manufacturer certification",
+    business.bbbRating ? `BBB accreditation at ${business.bbbRating}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ")
+    .replace(/, ([^,]*)$/, " and $1");
+  const warranty = business.warrantyTerms ? `carries a written ${business.warrantyTerms.toLowerCase()} warranty, ` : "";
+  const rating =
+    business.googleRating && business.googleReviewCount
+      ? `, and holds ${business.googleRating} out of 5 across ${business.googleReviewCount} Google reviews`
+      : "";
+  const top = business.entries.find((entry) => entry.position === 1);
+  const rank = top
+    ? ` TenBestFind ranks it #1 among ${top.ranking.city?.name ?? place} roofing companies as of ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}.`
+    : "";
+
+  return (
+    `${business.name} is an ${age}family-owned roofing contractor based in ${place}, serving Dallas County ` +
+    "and the northern suburbs. It handles roof repair, full replacement, inspections, storm and hail damage, " +
+    "metal roofing and light commercial work, using in-house crews rather than subcontractors. " +
+    `It holds ${credentials}, ${warranty}offers free estimates, financing and 24/7 emergency response${rating}.${rank}`
+  );
+}
 
 const DESCRIPTION = [
   "Founded in 2008 and family owned, Lone Star Roofing works across Dallas County and the northern suburbs on residential roofing, with a smaller commercial division handling low-slope and multi-unit work. The company employs its own installation crews rather than brokering jobs to subcontractors, and runs a dedicated storm response team during hail season.",
@@ -30,8 +74,8 @@ const FACT_ROWS = [
   { group: "Where", iconKey: "pin", label: "Headquarters", value: "Dallas, TX" },
   { group: "Where", iconKey: "pin", label: "Service area", value: "Dallas metro" },
   { group: "Where", iconKey: "pin", label: "Emergency service", value: "Yes, 24/7" },
-  { group: "Money and guarantees", iconKey: "shield", label: "Free estimates", value: "Yes" },
-  { group: "Money and guarantees", iconKey: "shield", label: "Financing", value: "Third-party lender" },
+  { group: "Money and guarantees", iconKey: "shield", label: "Free estimates", value: "Yes, including storm inspections" },
+  { group: "Money and guarantees", iconKey: "shield", label: "Financing", value: "Available through third-party lender" },
   { group: "Money and guarantees", iconKey: "shield", label: "Workmanship warranty", value: "10 years, written" },
 ];
 
@@ -82,6 +126,36 @@ const VIDEOS = [
   },
 ];
 
+/**
+ * The three reviews the design shows. They exist so the Recent Google Reviews
+ * block can be seen working on the demo record; a real listing gets its reviews
+ * from the importer, and this script never touches a business that already has
+ * any.
+ */
+const REVIEWS = [
+  {
+    externalId: "demo-1",
+    author: "J. Martinez",
+    rating: 5,
+    body: "Crew arrived when they said they would, replaced the decking they found rotted and walked the yard with a magnet afterwards. The estimate matched the invoice.",
+    monthsAgo: 2,
+  },
+  {
+    externalId: "demo-2",
+    author: "S. Bhatt",
+    rating: 5,
+    body: "They documented the hail damage thoroughly and dealt with the adjuster directly. The roof was finished in two days.",
+    monthsAgo: 3,
+  },
+  {
+    externalId: "demo-3",
+    author: "D. Kowalski",
+    rating: 4,
+    body: "Good work and a clean job site. Communication slowed down for about a week after the May storms, though they did follow up.",
+    monthsAgo: 4,
+  },
+];
+
 const CRITERIA = [
   {
     title: "Licence and insurance verified",
@@ -104,7 +178,13 @@ const CRITERIA = [
 async function main() {
   const business = await db.business.findUnique({
     where: { slug },
-    include: { credentials: true, videos: true, entries: { orderBy: { position: "asc" } } },
+    include: {
+      credentials: true,
+      videos: true,
+      reviews: true,
+      city: { include: { region: true } },
+      entries: { orderBy: { position: "asc" }, include: { ranking: { include: { city: true } } } },
+    },
   });
   if (!business) {
     console.log(`No business with slug "${slug}".`);
@@ -120,7 +200,7 @@ async function main() {
     }
   };
 
-  setIfEmpty("overview", OVERVIEW);
+  setIfEmpty("overview", overviewFor(business));
   setIfEmpty("factGroups", JSON.stringify(FACT_ROWS));
   setIfEmpty("reviewThemes", JSON.stringify(THEMES));
   setIfEmpty("specialties", JSON.stringify(SPECIALTIES));
@@ -164,6 +244,25 @@ async function main() {
       await db.businessVideo.create({ data: { businessId: business.id, ...row, sortOrder: index } });
     }
     filled.push(`${VIDEOS.length} videos`);
+  }
+
+  if (business.reviews.length === 0) {
+    for (const row of REVIEWS) {
+      const posted = new Date();
+      posted.setMonth(posted.getMonth() - row.monthsAgo);
+      await db.review.create({
+        data: {
+          businessId: business.id,
+          source: "GOOGLE",
+          externalId: row.externalId,
+          author: row.author,
+          rating: row.rating,
+          body: row.body,
+          postedAt: posted,
+        },
+      });
+    }
+    filled.push(`${REVIEWS.length} reviews`);
   }
 
   const entry = business.entries[0];

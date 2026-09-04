@@ -43,7 +43,7 @@ const POP_NOTE = {
   color: "var(--text-on-ink)",
   borderRadius: "16px",
   boxShadow: "var(--shadow-xl)",
-  padding: "18px 20px",
+  padding: "20px 22px",
 } as const;
 const POP_SUMMARY = {
   display: "inline-flex",
@@ -80,7 +80,7 @@ function Star({ size = 20, filled = true }: { size?: number; filled?: boolean })
 }
 
 /** The tick used on every "we checked this" list. */
-function Tick({ colour, size = 16 }: { colour: string; size?: number }) {
+function Tick({ colour, size = 16, nudge = true }: { colour: string; size?: number; nudge?: boolean }) {
   return (
     <svg
       width={size}
@@ -92,7 +92,7 @@ function Tick({ colour, size = 16 }: { colour: string; size?: number }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      style={{ flexShrink: "0", marginTop: "3px" }}
+      style={{ flexShrink: "0", ...(nudge ? { marginTop: "3px" } : null) }}
     >
       <path d="M20 6 9 17l-5-5" />
     </svg>
@@ -100,7 +100,7 @@ function Tick({ colour, size = 16 }: { colour: string; size?: number }) {
 }
 
 /** The caution mark, for the things worth checking before signing. */
-function Caution({ colour, size = 16 }: { colour: string; size?: number }) {
+function Caution({ colour, size = 16, nudge = true }: { colour: string; size?: number; nudge?: boolean }) {
   return (
     <svg
       width={size}
@@ -112,7 +112,7 @@ function Caution({ colour, size = 16 }: { colour: string; size?: number }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      style={{ flexShrink: "0", marginTop: "3px" }}
+      style={{ flexShrink: "0", ...(nudge ? { marginTop: "3px" } : null) }}
     >
       <path d="M12 8v5" />
       <path d="M12 16h.01" />
@@ -150,7 +150,7 @@ function Pop({
   width = "min(420px, 78vw)",
   align = "left",
   above = false,
-  compact = false,
+  small = false,
   style,
 }: {
   label: string;
@@ -158,17 +158,17 @@ function Pop({
   width?: string;
   align?: "left" | "right";
   above?: boolean;
-  /** Sits inline in the badge row, where the design tightens the hit area. */
-  compact?: boolean;
+  /** The trigger that sits beside a panel heading, a size down from the rest. */
+  small?: boolean;
   style?: React.CSSProperties;
 }) {
   return (
     <details data-pop="" style={{ position: "relative", ...style }}>
       <summary
         aria-label={label}
-        style={compact ? { ...POP_SUMMARY, padding: "0 6px", minHeight: "34px" } : POP_SUMMARY}
+        style={small ? { ...POP_SUMMARY, gap: "6px", fontSize: "12px" } : POP_SUMMARY}
       >
-        <span style={POP_MARK}>i</span>
+        <span style={small ? { ...POP_MARK, width: "17px", height: "17px", fontSize: "10px" } : POP_MARK}>i</span>
         {label}
       </summary>
       <div
@@ -194,7 +194,7 @@ function PopText({ children }: { children: React.ReactNode }) {
 
 function PopLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <p style={{ marginTop: "12px" }}>
+    <p style={{ marginTop: "14px" }}>
       <Link href={href} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
         {children}
       </Link>
@@ -209,6 +209,89 @@ function PopLink({ href, children }: { href: string; children: React.ReactNode }
  */
 function tradePlural(name: string, serviceName: string): string {
   return name === serviceName ? `${name} companies` : name;
+}
+
+const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAY_SHORT: Record<string, string> = {
+  Monday: "Mon",
+  Tuesday: "Tue",
+  Wednesday: "Wed",
+  Thursday: "Thu",
+  Friday: "Fri",
+  Saturday: "Sat",
+  Sunday: "Sun",
+};
+
+/** "07:30" becomes "7:30am". Anything else is passed through untouched. */
+function clockLabel(value: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return value.trim();
+  const hour = Number(match[1]);
+  if (hour > 23) return value.trim();
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${match[2]}${hour < 12 ? "am" : "pm"}`;
+}
+
+/**
+ * Collapses the week into runs of consecutive days that keep the same hours, so
+ * the card reads "Mon to Fri, 7:00am to 6:00pm · Sat, 8:00am to 1:00pm" rather
+ * than listing seven rows. A closed day ends a run and is left out, which is
+ * why the runs are walked in calendar order rather than in the order the rows
+ * happen to be stored.
+ */
+function hoursSummary(rows: HoursRow[]): string {
+  const byDay = new Map(rows.map((row) => [row.day, row]));
+  const runs: { from: string; to: string; label: string }[] = [];
+
+  DAY_ORDER.forEach((day, index) => {
+    const row = byDay.get(day);
+    if (!row || row.closed || !row.opens || !row.closes) return;
+    const label = `${clockLabel(row.opens)} to ${clockLabel(row.closes)}`;
+    const last = runs[runs.length - 1];
+    if (last && last.label === label && DAY_ORDER.indexOf(last.to) === index - 1) {
+      last.to = day;
+      return;
+    }
+    runs.push({ from: day, to: day, label });
+  });
+
+  return runs
+    .map((run) => {
+      const days =
+        run.from === run.to ? DAY_SHORT[run.from] : `${DAY_SHORT[run.from]} to ${DAY_SHORT[run.to]}`;
+      return `${days}, ${run.label}`;
+    })
+    .join(" · ");
+}
+
+/**
+ * An address line that already ends in a state and a postcode is a whole
+ * address, so it is printed as it stands. Anything shorter gets the town, the
+ * state and the postcode appended in the American order, with no comma before
+ * the postcode.
+ *
+ * The test matters because an importer usually writes the whole address into
+ * the one field, and because a business can sit in a different town from the
+ * city its listing belongs to. Appending the listing's town in either case
+ * would print an address that is wrong, not merely repetitive.
+ */
+const WHOLE_ADDRESS = /,\s*[A-Za-z]{2}\s+[A-Za-z0-9][A-Za-z0-9\s-]{2,}$/;
+
+function formatAddress(street: string | null, place: string, postalCode: string | null): string {
+  const line = (street ?? "").trim();
+  if (WHOLE_ADDRESS.test(line)) return line;
+  const tail = [place, postalCode && !line.includes(postalCode) ? postalCode : ""]
+    .filter(Boolean)
+    .join(" ");
+  return [line, tail].filter(Boolean).join(", ");
+}
+
+const NUMBER_WORDS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+];
+
+/** Spelled out up to ten, as the sentence around it is written. */
+function countWord(value: number): string {
+  return NUMBER_WORDS[value] ?? String(value);
 }
 
 /** Initials for the avatar squares, from whatever name we hold. */
@@ -285,7 +368,19 @@ export default async function BusinessProfilePage({ params }: Props) {
   const strengths = parseList(business.strengths);
   const considerations = parseList(business.considerations);
   const specialties = parseList(business.specialties);
+  // Google's documented search link, which lands on the right place from a name
+  // and an address. When the importer has stored a place id it is passed too,
+  // which pins the result to that exact listing instead of the best match.
+  const mapsQuery = [business.name, business.addressLine ?? placeLabel].filter(Boolean).join(" ");
+  const googleMapsUrl = mapsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}${
+        business.placeId ? `&query_place_id=${encodeURIComponent(business.placeId)}` : ""
+      }`
+    : null;
   const hours = parseJson<HoursRow[]>(business.hours, []);
+  // Empty when every day is closed or the rows carry no times, which is the
+  // signal to leave the whole line off rather than print a blank one.
+  const hoursLabel = hoursSummary(hours);
   const isSponsored = business.placements.length > 0;
   const yearsInBusiness = business.yearFounded ? new Date().getFullYear() - business.yearFounded : null;
   const initials = initialsOf(business.name);
@@ -655,7 +750,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     </h1>
                     <p data-hero-in="3" style={{ fontSize: "17px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
                       <Link href={routes.category(business.category.slug)} style={{ fontWeight: "600" }}>
-                        {business.category.serviceName}
+                        {business.category.singular}
                       </Link>
                       {city ? (
                         <>
@@ -865,7 +960,6 @@ export default async function BusinessProfilePage({ params }: Props) {
                         <Pop
                           label="What do these badges mean?"
                           width="min(460px, 82vw)"
-                          compact
                           style={{ display: "inline-block" }}
                         >
                           <dl style={{ display: "grid", gap: "12px", margin: "0", fontSize: "13px", lineHeight: "1.6" }}>
@@ -956,7 +1050,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                         </svg>
                         Quick Overview
                       </h2>
-                      <Pop label="How this is made" align="right">
+                      <Pop label="How this is made" align="right" small>
                         <PopText>
                           This summary is generated from the verified data on this profile: services, service area,
                           credentials, warranty terms and the company&apos;s Google review record. It is reviewed by
@@ -989,7 +1083,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                                 color: "var(--text-secondary)",
                               }}
                             >
-                              <Tick colour="#1F9D6B" />
+                              <Tick colour="#1F9D6B" nudge={false} />
                               Best for {business.bestFor.toLowerCase()}
                             </li>
                           ) : null}
@@ -1004,7 +1098,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                                 color: "var(--text-secondary)",
                               }}
                             >
-                              <Tick colour="#1F9D6B" />
+                              <Tick colour="#1F9D6B" nudge={false} />
                               {item}
                             </li>
                           ))}
@@ -1019,7 +1113,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                                 color: "var(--text-secondary)",
                               }}
                             >
-                              <Caution colour="#8A5F0B" />
+                              <Caution colour="#8A5F0B" nudge={false} />
                               {item}
                             </li>
                           ))}
@@ -1136,21 +1230,15 @@ export default async function BusinessProfilePage({ params }: Props) {
                     <div>
                       <dt style={{ color: "var(--text-secondary)", marginBottom: "2px" }}>Address</dt>
                       <dd style={{ margin: "0", color: "var(--text-primary)" }}>
-                        {[business.addressLine, placeLabel, business.postalCode].filter(Boolean).join(", ")}
+                        {formatAddress(business.addressLine, placeLabel, business.postalCode)}
                       </dd>
                     </div>
                   ) : null}
 
-                  {hours.length > 0 ? (
+                  {hoursLabel ? (
                     <div>
                       <dt style={{ color: "var(--text-secondary)", marginBottom: "2px" }}>Hours</dt>
-                      <dd style={{ margin: "0", color: "var(--text-primary)" }}>
-                        {hours
-                          .filter((row) => !row.closed && row.opens && row.closes)
-                          .slice(0, 2)
-                          .map((row) => `${row.day}, ${row.opens} to ${row.closes}`)
-                          .join(" · ")}
-                      </dd>
+                      <dd style={{ margin: "0", color: "var(--text-primary)" }}>{hoursLabel}</dd>
                     </div>
                   ) : null}
 
@@ -1608,7 +1696,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                   </p>
                   <p aria-hidden="true" style={{ marginTop: "10px", display: "flex", justifyContent: "center", gap: "3px" }}>
                     {[1, 2, 3, 4, 5].map((step) => (
-                      <Star key={step} filled={business.googleRating! >= step - 0.25} />
+                      <Star key={step} filled={business.googleRating! >= step} />
                     ))}
                   </p>
                   {business.googleReviewCount ? (
@@ -1622,6 +1710,18 @@ export default async function BusinessProfilePage({ params }: Props) {
                   {business.googleDataUpdated ? (
                     <p style={{ marginTop: "10px", fontSize: "13px", color: "var(--text-secondary)" }}>
                       Review data updated {fullDate(business.googleDataUpdated)}
+                    </p>
+                  ) : null}
+                  {googleMapsUrl ? (
+                    <p style={{ marginTop: "16px" }}>
+                      <a
+                        href={googleMapsUrl}
+                        rel="nofollow noopener"
+                        target="_blank"
+                        style={{ fontSize: "14px", fontWeight: "600" }}
+                      >
+                        View on Google Maps →
+                      </a>
                     </p>
                   ) : null}
                 </div>
@@ -1769,7 +1869,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                             }}
                           >
                             <Star size={15} />
-                            {review.rating}
+                            {review.rating.toFixed(1)}
                           </span>
                         </span>
                         <span style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>
@@ -1806,6 +1906,18 @@ export default async function BusinessProfilePage({ params }: Props) {
                       </li>
                     ))}
                   </ul>
+                  {googleMapsUrl ? (
+                    <p style={{ marginTop: "18px" }}>
+                      <a
+                        href={googleMapsUrl}
+                        rel="nofollow noopener"
+                        target="_blank"
+                        style={{ fontSize: "15px", fontWeight: "600" }}
+                      >
+                        View more Google reviews →
+                      </a>
+                    </p>
+                  ) : null}
                 </>
               ) : null}
             </div>
@@ -2103,28 +2215,25 @@ export default async function BusinessProfilePage({ params }: Props) {
                     textWrap: "pretty",
                   }}
                 >
-                  {topEntry.whyPicked ? (
-                    topEntry.whyPicked
-                  ) : (
-                    <>
-                      {topEntry.position === 1 ? "It took first place in " : `It holds position ${topEntry.position} in `}
-                      <Link
-                        href={rankingUrl(topRanking)}
-                        style={{
-                          color: "#fff",
-                          fontWeight: "600",
-                          textDecoration: "underline",
-                          textDecorationColor: "rgba(231,184,99,0.6)",
-                          textUnderlineOffset: "3px",
-                        }}
-                      >
-                        {topRanking.title}
-                      </Link>
-                      {rankCriteria.length > 0
-                        ? ` on ${rankCriteria.length} things we could verify, not on what the company said about itself.`
-                        : "."}
-                    </>
-                  )}
+                  {/* The editorial rationale for the placing lives on the ranking
+                      itself. What belongs here is the placing, what it was
+                      judged on, and a way back to the list. */}
+                  {topEntry.position === 1 ? "It took first place in " : `It holds position ${topEntry.position} in `}
+                  <Link
+                    href={rankingUrl(topRanking)}
+                    style={{
+                      color: "#fff",
+                      fontWeight: "600",
+                      textDecoration: "underline",
+                      textDecorationColor: "rgba(231,184,99,0.6)",
+                      textUnderlineOffset: "3px",
+                    }}
+                  >
+                    {topRanking.title}
+                  </Link>
+                  {rankCriteria.length > 0
+                    ? ` on ${countWord(rankCriteria.length)} things we could verify, not on what the company said about itself.`
+                    : "."}
                 </p>
 
                 {rankCriteria.length > 0 ? (

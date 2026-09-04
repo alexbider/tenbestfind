@@ -328,7 +328,7 @@ async function main() {
           { day: "Tuesday", opens: "07:30", closes: "17:30" },
           { day: "Wednesday", opens: "07:30", closes: "17:30" },
           { day: "Thursday", opens: "07:30", closes: "17:30" },
-          { day: "Friday", opens: "07:30", closes: "17:00" },
+          { day: "Friday", opens: "07:30", closes: "17:30" },
           { day: "Saturday", opens: "08:00", closes: "13:00" },
           { day: "Sunday", closed: true },
         ]),

@@ -95,9 +95,19 @@ export function AreasMap({
         pins.current[area.id] = pin;
       });
 
-      frame.current = L.latLngBounds(
+      // The coverage ring is part of what the map is showing, so it is folded
+      // into the frame. Without it a business with a single service area zooms
+      // to the maximum on that one point and the ring sits off screen. The box
+      // is measured off the centre rather than asked of the circle, because a
+      // circle cannot report its bounds until the map has a view, and setting
+      // the view is what this is for.
+      const spread = L.latLngBounds(
         plotted.map((area) => [area.latitude, area.longitude] as [number, number]),
-      ).pad(0.28);
+      );
+      if (radiusKm && base) {
+        spread.extend(L.latLng(base.latitude, base.longitude).toBounds(radiusKm * 2000));
+      }
+      frame.current = spread.pad(0.28);
       instance.fitBounds(frame.current);
 
       map.current = instance;
