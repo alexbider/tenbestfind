@@ -9,10 +9,17 @@
 // The crawl is deliberately small and polite: a handful of known paths on one
 // host, a short timeout, no JavaScript, nothing followed off-domain.
 
+// Ordered by what each page is worth, not alphabetically, because the crawl
+// stops at MAX_PAGES. The contact page comes straight after the home page: it
+// is where the email, the phone number and the address live, and on a site with
+// a deep gallery it used to fall off the end of the list and never be read.
 const PATHS = [
   "",
+  "/contact",
+  "/contact-us",
   "/about",
   "/about-us",
+  "/services",
   "/gallery",
   "/photos",
   "/portfolio",
@@ -20,16 +27,16 @@ const PATHS = [
   "/our-work",
   "/work",
   "/team",
-  "/meet-the-team",
   "/our-team",
+  "/meet-the-team",
   "/staff",
-  "/services",
   "/certifications",
-  "/contact",
 ];
 const TIMEOUT_MS = 9000;
 const MAX_BYTES = 900_000;
-const MAX_PAGES = 8;
+const MAX_PAGES = 10;
+
+import { collectEmails, rankEmails, type EmailFind } from "./emails";
 
 export type SiteData = {
   host: string | null;
@@ -367,7 +374,9 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
   };
   const licences = new Set<string>();
   const phones = new Set<string>();
-  const emails = new Set<string>();
+  // Scored rather than a set: several pages usually carry an address and the
+  // company's own is not always the first one met.
+  const emailFinds: EmailFind[] = [];
   const texts: string[] = [];
 
   let logo: string | null = null;
@@ -392,6 +401,10 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
       if (/Organization|LocalBusiness|Store|Contractor|Service/i.test(type)) {
         logo ??= absolute(firstString(node.logo), base);
         summary ??= firstString(node.description);
+        // An address in the structured data is the company stating it outright,
+        // so it outranks anything scraped out of the prose.
+        const declared = firstString(node.email);
+        if (declared) emailFinds.push({ email: declared.trim().toLowerCase(), score: 150 });
         const founded = firstString(node.foundingDate);
         if (founded && yearFounded === null) {
           const year = Number(founded.slice(0, 4));
@@ -538,9 +551,7 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
     }
     for (const match of text.matchAll(LICENCE)) licences.add(match[1].toUpperCase());
     for (const match of text.match(PHONE) ?? []) phones.add(match.trim());
-    for (const match of html.matchAll(/mailto:([^"'?>\s]+)/gi)) {
-      emails.add(decodeURIComponent(match[1]).toLowerCase());
-    }
+    emailFinds.push(...collectEmails(html, host, path));
   }
 
   // The best twelve, largest and best placed first, then checked to be sure
@@ -565,7 +576,7 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
     yearFounded,
     licenseNumbers: [...licences].slice(0, 3),
     phones: [...phones].slice(0, 3),
-    emails: [...emails].slice(0, 3),
+    emails: rankEmails(emailFinds),
     pagesRead,
     crawledAt: now,
   };

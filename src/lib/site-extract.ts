@@ -96,6 +96,7 @@ export const extractionSchema = z.object({
   financing: claim,
   freeEstimates: claim,
   phone: optionalText(40),
+  email: optionalText(120),
   addressLine: optionalText(200),
   summary: optionalText(600),
 });
@@ -152,6 +153,7 @@ export const extractionJsonSchema = {
     "financing",
     "freeEstimates",
     "phone",
+    "email",
     "addressLine",
     "summary",
   ],
@@ -283,6 +285,10 @@ export const extractionJsonSchema = {
     financing: claimField("Whether they advertise financing or payment plans."),
     freeEstimates: claimField("Whether they advertise free estimates or quotes."),
     phone: optionalStringField("The main number, as printed.", 40),
+    email: optionalStringField(
+      "The address they ask people to write to, as printed. Read one written to defeat a scraper, such as \"info (at) company (dot) com\", back into an ordinary address. Never invent a local part for a domain.",
+      120,
+    ),
     addressLine: optionalStringField("The street address, without the city and postcode.", 200),
     summary: optionalStringField(
       "Two or three sentences describing what the company does, written in plain third person rather than copied from the site.",

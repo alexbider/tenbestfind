@@ -208,7 +208,12 @@ export async function enrichBusiness(
 
   fill("logoUrl", site.logo, business.logoUrl);
   fill("phone", extraction?.phone ?? site.phones[0] ?? null, business.phone);
-  fill("email", site.emails[0] ?? null, business.email);
+  // The crawler's best address first: it is scored against the site's own
+  // domain and includes anything the structured data declares outright. The
+  // model is the fallback for one written in a way no pattern catches.
+  const foundEmail = site.emails[0] ?? extraction?.email ?? null;
+  fill("email", foundEmail, business.email);
+  if (foundEmail && !business.email && !business.emailSource) data.emailSource = "website";
   fill("addressLine", extraction?.addressLine ?? null, business.addressLine);
   fill("yearFounded", extraction?.yearFounded ?? site.yearFounded, business.yearFounded);
   fill("employeeCount", extraction?.employeeCount ?? null, business.employeeCount);

@@ -8,6 +8,7 @@
  *
  *   npx tsx scripts/check-enrich.ts http://127.0.0.1:3300/index.html
  */
+import { collectEmails, decodeCloudflareEmail, rankEmails } from "../src/lib/emails";
 import { crawlSite } from "../src/lib/site-crawl";
 import { extractionJsonSchema, extractionSchema } from "../src/lib/site-extract";
 import { channelIdFor, latestChannelVideos } from "../src/lib/youtube";
@@ -77,7 +78,49 @@ const SAMPLE = {
   summary: "",
 };
 
+/**
+ * One page carrying an address in every shape a site hides one in, plus three
+ * that must not be taken for the company's own.
+ */
+const EMAIL_PAGE = `
+<a class="__cf_email__" data-cfemail="2a454c4c43494f6a48465f4f484544444f5e4f525e4f584345585904494547">[email protected]</a>
+<a href="mailto:estimates@bluebonnetexteriors.com?subject=Quote">write to us</a>
+Accounts: billing&#64;bluebonnetexteriors&#46;com
+Storm team: storm (at) bluebonnetexteriors (dot) com
+Old crew: bluebonnetroofs at gmail dot com
+Site by <a href="mailto:webmaster@themeshop.io">the theme shop</a>.
+Do not reply to noreply@bluebonnetexteriors.com.
+<img src="/img/logo@2x.png" alt="logo">
+`;
+
+const EMAIL_EXPECTED = [
+  "office@bluebonnetexteriors.com",
+  "estimates@bluebonnetexteriors.com",
+  "billing@bluebonnetexteriors.com",
+];
+
+function checkEmails(): void {
+  console.log(
+    "cloudflare decode:",
+    decodeCloudflareEmail("2a454c4c43494f6a48465f4f484544444f5e4f525e4f584345585904494547"),
+  );
+  const finds = collectEmails(EMAIL_PAGE, "bluebonnetexteriors.com", "/contact");
+  const all = finds.sort((a, b) => b.score - a.score).map((f) => `${f.score} ${f.email}`);
+  console.log("found:", all);
+
+  const ranked = rankEmails(finds);
+  const ok = JSON.stringify(ranked) === JSON.stringify(EMAIL_EXPECTED);
+  console.log(ok ? "ranking OK" : `ranking WRONG, got ${JSON.stringify(ranked)}`);
+
+  for (const rejected of ["webmaster@themeshop.io", "noreply@bluebonnetexteriors.com", "logo@2x.png"]) {
+    const kept = finds.some((f) => f.email === rejected);
+    console.log(`  ${kept ? "STILL PRESENT" : "rejected"}: ${rejected}`);
+  }
+}
+
 async function main(): Promise<void> {
+  checkEmails();
+
   const unions = unionFields(extractionJsonSchema);
   console.log("union-typed fields in the tool schema:", unions.length, unions.slice(0, 6));
 
