@@ -40,11 +40,6 @@ export function LoginForm() {
         <button type="submit" className="btn btn--primary btn--block" disabled={pending}>
           {pending ? "Signing in…" : "Sign in"}
         </button>
-
-        <p className="login__hint">
-          Seeded accounts: admin@tenbestfind.com and editor@tenbestfind.com, password
-          tenbest2026. Change them before this goes anywhere near production.
-        </p>
       </form>
     </div>
   );

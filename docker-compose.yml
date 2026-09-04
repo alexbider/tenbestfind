@@ -1,23 +1,51 @@
-# Deployed to the VPS through Hostinger's Docker project API, so a redeploy is
-# one API call with no shell on the box.
+# The stack that runs on the VPS, deployed through Hostinger's Docker project
+# API so a redeploy is one call with no shell on the box.
 #
-# This matches how the host template actually runs Traefik: on the host network,
-# reading container labels off the docker socket, with exposedbydefault off and
-# a global http→https redirect already in place. So there is no shared external
-# network to join and no redirect middleware to declare here.
+# This file is the source of truth for what is running. If you change it here,
+# redeploy; if you change it on the box, copy it back. A compose file that has
+# drifted from production is worse than no compose file, because the next
+# redeploy silently reverts the box to it.
 #
-# The image carries no data. The database and the uploads are volumes, so a
+# The site container does the checkout, the install, the migrations and the
+# build at boot rather than baking an image. That is slower to start and much
+# easier to operate: there is no registry, no image to push, and a deploy is
+# whatever is on the branch. The importer and the rollup share that checkout
+# through the site-app volume and wait for it to finish building.
+#
+# Nothing durable lives in a container. The database is on site-data, uploaded
+# media on site-media and the certificates on traefik-letsencrypt, so a
 # redeploy replaces the code and leaves the content alone.
 
 services:
-  site:
-    build:
-      context: ${GIT_CONTEXT}
-      args:
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
-    image: tenbestfind:latest
+  # Terminates TLS for the whole box. On the host network, reading container
+  # labels off the docker socket, with exposedbydefault off and a global
+  # http->https redirect, so a service opts in with labels and nothing else.
+  traefik:
+    image: traefik:latest
     restart: unless-stopped
+    network_mode: host
+    command:
+      - --api.dashboard=false
+      - --api.insecure=false
+      - --log.level=INFO
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    volumes:
+      - traefik-letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  site:
+    image: node:22-bookworm
+    restart: unless-stopped
+    working_dir: /srv
     ports:
       - "3000"
     labels:
@@ -35,37 +63,162 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
-      - TZ=${TZ:-UTC}
+      # Quote requests are emailed through Resend. Either set the key here or
+      # enter it in the admin, where it is stored encrypted; the environment
+      # wins when both are present.
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - REPO_URL=${REPO_URL}
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
     volumes:
-      # The database and the uploads outlive any redeploy.
+      - site-app:/srv
       - site-data:/data
       - site-media:/media
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
 
-  # The nightly rollup the admin dashboards read. It waits on a loop rather than
-  # needing cron on the host. The build block is repeated so the image exists
-  # whichever service compose starts first.
-  rollup:
-    build:
-      context: ${GIT_CONTEXT}
-      args:
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-    image: tenbestfind:latest
+        # The worker containers wait on this marker, so a half-finished checkout
+        # never starts them.
+        rm -f /srv/app/.next/BUILD_ID || true
+
+        if [ -d /srv/app/.git ] && git -C /srv/app rev-parse HEAD >/dev/null 2>&1; then
+          echo "==> updating checkout"
+          cd /srv/app
+          git remote set-url origin "$$REPO_URL"
+          git fetch origin
+          git reset --hard "@{u}"
+        else
+          echo "==> cloning $$REPO_URL"
+          rm -rf /srv/app
+          git clone "$$REPO_URL" /srv/app
+          cd /srv/app
+        fi
+
+        if ! git rev-parse HEAD >/dev/null 2>&1 || [ ! -f package.json ]; then
+          echo "!!! repository has no usable checkout yet. Waiting, will retry."
+          sleep 30
+          exit 1
+        fi
+        echo "==> branch $$(git rev-parse --abbrev-ref HEAD) at $$(git rev-parse --short HEAD)"
+
+        # --include=dev is explicit because the build needs TypeScript, the
+        # Prisma CLI and tsx, all of which are devDependencies.
+        echo "==> installing dependencies"
+        npm ci --include=dev --no-audit --no-fund
+
+        echo "==> generating the Prisma client"
+        npx prisma generate
+
+        # Migrations rather than db push, so a destructive change fails the
+        # deploy instead of dropping a column. The fallback baselines a database
+        # that predates the migrations folder; a no-op after the first run.
+        echo "==> applying migrations"
+        npx prisma migrate deploy || {
+          echo "==> existing database with no migration history, baselining"
+          npx prisma migrate resolve --applied 0_init
+          npx prisma migrate deploy
+        }
+
+        COUNT=$$(node -e 'const {PrismaClient}=require("@prisma/client");const d=new PrismaClient();d.country.count().then(n=>{console.log(n);return d.$$disconnect()}).catch(()=>console.log(0))' 2>/dev/null | tail -1)
+        if [ "$${COUNT:-0}" = "0" ]; then
+          echo "==> empty database, seeding"
+          npx tsx prisma/seed.ts
+        else
+          echo "==> database already holds $$COUNT countries, leaving it alone"
+        fi
+
+        # Fills coordinates on cities that have none, which is what the service
+        # area radius measures against. It only writes empty ones, so a city an
+        # editor positioned by hand is left alone and re-running costs nothing.
+        echo "==> filling in city coordinates"
+        npx tsx scripts/backfill-coordinates.ts --yes || echo "coordinate backfill skipped"
+
+        # Rescores how complete each listing is. The enrichment filters select on
+        # this number, so it has to be right after any change to how it is
+        # weighted. Cheap, and safe to repeat.
+        echo "==> rescoring listing completeness"
+        npx tsx scripts/rescore.ts || echo "rescore skipped"
+
+        echo "==> building"
+        npm run build
+
+        echo "==> starting"
+        exec npm run start
+
+  # Runs the scrape-and-write batches queued in the admin, the review refreshes
+  # and the website enrichment passes. It shares the site's checkout rather than
+  # carrying its own, so it waits for the build to finish before starting. Apart
+  # from the web process on purpose: a batch survives a deploy and a long Apify
+  # run never sits inside an HTTP request.
+  importer:
+    image: node:22-bookworm
     restart: unless-stopped
+    working_dir: /srv/app
     depends_on:
       - site
     environment:
       - DATABASE_URL=file:/data/tenbestfind.db
-      - TZ=${TZ:-UTC}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - APIFY_TOKEN=${APIFY_TOKEN:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - IMPORT_MODEL=${IMPORT_MODEL:-}
+      - IMPORT_EFFORT=${IMPORT_EFFORT:-medium}
+      - NEXT_TELEMETRY_DISABLED=1
     volumes:
+      - site-app:/srv
       - site-data:/data
-    entrypoint: ["/bin/sh", "-c"]
     command:
+      - bash
+      - -lc
       - |
+        set -e
+        # BUILD_ID only exists once the site container has finished installing
+        # and building, which is the honest signal that the checkout is usable.
+        until [ -f /srv/app/.next/BUILD_ID ]; do
+          echo "==> waiting for the site build"
+          sleep 20
+        done
+        exec ./node_modules/.bin/tsx scripts/import-worker.ts
+
+  # The nightly rollup the admin dashboards read. Sleeps until the next 03:00
+  # UTC on a loop, so there is no cron on the host.
+  rollup:
+    image: node:22-bookworm
+    restart: unless-stopped
+    working_dir: /srv/app
+    depends_on:
+      - site
+    environment:
+      - DATABASE_URL=file:/data/tenbestfind.db
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - site-app:/srv
+      - site-data:/data
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+        until [ -f /srv/app/.next/BUILD_ID ]; do
+          echo "==> waiting for the site build"
+          sleep 20
+        done
         while true; do
-          sleep 86400
-          npx tsx scripts/rollup.ts || echo "rollup failed, retrying tomorrow"
+          NOW=$$(date -u +%s)
+          NEXT=$$(date -u -d 'today 03:00' +%s)
+          if [ "$$NEXT" -le "$$NOW" ]; then NEXT=$$(date -u -d 'tomorrow 03:00' +%s); fi
+          echo "==> next rollup in $$(( (NEXT - NOW) / 60 )) minutes"
+          sleep $$(( NEXT - NOW ))
+          ./node_modules/.bin/tsx scripts/rollup.ts || echo "rollup failed, retrying tomorrow"
         done
 
 volumes:
+  traefik-letsencrypt:
+  site-app:
   site-data:
   site-media:

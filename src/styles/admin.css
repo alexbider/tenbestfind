@@ -528,15 +528,6 @@
   color: var(--ink);
 }
 
-.login__hint {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
 /* ------------------------------------------------------------ SEO panel */
 
 .seo-score {

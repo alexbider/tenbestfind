@@ -4,6 +4,7 @@
  * Safe to re-run: every insert is an upsert keyed on a natural unique field,
  * and the join-style tables are cleared for the rows being rewritten.
  */
+import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { CATEGORIES } from "./data/taxonomy";
@@ -21,6 +22,25 @@ const J = (value: unknown) =>
     : JSON.stringify(value);
 
 const NOW = new Date();
+
+/**
+ * A password nobody has seen before. The alphabet drops the characters that
+ * are easy to confuse when a password is read off a screen, and the byte is
+ * rejected rather than folded when it falls outside a whole number of
+ * alphabets, so every character stays equally likely.
+ */
+function randomPassword(length = 20): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const limit = Math.floor(256 / alphabet.length) * alphabet.length;
+  let out = "";
+  while (out.length < length) {
+    for (const byte of randomBytes(length)) {
+      if (byte < limit) out += alphabet[byte % alphabet.length];
+      if (out.length === length) break;
+    }
+  }
+  return out;
+}
 
 function monthsAgo(months: number): Date {
   const date = new Date(NOW);
@@ -683,38 +703,41 @@ async function main() {
   console.log(`  ${planIds.size} plans`);
 
   // ----------------------------------------------------------------- users
-  const adminPassword = await bcrypt.hash("tenbest2026", 10);
-  const admin = await db.user.upsert({
-    where: { email: "admin@tenbestfind.com" },
-    create: {
-      email: "admin@tenbestfind.com",
-      name: "Site Administrator",
-      passwordHash: adminPassword,
-      role: "ADMIN",
-    },
-    update: { name: "Site Administrator", role: "ADMIN" },
-  });
-  await db.user.upsert({
-    where: { email: "editor@tenbestfind.com" },
-    create: {
-      email: "editor@tenbestfind.com",
-      name: "Dana Whitfield",
-      passwordHash: await bcrypt.hash("tenbest2026", 10),
-      role: "EDITOR",
-    },
-    update: { name: "Dana Whitfield", role: "EDITOR" },
-  });
+  // No password is written into this file. SEED_ADMIN_PASSWORD is used when it
+  // is set, and otherwise each new account gets a random one that is printed
+  // once at the end of the run. A default spelled out in the repository is a
+  // way into every install that has not changed it.
+  const newCredentials: { email: string; password: string }[] = [];
 
-  const ownerUser = await db.user.upsert({
-    where: { email: "owner@lonestarroofing.example" },
-    create: {
-      email: "owner@lonestarroofing.example",
-      name: "Ray Alvarez",
-      passwordHash: await bcrypt.hash("tenbest2026", 10),
-      role: "BUSINESS_OWNER",
-    },
-    update: { name: "Ray Alvarez", role: "BUSINESS_OWNER" },
-  });
+  async function seedUser(email: string, name: string, role: string, given?: string) {
+    const existing = await db.user.findUnique({ where: { email } });
+    if (existing) {
+      // An existing password belongs to whoever set it, so only the profile is
+      // brought back in line and the hash is left alone.
+      return db.user.update({ where: { email }, data: { name, role } });
+    }
+    if (given && given.length < 8) {
+      console.log(`  SEED_ADMIN_PASSWORD is too short to use, generating one for ${email}`);
+    }
+    const password = given && given.length >= 8 ? given : randomPassword();
+    if (password !== given) newCredentials.push({ email, password });
+    return db.user.create({
+      data: { email, name, role, passwordHash: await bcrypt.hash(password, 10) },
+    });
+  }
+
+  const admin = await seedUser(
+    process.env.SEED_ADMIN_EMAIL || "admin@tenbestfind.com",
+    "Site Administrator",
+    "ADMIN",
+    process.env.SEED_ADMIN_PASSWORD,
+  );
+  await seedUser("editor@tenbestfind.com", "Dana Whitfield", "EDITOR");
+  const ownerUser = await seedUser(
+    "owner@lonestarroofing.example",
+    "Ray Alvarez",
+    "BUSINESS_OWNER",
+  );
 
   // --------------------------------------------- subscriptions and invoices
   const subscriptionSeeds: { slug: string; plan: string; status: string; sponsored?: boolean }[] = [
@@ -971,6 +994,12 @@ async function main() {
       summary: "Database seeded from the design prototype content",
     },
   });
+
+  if (newCredentials.length > 0) {
+    console.log("\n  Accounts created. These passwords are shown once and stored only as hashes:");
+    for (const row of newCredentials) console.log(`    ${row.email}  ${row.password}`);
+    console.log("");
+  }
 
   console.log("Done.");
 }

@@ -13,15 +13,14 @@ npm run db:seed      # load the content from the design prototypes
 npm run dev          # http://localhost:3000
 ```
 
-Admin console at `/admin`, seeded accounts:
+Admin console at `/admin`. The seed creates `admin@tenbestfind.com` (admin) and
+`editor@tenbestfind.com` (editor). It does not ship a password: set
+`SEED_ADMIN_PASSWORD` before seeding to choose the admin's, and otherwise the
+seed generates one for each account and prints them once when it finishes.
+Re-running the seed never touches a password that already exists.
 
-| Email                     | Password      | Role   |
-| ------------------------- | ------------- | ------ |
-| admin@tenbestfind.com     | tenbest2026   | Admin  |
-| editor@tenbestfind.com    | tenbest2026   | Editor |
-
-Change both before this touches a real environment, and set a real
-`SESSION_SECRET` in `.env`.
+Set a real `SESSION_SECRET` in `.env` as well; it is what the session cookies
+and the stored API keys are derived from.
 
 ## Layout
 

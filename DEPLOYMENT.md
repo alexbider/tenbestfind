@@ -5,69 +5,113 @@ The target is Hostinger VPS `1936590`, hostname `tenbestfind.com`, IP `2.25.139.
 ## Why it is shaped this way
 
 The site is deployed as a Docker Compose project through Hostinger's API rather
-than over SSH. That choice is not cosmetic: it means a redeploy is one API call
-with no shell on the box, and it works from an environment that has no SSH
-access at all.
+than over SSH. That choice is not cosmetic: a redeploy is one API call with no
+shell on the box, and it works from an environment that has no SSH access at
+all. `docker-compose.yml` in this repository is the file that is sent, so it is
+the source of truth for what runs. Keep the two in step. A compose file that has
+drifted is worse than none, because the next redeploy quietly reverts the box to
+whatever it says.
 
-Traefik comes from the host template and terminates TLS. It runs on the host
-network, reads container labels off the docker socket, has `exposedbydefault`
-off and already applies a global http→https redirect. So this compose file
-declares only which host to answer on: there is no shared external network to
-join and no redirect middleware to add. The certificate is issued on first
-request, which means DNS has to resolve before the first deploy.
+There is no image to build or push. The `site` container starts on a stock
+`node:22-bookworm`, clones or fast-forwards the repository into the `site-app`
+volume, installs, generates the Prisma client, applies migrations, seeds only if
+the database is empty, backfills city coordinates, rescores listing completeness,
+builds and then serves. Slower to start, much easier to operate: a deploy is
+whatever is on the branch, and there is no registry in the loop.
 
-The image carries no data. The SQLite database lives on the `site-data` volume
-and uploaded media on `site-media`, so redeploying replaces the code and leaves
-the content alone. The entrypoint pushes the schema on every boot, which is
-idempotent, and seeds **only** when the database is empty, so a redeploy never
-overwrites something an editor has changed.
+`importer` and `rollup` share that same checkout through `site-app` instead of
+carrying their own. Both wait for `.next/BUILD_ID` to appear before they start,
+which is the honest signal that the checkout finished building, and the site
+container deletes that marker at the top of its run so a half-finished checkout
+never starts them.
+
+Traefik is in the compose file and runs on the host network, reading container
+labels off the docker socket with `exposedbydefault` off and a global http→https
+redirect. So a service opts in with labels and nothing else: there is no shared
+external network to join and no redirect middleware to declare. The certificate
+is issued on first request, which means DNS has to resolve before the first
+deploy.
+
+Nothing durable lives in a container. The database is on `site-data`, uploaded
+media on `site-media`, the certificates on `traefik-letsencrypt` and the checkout
+on `site-app`. A redeploy replaces code and leaves content alone. Migrations run
+with `prisma migrate deploy`, not `db push`, so a destructive change fails the
+deploy instead of dropping a column, and the seed runs **only** when the database
+holds no countries.
 
 ## Prerequisites
 
-1. The VPS must run a template that includes Docker. `Ubuntu 24.04 with Docker
-   and Traefik` (template id 1210) is the one this compose file assumes.
-   The box currently runs `Ubuntu 24.04 with Claude Code`, which has no Docker,
-   and Hostinger's API has no reinstall endpoint, so the switch is done from
-   hPanel: **VPS → Settings → OS & Panel → Change OS**.
-2. The code must be reachable from a public git URL, because the VPS builds the
-   image itself.
+1. A template with Docker. `Ubuntu 24.04 with Docker and Traefik` (template
+   id 1210) is what the box runs. Hostinger's API has no reinstall endpoint, so
+   changing it is done from hPanel: **VPS → Settings → OS & Panel → Change OS**.
+2. A public git URL, because the box does its own checkout. `REPO_URL` is
+   cloned with no credentials.
+3. An A record for `tenbestfind.com` on `2.25.139.87` before the first deploy,
+   or Let's Encrypt cannot answer the challenge.
 
 ## Environment
 
-Set these when deploying. `SESSION_SECRET` is required and must be at least 32
-characters; everything else has a working default.
+These are set on the Docker project, not read from a file in the repository.
+`SESSION_SECRET` is required and must be at least 32 characters; changing it
+invalidates every session and every API key stored through the admin, because
+those are encrypted with a key derived from it.
 
 ```
-SESSION_SECRET=<32+ random characters>
+REPO_URL=https://github.com/<owner>/<repo>.git
 SITE_HOST=tenbestfind.com
 NEXT_PUBLIC_SITE_URL=https://tenbestfind.com
-GIT_CONTEXT=https://github.com/<owner>/<repo>.git#implement-tenbestfind
-TZ=UTC
+ACME_EMAIL=admin@tenbestfind.com
+SESSION_SECRET=<32+ random characters>
+
+# Optional, read only when the seed runs against an empty database.
+SEED_ADMIN_EMAIL=admin@tenbestfind.com
+SEED_ADMIN_PASSWORD=
 
 # Optional. Without them the site runs and records intent, but skips checkout.
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# Optional. Quote requests are stored either way; these send the email.
+RESEND_API_KEY=
+MAIL_FROM=
+
+# Optional, read by the importer container. The admin holds encrypted copies of
+# the first two, and the environment wins when both are present.
+APIFY_TOKEN=
+ANTHROPIC_API_KEY=
+IMPORT_MODEL=
+IMPORT_EFFORT=medium
 ```
 
-`NEXT_PUBLIC_*` values are read at build time, not run time, so changing one
-means a rebuild rather than a restart.
+`NEXT_PUBLIC_*` values are inlined at build time. Since the build happens at
+container start, changing one means a restart of the `site` container rather
+than a separate build step.
 
-## First deploy
+The branch is whatever `REPO_URL`'s default branch is; the container logs the
+branch and short SHA it ended up on, which is the quickest way to confirm a
+deploy actually took.
 
-Once Docker is on the box and the code is pushed, the deploy is one call to
-Hostinger's *create project* endpoint with `docker-compose.yml` as the content
-and the variables above as the environment. Redeploys are the same call: a
-project with the same name is replaced.
+## Deploying
+
+Both the first deploy and every redeploy are the same call to Hostinger's
+*create project* endpoint, with `docker-compose.yml` as the content and the
+variables above as the environment. A project with the same name is replaced,
+and the named volumes survive, so the content survives with it.
+
+Watch the project logs afterwards. A good run says, in order: the branch and
+SHA, the install, the migrations ("All migrations have been successfully
+applied"), either the seed or "database already holds N countries, leaving it
+alone", the coordinate backfill, the rescore, the build, then "Ready in". The
+importer and rollup print "waiting for the site build" until that finishes.
 
 ## After it is live
 
-- Change both seeded passwords immediately. They are in `IMPLEMENTATION.md` and
-  they are public knowledge.
+- Set a password on the admin account. The seed no longer ships one: give it
+  `SEED_ADMIN_PASSWORD`, or let it generate one and read it out of the deploy
+  log, which prints each new account's password once and never again.
 - Point the Stripe webhook at `https://tenbestfind.com/api/stripe/webhook/` and
   put the signing secret in `STRIPE_WEBHOOK_SECRET`.
-- DNS for `tenbestfind.com` must have an A record on `2.25.139.87` before
-  Traefik can get a certificate.
 - Open **Admin → Global SEO** and check the site-wide configuration before you
   submit anything to Search Console. Nothing there lives in an environment
   variable: the title templates, robots directives, schema, verification codes,
@@ -96,9 +140,10 @@ npx prisma migrate dev --name what_changed   # locally, writes prisma/migrations
 git push                                     # the deploy applies it
 ```
 
-The first deploy after this change baselines the existing database by marking
-`0_init` as already applied, since the original schema was created with
-`db push`. That happens automatically and only once.
+The compose file falls back to marking `0_init` as applied when it meets a
+database with no migration history, which is what baselined the original
+`db push` schema. That has already happened on this box and is a no-op now, but
+it is what makes the file safe to point at an older copy of the database.
 
 ## Connecting Claude over MCP
 
