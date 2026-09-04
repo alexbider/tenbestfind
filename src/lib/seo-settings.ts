@@ -83,7 +83,7 @@ export const SEO_GROUPS: { id: SeoGroupId; title: string; description: string }[
     id: "sitemap",
     title: "XML sitemap",
     description:
-      "What the generated sitemap contains. It is served as a single file at /sitemap.xml, which is well inside the 50,000 URL limit.",
+      "What the generated sitemap contains. /sitemap.xml is an index of one file per kind of page, with company profiles split across as many files as they need, so a crawler can re-read only the part that changed.",
   },
   {
     id: "robots",
