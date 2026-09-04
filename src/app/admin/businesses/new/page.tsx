@@ -72,6 +72,16 @@ export default async function AdminNewBusiness() {
               staff: [],
               credentials: [],
               photos: [],
+              videos: [],
+              factGroups: [],
+              youtubeChannel: "",
+              serviceRadiusKm: "",
+              specialties: "",
+              reviewThemes: [],
+              bbbRating: "",
+              bbbAccreditedSince: "",
+              inspectionFee: "",
+              manufacturerWarranty: "",
             }}
             categories={categories.map((category) => ({ id: category.id, label: category.name }))}
             cities={cities.map((city) => ({

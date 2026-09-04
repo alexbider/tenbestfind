@@ -273,6 +273,39 @@ function lines(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * One criterion per line, as "Title: what was checked". Splitting on the first
+ * colon only, so the sentence can contain its own. A line with no colon
+ * becomes a title on its own rather than being thrown away.
+ */
+function criteria(value: string | undefined): { title: string; text: string }[] {
+  return lines(value).map((line) => {
+    const at = line.indexOf(":");
+    if (at === -1) return { title: line, text: "" };
+    return { title: line.slice(0, at).trim(), text: line.slice(at + 1).trim() };
+  });
+}
+
+/**
+ * Pulls the video id out of whatever someone pasted: a bare id, a watch URL, a
+ * youtu.be share link or an embed src. Anything unrecognised is stored as
+ * typed, so a bad paste shows as a broken video rather than being silently
+ * dropped on save.
+ */
+function youtubeId(value: string): string {
+  const patterns = [
+    /[?&]v=([A-Za-z0-9_-]{11})/,
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /\/embed\/([A-Za-z0-9_-]{11})/,
+    /\/shorts\/([A-Za-z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const found = value.match(pattern);
+    if (found) return found[1];
+  }
+  return value;
+}
+
 export async function saveGuide(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireStaff();
   const parsed = guideSchema.safeParse(Object.fromEntries(formData));
@@ -504,15 +537,33 @@ export async function saveRanking(_prev: ActionState, formData: FormData): Promi
   // Position is the row order in the editor, so reordering is a drag of the
   // list rather than a field anyone has to renumber by hand.
   const entryRows = rows(data.entries).filter((row) => row.businessId?.trim());
+
+  // The rows are rebuilt from scratch on every save, so how long a company has
+  // held its position has to be carried across by hand. A company that is
+  // still where it was keeps its original date; one that has moved is stamped
+  // today, because it has not held the new position any longer than that.
+  const heldBefore = new Map(
+    (
+      await db.rankingEntry.findMany({
+        where: { rankingId: ranking.id },
+        select: { businessId: true, position: true, heldSince: true },
+      })
+    ).map((entry) => [entry.businessId, entry]),
+  );
+
   await db.rankingEntry.deleteMany({ where: { rankingId: ranking.id } });
   for (const [index, row] of entryRows.entries()) {
+    const position = index + 1;
+    const before = heldBefore.get(row.businessId);
     await db.rankingEntry.create({
       data: {
         rankingId: ranking.id,
         businessId: row.businessId,
-        position: index + 1,
+        position,
         designation: row.designation?.trim() || null,
         whyPicked: row.whyPicked?.trim() || null,
+        criteria: stringify(criteria(row.entryCriteria)),
+        heldSince: before && before.position === position ? (before.heldSince ?? new Date()) : new Date(),
         likes: stringify(lines(row.likes)),
         concerns: stringify(lines(row.concerns)),
         sponsored: row.sponsored === "yes",
@@ -882,6 +933,16 @@ const businessSchema = z.object({
   credentials: z.string().optional(),
   staff: z.string().optional(),
   photos: z.string().optional(),
+  videos: z.string().optional(),
+  factGroups: z.string().optional(),
+  youtubeChannel: z.string().max(300).optional(),
+  serviceRadiusKm: z.string().optional(),
+  specialties: z.string().optional(),
+  reviewThemes: z.string().optional(),
+  bbbRating: z.string().max(10).optional(),
+  bbbAccreditedSince: z.string().optional(),
+  inspectionFee: z.string().max(160).optional(),
+  manufacturerWarranty: z.string().max(160).optional(),
 });
 
 export async function saveBusiness(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -941,6 +1002,34 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     claimed: data.claimed === "on",
     googleRating: rating,
     googleReviewCount: int(data.googleReviewCount),
+    youtubeChannel: data.youtubeChannel || null,
+    serviceRadiusKm: int(data.serviceRadiusKm),
+    specialties: stringify(lines(data.specialties)),
+    bbbRating: data.bbbRating || null,
+    bbbAccreditedSince: int(data.bbbAccreditedSince),
+    inspectionFee: data.inspectionFee || null,
+    manufacturerWarranty: data.manufacturerWarranty || null,
+    reviewThemes: stringify(
+      rows(data.reviewThemes)
+        .filter((row) => row.text?.trim())
+        .map((row) => ({
+          kind: row.kind === "concern" ? "concern" : "praised",
+          text: row.text.trim(),
+        })),
+    ),
+    // Kept as posted rather than normalised into groups: the render gathers
+    // rows under their group, so an editor can reorder the panel by dragging
+    // rows without the shape fighting them.
+    factGroups: stringify(
+      rows(data.factGroups)
+        .filter((row) => row.label?.trim() && row.value?.trim())
+        .map((row) => ({
+          group: row.group?.trim() || "",
+          iconKey: row.iconKey?.trim() || "",
+          label: row.label.trim(),
+          value: row.value.trim(),
+        })),
+    ),
     // Republishing someone else's numbers means recording when we read them.
     googleDataUpdated:
       rating !== null && rating !== previous?.googleRating
@@ -1032,6 +1121,24 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
         yearsExperience: years !== null && Number.isFinite(years) && years >= 0 ? Math.trunc(years) : null,
         sortOrder: index,
         source: before?.source ?? "MANUAL",
+      },
+    });
+  }
+
+  await db.businessVideo.deleteMany({ where: { businessId: business.id } });
+  for (const [index, row] of rows(data.videos)
+    .filter((row) => row.videoId?.trim() && row.title?.trim())
+    .entries()) {
+    await db.businessVideo.create({
+      data: {
+        businessId: business.id,
+        // Accepts a bare id or a pasted watch/share/embed URL, because that is
+        // what someone actually has on the clipboard.
+        videoId: youtubeId(row.videoId.trim()),
+        title: row.title.trim(),
+        meta: row.meta?.trim() || null,
+        duration: row.duration?.trim() || null,
+        sortOrder: index,
       },
     });
   }

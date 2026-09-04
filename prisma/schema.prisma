@@ -211,6 +211,39 @@ model Business {
   googleDistribution String?
   reviewsUpdatedAt   DateTime?
 
+  /// The at-a-glance facts panel, as JSON: [{ group, iconKey, label, value }].
+  /// Flat rows rather than nested groups so one editor can reorder the whole
+  /// panel; rows are gathered under their group in the order they first
+  /// appear. The panel is left out rather than half-filled when empty.
+  factGroups String?
+
+  /// The company's own YouTube channel, linked above the project videos.
+  youtubeChannel String?
+
+  /// The work this company is known for, as a JSON array of strings. Shown as
+  /// chips under the services list.
+  specialties String?
+
+  /// What recurs across this company's public reviews, as JSON:
+  /// [{ kind: "praised" | "concern", text }]. Our summary of the pattern, never
+  /// a quotation, so it is written by an editor rather than extracted.
+  reviewThemes String?
+
+  /// The Better Business Bureau grade and the year accreditation started.
+  /// Shown as its own card, beside Google rather than blended into it.
+  bbbRating           String?
+  bbbAccreditedSince  Int?
+
+  /// What the company itself publishes about pricing, beyond the yes/no flags
+  /// above. Both are free text because neither is a number we can compare.
+  inspectionFee        String?
+  manufacturerWarranty String?
+
+  /// How far the company travels from its base, in kilometres. Draws the ring
+  /// on the areas-served map; without it the map just frames the pins, which
+  /// is the honest picture when nobody has established a radius.
+  serviceRadiusKm Int?
+
   // A short summary for the top of the profile, written from the Google
   // profile and the company's own site. The long description stays below it.
   overview    String?
@@ -240,6 +273,7 @@ model Business {
   areas         BusinessArea[]
   credentials   Credential[]
   photos        BusinessPhoto[]
+  videos        BusinessVideo[]
   staff         StaffMember[]
   reviews       Review[]
   entries       RankingEntry[]
@@ -292,6 +326,25 @@ model Credential {
   // recognises the GAF or BBB badge faster than they read the words.
   imageUrl   String?
   sortOrder  Int       @default(0)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+/// A video on the company's own channel. Only the id is stored: the embed is
+/// built at render time so it stays on youtube-nocookie, and nothing is
+/// requested from YouTube until the reader presses play.
+model BusinessVideo {
+  id         String  @id @default(cuid())
+  businessId String
+  videoId    String
+  title      String
+  /// The line under the title, e.g. "Tear-off to final inspection · June 2026".
+  meta       String?
+  /// Shown on the thumbnail. Free text because YouTube is not queried for it.
+  duration   String?
+  sortOrder  Int     @default(0)
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
@@ -416,6 +469,13 @@ model RankingEntry {
   position    Int
   designation String? // "Best for emergency call-outs"
   whyPicked   String?
+  /// The checks this position rests on, as JSON: [{ title, text }]. The
+  /// profile lists them under the rank mark; whyPicked stays the prose
+  /// summary above them.
+  criteria    String?
+  /// When this business first reached this position. Lets the profile say how
+  /// long it has held the spot instead of implying it always has.
+  heldSince   DateTime?
   // JSON arrays of strings
   likes       String?
   concerns    String?

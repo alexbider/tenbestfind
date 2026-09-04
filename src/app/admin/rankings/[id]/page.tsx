@@ -7,7 +7,7 @@ import { markRankingReviewed, setRankingStatus } from "@/app/actions/admin-conte
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
-import { parseList } from "@/lib/json";
+import { parseList, parseRows } from "@/lib/json";
 import { db } from "@/lib/db";
 import { routes } from "@/lib/urls";
 
@@ -154,6 +154,9 @@ export default async function AdminRankingDetail({ params }: Props) {
                   businessId: entry.businessId,
                   designation: entry.designation ?? "",
                   whyPicked: entry.whyPicked ?? "",
+                  entryCriteria: parseRows(entry.criteria)
+                    .map((row) => (row.text ? `${row.title}: ${row.text}` : row.title))
+                    .join("\n"),
                   likes: parseList(entry.likes).join("\n"),
                   concerns: parseList(entry.concerns).join("\n"),
                   sponsored: entry.sponsored ? "yes" : "no",

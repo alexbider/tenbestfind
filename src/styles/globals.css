@@ -1,3 +1,6 @@
+/* Leaflet's own stylesheet, first so the profile's map rules can override it. */
+@import "leaflet/dist/leaflet.css";
+
 /* Design tokens carried over verbatim from the design system export. */
 @import "./tokens/colors.css";
 @import "./tokens/typography.css";

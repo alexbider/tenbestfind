@@ -27,6 +27,45 @@ export function stringify(value: unknown): string | null {
   return JSON.stringify(value);
 }
 
+/**
+ * A stored list of same-shaped rows, as the repeatable editors post them.
+ * Every value comes back as a string so the editor can render it straight
+ * into an input; anything that is not an object is dropped.
+ */
+export function parseRows(value: string | null | undefined): Record<string, string>[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+      .map((item) =>
+        Object.fromEntries(
+          Object.entries(item as Record<string, unknown>).map(([key, val]) => [
+            key,
+            val === null || val === undefined ? "" : String(val),
+          ]),
+        ),
+      );
+  } catch {
+    return [];
+  }
+}
+
+/** One row of the at-a-glance facts panel, gathered under `group` on render. */
+export type FactRow = {
+  group: string;
+  iconKey?: string;
+  label: string;
+  value: string;
+};
+
+/** One check behind a ranking position, listed under the rank mark. */
+export type CriterionRow = {
+  title: string;
+  text: string;
+};
+
 export type LicensingRow = {
   trade: string;
   authority: string;

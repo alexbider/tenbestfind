@@ -635,3 +635,509 @@
   border-radius: 8px;
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   Business profile, 2026 design.
+
+   Layout lives in inline styles copied from the design; this file carries only
+   what a style attribute cannot express: hover, focus, the entrance animations
+   on the rank mark, and the breakpoints.
+
+   Scoped to .biz-2026 so the hooks here cannot reach the other pages that
+   share names like [data-card] and [data-row].
+   ========================================================================== */
+
+.biz-2026 [data-about-body] {
+  position: relative;
+  max-height: 238px;
+  overflow: hidden;
+  transition: max-height 320ms var(--ease-out);
+}
+
+.biz-2026 [data-about-body]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 88px;
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0), var(--surface-page));
+  pointer-events: none;
+  transition: opacity 240ms var(--ease-out);
+}
+
+.biz-2026 [data-about-body][data-open="1"] {
+  max-height: none;
+}
+
+.biz-2026 [data-about-body][data-open="1"]::after {
+  opacity: 0;
+}
+
+/* Short enough to need no toggle, so no fade to suggest there is more. */
+.biz-2026 [data-about-body][data-short="1"]::after {
+  display: none;
+}
+
+.biz-2026 [data-readmore] {
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out),
+    color 160ms var(--ease-out);
+}
+
+.biz-2026 [data-readmore]:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-200);
+  color: var(--color-primary-hover);
+}
+
+.biz-2026 [data-readmore] svg {
+  transition: transform 220ms var(--ease-out);
+}
+
+.biz-2026 [data-readmore][aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------ the videos */
+
+.biz-2026 [data-vcard] {
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out),
+    border-color 220ms var(--ease-out);
+}
+
+.biz-2026 [data-vcard]:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--blue-200);
+}
+
+.biz-2026 [data-vcard]:hover [data-vplay] {
+  transform: scale(1.08);
+}
+
+.biz-2026 [data-vplay] {
+  transition: transform 220ms var(--ease-out), background 220ms var(--ease-out);
+}
+
+.biz-2026 [data-vcard] iframe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  border: 0;
+}
+
+/* --------------------------------------------------------- the rank mark */
+
+@keyframes rkDraw {
+  from { stroke-dashoffset: 1; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  to { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes rkFill {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes rkPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes rkRule {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes rkRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes rkGlow {
+  0%, 100% { text-shadow: 0 0 0 rgba(231, 184, 99, 0); }
+  50% { text-shadow: 0 0 40px rgba(231, 184, 99, 0.35); }
+}
+
+/* The numeral is drawn as a stroke, then handed over to the solid glyph. */
+.biz-2026 [data-rk-stroke] path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rkDraw 1400ms var(--ease-out) 200ms both;
+}
+
+.biz-2026 [data-rk-fill] {
+  opacity: 0;
+  animation: rkFill 700ms var(--ease-out) 1000ms both, rkGlow 4s ease-in-out 2s infinite;
+}
+
+.biz-2026 [data-rk-hash] {
+  opacity: 0;
+  animation: rkPop 500ms var(--ease-out) 1250ms both;
+}
+
+.biz-2026 [data-rk-eyebrow] {
+  opacity: 0;
+  animation: rkRise 500ms var(--ease-out) 100ms both;
+}
+
+.biz-2026 [data-rk-rule] {
+  transform: scaleX(0);
+  animation: rkRule 600ms var(--ease-out) 1500ms both;
+}
+
+.biz-2026 [data-rk-sub] {
+  opacity: 0;
+  animation: rkRise 500ms var(--ease-out) 1700ms both;
+}
+
+.biz-2026 [data-rk-sub] + [data-rk-sub] {
+  animation-delay: 1850ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biz-2026 [data-rk-stroke] { display: none; }
+
+  .biz-2026 [data-rk-fill],
+  .biz-2026 [data-rk-hash],
+  .biz-2026 [data-rk-eyebrow],
+  .biz-2026 [data-rk-rule],
+  .biz-2026 [data-rk-sub] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ------------------------------------------------------- the areas served */
+
+.biz-2026 [data-areachip] {
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out),
+    transform 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.biz-2026 [data-areachip]:hover,
+.biz-2026 [data-areachip][data-on="1"] {
+  background: var(--blue-900);
+  border-color: var(--blue-900);
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+.biz-2026 [data-areadot] {
+  transition: background 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+
+.biz-2026 [data-areachip]:hover [data-areadot],
+.biz-2026 [data-areachip][data-on="1"] [data-areadot] {
+  background: var(--gold-ink) !important;
+  box-shadow: 0 0 0 3px rgba(231, 184, 99, 0.3) !important;
+}
+
+/* ----------------------------------------------------------- the facts */
+
+.biz-2026 [data-frow] {
+  transition: background 160ms var(--ease-out);
+}
+
+.biz-2026 [data-frow]:hover {
+  background: var(--paper);
+  margin: 0 -10px;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  border-radius: 8px;
+}
+
+.biz-2026 [data-fstat]:first-child {
+  border-top: 0 !important;
+  padding-top: 4px !important;
+}
+
+.biz-2026 [data-fstat]:hover [data-fnum] {
+  color: var(--gold-ink);
+}
+
+.biz-2026 [data-fnum] {
+  transition: color 200ms var(--ease-out);
+}
+
+/* -------------------------------------------------------- the breakpoints */
+
+@media (max-width: 980px) {
+  .biz-2026 [data-split] { grid-template-columns: 1fr !important; }
+  .biz-2026 [data-facts] { grid-template-columns: 1fr !important; }
+  .biz-2026 [data-rankgrid] { grid-template-columns: 1fr !important; gap: 36px !important; }
+}
+
+@media (max-width: 900px) {
+  .biz-2026 [data-vgrid] { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 640px) {
+  .biz-2026 [data-fact-cols] {
+    grid-template-columns: 1fr !important;
+    padding: 20px 18px !important;
+  }
+
+  .biz-2026 [data-crit] { grid-template-columns: 1fr !important; }
+  .biz-2026 [data-rk-one] { font-size: 150px !important; }
+  .biz-2026 [data-rk-hash] { font-size: 64px !important; margin-top: 12px !important; }
+
+  .biz-2026 [data-identity] {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .biz-2026 [data-identity] > span[aria-hidden] {
+    grid-row: auto !important;
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 20px !important;
+  }
+
+  .biz-2026 [data-identity] > div:first-of-type { min-height: 0 !important; }
+  .biz-2026 [data-identity-body] { margin-top: 0 !important; }
+}
+
+/* ------------------------------------------------------------------ phones
+   The design's own 760px layer. Its selectors match on inline styles, which
+   React writes without a space after the colon, so they are spelled that way
+   here; copied from the design verbatim they would match nothing. */
+@media (max-width: 760px) {
+  .biz-2026 [data-stack] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .biz-2026 [data-stack] > * { width: 100% !important; }
+
+  .biz-2026 [style*="max-width:var(--shell)"],
+  .biz-2026 [style*="max-width:1240px"],
+  .biz-2026 [style*="max-width:880px"],
+  .biz-2026 [style*="max-width:900px"] {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .biz-2026 [style*="padding:104px"],
+  .biz-2026 [style*="padding:112px"],
+  .biz-2026 [style*="padding:88px"],
+  .biz-2026 [style*="padding:96px"],
+  .biz-2026 [style*="padding:84px"],
+  .biz-2026 [style*="padding:80px"],
+  .biz-2026 [style*="padding:72px"] {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  .biz-2026 [style*="padding:64px"],
+  .biz-2026 [style*="padding:60px"],
+  .biz-2026 [style*="padding:56px"] {
+    padding-top: 44px !important;
+    padding-bottom: 40px !important;
+  }
+
+  .biz-2026 h1 { font-size: clamp(30px, 8.6vw, 40px) !important; line-height: 1.04 !important; }
+  .biz-2026 h2 { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.1 !important; }
+  .biz-2026 h3 { font-size: 17px !important; }
+
+  .biz-2026 p[style*="font-size:19px"],
+  .biz-2026 p[style*="font-size:18px"],
+  .biz-2026 p[style*="font-size:17px"] {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+  }
+
+  .biz-2026 div[style*="grid-template-columns:repeat("],
+  .biz-2026 ul[style*="grid-template-columns:repeat("],
+  .biz-2026 ol[style*="grid-template-columns:repeat("],
+  .biz-2026 div[style*="grid-template-columns:1fr 1fr"],
+  .biz-2026 div[style*="grid-template-columns:minmax("],
+  .biz-2026 div[style*="fr 1fr"],
+  .biz-2026 div[style*="fr 0."],
+  .biz-2026 div[style*="fr 1."] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .biz-2026 aside[style*="position:sticky"],
+  .biz-2026 div[style*="position:sticky"] {
+    position: static !important;
+    top: auto !important;
+  }
+
+  /* 16px is the size below which iOS zooms the page on focus. */
+  .biz-2026 input,
+  .biz-2026 select,
+  .biz-2026 textarea {
+    font-size: 16px !important;
+  }
+
+  .biz-2026 a[style*="border-radius:12px"],
+  .biz-2026 a[style*="border-radius:999px"],
+  .biz-2026 button {
+    min-height: 44px;
+  }
+
+  .biz-2026 a[style*="height:52px"],
+  .biz-2026 a[style*="height:48px"] {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .biz-2026 [data-ten-outline] {
+    width: 170px !important;
+    height: 120px !important;
+    right: -50px !important;
+    top: -30px !important;
+    opacity: 0.7;
+  }
+
+  .biz-2026 table { min-width: 640px !important; }
+  .biz-2026 [style*="border-radius:24px"] { border-radius: 18px !important; }
+  .biz-2026 img { max-width: 100%; }
+}
+
+/* ---------------------------------------------------------- the areas map
+   The pins are Leaflet divIcons, so their markup sits outside React and these
+   rules are what style it. Values are the design's own. */
+
+.biz-2026 .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-sans);
+  background: #eef2f8;
+}
+
+/* Desaturated so the pins and the coverage ring carry the colour. */
+.biz-2026 .leaflet-tile-pane {
+  filter: saturate(0.45) brightness(1.04) contrast(0.95);
+}
+
+.biz-2026 .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #5b6b84;
+}
+
+.biz-2026 .leaflet-control-attribution a {
+  color: #2d74d7;
+}
+
+.area-pin {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  animation: areaPinDrop 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.area-pin__dot {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #2d74d7;
+  border: 2.5px solid #fff;
+  box-shadow: 0 4px 12px rgba(16, 31, 61, 0.35);
+  transition: transform 200ms ease, background 200ms ease;
+}
+
+.area-pin__ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(45, 116, 215, 0.55);
+  animation: areaPinPulse 2.6s ease-out infinite;
+}
+
+.area-pin__ring--2 {
+  animation-delay: 1.3s;
+}
+
+.area-pin--hq .area-pin__dot {
+  background: #101f3d;
+  inset: 0;
+  border-width: 3px;
+}
+
+.area-pin--hq .area-pin__ring {
+  border-color: rgba(231, 184, 99, 0.75);
+}
+
+.area-pin--on .area-pin__dot,
+.area-pin:hover .area-pin__dot {
+  transform: scale(1.35);
+  background: #101f3d;
+}
+
+.area-pin--on .area-pin__ring,
+.area-pin:hover .area-pin__ring {
+  border-color: rgba(231, 184, 99, 0.85);
+}
+
+.area-pin__label {
+  position: absolute;
+  left: 24px;
+  top: -2px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: #101f3d;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 31, 61, 0.1);
+  box-shadow: 0 2px 8px rgba(16, 31, 61, 0.12);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+/* The base is always named; the rest label themselves on hover. */
+.area-pin--on .area-pin__label,
+.area-pin:hover .area-pin__label,
+.area-pin--hq .area-pin__label {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes areaPinPulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes areaPinDrop {
+  from { transform: translateY(-22px) scale(0.8); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .area-pin,
+  .area-pin__ring {
+    animation: none;
+  }
+}
+
+/* The quote button sits in the contact card's stack, so it carries the design's
+   secondary-button shape rather than the shared .btn one. */
+.biz-2026 .biz-quote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-card);
+  color: var(--blue-900);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.biz-2026 .biz-quote-btn:hover {
+  border-color: var(--blue-200);
+  color: var(--color-primary-hover);
+}

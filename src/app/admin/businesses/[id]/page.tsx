@@ -25,7 +25,7 @@ import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { dailySeries, previousTotals, totalsFor } from "@/lib/analytics";
-import { parseJson, parseList } from "@/lib/json";
+import { parseJson, parseList, parseRows } from "@/lib/json";
 import { db } from "@/lib/db";
 import { routes } from "@/lib/urls";
 
@@ -57,6 +57,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
       credentials: { orderBy: { sortOrder: "asc" } },
       staff: { orderBy: { sortOrder: "asc" } },
       photos: { orderBy: { sortOrder: "asc" } },
+      videos: { orderBy: { sortOrder: "asc" } },
       services: { include: { subservice: true } },
       areas: { include: { city: true }, orderBy: { primary: "desc" } },
       reviews: { orderBy: { postedAt: "desc" }, take: 10 },
@@ -239,6 +240,21 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                   url: photo.url,
                   alt: photo.alt ?? "",
                 })),
+                videos: business.videos.map((video) => ({
+                  videoId: video.videoId,
+                  title: video.title,
+                  meta: video.meta ?? "",
+                  duration: video.duration ?? "",
+                })),
+                factGroups: parseRows(business.factGroups),
+                youtubeChannel: business.youtubeChannel ?? "",
+                serviceRadiusKm: business.serviceRadiusKm?.toString() ?? "",
+                specialties: parseList(business.specialties).join("\n"),
+                reviewThemes: parseRows(business.reviewThemes),
+                bbbRating: business.bbbRating ?? "",
+                bbbAccreditedSince: business.bbbAccreditedSince?.toString() ?? "",
+                inspectionFee: business.inspectionFee ?? "",
+                manufacturerWarranty: business.manufacturerWarranty ?? "",
               }}
               categories={categories.map((category) => ({ id: category.id, label: category.name }))}
               cities={cities.map((city) => ({

@@ -212,6 +212,12 @@ export function RankingEditor({
               placeholder: "Best for emergency call-outs",
             },
             { key: "whyPicked", label: "Why we picked it", type: "textarea" },
+            {
+              key: "entryCriteria",
+              label: "Checks behind the position",
+              type: "textarea",
+              hint: "One per line, as \u201cTitle: what was checked\u201d. These are listed under the rank mark on the company's profile.",
+            },
             { key: "likes", label: "What we like", type: "textarea", hint: "One per line." },
             { key: "concerns", label: "What to check", type: "textarea", hint: "One per line." },
             {

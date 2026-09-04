@@ -48,6 +48,16 @@ export type BusinessDraft = {
   staff: Record<string, string>[];
   credentials: Record<string, string>[];
   photos: Record<string, string>[];
+  videos: Record<string, string>[];
+  factGroups: Record<string, string>[];
+  youtubeChannel: string;
+  serviceRadiusKm: string;
+  specialties: string;
+  reviewThemes: Record<string, string>[];
+  bbbRating: string;
+  bbbAccreditedSince: string;
+  inspectionFee: string;
+  manufacturerWarranty: string;
 };
 
 function Switch({
@@ -351,7 +361,7 @@ export function BusinessEditor({
               : "The service above has no subservices yet. Add some under Services and locations."
           }
         />
-        <div style={{ marginBottom: 0 }}>
+        <div>
           <IdListEditor
             name="areas"
             label="Areas served"
@@ -359,6 +369,21 @@ export function BusinessEditor({
             initial={business.areas}
             hint="The first one checked is treated as the primary area."
           />
+        </div>
+        <div className="field" style={{ marginBottom: 0, maxWidth: 260 }}>
+          <label htmlFor="biz-radius">Travels up to (km)</label>
+          <input
+            id="biz-radius"
+            name="serviceRadiusKm"
+            type="number"
+            min={1}
+            max={500}
+            defaultValue={business.serviceRadiusKm}
+          />
+          <p className="field__hint">
+            Draws the coverage ring on the map. Leave empty unless someone has actually established
+            it; the map then just frames the areas above.
+          </p>
         </div>
       </fieldset>
 
@@ -436,6 +461,143 @@ export function BusinessEditor({
             { key: "alt", label: "Alt text", hint: "Describe the picture for someone who cannot see it." },
           ]}
           initial={business.photos}
+        />
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>Project videos</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          Videos from the company&apos;s own channel. Only the YouTube id is stored, and nothing is
+          requested from YouTube until a reader presses play.
+        </p>
+        <div className="field">
+          <label htmlFor="biz-channel">YouTube channel</label>
+          <input
+            id="biz-channel"
+            name="youtubeChannel"
+            type="url"
+            defaultValue={business.youtubeChannel}
+            placeholder="https://www.youtube.com/@company"
+          />
+          <p className="field__hint">Linked above the grid. Leave empty to hide that link.</p>
+        </div>
+        <RepeatableEditor
+          name="videos"
+          summaryKey="title"
+          addLabel="Add video"
+          emptyLabel="No videos on this profile."
+          fields={[
+            { key: "videoId", label: "YouTube id", width: "half", hint: "The part after v=, e.g. dQw4w9WgXcQ." },
+            { key: "duration", label: "Duration", width: "half", placeholder: "4:12" },
+            { key: "title", label: "Title" },
+            { key: "meta", label: "Caption", hint: "What it shows and when, e.g. \u201cTear-off to final inspection \u00b7 June 2026\u201d." },
+          ]}
+          initial={business.videos}
+        />
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>What customers commonly mention</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          Our summary of what recurs across this company&apos;s public reviews, never a quotation of
+          one. A theme belongs here only when several independent reviews raise it.
+        </p>
+        <RepeatableEditor
+          name="reviewThemes"
+          summaryKey="text"
+          addLabel="Add theme"
+          emptyLabel="No review themes recorded."
+          fields={[
+            {
+              key: "kind",
+              label: "Side",
+              type: "select",
+              width: "half",
+              options: [
+                { value: "praised", label: "Frequently praised" },
+                { value: "concern", label: "Concern mentioned" },
+              ],
+            },
+            { key: "text", label: "Theme" },
+          ]}
+          initial={business.reviewThemes}
+        />
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>Reputation and pricing</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          Each source is shown on its own card rather than blended into one score. Leave a field
+          empty and its card or row is left off the profile.
+        </p>
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="biz-bbb">BBB rating</label>
+            <input id="biz-bbb" name="bbbRating" defaultValue={business.bbbRating} placeholder="A+" />
+          </div>
+          <div className="field">
+            <label htmlFor="biz-bbb-since">BBB accredited since</label>
+            <input
+              id="biz-bbb-since"
+              name="bbbAccreditedSince"
+              type="number"
+              min={1900}
+              max={2100}
+              defaultValue={business.bbbAccreditedSince}
+            />
+          </div>
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="biz-inspection">Inspection fee</label>
+            <input
+              id="biz-inspection"
+              name="inspectionFee"
+              defaultValue={business.inspectionFee}
+              placeholder="Free, including storm inspections"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="biz-mfr">Manufacturer warranty</label>
+            <input
+              id="biz-mfr"
+              name="manufacturerWarranty"
+              defaultValue={business.manufacturerWarranty}
+              placeholder="Up to 50 years by system"
+            />
+          </div>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="biz-specialties">Specialties</label>
+          <textarea
+            id="biz-specialties"
+            name="specialties"
+            rows={4}
+            defaultValue={business.specialties}
+          />
+          <p className="field__hint">One per line. Shown as chips under the services list.</p>
+        </div>
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>At a glance</legend>
+        <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
+          The facts panel near the top of the profile. Rows are gathered under their group in the
+          order they first appear here, so put the rows of a group together. Leave it empty and the
+          panel is left off the page rather than shown half filled.
+        </p>
+        <RepeatableEditor
+          name="factGroups"
+          summaryKey="label"
+          addLabel="Add fact"
+          emptyLabel="No facts recorded."
+          fields={[
+            { key: "group", label: "Group", width: "half", placeholder: "The work" },
+            { key: "iconKey", label: "Icon key", width: "half", hint: "Used on the first row of each group." },
+            { key: "label", label: "Label", width: "half", placeholder: "Best for" },
+            { key: "value", label: "Value", width: "half", placeholder: "Residential roof replacement" },
+          ]}
+          initial={business.factGroups}
         />
       </fieldset>
 
