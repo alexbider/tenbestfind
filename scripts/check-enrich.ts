@@ -9,6 +9,7 @@
  *   npx tsx scripts/check-enrich.ts http://127.0.0.1:3300/index.html
  */
 import { crawlSite } from "../src/lib/site-crawl";
+import { extractionJsonSchema, extractionSchema } from "../src/lib/site-extract";
 import { channelIdFor, latestChannelVideos } from "../src/lib/youtube";
 
 const CHANNEL_PAGE = `<!doctype html><html><head>
@@ -24,7 +25,95 @@ const FEED = `<?xml version="1.0" encoding="UTF-8"?>
  <entry><yt:videoId>ggggggggggg</yt:videoId><title>One too many</title><published>2026-03-01T09:00:00+00:00</published></entry>
 </feed>`;
 
+/**
+ * Counts the fields in the tool schema whose type is a union. The API refuses a
+ * schema carrying more than a couple of dozen of them, and it refuses at call
+ * time rather than at build time, so nothing but a check like this catches a
+ * nullable field being added back.
+ */
+function unionFields(node: unknown, path = "", found: string[] = []): string[] {
+  if (!node || typeof node !== "object") return found;
+  const record = node as Record<string, unknown>;
+  if (Array.isArray(record.type) || Array.isArray(record.anyOf) || Array.isArray(record.oneOf)) {
+    found.push(path || "(root)");
+  }
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "description" || key === "enum" || key === "required") continue;
+    if (Array.isArray(value)) value.forEach((item, i) => unionFields(item, `${path}.${key}[${i}]`, found));
+    else unionFields(value, path ? `${path}.${key}` : key, found);
+  }
+  return found;
+}
+
+/** The shape a model actually sends back, sentinels and all. */
+const SAMPLE = {
+  staff: [{ name: "Ray Alvarez", role: "Owner", bio: "", yearsExperience: 0, credentials: [] }],
+  yearFounded: 2008,
+  employeeCount: "",
+  licenseNumbers: ["TX-0801442"],
+  certifications: [],
+  paymentMethods: [],
+  awards: [],
+  brands: [],
+  insured: "yes",
+  warrantyTerms: "10-year workmanship",
+  services: ["Roof repair"],
+  specialties: [],
+  areasServed: ["Plano"],
+  serviceRadiusKm: 0,
+  hours: [{ day: "Monday", opens: "07:00", closes: "18:00", closed: false }],
+  bbbRating: "A+",
+  bbbAccreditedSince: 0,
+  inspectionFee: "",
+  manufacturerWarranty: "",
+  bestFor: "residential roof replacement",
+  tagline: "",
+  postalCode: "75201",
+  emergency: "unknown",
+  financing: "no",
+  freeEstimates: "yes",
+  phone: "(214) 555-0142",
+  addressLine: "2118 Commerce St",
+  summary: "",
+};
+
 async function main(): Promise<void> {
+  const unions = unionFields(extractionJsonSchema);
+  console.log("union-typed fields in the tool schema:", unions.length, unions.slice(0, 6));
+
+  const parsed = extractionSchema.parse(SAMPLE);
+  console.log("sentinels become null:", {
+    employeeCount: parsed.employeeCount,
+    serviceRadiusKm: parsed.serviceRadiusKm,
+    bbbAccreditedSince: parsed.bbbAccreditedSince,
+    summary: parsed.summary,
+    staffBio: parsed.staff[0]?.bio,
+    staffYears: parsed.staff[0]?.yearsExperience,
+  });
+  console.log("claims become booleans:", {
+    emergency: parsed.emergency,
+    financing: parsed.financing,
+    freeEstimates: parsed.freeEstimates,
+    insured: parsed.insured,
+  });
+
+  // A model that ignores the instruction and sends nulls and real booleans.
+  const loose = extractionSchema.parse({
+    ...SAMPLE,
+    employeeCount: null,
+    yearFounded: null,
+    emergency: true,
+    financing: false,
+    bbbRating: null,
+  });
+  console.log("null and boolean tolerated:", {
+    employeeCount: loose.employeeCount,
+    yearFounded: loose.yearFounded,
+    emergency: loose.emergency,
+    financing: loose.financing,
+    bbbRating: loose.bbbRating,
+  });
+
   const url = process.argv[2];
   if (url) {
     const site = await crawlSite(url);
