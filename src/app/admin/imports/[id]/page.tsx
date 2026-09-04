@@ -128,9 +128,12 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
           {
             label: "To import",
             value: batch.found,
+            // A company that was already in the directory, or that failed the
+            // gate, is not kept as a row: only counted here, and remembered so
+            // the next scrape of this city does not offer it again.
             hint: [
-              batch.duplicates ? `${batch.duplicates} already known` : "",
-              batch.skipped ? `${batch.skipped} failed the quality gate` : "",
+              batch.duplicates ? `${batch.duplicates} already known, not kept` : "",
+              batch.skipped ? `${batch.skipped} failed the quality gate, not kept` : "",
             ]
               .filter(Boolean)
               .join(", "),

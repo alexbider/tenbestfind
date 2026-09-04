@@ -160,6 +160,85 @@ async function startScrape(batchId: string): Promise<Advance> {
   }
 }
 
+/* -------------------------------------------------------------- the skip list */
+
+/**
+ * Companies the gate has already rejected, so a later scrape of the same city
+ * does not pay to find that out twice. Keyed on the place id where there is
+ * one and on the hostname otherwise, which is the same order of trust the
+ * duplicate check uses.
+ */
+async function alreadyRejected(place: {
+  placeId: string | null;
+  website: string | null;
+}): Promise<string | null> {
+  if (place.placeId) {
+    const byPlace = await db.skippedPlace.findUnique({
+      where: { placeId: place.placeId },
+      select: { reason: true },
+    });
+    if (byPlace) return byPlace.reason;
+  }
+  const host = websiteHost(place.website);
+  if (!host) return null;
+  const byHost = await db.skippedPlace.findFirst({ where: { host }, select: { reason: true } });
+  return byHost?.reason ?? null;
+}
+
+/**
+ * Turns one company down for good: the row goes, the reason is remembered.
+ * Shared with the admin, because an editor rejecting a company should stop the
+ * next scrape putting it back in front of them.
+ */
+export async function dropItem(
+  item: { id: string; placeId: string | null; website: string | null; name: string },
+  reason: string,
+  stage: "scrape" | "enrich" = "enrich",
+): Promise<void> {
+  await rememberRejection({
+    placeId: item.placeId,
+    website: item.website,
+    name: item.name,
+    reason,
+    stage,
+  });
+  await db.importItem.delete({ where: { id: item.id } });
+}
+
+/**
+ * Remembers a rejection. Duplicates are deliberately not recorded: a company
+ * already in the directory is not a company to avoid, and the duplicate check
+ * catches it every time for free.
+ */
+async function rememberRejection(input: {
+  placeId: string | null;
+  website: string | null;
+  name: string;
+  reason: string;
+  stage: "scrape" | "enrich";
+}): Promise<void> {
+  const data = {
+    host: websiteHost(input.website) || null,
+    name: input.name.slice(0, 200),
+    reason: input.reason.slice(0, 300),
+    stage: input.stage,
+  };
+  if (input.placeId) {
+    await db.skippedPlace.upsert({
+      where: { placeId: input.placeId },
+      create: { placeId: input.placeId, ...data },
+      update: data,
+    });
+    return;
+  }
+  // Without a place id the hostname is the only key, and a company with
+  // neither is not worth a row nobody could ever match against.
+  if (!data.host) return;
+  const existing = await db.skippedPlace.findFirst({ where: { host: data.host }, select: { id: true } });
+  if (existing) await db.skippedPlace.update({ where: { id: existing.id }, data });
+  else await db.skippedPlace.create({ data: { placeId: null, ...data } });
+}
+
 async function collectScrape(batchId: string): Promise<Advance> {
   const batch = await db.importBatch.findUnique({
     where: { id: batchId },
@@ -216,6 +295,14 @@ async function collectScrape(batchId: string): Promise<Advance> {
         if (suburb?.created) discovered += 1;
       }
 
+      // Rejected on an earlier run. Nothing about this company has to be
+      // checked again, and nothing about it belongs in this batch.
+      const known = await alreadyRejected({ placeId: place.placeId, website: place.website });
+      if (known) {
+        skipped += 1;
+        continue;
+      }
+
       let verdict = await classify(place, city.id, batch);
 
       const keys = claimKeys(
@@ -230,9 +317,25 @@ async function collectScrape(batchId: string): Promise<Advance> {
         }
       }
 
-      if (verdict.status === "DUPLICATE") duplicates += 1;
-      else if (verdict.status === "SKIPPED") skipped += 1;
-      else found += 1;
+      // A company we are not importing does not become a row. The batch holds
+      // what it is importing; the counters say how many were turned away, and
+      // the skip list remembers the ones worth never looking at again.
+      if (verdict.status === "DUPLICATE") {
+        duplicates += 1;
+        continue;
+      }
+      if (verdict.status === "SKIPPED") {
+        skipped += 1;
+        await rememberRejection({
+          placeId: place.placeId,
+          website: place.website,
+          name: place.title,
+          reason: verdict.reason ?? "did not pass the gate",
+          stage: "scrape",
+        });
+        continue;
+      }
+      found += 1;
 
       const gmbEmail =
         place.email && plausibleEmail(place.email.toLowerCase()) ? place.email.toLowerCase() : null;
@@ -242,8 +345,8 @@ async function collectScrape(batchId: string): Promise<Advance> {
       const data = {
         cityId: city.id,
         name: place.title,
-        status: verdict.status,
-        reason: verdict.reason,
+        status: "FOUND",
+        reason: null,
         gmbRank: place.rank ?? rank,
         rating: place.rating,
         reviewCount: place.reviewCount,
@@ -256,7 +359,7 @@ async function collectScrape(batchId: string): Promise<Advance> {
         emailSource: gmbEmail ? "gmb" : null,
         addressLine: place.address,
         raw: JSON.stringify(place),
-        businessId: verdict.businessId,
+        businessId: null,
       };
 
       if (place.placeId) {
@@ -441,6 +544,14 @@ async function enrichSlice(batchId: string): Promise<Advance> {
     return { changed: true, note: "enriched" };
   }
 
+  const drop = async (
+    item: { id: string; placeId: string | null; website: string | null; name: string },
+    reason: string,
+  ) => {
+    await dropItem(item, reason);
+    return "skipped" as const;
+  };
+
   const outcomes = await Promise.all(
     items.map(async (item) => {
       // One pass over the company's own site does both jobs: it finds the
@@ -452,18 +563,10 @@ async function enrichSlice(batchId: string): Promise<Advance> {
       // the cheapest thing to find out and the most decisive: everything the
       // listing would carry comes from it.
       if (batch.requireLiveSite && site.pagesRead === 0) {
-        await db.importItem.update({
-          where: { id: item.id },
-          data: { status: "SKIPPED", reason: "website did not respond" },
-        });
-        return "skipped" as const;
+        return drop(item, "website did not respond");
       }
       if (batch.requireLiveSite && site.text.trim().length < MIN_READABLE_TEXT) {
-        await db.importItem.update({
-          where: { id: item.id },
-          data: { status: "SKIPPED", reason: "website carries nothing readable" },
-        });
-        return "skipped" as const;
+        return drop(item, "website carries nothing readable");
       }
 
       // The crawl read the contact pages already, and scored what it found
@@ -476,15 +579,10 @@ async function enrichSlice(batchId: string): Promise<Advance> {
           : null;
 
       if (batch.requireEmail && !found) {
-        await db.importItem.update({
-          where: { id: item.id },
-          data: {
-            status: "SKIPPED",
-            reason: `no email on the website (${site.pagesRead} page${site.pagesRead === 1 ? "" : "s"} read)`,
-            site: JSON.stringify(site),
-          },
-        });
-        return "skipped" as const;
+        return drop(
+          item,
+          `no email on the website (${site.pagesRead} page${site.pagesRead === 1 ? "" : "s"} read)`,
+        );
       }
 
       await db.importItem.update({
@@ -996,13 +1094,13 @@ async function createBusiness(
       item.cityId,
     );
     if (clash) {
-      await db.importItem.update({
-        where: { id: item.id },
-        data: { status: "DUPLICATE", reason: clash.reason, businessId: clash.businessId },
-      });
+      // The company arrived while this one was being written. The listing that
+      // is already live wins, and the row goes rather than sitting in the batch
+      // as something an editor might think still needs a decision.
+      await db.importItem.delete({ where: { id: item.id } });
       await db.importBatch.update({
         where: { id: batch.id },
-        data: { duplicates: { increment: 1 } },
+        data: { duplicates: { increment: 1 }, written: { decrement: 1 } },
       });
       return { published: false };
     }

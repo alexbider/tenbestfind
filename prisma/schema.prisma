@@ -1120,6 +1120,34 @@ model AuditLog {
 /// the rules that decide what gets published. Stages advance in order and the
 /// worker picks up whatever is not terminal, so a restart resumes rather than
 /// starting over.
+/// A company the gate rejected, remembered across batches.
+///
+/// The rows themselves are deleted the moment they fail: a batch should carry
+/// what it is importing, not a record of everything it declined. But the
+/// decision is worth keeping, because the next scrape of the same city returns
+/// the same companies, and re-crawling a site that was already found dead costs
+/// the same as crawling a live one. This table is that memory, and it is
+/// global rather than per batch for the same reason.
+model SkippedPlace {
+  id String @id @default(cuid())
+
+  /// Google's own id, when the scrape carried one. The most reliable key.
+  placeId String? @unique
+  /// The company's own hostname, for a record that arrived without a place id.
+  host    String?
+  name    String
+  /// Why it was dropped, in the words the operator would want to read.
+  reason  String
+  /// Which check dropped it: "scrape" before anything was spent, "enrich"
+  /// after the website was read.
+  stage   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([host])
+}
+
 model ImportBatch {
   id     String @id @default(cuid())
   name   String

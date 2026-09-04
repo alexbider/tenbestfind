@@ -5,7 +5,7 @@ import { z } from "zod";
 import { audit, requireAdmin, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { abortRun } from "@/lib/apify";
-import { resumeStage } from "@/lib/import-pipeline";
+import { dropItem, resumeStage } from "@/lib/import-pipeline";
 import { putSecret, SECRET_KEYS, type SecretKey } from "@/lib/secrets";
 import type { ActionState } from "./admin-system";
 
@@ -144,7 +144,10 @@ export async function skipItem(formData: FormData) {
   const id = String(formData.get("id"));
   const item = await db.importItem.findUnique({ where: { id } });
   if (!item) return;
-  await db.importItem.update({ where: { id }, data: { status: "SKIPPED", reason: "skipped by an editor" } });
+  // An editor turning a company down is the most reliable rejection there is,
+  // so the row goes and the decision is remembered: the next scrape of that
+  // city should not put it back in front of them.
+  await dropItem(item, "skipped by an editor");
   revalidatePath(`/admin/imports/${item.batchId}`);
 }
 
