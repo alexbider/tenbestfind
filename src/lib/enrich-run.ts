@@ -1,10 +1,18 @@
 import { db } from "./db";
 import { crawlSite, type SiteData } from "./site-crawl";
-import { extractFromSite } from "./site-extract";
+import { extractAsk, extractFromSite, extractionSchema, type Extraction } from "./site-extract";
 import { fillServiceAreas, recordNamedAreas } from "./geo";
 import { channelIdFor, latestChannelVideos, videoMeta } from "./youtube";
 import { normalizeName } from "./enrich";
-import { PermanentError, type Effort } from "./anthropic";
+import {
+  jsonBatchReady,
+  PermanentError,
+  readJsonBatch,
+  submitJsonBatch,
+  type BatchAsk,
+  type BatchOutcome,
+  type Effort,
+} from "./anthropic";
 import { stringify } from "./json";
 import { recomputeCompleteness } from "./completeness";
 
@@ -16,6 +24,14 @@ import { recomputeCompleteness } from "./completeness";
 // anything at any time without anyone having to check what it might undo.
 
 const SLICE = 3;
+
+/**
+ * How many websites go out in one wave when the model is reading them. The
+ * batch tier answers the whole wave at once for half the price, and the crawls
+ * that feed it are network waits that run together, so the wave can be much
+ * larger than a slice done one company at a time.
+ */
+const WAVE = 20;
 
 export type EnrichAdvance = { changed: boolean; note: string };
 
@@ -82,67 +98,264 @@ export async function advanceEnrichment(runId: string): Promise<EnrichAdvance> {
     });
   }
 
-  const slice = ids.slice(done, done + SLICE);
-  const entries: EnrichEntry[] = [];
-  let fields = 0;
-  let staff = 0;
-  let photos = 0;
+  if (run.extractBatchId) return collectReadingWave(run, run.extractBatchId);
+  if (run.useModel) return submitReadingWave(run, ids);
+  return readDirectly(run, ids.slice(done, done + SLICE));
+}
+
+/** The model and the effort, as settings, so a backfill can be run cheaper. */
+function modelOptions(): { model?: string; effort: Effort } {
+  return {
+    model: process.env.IMPORT_MODEL || undefined,
+    effort: (process.env.IMPORT_EFFORT as Effort | undefined) ?? "low",
+  };
+}
+
+type RunRow = { id: string; report: string | null; pending: string | null };
+type Tally = { entries: EnrichEntry[]; fields: number; staff: number; photos: number };
+
+function newTally(): Tally {
+  return { entries: [], fields: 0, staff: 0, photos: 0 };
+}
+
+function count(into: Tally, entry: EnrichEntry): void {
+  into.entries.push(entry);
+  into.fields += entry.filled.length;
+  into.staff += entry.staff;
+  into.photos += entry.photos;
+}
+
+/** Writes one tick's worth of results and says what happened in one line. */
+async function record(
+  run: RunRow,
+  processed: number,
+  into: Tally,
+  extra: Record<string, unknown> = {},
+): Promise<EnrichAdvance> {
+  const existing = run.report ? (JSON.parse(run.report) as EnrichEntry[]) : [];
+  await db.enrichRun.update({
+    where: { id: run.id },
+    data: {
+      processed: { increment: processed },
+      fieldsFilled: { increment: into.fields },
+      staffFound: { increment: into.staff },
+      photosAdded: { increment: into.photos },
+      report: JSON.stringify([...existing, ...into.entries].slice(-200)),
+      ...extra,
+    },
+  });
+  return {
+    changed: true,
+    note: `${processed} read, ${into.fields} fields, ${into.photos} photos, ${into.staff} people`,
+  };
+}
+
+/** A run that cannot continue: a dead key, no credits, a model it cannot use. */
+async function stopRun(runId: string, error: PermanentError): Promise<EnrichAdvance> {
+  await db.enrichRun.update({
+    where: { id: runId },
+    data: {
+      status: "FAILED",
+      error: `${error.message} ${error.hint}`.slice(0, 900),
+      finishedAt: new Date(),
+    },
+  });
+  return { changed: true, note: `stopped: ${error.message}` };
+}
+
+/** One company that could not be read, as the line the report will show. */
+function skipped(business: string, note: string): EnrichEntry {
+  return { business, filled: [], staff: 0, photos: 0, note };
+}
+
+/**
+ * The parser-only run. Nothing here costs anything, so it stays a small slice
+ * done in place rather than a wave with a wait in the middle of it.
+ */
+async function readDirectly(run: RunRow, slice: string[]): Promise<EnrichAdvance> {
+  const into = newTally();
 
   for (const businessId of slice) {
     try {
-      const result = await enrichBusiness(businessId, {
-        useModel: run.useModel,
-        model: process.env.IMPORT_MODEL || undefined,
-        effort: (process.env.IMPORT_EFFORT as Effort | undefined) ?? "low",
-      });
-      entries.push(result);
-      fields += result.filled.length;
-      staff += result.staff;
-      photos += result.photos;
+      count(into, await enrichBusiness(businessId, { useModel: false }));
     } catch (error) {
       // A run that stops on the first bad website is useless, so anything that
       // is not a dead API key is recorded against the company and skipped.
-      if (error instanceof PermanentError) {
-        await db.enrichRun.update({
-          where: { id: runId },
-          data: {
-            status: "FAILED",
-            error: `${error.message} ${error.hint}`.slice(0, 900),
-            finishedAt: new Date(),
-          },
-        });
-        return { changed: true, note: `stopped: ${error.message}` };
-      }
+      if (error instanceof PermanentError) return stopRun(run.id, error);
       const business = await db.business.findUnique({
         where: { id: businessId },
         select: { name: true },
       });
-      entries.push({
-        business: business?.name ?? businessId,
-        filled: [],
-        staff: 0,
-        photos: 0,
-        note: error instanceof Error ? error.message.slice(0, 200) : String(error),
-      });
+      count(
+        into,
+        skipped(
+          business?.name ?? businessId,
+          error instanceof Error ? error.message.slice(0, 200) : String(error),
+        ),
+      );
     }
   }
 
-  const existing = run.report ? (JSON.parse(run.report) as EnrichEntry[]) : [];
+  return record(run, slice.length, into);
+}
+
+/* ------------------------------------------------------------- the model wave */
+
+/**
+ * One company whose pages are read and waiting on an answer. The crawl is kept
+ * rather than the answer's absence: reading every website twice would double
+ * the slowest part of the run for nothing.
+ */
+type PendingRead = {
+  businessId: string;
+  name: string;
+  site: SiteData | null;
+  note?: string;
+};
+
+async function submitReadingWave(
+  run: RunRow & { processed: number },
+  ids: string[],
+): Promise<EnrichAdvance> {
+  const slice = ids.slice(run.processed, run.processed + WAVE);
+  const options = modelOptions();
+
+  // The crawls run together: they are network waits, and this is the part of a
+  // run that takes real time.
+  const prepared = await Promise.all(
+    slice.map(async (businessId): Promise<{ pending: PendingRead; ask: BatchAsk | null }> => {
+      const business = await db.business.findUnique({
+        where: { id: businessId },
+        select: {
+          name: true,
+          website: true,
+          city: { select: { name: true } },
+          category: { select: { serviceName: true } },
+        },
+      });
+      if (!business) {
+        return {
+          pending: { businessId, name: businessId, site: null, note: "That business no longer exists." },
+          ask: null,
+        };
+      }
+      if (!business.website) {
+        return {
+          pending: { businessId, name: business.name, site: null, note: "No website on file." },
+          ask: null,
+        };
+      }
+
+      const site = await crawlSite(business.website);
+      if (site.pagesRead === 0) {
+        return {
+          pending: {
+            businessId,
+            name: business.name,
+            site: null,
+            note: "Could not read the website. It may be down, or blocking crawlers.",
+          },
+          ask: null,
+        };
+      }
+
+      const ask = extractAsk(
+        { name: business.name, city: business.city?.name ?? null, trade: business.category.serviceName },
+        site,
+        options,
+      );
+      return {
+        pending: { businessId, name: business.name, site },
+        // A site with almost no text is not worth a paid read, but its logo,
+        // photos and social links still are, so it stays in the wave.
+        ask: ask ? { customId: businessId, ...ask } : null,
+      };
+    }),
+  );
+
+  const pending = prepared.map((row) => row.pending);
+  const asks = prepared.map((row) => row.ask).filter((ask): ask is BatchAsk => ask !== null);
+
+  // Nobody in this slice had anything to read. There is no wave to wait for, so
+  // whatever the parser found is applied now.
+  if (asks.length === 0) return applyWave(run, pending, new Map());
+
+  let waveId: string;
+  try {
+    waveId = await submitJsonBatch(asks);
+  } catch (error) {
+    if (error instanceof PermanentError) return stopRun(run.id, error);
+    throw error;
+  }
+
   await db.enrichRun.update({
-    where: { id: runId },
-    data: {
-      processed: { increment: slice.length },
-      fieldsFilled: { increment: fields },
-      staffFound: { increment: staff },
-      photosAdded: { increment: photos },
-      report: JSON.stringify([...existing, ...entries].slice(-200)),
-    },
+    where: { id: run.id },
+    data: { extractBatchId: waveId, pending: JSON.stringify(pending) },
   });
 
-  return {
-    changed: true,
-    note: `${slice.length} read, ${fields} fields, ${photos} photos, ${staff} people`,
-  };
+  return { changed: true, note: `queued ${asks.length} websites to read` };
+}
+
+async function collectReadingWave(run: RunRow, waveId: string): Promise<EnrichAdvance> {
+  let ready: boolean;
+  try {
+    ready = await jsonBatchReady(waveId);
+  } catch (error) {
+    if (error instanceof PermanentError) return stopRun(run.id, error);
+    throw error;
+  }
+  if (!ready) return { changed: false, note: "the website batch is still running" };
+
+  const pending = JSON.parse(run.pending ?? "[]") as PendingRead[];
+  const outcomes = await readJsonBatch(waveId, extractionSchema);
+  const answers = new Map(outcomes.map((outcome) => [outcome.customId, outcome]));
+
+  return applyWave(run, pending, answers);
+}
+
+/**
+ * Fills in every company in the wave. A company the model could not answer for
+ * is still worth applying: the logo, the photos, the social links and the
+ * founding year all came off the pages themselves.
+ */
+async function applyWave(
+  run: RunRow,
+  pending: PendingRead[],
+  answers: Map<string, BatchOutcome<Extraction>>,
+): Promise<EnrichAdvance> {
+  const into = newTally();
+  const clear = { extractBatchId: null, pending: null };
+
+  for (const entry of pending) {
+    if (!entry.site) {
+      count(into, skipped(entry.name, entry.note ?? "Nothing to read."));
+      continue;
+    }
+
+    const answer = answers.get(entry.businessId);
+    try {
+      const result = await enrichBusiness(entry.businessId, {
+        useModel: true,
+        site: entry.site,
+        extraction: answer?.ok ? answer.value : null,
+      });
+      if (answer && !answer.ok) {
+        result.note = `${result.note ? `${result.note} ` : ""}${answer.reason}`.slice(0, 200);
+      }
+      count(into, result);
+    } catch (error) {
+      if (error instanceof PermanentError) {
+        await db.enrichRun.update({ where: { id: run.id }, data: clear });
+        return stopRun(run.id, error);
+      }
+      count(
+        into,
+        skipped(entry.name, error instanceof Error ? error.message.slice(0, 200) : String(error)),
+      );
+    }
+  }
+
+  return record(run, pending.length, into, clear);
 }
 
 /**
@@ -153,7 +366,16 @@ export async function advanceEnrichment(runId: string): Promise<EnrichAdvance> {
  */
 export async function enrichBusiness(
   businessId: string,
-  options: { useModel?: boolean; model?: string; effort?: Effort } = {},
+  options: {
+    useModel?: boolean;
+    model?: string;
+    effort?: Effort;
+    /// Pages already read, so a batched run does not crawl the same site twice.
+    site?: SiteData;
+    /// An answer already in hand. Present and null means the model was asked
+    /// and had nothing, which is different from never asking it.
+    extraction?: Extraction | null;
+  } = {},
 ): Promise<EnrichEntry> {
   const business = await db.business.findUnique({
     where: { id: businessId },
@@ -172,7 +394,7 @@ export async function enrichBusiness(
     return { business: business.name, filled: [], staff: 0, photos: 0, note: "No website on file." };
   }
 
-  const site = await crawlSite(business.website);
+  const site = options.site ?? (await crawlSite(business.website));
   if (site.pagesRead === 0) {
     return {
       business: business.name,
@@ -183,17 +405,20 @@ export async function enrichBusiness(
     };
   }
 
-  const extraction = options.useModel
-    ? await extractFromSite(
-        {
-          name: business.name,
-          city: business.city?.name ?? null,
-          trade: business.category.serviceName,
-        },
-        site,
-        { model: options.model, effort: options.effort },
-      )
-    : null;
+  const extraction =
+    options.extraction !== undefined
+      ? options.extraction
+      : options.useModel
+        ? await extractFromSite(
+            {
+              name: business.name,
+              city: business.city?.name ?? null,
+              trade: business.category.serviceName,
+            },
+            site,
+            { model: options.model, effort: options.effort },
+          )
+        : null;
 
   // ------------------------------------------------------------ plain fields
   const data: Record<string, unknown> = {};

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { askForJson, type Effort } from "./anthropic";
+import { type Effort, type JsonAsk } from "./anthropic";
 import { auditTells, clean, openingFingerprint, wordCount, type Tell } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { slugify } from "./format";
@@ -41,7 +41,7 @@ export type Listing = z.infer<typeof listingSchema>;
 // The same shape as JSON Schema, sent to the model so the response arrives
 // already structured. Kept beside the Zod schema deliberately: one shapes the
 // request, the other is the gate on the way in.
-const listingJsonSchema = {
+export const listingJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
@@ -341,39 +341,23 @@ export function focusKeywordFor(name: string): string {
   return slugify(name).replace(/-/g, " ").trim() || name.toLowerCase();
 }
 
-/* ------------------------------------------------------------------- write */
-
-export type WriteResult = { listing: Listing; review: Review; attempts: number };
+/* ------------------------------------------------------------------ request */
 
 /**
- * Writes, judges, and sends the problems back for one more pass. Two attempts
- * is the ceiling: past that the brief is usually too thin rather than the copy
- * being wrong, and a batch should not spend forever on one listing.
+ * The request for one listing, without sending it. The import queues a wave of
+ * these on the batch tier, which is half the price for the same request, and
+ * sends the occasional second pass directly, because by then something is
+ * waiting on the answer.
  */
-export async function writeListing(
+export function writerAsk(
   brief: Brief,
-  path: string,
-  options: { model?: string; effort?: Effort; maxAttempts?: number } = {},
-): Promise<WriteResult> {
-  const maxAttempts = options.maxAttempts ?? 2;
-  let corrections: string[] | undefined;
-  let last: { listing: Listing; review: Review } | null = null;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await askForJson({
-      system: WRITER_SYSTEM,
-      prompt: buildPrompt({ ...brief, corrections }),
-      schema: listingSchema,
-      jsonSchema: listingJsonSchema as unknown as Record<string, unknown>,
-      model: options.model,
-      effort: options.effort,
-    });
-
-    const checked = reviewListing(raw, brief, path);
-    last = checked;
-    if (checked.review.ok) return { ...checked, attempts: attempt };
-    corrections = checked.review.problems;
-  }
-
-  return { ...last!, attempts: maxAttempts };
+  options: { model?: string; effort?: Effort } = {},
+): JsonAsk {
+  return {
+    system: WRITER_SYSTEM,
+    prompt: buildPrompt(brief),
+    jsonSchema: listingJsonSchema as unknown as Record<string, unknown>,
+    model: options.model,
+    effort: options.effort,
+  };
 }

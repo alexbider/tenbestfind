@@ -226,6 +226,15 @@ write, publish. Running it apart from the web process is deliberate, so a batch
 survives a deploy and a long Apify run never sits inside an HTTP request. One
 batch runs at a time because both Apify and Anthropic charge per call.
 
+Everything the model does goes through Anthropic's batch tier, which is half the
+price of the same request in exchange for waiting: the worker queues a wave of
+listings, or a wave of websites to read, and collects it on a later pass. A wave
+usually lands within the hour and can take up to twenty-four hours. The stage
+sits on WRITING while it waits, the wave id is on the batch row, and a container
+restart resumes from it rather than paying to write the same listings twice. A
+listing the reviewer sends back for a second pass is written directly at full
+price, because by then something is waiting on it.
+
 ## Running it locally
 
 Nothing here changes local development. `npm run dev` still uses the SQLite file

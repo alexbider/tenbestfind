@@ -1,15 +1,21 @@
 import { db } from "./db";
 import { ApifyPermanentError, readPlaces, runState, startPlacesRun, type PlaceRecord } from "./apify";
 import {
-  findEmail,
   isOwnWebsite,
   normalizeAddress,
   normalizeName,
   normalizePhone,
   websiteHost,
 } from "./enrich";
-import { focusKeywordFor, writeListing, type Brief } from "./listing-writer";
+import {
+  focusKeywordFor,
+  listingSchema,
+  reviewListing,
+  writerAsk,
+  type Brief,
+} from "./listing-writer";
 import { crawlSite, type SiteData } from "./site-crawl";
+import { plausibleEmail } from "./emails";
 import { discoverCity, fillServiceAreas } from "./geo";
 import { saveReviews } from "./reviews";
 import { recomputeCompleteness } from "./completeness";
@@ -18,14 +24,22 @@ import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
 import { stringify } from "./json";
 import { routes } from "./urls";
-import { PermanentError, preflight, type Effort } from "./anthropic";
+import {
+  askForJson,
+  jsonBatchReady,
+  PermanentError,
+  preflight,
+  readJsonBatch,
+  submitJsonBatch,
+  type BatchAsk,
+  type Effort,
+} from "./anthropic";
 
 // The batch state machine. Each call to `advance` does one unit of work and
 // returns, so the worker stays interruptible and a container restart resumes
 // from whatever the database already knows rather than starting over.
 
 const ENRICH_SLICE = 8;
-const WRITE_SLICE = 3;
 
 export type Advance = { changed: boolean; note: string };
 
@@ -89,7 +103,7 @@ export async function resumeStage(batchId: string): Promise<string> {
       ? "QUEUED"
       : has("FOUND")
         ? "ENRICHING"
-        : has("ENRICHED") || revived.count > 0
+        : has("ENRICHED") || has("WRITING") || revived.count > 0
           ? "WRITING"
           : has("WRITTEN")
             ? "PUBLISHING"
@@ -220,6 +234,9 @@ async function collectScrape(batchId: string): Promise<Advance> {
       else if (verdict.status === "SKIPPED") skipped += 1;
       else found += 1;
 
+      const gmbEmail =
+        place.email && plausibleEmail(place.email.toLowerCase()) ? place.email.toLowerCase() : null;
+
       // placeId is the unique key inside a batch; a result Apify returned twice
       // updates the row instead of colliding.
       const data = {
@@ -232,8 +249,11 @@ async function collectScrape(batchId: string): Promise<Advance> {
         reviewCount: place.reviewCount,
         website: place.website,
         phone: place.phone,
-        email: place.email,
-        emailSource: place.email ? "gmb" : null,
+        // Google publishes whatever the actor scraped off the profile, which
+        // is sometimes a theme author's address or an image filename. An
+        // address that fails the same test the crawler uses is no address.
+        email: gmbEmail,
+        emailSource: gmbEmail ? "gmb" : null,
         addressLine: place.address,
         raw: JSON.stringify(place),
         businessId: verdict.businessId,
@@ -446,14 +466,14 @@ async function enrichSlice(batchId: string): Promise<Advance> {
         return "skipped" as const;
       }
 
-      // The crawl already happened, and its addresses are scored against the
-      // company's own domain, so they are read first. findEmail is the fallback
-      // that fetches a couple of extra paths of its own.
+      // The crawl read the contact pages already, and scored what it found
+      // against the company's own domain, so there is nothing left to fetch:
+      // an address it did not see is not on the site in a readable form.
       const found = item.email
         ? { email: item.email, source: item.emailSource === "gmb" ? ("gmb" as const) : ("website" as const) }
         : site.emails[0]
           ? { email: site.emails[0], source: "website" as const }
-          : await findEmail({ gmbEmail: null, website: item.website });
+          : null;
 
       if (batch.requireEmail && !found) {
         await db.importItem.update({
@@ -499,32 +519,99 @@ async function enrichSlice(batchId: string): Promise<Advance> {
 
 /* ------------------------------------------------------------------- write */
 
-async function writeSlice(batchId: string): Promise<Advance> {
-  const batch = await db.importBatch.findUnique({
+/**
+ * How many listings go out in one wave. The batch tier answers a wave in one
+ * go, so a bigger wave is fewer round trips, but every listing that comes back
+ * needing a second pass is paid for at full price in this same tick: twenty
+ * keeps the worst tick to a few minutes.
+ */
+const WRITE_WAVE = 20;
+
+/**
+ * How many recent openings the writer is told to avoid. Every one of them is
+ * input tokens on every request in the wave, and a dozen is already more
+ * variety than a reader would notice.
+ */
+const OPENINGS_REMEMBERED = 12;
+
+function loadWriteBatch(batchId: string) {
+  return db.importBatch.findUnique({
     where: { id: batchId },
     include: { category: { include: { subservices: true } } },
   });
-  if (!batch) return { changed: false, note: "gone" };
+}
+type WriteBatch = NonNullable<Awaited<ReturnType<typeof loadWriteBatch>>>;
 
-  const items = await db.importItem.findMany({
-    where: { batchId, status: "ENRICHED" },
+function loadWriteItems(batchId: string, status: string, take: number) {
+  return db.importItem.findMany({
+    where: { batchId, status },
     orderBy: { gmbRank: "asc" },
-    take: WRITE_SLICE,
+    take,
     include: { city: { include: { region: { include: { country: true } } } } },
   });
+}
+type WriteItem = Awaited<ReturnType<typeof loadWriteItems>>[number];
 
-  if (items.length === 0) {
-    await db.importBatch.update({ where: { id: batchId }, data: { status: "PUBLISHING" } });
-    return { changed: true, note: "written" };
-  }
+/** The model and the effort, as settings, so a backfill can be run cheaper. */
+function writerOptions(): { model?: string; effort?: Effort } {
+  return {
+    model: process.env.IMPORT_MODEL || undefined,
+    effort: (process.env.IMPORT_EFFORT as Effort | undefined) ?? "medium",
+  };
+}
 
-  // Openings already used, so profiles in one batch do not rhyme with each other.
+/**
+ * Everything the writer is told about one company. Built twice for a batched
+ * listing, once to write the request and once to judge the answer, so it is
+ * derived from the stored record rather than held in memory across ticks.
+ */
+function buildBrief(item: WriteItem, batch: WriteBatch, avoidOpenings: string[]): Brief {
+  const city = item.city;
+  if (!city) throw new Error("The item has no city.");
+
+  const place = JSON.parse(item.raw ?? "{}") as PlaceRecord;
+  const site = item.site ? (JSON.parse(item.site) as SiteData) : null;
+
+  return {
+    name: item.name.trim(),
+    focusKeyword: focusKeywordFor(item.name.trim()),
+    category: batch.category.name,
+    serviceName: batch.category.serviceName,
+    city: city.name,
+    region: city.region.name,
+    country: city.region.country.name,
+    address: item.addressLine,
+    phone: item.phone,
+    website: item.website,
+    email: item.email,
+    rating: item.rating,
+    reviewCount: item.reviewCount,
+    ratingReadOn: fullDate(new Date()),
+    gmbRank: item.gmbRank,
+    gmbCategory: place.categoryName ?? null,
+    hours: place.openingHours ?? null,
+    site: site
+      ? {
+          summary: site.summary,
+          text: site.text,
+          yearFounded: site.yearFounded,
+          licenseNumbers: site.licenseNumbers,
+          social: Object.values(site.social),
+        }
+      : null,
+    avoidOpenings,
+  };
+}
+
+/** The openings already used in this batch, so its profiles do not rhyme. */
+async function usedOpenings(batchId: string): Promise<string[]> {
   const written = await db.importItem.findMany({
     where: { batchId, status: { in: ["WRITTEN", "IMPORTED"] } },
     select: { draft: true },
-    take: 40,
+    orderBy: { updatedAt: "desc" },
+    take: OPENINGS_REMEMBERED,
   });
-  const avoidOpenings = written
+  return written
     .map((row) => {
       try {
         return openingFingerprint(JSON.parse(row.draft ?? "{}").description ?? "");
@@ -533,85 +620,177 @@ async function writeSlice(batchId: string): Promise<Advance> {
       }
     })
     .filter(Boolean);
+}
 
-  let ok = 0;
-  let failed = 0;
+/**
+ * Writing is two ticks rather than one: a wave is queued on the batch tier,
+ * and a later tick collects it. Half the price for the same request, and the
+ * import was never waiting on the answer.
+ */
+async function writeSlice(batchId: string): Promise<Advance> {
+  const batch = await loadWriteBatch(batchId);
+  if (!batch) return { changed: false, note: "gone" };
+  return batch.writerBatchId ? collectWave(batch, batch.writerBatchId) : submitWave(batch);
+}
+
+async function submitWave(batch: WriteBatch): Promise<Advance> {
+  // An item left mid-flight by a batch that failed or was paused before its
+  // wave came back. The wave is gone, so the item goes back in the queue.
+  const stranded = await db.importItem.updateMany({
+    where: { batchId: batch.id, status: "WRITING" },
+    data: { status: "ENRICHED" },
+  });
+  if (stranded.count > 0) return { changed: true, note: `requeued ${stranded.count}` };
+
+  const items = await loadWriteItems(batch.id, "ENRICHED", WRITE_WAVE);
+  if (items.length === 0) {
+    await db.importBatch.update({ where: { id: batch.id }, data: { status: "PUBLISHING" } });
+    return { changed: true, note: "written" };
+  }
+
+  const avoidOpenings = await usedOpenings(batch.id);
+  const asks: BatchAsk[] = [];
+  let broken = 0;
 
   for (const item of items) {
     try {
-      const place = JSON.parse(item.raw ?? "{}") as PlaceRecord;
-      const city = item.city;
-      if (!city) throw new Error("The item has no city.");
+      asks.push({ customId: item.id, ...writerAsk(buildBrief(item, batch, avoidOpenings), writerOptions()) });
+    } catch (error) {
+      // A record we cannot even describe to the model is not going to write on
+      // the next tick either, so it is failed here rather than retried forever.
+      await db.importItem.update({
+        where: { id: item.id },
+        data: {
+          status: "FAILED",
+          reason: (error instanceof Error ? error.message : String(error)).slice(0, 400),
+        },
+      });
+      broken += 1;
+    }
+  }
 
-      const name = item.name.trim();
-      const focusKeyword = focusKeywordFor(name);
-      const slug = await uniqueSlug(name, city.slug);
+  if (asks.length === 0) {
+    await db.importBatch.update({
+      where: { id: batch.id },
+      data: { failed: { increment: broken } },
+    });
+    return { changed: true, note: `${broken} could not be written` };
+  }
+
+  let waveId: string;
+  try {
+    waveId = await submitJsonBatch(asks);
+  } catch (error) {
+    if (error instanceof PermanentError) return fail(batch.id, error);
+    throw error;
+  }
+
+  await db.$transaction([
+    db.importItem.updateMany({
+      where: { id: { in: asks.map((ask) => ask.customId) } },
+      data: { status: "WRITING", reason: null },
+    }),
+    db.importBatch.update({
+      where: { id: batch.id },
+      data: { writerBatchId: waveId, failed: { increment: broken } },
+    }),
+  ]);
+
+  return { changed: true, note: `queued ${asks.length} to write` };
+}
+
+async function collectWave(batch: WriteBatch, waveId: string): Promise<Advance> {
+  let ready: boolean;
+  try {
+    ready = await jsonBatchReady(waveId);
+  } catch (error) {
+    if (error instanceof PermanentError) return fail(batch.id, error);
+    throw error;
+  }
+  if (!ready) return { changed: false, note: "the writer batch is still running" };
+
+  const items = await loadWriteItems(batch.id, "WRITING", WRITE_WAVE * 2);
+  const outcomes = await readJsonBatch(waveId, listingSchema);
+  const byId = new Map(outcomes.map((outcome) => [outcome.customId, outcome]));
+
+  // Every request in the wave was sent the same list of openings to avoid, so
+  // two of them can still land on the same one. The list grows as results are
+  // accepted, which turns a collision inside the wave into a second pass.
+  const avoidOpenings = await usedOpenings(batch.id);
+  const claimed = new Set<string>();
+  let ok = 0;
+  let failed = 0;
+  let requeued = 0;
+
+  for (const item of items) {
+    const outcome = byId.get(item.id);
+
+    // No answer at all: the request errored, expired, or the wave never
+    // carried it. Back in the queue, and failed on the second time round.
+    if (!outcome || !outcome.ok) {
+      const reason = outcome?.ok === false ? outcome.reason : "The batch returned no answer for this listing.";
+      await db.importItem.update({
+        where: { id: item.id },
+        data: {
+          status: item.attempts >= 1 ? "FAILED" : "ENRICHED",
+          attempts: { increment: 1 },
+          reason: reason.slice(0, 400),
+        },
+      });
+      if (item.attempts >= 1) failed += 1;
+      else requeued += 1;
+      continue;
+    }
+
+    try {
+      const brief = buildBrief(item, batch, avoidOpenings);
+      const slug = await uniqueSlug(brief.name, item.city!.slug, claimed);
       const path = routes.business(slug);
 
-      const site = item.site ? (JSON.parse(item.site) as SiteData) : null;
+      let checked = reviewListing(outcome.value, brief, path);
+      let attempts = 1;
 
-      const brief: Brief = {
-        name,
-        focusKeyword,
-        category: batch.category.name,
-        serviceName: batch.category.serviceName,
-        city: city.name,
-        region: city.region.name,
-        country: city.region.country.name,
-        address: item.addressLine,
-        phone: item.phone,
-        website: item.website,
-        email: item.email,
-        rating: item.rating,
-        reviewCount: item.reviewCount,
-        ratingReadOn: fullDate(new Date()),
-        gmbRank: item.gmbRank,
-        gmbCategory: place.categoryName ?? null,
-        hours: place.openingHours ?? null,
-        site: site
-          ? {
-              summary: site.summary,
-              text: site.text,
-              yearFounded: site.yearFounded,
-              licenseNumbers: site.licenseNumbers,
-              social: Object.values(site.social),
-            }
-          : null,
-        avoidOpenings,
-      };
-
-      // The model and the effort are environment settings so a large backfill
-      // can be run cheaper without touching the code.
-      const result = await writeListing(brief, path, {
-        model: process.env.IMPORT_MODEL || undefined,
-        effort: (process.env.IMPORT_EFFORT as Effort | undefined) ?? "medium",
-      });
+      // The second pass goes out on its own, at full price: something is
+      // waiting on it now, and a whole second wave would cost the batch
+      // another hour of wall clock for the sake of a handful of listings.
+      if (!checked.review.ok) {
+        const retry = await askForJson({
+          ...writerAsk({ ...brief, corrections: checked.review.problems }, writerOptions()),
+          schema: listingSchema,
+        });
+        checked = reviewListing(retry, brief, path);
+        attempts = 2;
+      }
 
       await db.importItem.update({
         where: { id: item.id },
         data: {
           status: "WRITTEN",
-          draft: JSON.stringify({ ...result.listing, slug, focusKeyword, path }),
-          seoScore: result.review.score,
-          attempts: result.attempts,
-          reason: result.review.ok ? null : result.review.problems.slice(0, 3).join(" "),
+          draft: JSON.stringify({ ...checked.listing, slug, focusKeyword: brief.focusKeyword, path }),
+          seoScore: checked.review.score,
+          attempts,
+          reason: checked.review.ok ? null : checked.review.problems.slice(0, 3).join(" "),
         },
       });
-      avoidOpenings.push(openingFingerprint(result.listing.description));
+      claimed.add(slug);
+      avoidOpenings.push(openingFingerprint(checked.listing.description));
       ok += 1;
     } catch (error) {
-      // A permanent failure will hit every remaining item the same way, and
-      // each attempt is a paid call. Stop the batch, say why in one sentence,
-      // and leave the item ready to write so a resume costs nothing extra.
+      // A permanent failure will hit every remaining retry the same way, and
+      // each one is a paid call. Stop the batch, say why in one sentence, and
+      // leave the rest of the wave where a resume can pick it up.
       if (error instanceof PermanentError) {
         await db.importItem.update({
           where: { id: item.id },
           data: { status: "ENRICHED", reason: error.message },
         });
         await db.importBatch.update({
-          where: { id: batchId },
+          where: { id: batch.id },
           data: {
             status: "FAILED",
+            // The wave is deliberately left on the batch: its answers stay
+            // readable for weeks, so a resume finishes collecting them rather
+            // than paying to write the same listings twice.
             written: { increment: ok },
             error: `${error.message} ${error.hint}`.slice(0, 900),
           },
@@ -628,25 +807,30 @@ async function writeSlice(batchId: string): Promise<Advance> {
           reason: message.slice(0, 400),
         },
       });
-      failed += 1;
+      if (item.attempts >= 1) failed += 1;
+      else requeued += 1;
     }
   }
 
   await db.importBatch.update({
-    where: { id: batchId },
-    data: { written: { increment: ok }, failed: { increment: failed } },
+    where: { id: batch.id },
+    data: { writerBatchId: null, written: { increment: ok }, failed: { increment: failed } },
   });
 
-  return { changed: true, note: `wrote ${ok}${failed ? `, ${failed} failed` : ""}` };
+  const extra = [failed ? `${failed} failed` : "", requeued ? `${requeued} back in the queue` : ""].filter(Boolean);
+  return { changed: true, note: `wrote ${ok}${extra.length ? `, ${extra.join(", ")}` : ""}` };
 }
 
 /** Slugs are global, so a clash falls back to the city and then to a counter. */
-async function uniqueSlug(name: string, citySlug: string): Promise<string> {
+async function uniqueSlug(name: string, citySlug: string, claimed = new Set<string>()): Promise<string> {
   const base = slugify(name) || "business";
   const candidates = [base, `${base}-${citySlug}`];
   for (let index = 2; index <= 40; index += 1) candidates.push(`${base}-${citySlug}-${index}`);
 
   for (const candidate of candidates) {
+    // Two companies of the same name in one wave are both still drafts, so the
+    // database cannot tell them apart yet; the set can.
+    if (claimed.has(candidate)) continue;
     const taken = await db.business.findUnique({ where: { slug: candidate }, select: { id: true } });
     if (!taken) return candidate;
   }

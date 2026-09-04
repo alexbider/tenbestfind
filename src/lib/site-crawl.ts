@@ -17,6 +17,8 @@ const PATHS = [
   "",
   "/contact",
   "/contact-us",
+  "/get-a-quote",
+  "/quote",
   "/about",
   "/about-us",
   "/services",

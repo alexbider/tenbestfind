@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { askForJson, type Effort } from "./anthropic";
+import { askForJson, type Effort, type JsonAsk } from "./anthropic";
 import type { SiteData } from "./site-crawl";
 
 // Reading a crawled website for the facts a listing is missing.
@@ -317,11 +317,16 @@ RULES
  * text to be worth a call, which is the common case for a one-page brochure
  * site behind a script.
  */
-export async function extractFromSite(
+/**
+ * The request for one company, without sending it. Returns null when the site
+ * gave the crawl too little to be worth reading: an empty page costs the same
+ * as a full one.
+ */
+export function extractAsk(
   business: { name: string; city: string | null; trade: string },
   site: SiteData,
   options: { model?: string; effort?: Effort } = {},
-): Promise<Extraction | null> {
+): JsonAsk | null {
   const text = site.text.trim();
   if (text.length < 400) return null;
 
@@ -334,22 +339,29 @@ export async function extractFromSite(
     .filter(Boolean)
     .join("\n");
 
-  const prompt = [
-    "Read these pages from one company's website and report what they say.",
-    "",
-    known,
-    "",
-    "PAGES",
-    text.slice(0, 24_000),
-  ].join("\n");
-
-  return askForJson({
+  return {
     system: SYSTEM,
-    prompt,
-    schema: extractionSchema,
+    prompt: [
+      "Read these pages from one company's website and report what they say.",
+      "",
+      known,
+      "",
+      "PAGES",
+      text.slice(0, 24_000),
+    ].join("\n"),
     jsonSchema: extractionJsonSchema,
     model: options.model,
     effort: options.effort ?? "low",
     maxTokens: 8000,
-  });
+  };
+}
+
+export async function extractFromSite(
+  business: { name: string; city: string | null; trade: string },
+  site: SiteData,
+  options: { model?: string; effort?: Effort } = {},
+): Promise<Extraction | null> {
+  const ask = extractAsk(business, site, options);
+  if (!ask) return null;
+  return askForJson({ ...ask, schema: extractionSchema });
 }

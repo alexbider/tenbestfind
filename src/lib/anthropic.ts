@@ -93,45 +93,50 @@ export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
  * The system prompt goes in a cached block: it is identical for every listing in
  * a batch and is most of the input tokens.
  */
-export async function askForJson<T extends z.ZodType>({
-  system,
-  prompt,
-  schema,
-  jsonSchema,
-  model = DEFAULT_MODEL,
-  effort = "medium",
-  maxTokens = 16000,
-}: {
+export type JsonAsk = {
   system: string;
   prompt: string;
-  schema: T;
   jsonSchema: Record<string, unknown>;
   model?: string;
   effort?: Effort;
   maxTokens?: number;
-}): Promise<z.infer<T>> {
-  const client = await anthropic();
+};
 
-  let response;
-  try {
-    response = await client.messages.parse({
-      model,
-      max_tokens: maxTokens,
-      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: prompt }],
-      output_config: {
-        effort,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the helper
-        // infers its result type from a literal schema; ours is built at runtime.
-        format: jsonSchemaOutputFormat(jsonSchema as any),
-      },
-    });
-  } catch (error) {
-    // Rate limits and 5xx have already been retried by the SDK, so anything
-    // arriving here is either permanent or worth reporting as it stands.
-    throw classify(error);
-  }
+/**
+ * The request body, built once and used two ways: sent directly when something
+ * is waiting on the answer, or handed to the Batch API when nothing is.
+ *
+ * Keeping one builder is the point. The batch tier is half price for a request
+ * that is byte-identical to the direct one, and two builders would drift.
+ */
+export function jsonRequest({
+  system,
+  prompt,
+  jsonSchema,
+  model = DEFAULT_MODEL,
+  effort = "medium",
+  maxTokens = 16000,
+}: JsonAsk) {
+  return {
+    model,
+    max_tokens: maxTokens,
+    system: [{ type: "text" as const, text: system, cache_control: { type: "ephemeral" as const } }],
+    messages: [{ role: "user" as const, content: prompt }],
+    output_config: {
+      effort,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the helper
+      // infers its result type from a literal schema; ours is built at runtime.
+      format: jsonSchemaOutputFormat(jsonSchema as any),
+    },
+  };
+}
 
+/** The checks that turn a finished message into a value, or into a reason. */
+function readMessage<T extends z.ZodType>(
+  response: { stop_reason: string | null; stop_details?: { category?: string | null } | null },
+  parsed: unknown,
+  schema: T,
+): z.infer<T> {
   if (response.stop_reason === "refusal") {
     throw new ContentError(
       `The model declined this listing (${response.stop_details?.category ?? "no category"}).`,
@@ -140,16 +145,175 @@ export async function askForJson<T extends z.ZodType>({
   if (response.stop_reason === "max_tokens") {
     throw new ContentError("The model ran out of output tokens before finishing the listing.");
   }
-  if (!response.parsed_output) {
+  if (parsed === null || parsed === undefined) {
     throw new ContentError("The model returned content that did not match the expected shape.");
   }
 
-  const checked = schema.safeParse(response.parsed_output);
+  const checked = schema.safeParse(parsed);
   if (!checked.success) {
     throw new ContentError(`The listing failed validation: ${checked.error.issues[0]?.message ?? "unknown"}`);
   }
-
   return checked.data as z.infer<T>;
+}
+
+export async function askForJson<T extends z.ZodType>({
+  schema,
+  ...ask
+}: JsonAsk & { schema: T }): Promise<z.infer<T>> {
+  const client = await anthropic();
+
+  let response;
+  try {
+    response = await client.messages.parse(jsonRequest(ask));
+  } catch (error) {
+    // Rate limits and 5xx have already been retried by the SDK, so anything
+    // arriving here is either permanent or worth reporting as it stands.
+    throw classify(error);
+  }
+
+  return readMessage(response, response.parsed_output, schema);
+}
+
+// ---------------------------------------------------------------------------
+// The batch tier
+//
+// Half price for the same request, in exchange for waiting. Nothing in the
+// import is waiting: the pipeline already advances one slice per worker tick,
+// so a wave that comes back in twenty minutes costs the same wall clock as a
+// wave written one company at a time, and half the money.
+//
+// The three calls below are submit, poll and read, because the pipeline cannot
+// hold a promise open across ticks. State lives in the database between them.
+
+export type BatchAsk = JsonAsk & { customId: string };
+
+/** Queues a wave and returns the batch id to store. */
+export async function submitJsonBatch(asks: BatchAsk[]): Promise<string> {
+  const client = await anthropic();
+  try {
+    const batch = await client.messages.batches.create({
+      requests: asks.map(({ customId, ...ask }) => ({
+        custom_id: customId,
+        params: jsonRequest(ask),
+      })),
+    });
+    return batch.id;
+  } catch (error) {
+    throw classify(error);
+  }
+}
+
+/**
+ * A wave takes minutes at best and an hour at worst, while the worker comes
+ * back every ten seconds, so the answer is only actually asked for once a
+ * minute. In between the wave is reported as still running, which is what it
+ * is. The record is in memory on purpose: a restart asking once more costs
+ * nothing, and the worker is one long-lived process.
+ */
+const POLL_EVERY_MS = 60_000;
+const lastPolled = new Map<string, number>();
+
+/** True once every request in the wave has an answer of some kind. */
+export async function jsonBatchReady(batchId: string): Promise<boolean> {
+  const since = Date.now() - (lastPolled.get(batchId) ?? 0);
+  if (since < POLL_EVERY_MS) return false;
+  lastPolled.set(batchId, Date.now());
+
+  const client = await anthropic();
+  try {
+    const batch = await client.messages.batches.retrieve(batchId);
+    if (batch.processing_status !== "ended") return false;
+    lastPolled.delete(batchId);
+    return true;
+  } catch (error) {
+    throw classify(error);
+  }
+}
+
+export async function cancelJsonBatch(batchId: string): Promise<void> {
+  const client = await anthropic();
+  await client.messages.batches.cancel(batchId).catch(() => undefined);
+}
+
+/**
+ * The batch tier returns the raw message, so the JSON that messages.parse()
+ * would have handed back has to be read out here. A structured response is one
+ * text block holding the whole object, which is what the SDK's own parser
+ * reads: the first text block, parsed as JSON.
+ */
+export function readBatchMessage<T extends z.ZodType>(
+  message: {
+    stop_reason: string | null;
+    stop_details?: { category?: string | null } | null;
+    content: { type: string }[];
+  },
+  schema: T,
+): z.infer<T> {
+  const first = message.content.find((block) => block.type === "text");
+  const text = (first as { text?: string } | undefined)?.text ?? "";
+
+  let parsed: unknown = null;
+  try {
+    parsed = text.trim().length > 0 ? JSON.parse(text) : null;
+  } catch {
+    parsed = null;
+  }
+
+  return readMessage(message, parsed, schema);
+}
+
+/**
+ * One result. A batch answers per request, so a single company that the model
+ * refused or that came back malformed must not take the other forty-nine with
+ * it: the failure travels as a value rather than a throw.
+ */
+export type BatchOutcome<T> =
+  | { customId: string; ok: true; value: T }
+  | { customId: string; ok: false; reason: string };
+
+/**
+ * Reads a finished wave. Results arrive in whatever order the service finished
+ * them, so the caller matches on custom_id rather than position.
+ */
+export async function readJsonBatch<T extends z.ZodType>(
+  batchId: string,
+  schema: T,
+): Promise<BatchOutcome<z.infer<T>>[]> {
+  const client = await anthropic();
+  const out: BatchOutcome<z.infer<T>>[] = [];
+
+  let results;
+  try {
+    results = await client.messages.batches.results(batchId);
+  } catch (error) {
+    throw classify(error);
+  }
+
+  for await (const entry of results) {
+    const customId = entry.custom_id;
+    const result = entry.result;
+
+    if (result.type !== "succeeded") {
+      const detail =
+        result.type === "errored"
+          ? (result.error?.error?.message ?? result.error?.type ?? "unknown error")
+          : result.type;
+      out.push({ customId, ok: false, reason: `The batch request ${detail}.` });
+      continue;
+    }
+
+    try {
+      out.push({ customId, ok: true, value: readBatchMessage(result.message, schema) });
+    } catch (error) {
+      out.push({
+        customId,
+        ok: false,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return out;
 }
 
 /**

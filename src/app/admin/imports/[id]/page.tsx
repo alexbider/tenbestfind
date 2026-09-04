@@ -22,6 +22,7 @@ const RUNNING = ["QUEUED", "SCRAPING", "ENRICHING", "WRITING", "PUBLISHING"];
 const ITEM_TONE: Record<string, "positive" | "warning" | "neutral" | "danger"> = {
   IMPORTED: "positive",
   WRITTEN: "neutral",
+  WRITING: "neutral",
   DUPLICATE: "warning",
   SKIPPED: "warning",
   FAILED: "danger",
@@ -30,8 +31,8 @@ const ITEM_TONE: Record<string, "positive" | "warning" | "neutral" | "danger"> =
 const STAGE_NOTE: Record<string, string> = {
   QUEUED: "Waiting for the worker to pick it up.",
   SCRAPING: "Apify is working through the city searches. This is the slow part.",
-  ENRICHING: "Looking for a contact address on each company's own site.",
-  WRITING: "Claude is writing profiles, a few at a time.",
+  ENRICHING: "Reading each company's own site for a contact address.",
+  WRITING: "Claude is writing profiles a wave at a time, at the batch price. A wave usually lands within the hour.",
   PUBLISHING: "Creating the businesses, their schema and the ranking.",
   PAUSED: "Stopped. Resuming picks up where it left off.",
   FAILED: "Stopped on an error. Fix the cause, then resume.",
