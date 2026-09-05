@@ -547,9 +547,6 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
               </div>
             </div>
 
-            <Link data-navlink="" data-active={on("trust")} href={routes.howWeRank()} style={NAVLINK}>
-              How We Rank
-            </Link>
           </nav>
 
           {/* -------------------------------------------------- mobile drawer */}
@@ -733,11 +730,6 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
                 <li>
                   <Link href={routes.guidesIndex()} style={MOBILE_ROW}>
                     Guides
-                  </Link>
-                </li>
-                <li>
-                  <Link href={routes.howWeRank()} style={MOBILE_ROW}>
-                    How We Rank
                   </Link>
                 </li>
                 <li>

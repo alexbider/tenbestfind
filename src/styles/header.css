@@ -45,8 +45,16 @@
 [data-mega] > [data-panel] { opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.995); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out), visibility 220ms; }
 [data-mega]:hover > [data-panel], [data-mega]:focus-within > [data-panel] { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
 [data-navlink] { position: relative; transition: background 160ms var(--ease-out), color 160ms var(--ease-out); }
+/* The three states of a tab, all of them light. The page a reader is on used
+   to invert to solid navy with white text, which read as a button rather than
+   a position and sat oddly against everything around it. It is the same wash
+   as the hover now, one step deeper and in the darker blue, so the current tab
+   is still the one your eye lands on, helped by the heavier weight. The
+   colour and the weight are important because both are set on the element
+   itself, where a stylesheet cannot reach them otherwise. */
 [data-navlink]:hover, [data-mega]:hover > [data-navlink], [data-mega]:focus-within > [data-navlink] { background: var(--blue-50); color: var(--color-primary-hover) !important; }
-[data-navlink][data-active="1"] { background: var(--ink) !important; color: #fff !important; }
+[data-navlink]:active, [data-mega] > [data-navlink]:active { background: var(--blue-100); color: var(--color-primary-active) !important; }
+[data-navlink][data-active="1"] { background: var(--blue-100); color: var(--color-primary-active) !important; font-weight: 700 !important; }
 [data-navlink] svg { transition: transform 200ms var(--ease-out); }
 [data-mega]:hover > [data-navlink] svg { transform: rotate(180deg); }
 [data-mitem] { transition: background 160ms var(--ease-out), color 160ms var(--ease-out), transform 160ms var(--ease-out); }
