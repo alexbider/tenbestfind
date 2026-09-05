@@ -150,7 +150,7 @@
    general lives here; what is genuinely one page's problem lives in that
    page's own file and outranks this by carrying a class. */
 @media (max-width: 760px) {
-    body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+    body { -webkit-tap-highlight-color: transparent; }
     main [style*="max-width: 1240px"], main [style*="max-width:1240px"], main [style*="max-width: var(--shell)"], main [style*="max-width:var(--shell)"], main [style*="max-width: 880px"], main [style*="max-width:880px"], main [style*="max-width: 900px"], main [style*="max-width:900px"] { padding-left: var(--gutter) !important; padding-right: var(--gutter) !important; }
     main [style*="padding: 104px"], main [style*="padding:104px"], main [style*="padding: 112px"], main [style*="padding:112px"], main [style*="padding: 88px"], main [style*="padding:88px"], main [style*="padding: 96px"], main [style*="padding:96px"], main [style*="padding: 80px"], main [style*="padding:80px"], main [style*="padding: 72px"], main [style*="padding:72px"] { padding-top: 56px !important; padding-bottom: 56px !important; }
     main [style*="padding: 84px"], main [style*="padding:84px"], main [style*="padding: 76px"], main [style*="padding:76px"], main [style*="padding: 64px"], main [style*="padding:64px"], main [style*="padding: 60px"], main [style*="padding:60px"] { padding-top: 44px !important; padding-bottom: 40px !important; }
@@ -226,6 +226,14 @@
      making a scroll container, which would break the sticky bars. */
   .site-page > section,
   .site-page section {
+    /* Positioned as well as clipped. The outlined "10" is
+       `position: absolute` with nothing positioned above it, so its
+       containing block was the page itself and the section's clip could
+       not reach it: the crop was there, the thing being cropped was not
+       inside it, and six pages scrolled 38px sideways. With the section
+       positioned the decoration hangs off the section it belongs to and
+       the crop applies. */
+    position: relative;
     overflow-x: clip;
   }
 
@@ -800,5 +808,260 @@
     font-size: 14.5px !important;
     line-height: 1.3 !important;
     margin-bottom: 0 !important;
+  }
+}
+
+/* --- what a thumb can hit ---
+
+   Measured across the templates at 390px: the section links ("All 38
+   services", "Every ranking") were 17px tall and the rows in a list of
+   cities or rankings were 29px. A finger is about 44px. The links inside
+   a sentence are left alone: making those 44px tall would space out the
+   paragraph they belong to, and a reader tapping a word in a sentence is
+   aiming at the word.
+
+   The section links are the ones sitting on their own in a heading row,
+   which is what `div >` picks out; the rows are the ones that are the
+   whole of their list item. */
+@media (max-width: 760px) {
+  .site-page div > a.arrow-link {
+    min-height: 44px;
+  }
+
+  .site-page li > a:only-child {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* A paragraph whose whole content is one link is a call to action that
+     happens to be written as a paragraph: "Read the full methodology",
+     "Advertising disclosure". Same thumb, same size. */
+  .site-page p > a:only-child {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* A row already laid out as a grid keeps its own display. */
+  .site-page li > a[data-index]:only-child,
+  .site-page [data-cat-grid] li > a:only-child,
+  .site-page [data-band-grid] li > a:only-child {
+    display: flex;
+  }
+
+  .site-page [data-cat-grid] li > a:only-child,
+  .site-page [data-band-grid] li > a:only-child {
+    align-items: center;
+  }
+}
+
+/* --- what a thumb can hit, part two ---
+
+   A second measuring pass found three more shapes the rules above miss,
+   and one of them needed a different answer.
+
+   A card's title link and a card's closing link are not the same thing.
+   The closing link ("About drain cleaning", "View the top 10") sits at
+   the bottom of the card with nothing under it, so it can simply become
+   44px tall and the cards in a row end up agreeing on where their
+   bottoms are. A title link has a paragraph directly beneath it, and
+   growing it would push a visible gap between a heading and its own
+   text. So the title gets its hit area through padding cancelled by an
+   equal negative margin: 20px taller to a finger, unchanged to the eye.
+
+   Breadcrumbs are the third. Two templates draw them from a component
+   with microdata, where the crumb link shares its list item with a meta
+   tag and a chevron, so the "whole of the list item" rule never applied
+   to them and they stayed at 16px. */
+@media (max-width: 760px) {
+  .crumbs li > a,
+  .site-page nav[aria-label="Breadcrumb"] li > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-page li > :not(a) + a:last-child {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-page div > :is(h2, h3) + a:last-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-page :is(h2, h3, h4) > a:only-child {
+    display: block;
+    padding-block: 10px;
+    margin-block: -10px;
+  }
+}
+
+/* --- the chevron on a row that wrapped ---
+
+   A row is a badge, a title, a line of detail and a chevron on the
+   right. The title asks for 240px so the row stays readable, which on a
+   390px screen means the detail and the chevron drop to a second line,
+   and the chevron came to rest wherever the detail happened to end:
+   floating in the middle of the row with nothing to its right. Pushed
+   away from the text it lands on the right edge of whichever line it is
+   on, which is where a chevron is supposed to be. */
+@media (max-width: 760px) {
+  .site-page [data-row] > svg:last-child {
+    margin-left: auto;
+  }
+}
+
+/* --- the licensing table on a phone ---
+
+   Three columns of prose in a 560px table inside a sideways scroller:
+   on a 390px screen you could read the trade or you could read the
+   sentence about it, never both, and the sentence ran off the edge
+   mid-word. Stacked, each row is a small card in the list: the trade,
+   the licensed / not-licensed badge next to it, and the note under
+   them both. The roles are written into the markup so the stack is
+   still a table to anything reading it aloud. */
+@media (max-width: 760px) {
+  .site-page [data-ltable-wrap] {
+    overflow-x: clip;
+  }
+
+  .site-page [data-ltable] {
+    display: block;
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .site-page [data-ltable] caption,
+  .site-page [data-ltable] tbody {
+    display: block;
+  }
+
+  .site-page [data-ltable] tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .site-page [data-ltable] tr:last-child {
+    border-bottom: 0;
+  }
+
+  .site-page [data-ltable] :is(th, td) {
+    display: block;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .site-page [data-ltable] [data-lcell="trade"] {
+    grid-column: 1;
+  }
+
+  .site-page [data-ltable] [data-lcell="status"] {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .site-page [data-ltable] [data-lcell="note"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* --- a stacked search field needs a line between its halves ---
+
+   The hero search is a service field and a place field with a 1px rule
+   standing between them. Stacked into a column that rule keeps its
+   1px width and loses its height, so the two fields ran together as
+   one tall white box with two icons in it. Laid across instead, it
+   separates them the way it does on a wide screen. */
+@media (max-width: 760px) {
+  .site-page form [style*="width: 1px"],
+  .site-page form [style*="width:1px"] {
+    width: 100% !important;
+    height: 1px;
+    margin: 2px 0 !important;
+  }
+}
+
+/* --- the fact list under "About this page" ---
+
+   Six facts, each an icon chip beside a label and a value. Two-up they
+   left the value 95px to work with, which turned "September 2, 2026"
+   into three lines and "Home services desk" into two, in a card whose
+   whole job is to be scanned. One column and every value is one line.
+   The other two-up lists on these pages are short labels with no icon
+   and stay as they are; this shape is marked rather than guessed at. */
+@media (max-width: 760px) {
+  /* Written to out-weigh the two-up rule above, which is more specific
+     than the attribute on its own and would otherwise keep winning. */
+  .site-page section dl[data-facts][style],
+  .site-page dl[data-facts][style] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+}
+
+/* --- a rail is for cards, not for a list of links ---
+
+   The rule that turns a wide auto-fit grid into a horizontal rail was
+   written for cards: a picture, a heading and a line of text, three of
+   which will never fit across a phone. It was also catching lists that
+   are only links. Fourteen Miami trades became fourteen swipes with one
+   word visible at a time, and "Explore nearby cities" became a rail of
+   two whose second city sat off the edge of the screen.
+
+   What separates the two is what is inside an item, which `:has` can
+   ask: a card carries a heading, a paragraph or a picture, and a link
+   row carries a word. So the rows come back out of the rail and go
+   two-up, where fourteen trades are seven short lines you can read at
+   once. The rails a template asked for by name are left alone. */
+@media (max-width: 760px) {
+  .site-page
+    section
+    :is(ul, ol, dl, div)[style*="repeat(auto-fit"]:not([data-rail]):not([data-rank-rail]):not(
+      [data-jobs]
+    ):not([data-trend-rail]):not([data-cat-grid]):not([data-band-grid]):not([data-facts]):not(
+      :has(> * :is(h2, h3, h4, p, img, [data-thumb]))
+    ) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px 10px !important;
+    overflow-x: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  .site-page
+    section
+    :is(ul, ol, dl, div)[style*="repeat(auto-fit"]:not([data-rail]):not([data-rank-rail]):not(
+      [data-jobs]
+    ):not([data-trend-rail]):not([data-cat-grid]):not([data-band-grid]):not([data-facts]):not(
+      :has(> * :is(h2, h3, h4, p, img, [data-thumb]))
+    )
+    > * {
+    width: auto !important;
+    flex: initial;
+    scroll-snap-align: none;
+  }
+}
+
+/* --- the "i" that opens an explanation ---
+
+   Twenty-two pixels tall and, on the methodology page, seven of them in
+   a column. It is the one control on these pages that exists only to be
+   pressed, so it gets the full 44 rather than the height of its own
+   label. */
+@media (max-width: 760px) {
+  .site-page [data-info] {
+    min-height: 44px;
   }
 }

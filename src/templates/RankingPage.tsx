@@ -1331,7 +1331,7 @@ export async function RankingPage({
               <h2 id="about-h2" style={{ fontSize: "22px", fontWeight: "700", marginBottom: "18px" }}>
                 About this ranking
               </h2>
-              <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px 32px", margin: "0" }}>
+              <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px 32px", margin: "0" }}>
                 <div>
                   <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Originally published</dt>
                   <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>

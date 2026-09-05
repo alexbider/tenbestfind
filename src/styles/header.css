@@ -117,15 +117,9 @@
   [data-util-copy] { display: none !important; }
   [data-util] > div { justify-content: flex-end !important; }
 }
-[data-tabbar] { display: none; }
-[data-tab] { transition: color 160ms var(--ease-out), background 160ms var(--ease-out); }
-[data-tab]:active { background: var(--blue-50); }
-[data-tab][data-on="1"] { color: var(--color-primary) !important; }
-[data-tab][data-on="1"] [data-tab-ico] { background: var(--blue-50); }
 @media (max-width: 760px) {
   [data-util] { display: none !important; }
   [data-wordmark] { display: none !important; }
-  [data-tabbar] { display: flex !important; }
   [data-mobile-sheet] { left: 0 !important; right: 0 !important; top: var(--hdr-h) !important; bottom: 0 !important; max-height: none !important; border-radius: 0 !important; padding-bottom: 96px !important; }
   :root { --hdr-h: 64px; }
 }

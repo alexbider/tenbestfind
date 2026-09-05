@@ -721,6 +721,7 @@ export async function RegionHub({
               </div>
             </div>
             <div
+              data-ltable-wrap=""
               style={{
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -729,7 +730,14 @@ export async function RegionHub({
                 overflowX: "auto",
               }}
             >
-              <table style={{ minWidth: "560px" }}>
+              {/* Three columns of prose do not fit a phone, and a table you
+                  have to drag sideways to finish a sentence is not a table
+                  anyone reads. The phone layer stacks each row into a block:
+                  trade, status, then the note. Changing a table's `display`
+                  drops the roles the tags carried, so they are written out
+                  here and the stacked version is still a table to a screen
+                  reader. */}
+              <table role="table" data-ltable="" style={{ minWidth: "560px" }}>
                 <caption
                   style={{
                     textAlign: "left",
@@ -744,16 +752,25 @@ export async function RegionHub({
                 >
                   Licensing at a glance
                 </caption>
-                <tbody>
+                <tbody role="rowgroup">
                   {licensing.map((row) => (
-                    <tr key={row.trade}>
-                      <th scope="row" style={{ ...DARK_CELL, fontSize: "15px", fontWeight: "700", color: "#fff" }}>
+                    <tr role="row" key={row.trade}>
+                      <th
+                        role="rowheader"
+                        scope="row"
+                        data-lcell="trade"
+                        style={{ ...DARK_CELL, fontSize: "15px", fontWeight: "700", color: "#fff" }}
+                      >
                         {row.trade}
                       </th>
-                      <td style={{ ...DARK_CELL, fontSize: "14px", lineHeight: "1.55", color: "rgba(232,237,245,0.8)" }}>
+                      <td
+                        role="cell"
+                        data-lcell="note"
+                        style={{ ...DARK_CELL, fontSize: "14px", lineHeight: "1.55", color: "rgba(232,237,245,0.8)" }}
+                      >
                         {row.note || (row.authority ? `Licensed by ${row.authority}.` : "")}
                       </td>
-                      <td style={DARK_CELL}>
+                      <td role="cell" data-lcell="status" style={DARK_CELL}>
                         <span
                           style={{
                             display: "inline-block",
@@ -1092,7 +1109,7 @@ export async function RegionHub({
               </h2>
               {sourcesModal}
             </div>
-            <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
+            <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
               {[
                 {
                   icon: "shield" as IconName,

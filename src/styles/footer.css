@@ -5,6 +5,11 @@
    ================================================================== */
 
 [data-ftr] *, [data-ftr] *::before, [data-ftr] *::after { box-sizing: border-box; }
+/* The drawn "10" is 560px wide and hangs off the bottom right corner.
+   Nothing above it was positioned, so on a phone it reached past the
+   right edge of the document rather than past the edge of the footer,
+   and the whole page could be dragged sideways. */
+[data-ftr] { position: relative; overflow-x: clip; }
 [data-ftr] a { text-decoration: none; color: rgba(232,237,245,0.72); transition: color 160ms var(--ease-out), transform 160ms var(--ease-out); }
 [data-ftr] a:hover { color: #fff; }
 [data-ftr] ul { margin: 0; padding: 0; list-style: none; }
@@ -30,4 +35,22 @@
 }
 @media (prefers-reduced-motion: reduce) { [data-ftr] * { animation: none !important; transition: none !important; } }
 @media (max-width: 1000px) { [data-fgrid] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } [data-fbrand] { grid-column: 1 / -1 !important; max-width: 560px !important; } [data-ftop] { grid-template-columns: 1fr !important; } }
-@media (max-width: 560px) { [data-fgrid] { grid-template-columns: 1fr !important; } [data-fbottom] { flex-direction: column !important; align-items: flex-start !important; } [data-fsearch] { flex-direction: column !important; } [data-fsearch] > * { width: 100% !important; } }
+@media (max-width: 560px) { [data-fbottom] { flex-direction: column !important; align-items: flex-start !important; } [data-fsearch] { flex-direction: column !important; } [data-fsearch] > * { width: 100% !important; flex: none !important; }
+  /* The two fields carry `flex: 1.1` and `flex: 1` so they share the row.
+     Stacked into a column that becomes a share of the height, and with a
+     `flex-basis` of zero and nothing to grow into they collapsed to the
+     height of their own text: two 17px slots in a white band that read as
+     an empty space at the bottom of every page. */ }
+
+/* The four link columns stay two-up on a phone rather than stacking into
+   one. Stacked they made a 1,900px footer under a 9,700px page, which is
+   a lot of scrolling to reach a copyright line; side by side the whole
+   footer is about half that and the longest label, "Advertising
+   Disclosure", still fits a 170px column. */
+@media (max-width: 560px) {
+  [data-fgrid] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    column-gap: 20px !important;
+  }
+  [data-fbrand] { grid-column: 1 / -1 !important; }
+}

@@ -1265,7 +1265,7 @@ export default async function HowWeRankPage() {
                 Getting something wrong is not the problem. Leaving it wrong is.
               </InfoModal>
             </div>
-            <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
+            <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
               {meta.map((item) => (
                 <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                   <span

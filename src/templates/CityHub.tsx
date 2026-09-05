@@ -1026,7 +1026,7 @@ export async function CityHub({
                 our editors&apos; own review. Where a company is the only source for a claim, the page says so.
               </InfoModal>
             </div>
-            <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px 32px", margin: "0" }}>
+            <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px 32px", margin: "0" }}>
               <div>
                 <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Rankings published</dt>
                 <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>{rankings.length}</dd>

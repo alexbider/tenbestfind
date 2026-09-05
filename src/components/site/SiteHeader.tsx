@@ -226,13 +226,6 @@ function Glyph({ d, size = 16, width = 1.8 }: { d: string; size?: number; width?
 const path = (name: IconName | undefined) => ICON_PATHS[name ?? "house"] ?? ICON_PATHS.house;
 
 /** The five destinations the phone tab bar offers. */
-const TABS: { id: NavKey; name: string; href: string; icon: IconName }[] = [
-  { id: "none", name: "Home", href: "/", icon: "house" },
-  { id: "services", name: "Services", href: routes.servicesIndex(), icon: "grid" },
-  { id: "locations", name: "Locations", href: routes.locationsIndex(), icon: "pin" },
-  { id: "rankings", name: "Rankings", href: routes.rankingsIndex(), icon: "trophy" },
-  { id: "guides", name: "Guides", href: routes.guidesIndex(), icon: "book" },
-];
 
 /* ---------------------------------------------------------------- header */
 
@@ -832,65 +825,6 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
         </div>
       </div>
 
-      {/* ---------------------------------------------------- phone tab bar */}
-      <nav
-        data-tabbar=""
-        aria-label="Quick navigation"
-        style={{
-          position: "fixed",
-          left: "0",
-          right: "0",
-          bottom: "0",
-          zIndex: "220",
-          alignItems: "stretch",
-          justifyContent: "space-around",
-          height: "calc(64px + env(safe-area-inset-bottom))",
-          padding: "6px 6px calc(6px + env(safe-area-inset-bottom))",
-          background: "rgba(255,255,255,0.94)",
-          backdropFilter: "blur(18px)",
-          borderTop: "1px solid var(--border-subtle)",
-          boxShadow: "0 -10px 30px -20px rgba(16,31,61,0.35)",
-        }}
-      >
-        {TABS.map((tab) => (
-          <Link
-            key={tab.id}
-            data-tab=""
-            data-on={on(tab.id)}
-            href={tab.href}
-            aria-current={active === tab.id ? "page" : undefined}
-            style={{
-              flex: "1",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "3px",
-              minHeight: "52px",
-              borderRadius: "12px",
-              fontSize: "11px",
-              fontWeight: "600",
-              color: "var(--text-secondary)",
-            }}
-          >
-            <span
-              data-tab-ico=""
-              aria-hidden="true"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "28px",
-                borderRadius: "999px",
-              }}
-            >
-              <Glyph d={ICON_PATHS[tab.icon]} size={20} />
-            </span>
-            {tab.name}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }
