@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { loadSeoSettings } from "@/lib/seo-settings";
 import { rankingUrl, routes } from "@/lib/urls";
+import { rankingCardTitle } from "@/lib/seo-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -458,7 +459,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 </span>
                 <h3 style={{ fontSize: "24px", lineHeight: "1.25", fontWeight: "700", marginBottom: "10px" }}>
                   <Link href={rankingUrl(leadRanking)} style={{ color: "var(--blue-900)" }}>
-                    {leadRanking.title}
+                    {rankingCardTitle(leadRanking)}
                   </Link>
                 </h3>
                 {leadRanking.summary ? (

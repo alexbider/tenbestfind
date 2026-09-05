@@ -17,7 +17,7 @@ import {
   getTrendingSubservices,
 } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { homeCopy } from "@/lib/seo-copy";
+import { homeCopy, rankingCardTitle } from "@/lib/seo-copy";
 
 const copy = homeCopy();
 
@@ -537,7 +537,7 @@ export default async function HomePage() {
                   <SuggestColumn label="Just re-checked">
                     {rankings.slice(0, 2).map((ranking) => (
                       <SuggestLink key={ranking.id} href={rankingUrl(ranking)}>
-                        {ranking.title}
+                        {rankingCardTitle(ranking)}
                       </SuggestLink>
                     ))}
                   </SuggestColumn>
@@ -653,7 +653,7 @@ export default async function HomePage() {
                       }}
                     >
                       <Link href={heroPath} style={{ color: "#fff" }}>
-                        {hero.title}
+                        {rankingCardTitle(hero)}
                       </Link>
                     </h2>
                     <ol style={{ display: "grid", gap: "0" }}>
@@ -1100,7 +1100,7 @@ export default async function HomePage() {
                       }}
                     >
                       <Link href={rankingUrl(leadRanking)} style={{ color: "var(--ink)" }}>
-                        {leadRanking.title}
+                        {rankingCardTitle(leadRanking)}
                       </Link>
                     </h3>
                     <p
@@ -1234,7 +1234,7 @@ export default async function HomePage() {
                           }}
                         >
                           <Link href={rankingUrl(ranking)} style={{ color: "var(--ink)" }}>
-                            {ranking.title}
+                            {rankingCardTitle(ranking)}
                           </Link>
                         </h3>
                         <span
@@ -1662,7 +1662,7 @@ export default async function HomePage() {
                           marginBottom: "4px",
                         }}
                       >
-                        {ranking.title}
+                        {rankingCardTitle(ranking)}
                       </span>
                       <span style={{ display: "block", fontSize: "15px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
                         {ranking.summary}

@@ -10,11 +10,38 @@
   --hdr-h: 76px;
   --util-h: 38px;
 }
+/* The header paints above the page, which it was not doing.
+ 
+   Nothing in the header was positioned, so its mega panels and its mobile
+   drawer sat in the same painting layer as the page, and every section below
+   with position:relative on it, which is most of them, came later in the
+   document and covered them. The menus opened; the page was simply on top of
+   them, so nothing in them could be clicked. */
+[data-hdr] { position: relative; z-index: 300; }
 [data-hdr] *, [data-hdr] *::before, [data-hdr] *::after { box-sizing: border-box; }
 [data-hdr] a { text-decoration: none; }
 [data-hdr] ul { margin: 0; padding: 0; list-style: none; }
 [data-hdr] p { margin: 0; }
 [data-hdr] a:focus-visible, [data-hdr] button:focus-visible, [data-hdr] summary:focus-visible, [data-hdr] input:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 10px; }
+/* The panel hangs below the link it belongs to, and in the space between them
+   the pointer is over nothing at all: the menu closed the moment anyone moved
+   towards it, so the sub-menus could be seen but not reached.
+ 
+   Two things close it. The trigger grows its hit area straight down into the
+   gap, with a negative margin cancelling the padding so nothing moves. And
+   while the menu is open, an invisible strip spans the full width of the
+   panel, because nobody moves straight down: they move diagonally towards the
+   item they want, which leaves the trigger long before it reaches the panel. */
+[data-mega] { padding-bottom: 22px; margin-bottom: -22px; }
+[data-mega]:hover::after, [data-mega]:focus-within::after {
+  content: "";
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  top: calc(var(--hdr-h) - 22px);
+  height: 18px;
+  z-index: 49;
+}
 [data-mega] > [data-panel] { opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.995); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out), visibility 220ms; }
 [data-mega]:hover > [data-panel], [data-mega]:focus-within > [data-panel] { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
 [data-navlink] { position: relative; transition: background 160ms var(--ease-out), color 160ms var(--ease-out); }
@@ -44,6 +71,22 @@
 [data-hsearch]:focus-within { width: 300px !important; border-color: var(--blue-300); box-shadow: var(--shadow-sm); }
 [data-cta-primary] { transition: transform 160ms var(--ease-out), background 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
 [data-cta-primary]:hover { background: var(--color-primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-primary); }
+/* The frosted bar behind the header used to carry backdrop-filter itself,
+   which makes it the containing block for every fixed child, including the
+   mobile drawer. The drawer was being squashed into a 112px box inside the
+   header rather than covering the screen. The blur moves to a layer behind the
+   bar, which looks the same and contains nothing. */
+[data-hdr-bar] { position: relative; isolation: isolate; }
+[data-hdr-bar]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
 [data-mobile-nav] { display: none; }
 [data-mobile-nav] > summary { list-style: none; cursor: pointer; }
 [data-mobile-nav] > summary::-webkit-details-marker { display: none; }

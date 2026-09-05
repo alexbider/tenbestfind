@@ -14,7 +14,7 @@ import {
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
-import { countryCopy } from "@/lib/seo-copy";
+import { countryCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, countryCrumbs } from "@/lib/breadcrumbs";
 import { compactNumber, monthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
@@ -501,7 +501,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 </p>
                 <h2 id="hero-preview-h2" style={{ fontSize: "21px", lineHeight: "1.25", fontWeight: "700", marginBottom: "18px" }}>
                   <Link href={rankingUrl(heroCard)} style={{ color: "var(--ink)" }}>
-                    {heroCard.title}
+                    {rankingCardTitle(heroCard)}
                   </Link>
                 </h2>
                 <ul style={{ display: "grid", gap: "11px" }}>
@@ -882,7 +882,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 <div style={{ padding: "28px" }}>
                   <h3 style={{ fontSize: "27px", lineHeight: "1.2", fontWeight: "700", marginBottom: "12px", textWrap: "balance" }}>
                     <Link href={rankingUrl(leadRanking)} style={{ color: "var(--ink)" }}>
-                      {leadRanking.title}
+                      {rankingCardTitle(leadRanking)}
                     </Link>
                   </h3>
                   {leadRanking.summary ? (
@@ -967,7 +967,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                       </span>
                       <h3 style={{ fontSize: "17px", lineHeight: "1.3", fontWeight: "700" }}>
                         <Link href={rankingUrl(entry)} style={{ color: "var(--ink)" }}>
-                          {entry.title}
+                          {rankingCardTitle(entry)}
                         </Link>
                       </h3>
                       {entry.summary ? (
@@ -1099,7 +1099,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                     </span>
                     <span style={{ display: "block", minWidth: "0" }}>
                       <span style={{ display: "block", fontSize: "18px", lineHeight: "1.3", fontWeight: "700", color: "var(--ink)", marginBottom: "3px" }}>
-                        {entry.title}
+                        {rankingCardTitle(entry)}
                       </span>
                       {entry.summary ? (
                         <span style={{ display: "block", fontSize: "15px", lineHeight: "1.5", color: "var(--text-secondary)" }}>

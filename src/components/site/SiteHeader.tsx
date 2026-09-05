@@ -299,13 +299,7 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
       </div>
 
       {/* --------------------------------------------------------- main bar */}
-      <div
-        style={{
-          background: "rgba(255,255,255,0.88)",
-          backdropFilter: "blur(18px)",
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
-      >
+      <div data-hdr-bar="" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div
           style={{
             position: "relative",

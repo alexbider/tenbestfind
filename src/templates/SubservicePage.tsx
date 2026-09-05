@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { subserviceCopy } from "@/lib/seo-copy";
+import { subserviceCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, subserviceCrumbs } from "@/lib/breadcrumbs";
 
 export async function SubservicePage({
@@ -181,7 +181,7 @@ export async function SubservicePage({
                     {ranking.city?.name}, {ranking.city?.region.code.toUpperCase()}
                   </span>
                   <span style={{ display: "block", minWidth: 0 }}>
-                    <span className="index-row__title">{ranking.title}</span>
+                    <span className="index-row__title">{rankingCardTitle(ranking)}</span>
                     <span className="index-row__summary">{ranking.summary}</span>
                   </span>
                   <span className="index-row__meta">Updated {shortMonthYear(ranking.lastReviewedAt)}</span>

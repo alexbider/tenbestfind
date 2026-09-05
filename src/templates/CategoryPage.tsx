@@ -29,7 +29,7 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { serviceCopy } from "@/lib/seo-copy";
+import { serviceCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, serviceCrumbs } from "@/lib/breadcrumbs";
 
 /** The checks that separate a company worth calling from one worth avoiding. */
@@ -406,7 +406,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                 >
                   <h3 style={{ fontSize: "18px", lineHeight: "1.3", fontWeight: "700", marginBottom: "8px" }}>
                     <Link href={rankingUrl(entry)} style={{ color: "var(--blue-900)" }}>
-                      {entry.title}
+                      {rankingCardTitle(entry)}
                     </Link>
                   </h3>
                   {entry.summary ? (
