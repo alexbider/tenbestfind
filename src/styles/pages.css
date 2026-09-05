@@ -141,17 +141,24 @@
   .site-page [data-rtable] td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; font-weight: 700; letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
 }
 
-.site-page /* --- shared mobile layer: app-like, .site-page thumb friendly --- */
-  @media (max-width: 760px) {
+/* --- the shared phone layer ---
+
+   Every template gets this. It had a stray `.site-page` in front of it,
+   which made a selector followed by an at-rule: not a thing CSS can parse,
+   so the build dropped the whole block and none of it has ever shipped.
+   That is why each page that needed a phone layout grew its own. What is
+   general lives here; what is genuinely one page's problem lives in that
+   page's own file and outranks this by carrying a class. */
+@media (max-width: 760px) {
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
-    main [style*="max-width: 1240px"], main [style*="max-width:1240px"], main [style*="max-width: var(--shell)"], main [style*="max-width:var(--shell)"], main [style*="max-width: 880px"], main [style*="max-width:880px"], main [style*="max-width: 900px"], main [style*="max-width:900px"] { padding-left: 18px !important; padding-right: 18px !important; }
+    main [style*="max-width: 1240px"], main [style*="max-width:1240px"], main [style*="max-width: var(--shell)"], main [style*="max-width:var(--shell)"], main [style*="max-width: 880px"], main [style*="max-width:880px"], main [style*="max-width: 900px"], main [style*="max-width:900px"] { padding-left: var(--gutter) !important; padding-right: var(--gutter) !important; }
     main [style*="padding: 104px"], main [style*="padding:104px"], main [style*="padding: 112px"], main [style*="padding:112px"], main [style*="padding: 88px"], main [style*="padding:88px"], main [style*="padding: 96px"], main [style*="padding:96px"], main [style*="padding: 80px"], main [style*="padding:80px"], main [style*="padding: 72px"], main [style*="padding:72px"] { padding-top: 56px !important; padding-bottom: 56px !important; }
     main [style*="padding: 84px"], main [style*="padding:84px"], main [style*="padding: 76px"], main [style*="padding:76px"], main [style*="padding: 64px"], main [style*="padding:64px"], main [style*="padding: 60px"], main [style*="padding:60px"] { padding-top: 44px !important; padding-bottom: 40px !important; }
     main h1 { font-size: clamp(30px, 8.6vw, 40px) !important; line-height: 1.04 !important; }
     main h2 { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.1 !important; }
     main h3 { font-size: 17px !important; }
     main p[style*="font-size: 19px"], main p[style*="font-size:19px"], main p[style*="font-size: 18px"], main p[style*="font-size:18px"], main p[style*="font-size: 17px"], main p[style*="font-size:17px"] { font-size: 16px !important; line-height: 1.6 !important; }
-    main [data-split], main [data-two], main [data-three], main [data-cat-grid], main [data-country-grid], main [data-steps], main [data-eeat-grid], main [data-ledger], main div[style*="grid-template-columns: repeat("], main div[style*="grid-template-columns:repeat("], main ul[style*="grid-template-columns: repeat("], main ul[style*="grid-template-columns:repeat("], main ol[style*="grid-template-columns: repeat("], main ol[style*="grid-template-columns:repeat("], main div[style*="grid-template-columns: 1fr 1fr"], main div[style*="grid-template-columns:1fr 1fr"], main div[style*="grid-template-columns: minmax("], main div[style*="grid-template-columns:minmax("], main div[style*="fr 1fr"], main div[style*="fr 0."], main div[style*="fr 1."] { grid-template-columns: 1fr !important; }
+    main [data-split], main [data-two], main [data-three], main [data-country-grid], main [data-steps], main [data-eeat-grid], main [data-ledger], main div[style*="grid-template-columns: repeat("], main div[style*="grid-template-columns:repeat("], main ul[style*="grid-template-columns: repeat("], main ul[style*="grid-template-columns:repeat("], main ol[style*="grid-template-columns: repeat("], main ol[style*="grid-template-columns:repeat("], main div[style*="grid-template-columns: 1fr 1fr"], main div[style*="grid-template-columns:1fr 1fr"], main div[style*="grid-template-columns: minmax("], main div[style*="grid-template-columns:minmax("], main div[style*="fr 1fr"], main div[style*="fr 0."], main div[style*="fr 1."] { grid-template-columns: 1fr !important; }
     main [data-ledger] > li { border-right: 0 !important; padding-left: 0 !important; padding-top: 18px !important; padding-bottom: 18px !important; border-bottom: 1px solid var(--border-subtle); }
     main [data-steps] > li { border-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
     main aside[style*="position: sticky"], main aside[style*="position:sticky"], main div[style*="position: sticky"], main div[style*="position:sticky"], main [data-faq-sticky] { position: static !important; top: auto !important; }
@@ -171,6 +178,118 @@
     main [style*="border-radius: 24px"], main [style*="border-radius:24px"] { border-radius: 18px !important; }
     main img, main image-slot { max-width: 100%; }
   }
+
+/* --- the shared phone layer, part two ---
+
+   The rules above were written page by page as each one needed them.
+   These are the ones that turned out to be everybody's, found by
+   measuring every template at 390px rather than by guessing. */
+@media (max-width: 760px) {
+  /* A grid told to be one column can still be two.
+
+     `1fr` leaves the track free to grow past the container when a child
+     is wider than it, and a child that says `grid-column: span 2` makes
+     a second, implicit track whatever the template says. That is what
+     pushed the company profile 100px off the right of the screen. Both
+     are ruled out here rather than one page at a time. */
+  .site-page [data-split],
+  .site-page [data-two],
+  .site-page [data-three],
+  .site-page [data-fact-cols],
+  .site-page [data-crit],
+  .site-page [data-rankgrid],
+  .site-page [data-vgrid],
+  .site-page div[style*="grid-template-columns"],
+  .site-page ul[style*="grid-template-columns"],
+  .site-page ol[style*="grid-template-columns"] {
+    min-width: 0;
+  }
+
+  .site-page [data-split] > *,
+  .site-page [data-two] > *,
+  .site-page [data-three] > *,
+  .site-page [data-fact-cols] > *,
+  .site-page [data-crit] > *,
+  .site-page [data-rankgrid] > *,
+  .site-page [data-vgrid] > * {
+    grid-column: auto !important;
+    min-width: 0;
+  }
+
+  /* Decoration stays inside the page.
+
+     Several sections hang an outlined "10", an oversized numeral or a
+     gradient off their own edge, positioned against a desktop width. On
+     a phone those hang off the side of the screen and the page scrolls
+     sideways. `clip` rather than `hidden` because it crops without
+     making a scroll container, which would break the sticky bars. */
+  .site-page > section,
+  .site-page section {
+    overflow-x: clip;
+  }
+
+  .site-page [data-rk-one],
+  .site-page [style*="font-size:420px"],
+  .site-page [style*="font-size: 420px"] {
+    font-size: 140px !important;
+  }
+
+  /* A long word, a URL or an email address is not a reason for the
+     whole page to be wider than the screen. */
+  .site-page p,
+  .site-page dd,
+  .site-page li,
+  .site-page h1,
+  .site-page h2,
+  .site-page h3 {
+    overflow-wrap: anywhere;
+  }
+
+  /* --- the shapes ---
+
+     A rail, a row and a chip mean the same thing on every page: this is
+     the vocabulary the three redesigned pages settled on, written once
+     so a template gets it by using the attribute. */
+  .site-page [data-rail] {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 10px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: var(--gutter);
+    padding: 2px var(--gutter) 12px !important;
+    margin: 0 calc(-1 * var(--gutter)) !important;
+  }
+
+  .site-page [data-rail] > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    width: min(78vw, 300px) !important;
+  }
+
+  .site-page [data-rail] > *:only-child {
+    width: 100% !important;
+  }
+
+  .site-page [data-row] {
+    min-height: 48px;
+    padding: 10px 12px !important;
+  }
+
+  .site-page [data-chip] {
+    height: 34px;
+    padding: 0 12px !important;
+    display: inline-flex;
+    align-items: center;
+    font-size: 13.5px !important;
+  }
+
+  /* Anything with a picture at the top of a card is drawn for a desktop
+     column and is a third of the screen here. */
+  .site-page [data-thumb] {
+    height: 168px !important;
+  }
+}
 
 .site-page section[id] { scroll-margin-top: 100px; }
 
@@ -398,4 +517,281 @@
 
 @media print {
   .site-page header, .site-page nav, .site-page [data-aside], .site-page [data-noprint] { display: none !important; }
+}
+
+/* --- the shapes, applied by what a grid is for ---
+
+   Nearly every card row on this site is written the same way:
+   `repeat(auto-fit, minmax(Npx, 1fr))`. On a phone auto-fit resolves to
+   one column and the row becomes a stack, which is why the hub pages ran
+   to sixteen thousand pixels. N says what the grid is holding, so N is
+   what decides the shape: a wide minimum is a row of cards and becomes a
+   rail you swipe, a narrow one is a list of short links and becomes two
+   columns. Lists only, so a form's field grid is left alone. */
+@media (max-width: 760px) {
+  .site-page section ul[style*="minmax(240px"],
+  .site-page section ol[style*="minmax(240px"],
+  .site-page section ul[style*="minmax(250px"],
+  .site-page section ol[style*="minmax(250px"],
+  .site-page section ul[style*="minmax(260px"],
+  .site-page section ol[style*="minmax(260px"],
+  .site-page section ul[style*="minmax(270px"],
+  .site-page section ol[style*="minmax(270px"],
+  .site-page section ul[style*="minmax(280px"],
+  .site-page section ol[style*="minmax(280px"],
+  .site-page section ul[style*="minmax(290px"],
+  .site-page section ol[style*="minmax(290px"],
+  .site-page section ul[style*="minmax(300px"],
+  .site-page section ol[style*="minmax(300px"],
+  .site-page section ul[style*="minmax(320px"],
+  .site-page section ol[style*="minmax(320px"],
+  .site-page section ul[style*="minmax(330px"],
+  .site-page section ol[style*="minmax(330px"] {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 10px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: var(--gutter);
+    padding: 2px var(--gutter) 12px !important;
+    margin: 0 calc(-1 * var(--gutter)) !important;
+  }
+
+  .site-page section ul[style*="minmax(240px"] > *,
+  .site-page section ol[style*="minmax(240px"] > *,
+  .site-page section ul[style*="minmax(250px"] > *,
+  .site-page section ol[style*="minmax(250px"] > *,
+  .site-page section ul[style*="minmax(260px"] > *,
+  .site-page section ol[style*="minmax(260px"] > *,
+  .site-page section ul[style*="minmax(270px"] > *,
+  .site-page section ol[style*="minmax(270px"] > *,
+  .site-page section ul[style*="minmax(280px"] > *,
+  .site-page section ol[style*="minmax(280px"] > *,
+  .site-page section ul[style*="minmax(290px"] > *,
+  .site-page section ol[style*="minmax(290px"] > *,
+  .site-page section ul[style*="minmax(300px"] > *,
+  .site-page section ol[style*="minmax(300px"] > *,
+  .site-page section ul[style*="minmax(320px"] > *,
+  .site-page section ol[style*="minmax(320px"] > *,
+  .site-page section ul[style*="minmax(330px"] > *,
+  .site-page section ol[style*="minmax(330px"] > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    width: min(78vw, 300px) !important;
+    min-width: 0;
+  }
+
+  .site-page section ul[style*="minmax(240px"] > *:only-child,
+  .site-page section ol[style*="minmax(240px"] > *:only-child,
+  .site-page section ul[style*="minmax(250px"] > *:only-child,
+  .site-page section ol[style*="minmax(250px"] > *:only-child,
+  .site-page section ul[style*="minmax(260px"] > *:only-child,
+  .site-page section ol[style*="minmax(260px"] > *:only-child,
+  .site-page section ul[style*="minmax(270px"] > *:only-child,
+  .site-page section ol[style*="minmax(270px"] > *:only-child,
+  .site-page section ul[style*="minmax(280px"] > *:only-child,
+  .site-page section ol[style*="minmax(280px"] > *:only-child,
+  .site-page section ul[style*="minmax(290px"] > *:only-child,
+  .site-page section ol[style*="minmax(290px"] > *:only-child,
+  .site-page section ul[style*="minmax(300px"] > *:only-child,
+  .site-page section ol[style*="minmax(300px"] > *:only-child,
+  .site-page section ul[style*="minmax(320px"] > *:only-child,
+  .site-page section ol[style*="minmax(320px"] > *:only-child,
+  .site-page section ul[style*="minmax(330px"] > *:only-child,
+  .site-page section ol[style*="minmax(330px"] > *:only-child {
+    width: 100% !important;
+  }
+
+  .site-page section ul[style*="minmax(160px"],
+  .site-page section div[style*="minmax(160px"],
+  .site-page section ol[style*="minmax(160px"],
+  .site-page section ul[style*="minmax(180px"],
+  .site-page section div[style*="minmax(180px"],
+  .site-page section ol[style*="minmax(180px"],
+  .site-page section ul[style*="minmax(190px"],
+  .site-page section div[style*="minmax(190px"],
+  .site-page section ol[style*="minmax(190px"],
+  .site-page section ul[style*="minmax(200px"],
+  .site-page section div[style*="minmax(200px"],
+  .site-page section ol[style*="minmax(200px"],
+  .site-page section ul[style*="minmax(220px"],
+  .site-page section div[style*="minmax(220px"],
+  .site-page section ol[style*="minmax(220px"],
+  .site-page section ul[style*="minmax(230px"],
+  .site-page section div[style*="minmax(230px"],
+  .site-page section ol[style*="minmax(230px"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px 14px !important;
+  }
+}
+
+/* --- the trade grid ---
+
+   Lifted out of the home page's stylesheet, because the country and
+   region hubs render the same `data-cat-grid` and were getting the
+   generic one-column collapse instead: fourteen full-width cards where
+   the home page shows the same trades as two rows of icons. One
+   definition, wherever the attribute appears. */
+@media (max-width: 760px) {
+  /* ------------------------------------------------------------ the trades
+
+     Four columns of icons rather than a stack of full-width rows: the point
+     of this section is to see the whole trade list at a glance, and eight
+     tiles do that in two rows. The rest are a tap away on the services page,
+     which the heading already links to. */
+  .site-page ul[data-cat-grid][data-cat-grid],
+  .site-page [data-cat-grid][data-cat-grid] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px 2px !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] > li:nth-child(n + 9),
+  .site-page [data-cat-grid][data-cat-grid] > *:nth-child(n + 9) {
+    display: none !important;
+  }
+
+  /* The tile loses its card chrome: on a phone this is an icon and a word,
+     the way an app's home screen is, not fourteen bordered rows. */
+  .site-page [data-cat-grid][data-cat-grid] > li,
+  .site-page [data-cat-grid][data-cat-grid] > * {
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] > * a,
+  .site-page [data-cat-grid][data-cat-grid] > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center;
+    gap: 7px !important;
+    padding: 10px 4px 8px !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] h3,
+  .site-page [data-cat-grid][data-cat-grid] [data-cat-name] {
+    font-size: 12.5px !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    flex: 0 0 34px !important;
+    aspect-ratio: 1 !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child > * {
+    width: 34px !important;
+    height: 34px !important;
+    flex: none !important;
+    border-radius: 12px !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child > *,
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child span {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 0 !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+
+  /* The blurb under each trade name is for a page with room for it. */
+  .site-page [data-cat-grid][data-cat-grid] p,
+  .site-page [data-cat-grid][data-cat-grid] [data-cat-note] {
+    display: none !important;
+  }
+
+  /* --------------------------------------------------------- the trade name
+
+     Two lines for a trade name, which covers every one of them. A third line
+     only appears when a name is long enough to need cutting anyway. */
+  .site-page [data-cat-grid][data-cat-grid] [data-tname] {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .site-page [data-cat-grid][data-cat-grid] > li[data-span2],
+  .site-page [data-cat-grid][data-cat-grid] > li {
+    grid-column: auto !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child,
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child > *,
+  .site-page [data-cat-grid][data-cat-grid] a > span:first-child span {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    flex: 0 0 52px !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-subtle) !important;
+    background: var(--paper) !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .site-page [data-cat-grid][data-cat-grid] [data-tarrow] {
+    display: none !important;
+  }
+}
+
+/* --- the hub lists ---
+
+   The country and region hubs list states, metros and cities in grids
+   sized for a desktop row. They are lists of names, so on a phone they
+   are two columns of rows rather than a column of cards. */
+@media (max-width: 760px) {
+  .site-page [data-region-grid],
+  .site-page [data-metro-grid] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .site-page [data-region-grid] > *,
+  .site-page [data-metro-grid] > * {
+    min-width: 0;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .site-page [data-region-grid] p,
+  .site-page [data-metro-grid] p,
+  .site-page [data-region-grid] [data-tsub],
+  .site-page [data-metro-grid] [data-tsub] {
+    display: none !important;
+  }
+
+  .site-page [data-region-grid] h3,
+  .site-page [data-region-grid] h4,
+  .site-page [data-metro-grid] h3,
+  .site-page [data-metro-grid] h4 {
+    font-size: 14.5px !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0 !important;
+  }
 }

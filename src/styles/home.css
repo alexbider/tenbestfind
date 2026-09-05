@@ -986,8 +986,8 @@
   .home-2026 [style*="max-width:1240px"],
   .home-2026 [style*="max-width:880px"],
   .home-2026 [style*="max-width:900px"] {
-    padding-left: 18px !important;
-    padding-right: 18px !important;
+    padding-left: var(--gutter) !important;
+    padding-right: var(--gutter) !important;
   }
 
   /* A section on a phone opens 28px below the one before it, not 56. Desktop
@@ -1171,9 +1171,9 @@
     gap: 12px !important;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scroll-padding-left: 18px;
-    padding: 4px 18px 12px !important;
-    margin: 0 -18px !important;
+    scroll-padding-left: var(--gutter);
+    padding: 4px var(--gutter) 12px !important;
+    margin: 0 calc(-1 * var(--gutter)) !important;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -1192,84 +1192,6 @@
      any other block rather than sitting short with a gap beside it. */
   .home-2026 [data-rail][data-rail] > *:only-child {
     width: 100% !important;
-  }
-
-  /* ------------------------------------------------------------ the trades
-
-     Four columns of icons rather than a stack of full-width rows: the point
-     of this section is to see the whole trade list at a glance, and eight
-     tiles do that in two rows. The rest are a tap away on the services page,
-     which the heading already links to. */
-  .home-2026 ul[data-cat-grid][data-cat-grid],
-  .home-2026 [data-cat-grid][data-cat-grid] {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 4px 2px !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] > li:nth-child(n + 9),
-  .home-2026 [data-cat-grid][data-cat-grid] > *:nth-child(n + 9) {
-    display: none !important;
-  }
-
-  /* The tile loses its card chrome: on a phone this is an icon and a word,
-     the way an app's home screen is, not fourteen bordered rows. */
-  .home-2026 [data-cat-grid][data-cat-grid] > li,
-  .home-2026 [data-cat-grid][data-cat-grid] > * {
-    padding: 0 !important;
-    border: 0 !important;
-    background: none !important;
-    box-shadow: none !important;
-    min-height: 0 !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] > * a,
-  .home-2026 [data-cat-grid][data-cat-grid] > a {
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center;
-    gap: 7px !important;
-    padding: 10px 4px 8px !important;
-    min-height: 0 !important;
-    border: 0 !important;
-    background: none !important;
-    box-shadow: none !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] h3,
-  .home-2026 [data-cat-grid][data-cat-grid] [data-cat-name] {
-    font-size: 12.5px !important;
-    line-height: 1.25 !important;
-    font-weight: 600 !important;
-    letter-spacing: 0 !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    flex: 0 0 34px !important;
-    aspect-ratio: 1 !important;
-    padding: 0 !important;
-    border-radius: 12px !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > * {
-    width: 34px !important;
-    height: 34px !important;
-    flex: none !important;
-    border-radius: 12px !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > *,
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child span {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 0 !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] svg {
-    width: 18px !important;
-    height: 18px !important;
   }
 
   /* ------------------------------------------------------------- the media
@@ -1291,11 +1213,6 @@
     padding: 20px 18px 18px !important;
   }
 
-  /* The blurb under each trade name is for a page with room for it. */
-  .home-2026 [data-cat-grid][data-cat-grid] p,
-  .home-2026 [data-cat-grid][data-cat-grid] [data-cat-note] {
-    display: none !important;
-  }
 
   /* --------------------------------------------------------- the counters
 
@@ -1347,31 +1264,6 @@
      of icons it just makes one row uneven, so every tile is one column wide
      here. The chip is the size the design draws it, 52px, not the 34px a
      shrunken desktop tile would give. */
-  .home-2026 [data-cat-grid][data-cat-grid] > li[data-span2],
-  .home-2026 [data-cat-grid][data-cat-grid] > li {
-    grid-column: auto !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child,
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > *,
-  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child span {
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    flex: 0 0 52px !important;
-    border-radius: 16px !important;
-    border: 1px solid var(--border-subtle) !important;
-    background: var(--paper) !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] svg {
-    width: 24px !important;
-    height: 24px !important;
-  }
-
-  .home-2026 [data-cat-grid][data-cat-grid] [data-tarrow] {
-    display: none !important;
-  }
 
   /* The trending panel is a wrapping block of chips on desktop. Wrapped on a
      phone it is six rows of two; the design scrolls it sideways instead. */
@@ -1381,8 +1273,8 @@
     scrollbar-width: none;
     border: 0 !important;
     background: none !important;
-    padding: 2px 18px !important;
-    margin: 14px -18px 0 !important;
+    padding: 2px var(--gutter) !important;
+    margin: 14px calc(-1 * var(--gutter)) 0 !important;
     border-radius: 0 !important;
   }
 
@@ -1419,9 +1311,9 @@
     gap: 12px !important;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scroll-padding-left: 18px;
-    padding: 4px 18px 12px !important;
-    margin: 0 -18px !important;
+    scroll-padding-left: var(--gutter);
+    padding: 4px var(--gutter) 12px !important;
+    margin: 0 calc(-1 * var(--gutter)) !important;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -1684,17 +1576,6 @@
     padding: 18px !important;
   }
 
-  /* --------------------------------------------------------- the trade name
-
-     Two lines for a trade name, which covers every one of them. A third line
-     only appears when a name is long enough to need cutting anyway. */
-  .home-2026 [data-cat-grid][data-cat-grid] [data-tname] {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin-bottom: 0 !important;
-  }
 
   /* Three lines of supporting copy is a paragraph on a desktop card and half
      a screen on a phone card, so the cards that repeat down a section hold

@@ -1,0 +1,169 @@
+/* ==================================================================
+   Motion.
+
+   Three things only, because a page that moves everywhere reads as a
+   page that cannot decide what matters:
+
+   1. Things you press respond to being pressed.
+   2. Things arriving from below arrive, rather than appearing.
+   3. Things that open turn their marker as they open.
+
+   The reveals are scroll-driven, not time-driven: `animation-timeline:
+   view()` ties the animation to where the element is in the viewport, so
+   it runs off the main thread and cannot fire while the reader is
+   somewhere else on the page. It sits inside `@supports`, so a browser
+   without it gets the page with everything already visible rather than
+   a page holding its breath for an animation that will never come.
+
+   Everything here is off under `prefers-reduced-motion`.
+   ================================================================== */
+
+/* ------------------------------------------------------------- press
+
+   The whole point of a card on a phone is that it is a button. Nothing
+   about the desktop design says so, and without this a tap on a card
+   and a tap on dead space feel the same until the next page loads. */
+.site-page a[data-press],
+.site-page button[data-press],
+.site-page [data-card] > a,
+.site-page [data-card] a[data-row],
+.site-page [data-row],
+.site-page [data-chip],
+.site-page [data-entry-head],
+.site-page [data-tip-head],
+.site-page [data-intro-head],
+.site-page [data-faq] > summary,
+.site-page a[data-btn-primary],
+.site-page a[data-btn-ghost],
+.site-page [data-toc] a {
+  transition:
+    scale 140ms var(--ease-out),
+    background-color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+  touch-action: manipulation;
+}
+
+.site-page a[data-press]:active,
+.site-page button[data-press]:active,
+.site-page [data-card] > a:active,
+.site-page [data-card] a[data-row]:active,
+.site-page [data-row]:active,
+.site-page [data-chip]:active,
+.site-page [data-entry-head]:active,
+.site-page [data-tip-head]:active,
+.site-page [data-intro-head]:active,
+.site-page [data-faq] > summary:active,
+.site-page a[data-btn-primary]:active,
+.site-page a[data-btn-ghost]:active,
+.site-page [data-toc] a:active {
+  scale: 0.985;
+}
+
+/* A card itself presses, so the whole tile answers rather than only the
+   link inside it. */
+.site-page [data-card] {
+  transition:
+    scale 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+.site-page [data-card]:active {
+  scale: 0.99;
+}
+
+/* ------------------------------------------------------ what opens
+
+   The plus turns into a cross, the chevron turns to point down. Both
+   are the same 180ms so a section that has one of each does not look
+   like two different pages. */
+.site-page [data-fq-ico] svg,
+.site-page [data-tip-ico] svg,
+.site-page [data-intro-ico] svg,
+.site-page [data-entry-open] svg {
+  transition: transform 180ms var(--ease-out);
+}
+
+/* -------------------------------------------------------- the rails
+
+   Declared once here so a rail behaves the same on every page that has
+   one, rather than each page describing a rail slightly differently. */
+.site-page [data-rail],
+.site-page [data-rail-merge],
+.site-page [data-jobs],
+.site-page [data-rank-rail],
+.site-page [data-rtable] tbody {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.site-page [data-rail]::-webkit-scrollbar,
+.site-page [data-rail-merge]::-webkit-scrollbar,
+.site-page [data-jobs]::-webkit-scrollbar,
+.site-page [data-rank-rail]::-webkit-scrollbar,
+.site-page [data-rtable] tbody::-webkit-scrollbar {
+  display: none;
+}
+
+/* ------------------------------------------------------- the reveal
+
+   A card rises 10px and fades in as it enters, and is finished well
+   before it reaches the middle of the screen, so reading is never
+   waiting. Only the repeating units and the section headings: animating
+   every element in a section is how a page ends up feeling seasick. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-page [data-reveal],
+    .site-page section [data-card],
+    .site-page [data-rail] > *,
+    .site-page [data-jobs] > *,
+    .site-page [data-rank-rail] > *,
+    .site-page section > div > h2,
+    .site-page [data-band-grid] > li {
+      animation: revealRise both;
+      animation-timeline: view();
+      /* Finished within the first third of the element's entry, so it is
+         at full strength while still near the bottom of the screen. A
+         scroll-linked animation is reversible by nature: keeping the
+         range short means scrolling back up barely shows it. */
+      animation-range: entry 0% entry 30%;
+    }
+
+    /* The hero is already on screen when the page opens, so it has
+       nothing to enter from and its own entrance to run. */
+    .site-page section:first-of-type [data-card],
+    .site-page [data-hero] [data-card] {
+      animation: none;
+    }
+  }
+}
+
+/* `translate` rather than `transform`, and the press below uses `scale`.
+
+   They are separate properties, so a card that is still filling its
+   reveal can still answer a press. Written as one `transform` they would
+   be the same property and the animation would win, which is a card that
+   quietly stops responding to taps for as long as it is near the top of
+   the screen. */
+@keyframes revealRise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+/* --------------------------------------------------- the quiet setting */
+@media (prefers-reduced-motion: reduce) {
+  .site-page *,
+  .site-page *::before,
+  .site-page *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

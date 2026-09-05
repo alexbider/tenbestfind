@@ -56,8 +56,8 @@
 @media (max-width: 760px) {
   .hs-2026 [style*="max-width:var(--shell)"],
   .hs-2026 [style*="max-width:1240px"] {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-left: var(--gutter) !important;
+    padding-right: var(--gutter) !important;
   }
 
   .hs-2026 [style*="padding:80px"],
@@ -263,9 +263,9 @@
     gap: 10px !important;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scroll-padding-left: 16px;
-    padding: 2px 16px 12px !important;
-    margin: 0 -16px !important;
+    scroll-padding-left: var(--gutter);
+    padding: 2px var(--gutter) 12px !important;
+    margin: 0 calc(-1 * var(--gutter)) !important;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -318,8 +318,8 @@
     border: 0 !important;
     background: none !important;
     border-radius: 0 !important;
-    margin: 12px -16px 0 !important;
-    padding: 2px 16px !important;
+    margin: 12px calc(-1 * var(--gutter)) 0 !important;
+    padding: 2px var(--gutter) !important;
   }
 
   .hs-2026 [data-trend-rail] > * {

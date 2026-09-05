@@ -18,6 +18,7 @@
 @import "./business.css";
 @import "./editorial.css";
 @import "./admin.css";
+@import "./motion.css";
 
 /* ------------------------------------------------------------------
    TenBestFind additions on top of the base system.
@@ -32,6 +33,20 @@
   --shell: 1240px;
   --gutter: 24px;
   --header-h: 74px;
+}
+
+/* One number for how far the page holds off the edge of the screen.
+
+   Most layout on this site is written inline as `padding: 104px
+   var(--gutter)`, so moving the token moves every shell at once. It used
+   to stay at 24px on a phone and each stylesheet that needed something
+   tighter picked its own: 18px on the home page and the profile, 16px on
+   the ranking and services pages. Nothing looked wrong on its own and
+   nothing lined up between pages. */
+@media (max-width: 760px) {
+  :root {
+    --gutter: 16px;
+  }
 }
 
 *,

@@ -605,27 +605,52 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                   data-card=""
                   style={{ ...CARD, borderRadius: "16px", padding: "22px" }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                    <span aria-hidden="true" style={{ color: "var(--blue-700)", display: "inline-flex" }}>
-                      <Icon name={icon(entry.iconKey)} size={24} strokeWidth={1.7} />
-                    </span>
-                    <Chevron size={16} />
-                  </div>
-                  <h3
-                    data-cat-name=""
-                    style={{
-                      fontSize: "17px",
-                      fontWeight: "700",
-                      lineHeight: "1.3",
-                      marginBottom: "5px",
-                      transition: "color 200ms var(--ease-out)",
-                    }}
+                  {/* The same shape as the trade tile on the home page: an
+                      icon in its own box, then the name, then the line under
+                      it. The phone layer turns that into a four-across grid
+                      of icons, and it can only do that if the tile is built
+                      the same way wherever it appears. */}
+                  <Link
+                    href={routes.category(entry.slug)}
+                    style={{ display: "flex", flexDirection: "column", height: "100%", color: "inherit" }}
                   >
-                    <Link href={routes.category(entry.slug)} style={{ color: "var(--ink)" }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <span
+                        data-tico=""
+                        aria-hidden="true"
+                        style={{ color: "var(--blue-700)", display: "inline-flex" }}
+                      >
+                        <Icon name={icon(entry.iconKey)} size={24} strokeWidth={1.7} />
+                      </span>
+                      <span data-tarrow="" aria-hidden="true" style={{ display: "inline-flex" }}>
+                        <Chevron size={16} />
+                      </span>
+                    </span>
+                    <h3
+                      data-cat-name=""
+                      data-tname=""
+                      style={{
+                        fontSize: "17px",
+                        fontWeight: "700",
+                        lineHeight: "1.3",
+                        marginBottom: "5px",
+                        color: "var(--ink)",
+                        transition: "color 200ms var(--ease-out)",
+                      }}
+                    >
                       {entry.name}
-                    </Link>
-                  </h3>
-                  <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.5" }}>{entry.tagline}</p>
+                    </h3>
+                    <p data-tsub="" style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                      {entry.tagline}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>
