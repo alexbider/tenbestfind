@@ -30,11 +30,19 @@
 
 .site-page [data-card]:hover [data-rank-n], .site-page article:hover > [data-rank-n], .site-page li:hover > [data-rank-n] { transform: rotate(-8deg) scale(1.08); }
 
-.site-page a[style*="background: var(--color-primary)"], .site-page button[style*="background: var(--color-primary)"] { transition: transform 160ms var(--ease-out), background 160ms var(--ease-out); }
+/* Inline-style selectors are spelled twice below.
 
-.site-page a[style*="background: var(--color-primary)"]:hover, .site-page button[style*="background: var(--color-primary)"]:hover { background: var(--color-primary-hover) !important; transform: translateY(-1px); }
+   React serialises a style object without spaces when it renders the HTML
+   ("padding:104px"), and with them when the same element is rendered again in
+   the browser ("padding: 104px"). Only one of those spellings matches at a
+   time, and which one depends on whether anything re-rendered the tree, so a
+   rule written for one of them silently does nothing half the time. Both are
+   listed rather than guessed at. */
+.site-page a[style*="background: var(--color-primary)"], .site-page a[style*="background:var(--color-primary)"], .site-page button[style*="background: var(--color-primary)"], .site-page button[style*="background:var(--color-primary)"] { transition: transform 160ms var(--ease-out), background 160ms var(--ease-out); }
 
-.site-page a[style*="background: var(--color-primary)"]:active, .site-page button[style*="background: var(--color-primary)"]:active { transform: scale(0.98); }
+.site-page a[style*="background: var(--color-primary)"]:hover, .site-page a[style*="background:var(--color-primary)"]:hover, .site-page button[style*="background: var(--color-primary)"]:hover, .site-page button[style*="background:var(--color-primary)"]:hover { background: var(--color-primary-hover) !important; transform: translateY(-1px); }
+
+.site-page a[style*="background: var(--color-primary)"]:active, .site-page a[style*="background:var(--color-primary)"]:active, .site-page button[style*="background: var(--color-primary)"]:active, .site-page button[style*="background:var(--color-primary)"]:active { transform: scale(0.98); }
 
 @media (prefers-reduced-motion: no-preference) {
   .site-page [data-ten-outline] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tenDraw 1.6s var(--ease-out) 200ms forwards; }
@@ -136,31 +144,31 @@
 .site-page /* --- shared mobile layer: app-like, .site-page thumb friendly --- */
   @media (max-width: 760px) {
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
-    main [style*="max-width: 1240px"], main [style*="max-width: var(--shell)"], main [style*="max-width: 880px"], main [style*="max-width: 900px"] { padding-left: 18px !important; padding-right: 18px !important; }
-    main [style*="padding: 104px"], main [style*="padding: 112px"], main [style*="padding: 88px"], main [style*="padding: 96px"], main [style*="padding: 80px"], main [style*="padding: 72px"] { padding-top: 56px !important; padding-bottom: 56px !important; }
-    main [style*="padding: 84px"], main [style*="padding: 76px"], main [style*="padding: 64px"], main [style*="padding: 60px"] { padding-top: 44px !important; padding-bottom: 40px !important; }
+    main [style*="max-width: 1240px"], main [style*="max-width:1240px"], main [style*="max-width: var(--shell)"], main [style*="max-width:var(--shell)"], main [style*="max-width: 880px"], main [style*="max-width:880px"], main [style*="max-width: 900px"], main [style*="max-width:900px"] { padding-left: 18px !important; padding-right: 18px !important; }
+    main [style*="padding: 104px"], main [style*="padding:104px"], main [style*="padding: 112px"], main [style*="padding:112px"], main [style*="padding: 88px"], main [style*="padding:88px"], main [style*="padding: 96px"], main [style*="padding:96px"], main [style*="padding: 80px"], main [style*="padding:80px"], main [style*="padding: 72px"], main [style*="padding:72px"] { padding-top: 56px !important; padding-bottom: 56px !important; }
+    main [style*="padding: 84px"], main [style*="padding:84px"], main [style*="padding: 76px"], main [style*="padding:76px"], main [style*="padding: 64px"], main [style*="padding:64px"], main [style*="padding: 60px"], main [style*="padding:60px"] { padding-top: 44px !important; padding-bottom: 40px !important; }
     main h1 { font-size: clamp(30px, 8.6vw, 40px) !important; line-height: 1.04 !important; }
     main h2 { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.1 !important; }
     main h3 { font-size: 17px !important; }
-    main p[style*="font-size: 19px"], main p[style*="font-size: 18px"], main p[style*="font-size: 17px"] { font-size: 16px !important; line-height: 1.6 !important; }
-    main [data-split], main [data-two], main [data-three], main [data-cat-grid], main [data-country-grid], main [data-steps], main [data-eeat-grid], main [data-ledger], main div[style*="grid-template-columns: repeat("], main ul[style*="grid-template-columns: repeat("], main ol[style*="grid-template-columns: repeat("], main div[style*="grid-template-columns: 1fr 1fr"], main div[style*="grid-template-columns: minmax("], main div[style*="fr 1fr"], main div[style*="fr 0."], main div[style*="fr 1."] { grid-template-columns: 1fr !important; }
+    main p[style*="font-size: 19px"], main p[style*="font-size:19px"], main p[style*="font-size: 18px"], main p[style*="font-size:18px"], main p[style*="font-size: 17px"], main p[style*="font-size:17px"] { font-size: 16px !important; line-height: 1.6 !important; }
+    main [data-split], main [data-two], main [data-three], main [data-cat-grid], main [data-country-grid], main [data-steps], main [data-eeat-grid], main [data-ledger], main div[style*="grid-template-columns: repeat("], main div[style*="grid-template-columns:repeat("], main ul[style*="grid-template-columns: repeat("], main ul[style*="grid-template-columns:repeat("], main ol[style*="grid-template-columns: repeat("], main ol[style*="grid-template-columns:repeat("], main div[style*="grid-template-columns: 1fr 1fr"], main div[style*="grid-template-columns:1fr 1fr"], main div[style*="grid-template-columns: minmax("], main div[style*="grid-template-columns:minmax("], main div[style*="fr 1fr"], main div[style*="fr 0."], main div[style*="fr 1."] { grid-template-columns: 1fr !important; }
     main [data-ledger] > li { border-right: 0 !important; padding-left: 0 !important; padding-top: 18px !important; padding-bottom: 18px !important; border-bottom: 1px solid var(--border-subtle); }
     main [data-steps] > li { border-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
-    main aside[style*="position: sticky"], main div[style*="position: sticky"], main [data-faq-sticky] { position: static !important; top: auto !important; }
+    main aside[style*="position: sticky"], main aside[style*="position:sticky"], main div[style*="position: sticky"], main div[style*="position:sticky"], main [data-faq-sticky] { position: static !important; top: auto !important; }
     main [data-stack], main form[role="search"] { flex-direction: column !important; align-items: stretch !important; }
     main [data-stack] > *, main form[role="search"] > * { width: 100% !important; flex: none !important; }
     main [data-divider] { display: none !important; }
     main form[role="search"] button { height: 52px !important; }
     main input, main select, main textarea { font-size: 16px !important; }
-    main a[style*="border-radius: 12px"], main a[style*="border-radius: 999px"], main button { min-height: 44px; }
-    main [style*="display: flex"][style*="flex-wrap: wrap"] > a[style*="height: 52px"], main a[style*="height: 52px"], main a[style*="height: 48px"] { width: 100%; justify-content: center; }
+    main a[style*="border-radius: 12px"], main a[style*="border-radius:12px"], main a[style*="border-radius: 999px"], main a[style*="border-radius:999px"], main button { min-height: 44px; }
+    main [style*="display: flex"][style*="flex-wrap: wrap"] > a[style*="height: 52px"], main [style*="display:flex"][style*="flex-wrap:wrap"] > a[style*="height:52px"], main a[style*="height: 52px"], main a[style*="height:52px"], main a[style*="height: 48px"], main a[style*="height:48px"] { width: 100%; justify-content: center; }
     [data-ten-outline] { width: 170px !important; height: 120px !important; right: -50px !important; top: -30px !important; opacity: 0.7; }
     main [data-index] { grid-template-columns: 1fr !important; gap: 6px !important; padding: 16px 14px !important; }
     main [data-index] > svg { display: none !important; }
     main [data-index-meta] { justify-self: start !important; }
     main table { min-width: 640px !important; }
     main [data-hero-aside] { display: none !important; }
-    main [style*="border-radius: 24px"] { border-radius: 18px !important; }
+    main [style*="border-radius: 24px"], main [style*="border-radius:24px"] { border-radius: 18px !important; }
     main img, main image-slot { max-width: 100%; }
   }
 

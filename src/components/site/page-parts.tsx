@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 /* ------------------------------------------------------------------
    The pieces every 2026 page is built from. The design draws its layout
@@ -233,8 +233,13 @@ export function Crumbs({ items, flush }: { items: { label: string; href?: string
           color: "var(--text-secondary)",
         }}
       >
+        {/* A fragment, not a wrapper. An li holding the separator and the
+            crumb was an li inside an li, which no parser accepts: the browser
+            unpicked it, the markup React expected was not the markup on the
+            page, and hydration failed and re-rendered every page with a
+            breadcrumb on it from scratch. */}
         {items.map((item, index) => (
-          <li key={item.label} style={{ display: "contents" }}>
+          <Fragment key={item.label}>
             {index > 0 ? (
               <li aria-hidden="true" style={{ color: "var(--text-secondary)" }}>
                 ›
@@ -251,7 +256,7 @@ export function Crumbs({ items, flush }: { items: { label: string; href?: string
                 {item.label}
               </li>
             )}
-          </li>
+          </Fragment>
         ))}
       </ol>
     </nav>
