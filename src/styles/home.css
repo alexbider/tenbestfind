@@ -990,36 +990,54 @@
     padding-right: 18px !important;
   }
 
+  /* A section on a phone opens 28px below the one before it, not 56. Desktop
+     air between sections reads as generous; the same air on a 390px screen is
+     a third of the viewport spent on nothing, twelve times over. */
   .home-2026 [style*="padding:104px"],
   .home-2026 [style*="padding:112px"],
   .home-2026 [style*="padding:88px"],
   .home-2026 [style*="padding:96px"],
   .home-2026 [style*="padding:80px"],
-  .home-2026 [style*="padding:72px"] {
-    padding-top: 56px !important;
-    padding-bottom: 56px !important;
-  }
-
+  .home-2026 [style*="padding:72px"],
   .home-2026 [style*="padding:84px"],
   .home-2026 [style*="padding:76px"],
   .home-2026 [style*="padding:64px"],
   .home-2026 [style*="padding:60px"] {
-    padding-top: 44px !important;
-    padding-bottom: 40px !important;
+    padding-top: 28px !important;
+    padding-bottom: 22px !important;
   }
 
   .home-2026 h1 {
-    font-size: clamp(30px, 8.6vw, 40px) !important;
-    line-height: 1.04 !important;
+    font-size: clamp(32px, 9vw, 44px) !important;
+    line-height: 1.06 !important;
   }
 
+  /* Section headings sit at 20px, the size the design uses. A 32px heading on
+     a phone takes three lines and pushes what it introduces off the screen. */
   .home-2026 h2 {
-    font-size: clamp(25px, 7vw, 32px) !important;
-    line-height: 1.1 !important;
+    font-size: 20px !important;
+    line-height: 1.22 !important;
+    letter-spacing: -0.02em !important;
   }
 
   .home-2026 h3 {
-    font-size: 17px !important;
+    font-size: 16px !important;
+  }
+
+  /* The eyebrow above a heading and the paragraph under it are one line each
+     rather than a block of their own. */
+  /* A five line paragraph under a heading is a wall on a phone. Three lines
+     say what the section is; the section itself says the rest. */
+  .home-2026 section p[style*="font-size:19px"],
+  .home-2026 section p[style*="font-size:18px"],
+  .home-2026 section p[style*="font-size:17px"] {
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    margin-top: 8px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .home-2026 p[style*="font-size:19px"],
@@ -1029,31 +1047,23 @@
     line-height: 1.6 !important;
   }
 
-  .home-2026 [data-split],
-  .home-2026 [data-two],
-  .home-2026 [data-three],
-  .home-2026 [data-cat-grid],
-  .home-2026 [data-country-grid],
-  .home-2026 [data-steps],
-  .home-2026 [data-eeat-grid],
-  .home-2026 [data-ledger],
-  .home-2026 div[style*="grid-template-columns:repeat("],
-  .home-2026 ul[style*="grid-template-columns:repeat("],
-  .home-2026 ol[style*="grid-template-columns:repeat("],
-  .home-2026 div[style*="grid-template-columns:1fr 1fr"],
-  .home-2026 div[style*="grid-template-columns:minmax("],
-  .home-2026 div[style*="fr 1fr"],
-  .home-2026 div[style*="fr 0."],
-  .home-2026 div[style*="fr 1."] {
+  /* One column is right for a row of wide cards and wrong for everything the
+     design keeps side by side on a phone, so the compact grids and the swipe
+     rails are named here rather than fought with specificity further down. */
+  .home-2026 [data-split]:not([data-rail]),
+  .home-2026 [data-two]:not([data-rail]),
+  .home-2026 [data-three]:not([data-rail]),
+  .home-2026 [data-country-grid]:not([data-rail]),
+  .home-2026 [data-steps]:not([data-rail]),
+  .home-2026 div[style*="grid-template-columns:repeat("]:not([data-rail]):not([data-cat-grid]):not([data-eeat-grid]):not([data-ledger]),
+  .home-2026 ul[style*="grid-template-columns:repeat("]:not([data-rail]):not([data-cat-grid]):not([data-eeat-grid]):not([data-ledger]),
+  .home-2026 ol[style*="grid-template-columns:repeat("]:not([data-rail]):not([data-cat-grid]):not([data-eeat-grid]):not([data-ledger]),
+  .home-2026 div[style*="grid-template-columns:1fr 1fr"]:not([data-rail]),
+  .home-2026 div[style*="grid-template-columns:minmax("]:not([data-rail]),
+  .home-2026 div[style*="fr 1fr"]:not([data-rail]),
+  .home-2026 div[style*="fr 0."]:not([data-rail]),
+  .home-2026 div[style*="fr 1."]:not([data-rail]) {
     grid-template-columns: 1fr !important;
-  }
-
-  .home-2026 [data-ledger] > li {
-    border-right: 0 !important;
-    padding-left: 0 !important;
-    padding-top: 18px !important;
-    padding-bottom: 18px !important;
-    border-bottom: 1px solid var(--border-subtle);
   }
 
   .home-2026 [data-steps] > li {
@@ -1145,5 +1155,640 @@
 
   .home-2026 img {
     max-width: 100%;
+  }
+
+  /* ----------------------------------------------------------------- rails
+
+     Collapsing every grid to one column is what made this page five screens
+     longer than it needed to be: eight cards stacked is eight screens of
+     scrolling to learn there were eight. The design turns a row of cards into
+     a rail you swipe, which keeps the section one screen tall and makes it
+     obvious there is more beside it. The negative margin lets the rail bleed
+     to both edges while its first card still lines up with the text above. */
+  .home-2026 [data-rail][data-rail] {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 12px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 18px;
+    padding: 4px 18px 12px !important;
+    margin: 0 -18px !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-2026 [data-rail][data-rail]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-2026 [data-rail][data-rail] > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: min(78vw, 300px) !important;
+  }
+
+  /* A rail of one card has nothing to swipe to, so it fills the width like
+     any other block rather than sitting short with a gap beside it. */
+  .home-2026 [data-rail][data-rail] > *:only-child {
+    width: 100% !important;
+  }
+
+  /* ------------------------------------------------------------ the trades
+
+     Four columns of icons rather than a stack of full-width rows: the point
+     of this section is to see the whole trade list at a glance, and eight
+     tiles do that in two rows. The rest are a tap away on the services page,
+     which the heading already links to. */
+  .home-2026 ul[data-cat-grid][data-cat-grid],
+  .home-2026 [data-cat-grid][data-cat-grid] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px 2px !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] > li:nth-child(n + 9),
+  .home-2026 [data-cat-grid][data-cat-grid] > *:nth-child(n + 9) {
+    display: none !important;
+  }
+
+  /* The tile loses its card chrome: on a phone this is an icon and a word,
+     the way an app's home screen is, not fourteen bordered rows. */
+  .home-2026 [data-cat-grid][data-cat-grid] > li,
+  .home-2026 [data-cat-grid][data-cat-grid] > * {
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] > * a,
+  .home-2026 [data-cat-grid][data-cat-grid] > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center;
+    gap: 7px !important;
+    padding: 10px 4px 8px !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] h3,
+  .home-2026 [data-cat-grid][data-cat-grid] [data-cat-name] {
+    font-size: 12.5px !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    flex: 0 0 34px !important;
+    aspect-ratio: 1 !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > * {
+    width: 34px !important;
+    height: 34px !important;
+    flex: none !important;
+    border-radius: 12px !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > *,
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child span {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 0 !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* ------------------------------------------------------------- the media
+
+     Editorial thumbnails are sized for a two-column desktop card. On a phone
+     the same image is the width of the screen, so a 250px band becomes a third
+     of the viewport before a word of the guide is read. */
+  .home-2026 [data-thumb] {
+    height: 168px !important;
+  }
+
+  /* Cards carry desktop padding, which on a 390px screen is most of the card.
+     Anything padded like a feature panel comes down to something a thumb can
+     scroll past. */
+  .home-2026 [data-card] > div[style*="padding:40px"],
+  .home-2026 [data-card] > div[style*="padding:36px"],
+  .home-2026 [data-card] > div[style*="padding:32px"],
+  .home-2026 [data-card] > div[style*="padding:28px"] {
+    padding: 20px 18px 18px !important;
+  }
+
+  /* The blurb under each trade name is for a page with room for it. */
+  .home-2026 [data-cat-grid][data-cat-grid] p,
+  .home-2026 [data-cat-grid][data-cat-grid] [data-cat-note] {
+    display: none !important;
+  }
+
+  /* --------------------------------------------------------- the counters
+
+     Two by two rather than four stacked. These are four short numbers; a
+     column of them reads as a list of unrelated facts and takes a screen to
+     do it. */
+  .home-2026 ul[data-ledger][data-ledger],
+  .home-2026 [data-ledger][data-ledger] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+  }
+
+  .home-2026 [data-ledger][data-ledger] > li {
+    border-right: 0 !important;
+    padding: 16px 12px 16px 0 !important;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .home-2026 [data-ledger][data-ledger] > li:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .home-2026 [data-ledger][data-ledger] p[style*="font-size:34px"],
+  .home-2026 [data-ledger][data-ledger] p[style*="font-size:38px"],
+  .home-2026 [data-ledger][data-ledger] p:first-of-type {
+    font-size: 26px !important;
+  }
+
+  /* Two-up tiles that are short enough to stay two-up on a phone. */
+  .home-2026 ul[data-eeat-grid][data-eeat-grid],
+  .home-2026 [data-eeat-grid][data-eeat-grid],
+  .home-2026 [data-two-up] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li {
+    padding: 16px 14px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] p {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* ------------------------------------------------------- the trade tiles
+
+     A tile that spans two columns is a desktop accent. In a four-across grid
+     of icons it just makes one row uneven, so every tile is one column wide
+     here. The chip is the size the design draws it, 52px, not the 34px a
+     shrunken desktop tile would give. */
+  .home-2026 [data-cat-grid][data-cat-grid] > li[data-span2],
+  .home-2026 [data-cat-grid][data-cat-grid] > li {
+    grid-column: auto !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child,
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child > *,
+  .home-2026 [data-cat-grid][data-cat-grid] a > span:first-child span {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    flex: 0 0 52px !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-subtle) !important;
+    background: var(--paper) !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .home-2026 [data-cat-grid][data-cat-grid] [data-tarrow] {
+    display: none !important;
+  }
+
+  /* The trending panel is a wrapping block of chips on desktop. Wrapped on a
+     phone it is six rows of two; the design scrolls it sideways instead. */
+  .home-2026 [data-trend-rail] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border: 0 !important;
+    background: none !important;
+    padding: 2px 18px !important;
+    margin: 14px -18px 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .home-2026 [data-trend-rail]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-2026 [data-trend-rail] > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* A section lead runs to two paragraphs in a couple of places. The design
+     gives every section one, so the second one is held to two lines. */
+  .home-2026 section p[style*="font-size:19px"] + p[style*="font-size:19px"],
+  .home-2026 section p[style*="font-size:18px"] + p[style*="font-size:18px"],
+  .home-2026 section p[style*="font-size:17px"] + p[style*="font-size:17px"] {
+    -webkit-line-clamp: 2;
+    margin-top: 6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* ------------------------------------------------- lead card into the rail
+
+     Two sections put one large card beside a rail of smaller ones. Stacked on
+     a phone the large card is a screen on its own before the rail below it is
+     even visible. The design has no large card at all: it is one rail of
+     equal cards. `display: contents` on the inner list drops its box so its
+     cards become siblings of the lead card, and the lead card is dressed down
+     to the same size as the rest. */
+  .home-2026 [data-rail-merge][data-rail-merge] {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 12px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 18px;
+    padding: 4px 18px 12px !important;
+    margin: 0 -18px !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-2026 [data-rail-merge][data-rail-merge]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-2026 [data-rail-merge] > [data-rail] {
+    display: contents !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-lead],
+  .home-2026 [data-rail-merge] > [data-rail] > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: min(78vw, 300px) !important;
+    border-radius: 20px !important;
+  }
+
+  /* Every card in the merged rail is a picture with a caption under it, the
+     shape the design uses, rather than the desktop side card's picture beside
+     its text. */
+  .home-2026 [data-rail-merge] > [data-rail] > * {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: hidden;
+  }
+
+  .home-2026 [data-rail-merge] [data-thumb] {
+    flex: 0 0 150px !important;
+    width: 100% !important;
+    height: 150px !important;
+    min-height: 150px !important;
+    border-radius: 0 !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-rail] > * > span:last-child {
+    padding: 14px 16px 16px !important;
+    gap: 6px !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-lead] > div:last-child {
+    padding: 14px 16px 16px !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-lead] h3 {
+    font-size: 17px !important;
+    line-height: 1.25 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-lead] [data-badge-ten] {
+    left: 14px !important;
+    bottom: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+  }
+
+  /* The lead card's summary and its second call to action are what make it
+     large. The rail cards beside it carry neither, and the ranking is one tap
+     away from the title. */
+  .home-2026 [data-rail-merge] > [data-lead] > div:last-child > p:nth-of-type(2),
+  .home-2026 [data-rail-merge] > [data-lead] .arrow-link {
+    display: none !important;
+  }
+
+  .home-2026 [data-rail-merge] > [data-lead] > div:last-child > div:last-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: 0 !important;
+  }
+
+  /* ---------------------------------------------------------- the countries
+
+     The country card is drawn 420px tall so a desktop pair fills its row.
+     In a rail it only has to be as tall as what is written on it. */
+  .home-2026 [data-ctry] {
+    min-height: 300px !important;
+  }
+
+  /* -------------------------------------------------------------- the rows
+
+     A ranking row on a phone is a title and a date. The trade line repeats
+     what the title already says and the summary is written for the ranking
+     page, so both wait until there is a column wide enough for them. */
+  .home-2026 [data-row-kicker],
+  .home-2026 [data-row-sub] {
+    display: none !important;
+  }
+
+  .home-2026 [data-index] {
+    padding: 12px 14px !important;
+    gap: 2px !important;
+  }
+
+  .home-2026 [data-index] span[style*="font-size:19px"] {
+    font-size: 15.5px !important;
+  }
+
+  /* -------------------------------------------------------------- the cities
+
+     Six cities per country is what fits on a screen. The rest are behind the
+     "all cities" link that already sits beside the heading, which is where
+     someone looking for a city not in the six would go anyway. */
+  .home-2026 [data-city-cols][data-city-cols] > li:nth-child(n + 7) {
+    display: none !important;
+  }
+
+  .home-2026 [data-city-cols][data-city-cols] [data-row] {
+    padding: 9px 0 !important;
+  }
+
+  /* ----------------------------------------------------------------- faq
+
+     The question is set for a two-column layout where it has room to be a
+     heading. On a phone it is a row you tap, so it takes the size the design
+     gives it and the answer loses the indent that kept it clear of the icon. */
+  .home-2026 [data-faq] summary {
+    padding: 13px 2px !important;
+    font-size: 15.5px !important;
+    line-height: 1.35 !important;
+    gap: 12px !important;
+  }
+
+  .home-2026 [data-faq] [data-fq-ico] {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .home-2026 [data-faq] > div {
+    padding: 0 40px 16px 2px !important;
+  }
+
+  .home-2026 [data-faq] > div p {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ------------------------------------------------------- for businesses */
+  .home-2026 [data-card] > div[style*="padding:44px"],
+  .home-2026 div[style*="padding:44px"] {
+    padding: 22px 18px 20px !important;
+  }
+
+  .home-2026 li[data-card][style*="padding:26px"] {
+    padding: 16px !important;
+    gap: 14px !important;
+  }
+
+  .home-2026 li[data-card][style*="padding:26px"] h3 {
+    font-size: 15.5px !important;
+  }
+
+  .home-2026 li[data-card][style*="padding:26px"] p {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* A guide row has no picture of its own, so in the merged rail it is a
+     bordered card of text beside the lead card's picture card. */
+  .home-2026 [data-rail-merge] > [data-rail] > li:has([data-index]) {
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 20px !important;
+    align-self: start;
+  }
+
+  .home-2026 [data-rail-merge] > [data-rail] > li > [data-index] {
+    padding: 14px 16px 16px !important;
+  }
+
+  /* Five cities per country is a screen. The link beside the heading is where
+     someone looking for a sixth would go. */
+  .home-2026 [data-city-cols][data-city-cols] > li:nth-child(n + 6) {
+    display: none !important;
+  }
+
+  /* ----------------------------------------------------------- the steps
+
+     The oversized numeral is a desktop flourish sized against a 22px heading.
+     In a rail card it is the tallest thing on the card. */
+  .home-2026 [data-step-n] {
+    font-size: 40px !important;
+    margin-bottom: 12px !important;
+    -webkit-text-stroke-width: 1.4px !important;
+  }
+
+  .home-2026 [data-step] p {
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .home-2026 [data-step] h3 {
+    font-size: 17px !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* --------------------------------------------------------- who is behind
+
+     The oversized outlined "10" is drawn to fill the empty half of a desktop
+     section. There is no empty half here, so it would sit over the words. */
+  .home-2026 [data-ten-big] {
+    display: none !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li {
+    padding: 14px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] h3 {
+    font-size: 15px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] p {
+    margin-bottom: 10px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] span[style*="width:46px"],
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li > span:first-child {
+    width: 36px !important;
+    height: 36px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* ---------------------------------------------------------- the countries
+
+     The card is a photograph with a country written over it. On a phone the
+     photograph is the whole width, so the type comes down to the size the
+     design uses and the blurb says one thing rather than three. */
+  .home-2026 [data-ctry] h3 {
+    font-size: 22px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .home-2026 [data-ctry] p {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 12px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .home-2026 [data-ctry] > div:last-child {
+    padding: 18px !important;
+  }
+
+  /* --------------------------------------------------------- the trade name
+
+     Two lines for a trade name, which covers every one of them. A third line
+     only appears when a name is long enough to need cutting anyway. */
+  .home-2026 [data-cat-grid][data-cat-grid] [data-tname] {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+  }
+
+  /* Three lines of supporting copy is a paragraph on a desktop card and half
+     a screen on a phone card, so the cards that repeat down a section hold
+     theirs to two. */
+  .home-2026 li[data-card][style*="padding:26px"] p,
+  .home-2026 [data-eeat-grid][data-eeat-grid] p {
+    -webkit-line-clamp: 2;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] p {
+    margin-bottom: 8px !important;
+  }
+
+  /* The featured-slot note is the small print under the two buttons. */
+  .home-2026 div[style*="padding:44px"] > p:last-child {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* ------------------------------------------------------------ the gaps
+
+     A section head is a heading on the left and a link on the right, 24px
+     apart with 44 below. Wrapped onto two rows on a phone those become
+     vertical gaps, and the link ends up floating between the heading and the
+     thing it points at. The same goes for the two-column splits: a 64px
+     column gap becomes 64px of nothing between a heading and its paragraph. */
+  .home-2026 div[style*="align-items:flex-end"][style*="flex-wrap:wrap"] {
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .home-2026 [data-split]:not([data-rail-merge]) {
+    gap: 16px !important;
+    margin-bottom: 18px !important;
+  }
+
+  /* Equal columns that hold their width whatever is written in them. Without
+     the zero minimum a long word sets the column and the grid runs off the
+     right edge of the screen. */
+  .home-2026 ul[data-eeat-grid][data-eeat-grid],
+  .home-2026 [data-eeat-grid][data-eeat-grid],
+  .home-2026 ul[data-ledger][data-ledger],
+  .home-2026 [data-ledger][data-ledger] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  .home-2026 li[data-card][style*="padding:26px"] p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ------------------------------------------------- who is behind this
+
+     Two of these side by side leaves about 150px for a line like
+     "Advertising disclosure", which is not enough and cuts it off. The design
+     runs them down the screen instead, with the icon beside the title rather
+     than above it, so a row is a heading, a sentence and a link. */
+  .home-2026 ul[data-eeat-grid][data-eeat-grid],
+  .home-2026 [data-eeat-grid][data-eeat-grid] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li {
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-areas: "icon title" "gap text" "gap link";
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 12px 14px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li > span:first-child {
+    grid-area: icon;
+    margin-bottom: 0 !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li > h3 {
+    grid-area: title;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li > p {
+    grid-area: text;
+    margin-top: 4px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .home-2026 [data-eeat-grid][data-eeat-grid] > li > a {
+    grid-area: link;
+    margin-top: 0 !important;
+    justify-self: start;
   }
 }

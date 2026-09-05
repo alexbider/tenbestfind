@@ -1024,10 +1024,12 @@ export default async function HomePage() {
 
               <div
                 data-split=""
+                data-rail-merge=""
                 style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "24px", alignItems: "stretch" }}
               >
                 <article
                   data-card=""
+                  data-lead=""
                   style={{
                     position: "relative",
                     background: "var(--surface-card)",
@@ -1169,6 +1171,7 @@ export default async function HomePage() {
                     column, which is what a market with one published ranking
                     would otherwise get. */}
                 <ul
+                  data-rail=""
                   style={{
                     display: "grid",
                     gap: "14px",
@@ -1338,6 +1341,7 @@ export default async function HomePage() {
 
             <ol
               data-steps=""
+              data-rail=""
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -1414,6 +1418,7 @@ export default async function HomePage() {
             </div>
             <div
               data-country-grid=""
+              data-rail=""
               style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}
             >
               {countries.map((country) => (
@@ -1639,6 +1644,7 @@ export default async function HomePage() {
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <span
+                      data-row-kicker=""
                       style={{
                         fontSize: "11.5px",
                         fontWeight: "700",
@@ -1664,7 +1670,10 @@ export default async function HomePage() {
                       >
                         {rankingCardTitle(ranking)}
                       </span>
-                      <span style={{ display: "block", fontSize: "15px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
+                      <span
+                        data-row-sub=""
+                        style={{ display: "block", fontSize: "15px", lineHeight: "1.5", color: "var(--text-secondary)" }}
+                      >
                         {ranking.summary}
                       </span>
                     </span>
@@ -1724,10 +1733,12 @@ export default async function HomePage() {
               </div>
               <div
                 data-split=""
+                data-rail-merge=""
                 style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "28px", alignItems: "start" }}
               >
                 <article
                   data-card=""
+                  data-lead=""
                   style={{
                     background: "var(--surface-card)",
                     border: "1px solid var(--border-subtle)",
@@ -1794,7 +1805,7 @@ export default async function HomePage() {
                     </p>
                   </div>
                 </article>
-                <ol style={{ borderTop: "2px solid var(--ink)" }}>
+                <ol data-rail="" style={{ borderTop: "2px solid var(--ink)" }}>
                   {sideGuides.map((guide) => (
                     <li key={guide.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                       <Link
@@ -1838,6 +1849,7 @@ export default async function HomePage() {
                             {guide.title}
                           </span>
                           <span
+                            data-row-sub=""
                             style={{
                               display: "block",
                               fontSize: "15px",
