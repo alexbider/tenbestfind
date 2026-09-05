@@ -138,20 +138,28 @@
   }
 }
 
-/* `translate` rather than `transform`, and the press below uses `scale`.
+/* The reveal moves; it does not hide.
 
-   They are separate properties, so a card that is still filling its
-   reveal can still answer a press. Written as one `transform` they would
-   be the same property and the animation would win, which is a card that
-   quietly stops responding to taps for as long as it is near the top of
-   the screen. */
+   It animates `translate` only, and the press below sets `scale`. Two
+   reasons, and the second one is why there is no fade.
+
+   They are separate properties, so a card still filling its reveal can
+   still answer a press; written as one `transform` the animation would
+   win and a card near the top of the screen would quietly stop
+   responding to taps.
+
+   And a scroll timeline has no way to guarantee an element ever finishes
+   its entry range. Anything close enough to the end of the document that
+   the page cannot scroll past it never completes, which with a fade
+   meant five cards sat at zero opacity while centred on the screen: the
+   last three on the home page and two of the three companies on a Top 10
+   page. A rise that does not finish is ten pixels low and perfectly
+   readable. A fade that does not finish is missing content. */
 @keyframes revealRise {
   from {
-    opacity: 0;
     translate: 0 10px;
   }
   to {
-    opacity: 1;
     translate: none;
   }
 }
