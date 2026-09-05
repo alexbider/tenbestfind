@@ -288,6 +288,7 @@ export default async function ServicesIndexPage() {
 
   return (
     <SiteChrome active="services">
+      <div className="hs-2026">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -490,10 +491,27 @@ export default async function ServicesIndexPage() {
           data-split=""
           style={{ ...SHELL, padding: "72px 24px", display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
         >
-          <h2 id="intro-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", textWrap: "balance" }}>
-            Your starting point for home services
-          </h2>
-          <div>
+          {/* Open on a desktop, where it sits in its own column beside the
+              heading, and closed on a phone, where six hundred pixels of
+              preamble stand between the reader and the trades they came for.
+              The CSS decides which, so it is right on the first paint and
+              every word is in the page either way. */}
+          <details data-intro="">
+            <summary data-intro-head="">
+              <span>
+                <h2 id="intro-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", textWrap: "balance" }}>
+                  Your starting point for home services
+                </h2>
+                <span data-intro-note="">What this page covers and how to use it</span>
+              </span>
+              <span data-intro-ico="" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
+              </span>
+            </summary>
+            <div data-intro-body="">
             <p style={{ fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
               Home services cover the trades and companies homeowners hire to keep a property working,
               safe and comfortable: repairs to core systems like plumbing, heating and electrical,
@@ -516,7 +534,8 @@ export default async function ServicesIndexPage() {
               </Link>
               .
             </p>
-          </div>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -554,7 +573,7 @@ export default async function ServicesIndexPage() {
                 <h3 style={{ fontSize: "20px", fontWeight: "700" }}>{band.title}</h3>
                 <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>{band.note}</span>
               </div>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "14px" }}>
+              <ul data-band-grid="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "14px" }}>
                 {band.items.map((category) => (
                   <li
                     key={category.id}
@@ -605,7 +624,7 @@ export default async function ServicesIndexPage() {
               Not sure which trade you need? Start from the job instead of the job title.
             </p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "18px" }}>
+          <div data-jobs="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "18px" }}>
             {PROJECT_GROUPS.map((group) => (
               <div key={group.title} data-card="" style={{ ...CARD, padding: "24px 22px 18px" }}>
                 <span
@@ -651,6 +670,7 @@ export default async function ServicesIndexPage() {
 
           {trending.length > 0 ? (
             <div
+              data-trend-rail=""
               style={{
                 marginTop: "36px",
                 padding: "22px 24px",
@@ -723,7 +743,7 @@ export default async function ServicesIndexPage() {
                 View all rankings →
               </Link>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
+            <ul data-rank-rail="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
               {rankings.map((ranking) => (
                 <li key={ranking.id} data-card="" style={{ ...CARD, padding: "22px 24px", display: "flex", gap: "18px" }}>
                   <span
@@ -820,7 +840,7 @@ export default async function ServicesIndexPage() {
                   Browse all states
                 </Link>
               </div>
-              <ul style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+              <ul data-places="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
                 {regions.map((region) => (
                   <li key={region.id}>
                     <Link data-row="" href={routes.region(region.country.code, region.slug)} style={ROW}>
@@ -848,7 +868,7 @@ export default async function ServicesIndexPage() {
                   Browse all cities
                 </Link>
               </div>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0 20px" }}>
+              <ul data-places="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0 20px" }}>
                 {cities.map((city) => (
                   <li key={city.id}>
                     <Link
@@ -901,7 +921,7 @@ export default async function ServicesIndexPage() {
                 </Link>
               </p>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
+            <ul data-checks="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
               {HIRING_CRITERIA.map((item) => (
                 <li
                   key={item.title}
@@ -1131,7 +1151,7 @@ export default async function ServicesIndexPage() {
             not evaluated the same way as a moving company or a remodeling contractor, because the
             decisions consumers face are different.
           </p>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "48px" }}>
+          <ul data-crit="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "48px" }}>
             {EVAL_CRITERIA.map((item) => (
               <li key={item.title} style={DARK_CARD}>
                 <h3 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{item.title}</h3>
@@ -1140,13 +1160,13 @@ export default async function ServicesIndexPage() {
             ))}
           </ul>
 
-          <h2 style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", color: "#fff", marginBottom: "24px" }}>
+          <h3 style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", color: "#fff", marginBottom: "24px" }}>
             Home service research you can understand
-          </h2>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "32px" }}>
+          </h3>
+          <ul data-eeat="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "32px" }}>
             {EEAT.map((item) => (
               <li key={item.title} style={DARK_CARD}>
-                <h3 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{item.title}</h3>
+                <h4 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{item.title}</h4>
                 <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)", marginBottom: "12px" }}>
                   {item.body}
                 </p>
@@ -1182,6 +1202,7 @@ export default async function ServicesIndexPage() {
               </Link>
             </div>
             <ul
+              data-lead-guides=""
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -1269,7 +1290,7 @@ export default async function ServicesIndexPage() {
             <h2 id="faqs-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", textWrap: "balance" }}>
               Common questions about home services
             </h2>
-            <ul style={{ display: "grid", gap: "12px" }}>
+            <ul data-faqs="" style={{ display: "grid", gap: "12px" }}>
               {faqs.map((faq) => (
                 <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
               ))}
@@ -1400,6 +1421,7 @@ export default async function ServicesIndexPage() {
           </form>
         </div>
       </section>
+      </div>
     </SiteChrome>
   );
 }

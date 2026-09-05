@@ -1,0 +1,591 @@
+/* ==================================================================
+   The Home Services page on a phone.
+
+   The desktop page is a directory: thirty-eight trades as bordered
+   cards in five groups, six project panels, seven criteria tiles, and
+   a paragraph of preamble before any of it. Collapsed into one column
+   that came to 24,205px at 390px wide, which is not a directory any
+   more, it is a scroll.
+
+   The design keeps the same content and changes its shape at every
+   section: trades become chips you can see a whole group of at once,
+   rows of cards become rails you swipe, the preamble becomes something
+   you open. Nothing is dropped.
+
+   Selectors that match on inline styles are spelled the way React
+   writes them, without a space after the colon.
+   ================================================================== */
+
+/* The preamble is a heading on a desktop, where it has its own column
+   beside the prose. `display: contents` puts the summary and the prose
+   back as the two columns of that grid, and the two declarations below
+   it hold the closed half open, because engines have hidden it two
+   different ways. */
+@media (min-width: 761px) {
+  .hs-2026 [data-intro] {
+    display: contents;
+  }
+
+  .hs-2026 [data-intro]::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+
+  .hs-2026 [data-intro] > [data-intro-body] {
+    display: block;
+  }
+
+  .hs-2026 [data-intro-head] {
+    pointer-events: none;
+  }
+
+  .hs-2026 [data-intro-note],
+  .hs-2026 [data-intro-ico] {
+    display: none;
+  }
+}
+
+.hs-2026 [data-intro-head] {
+  list-style: none;
+}
+
+.hs-2026 [data-intro-head]::-webkit-details-marker {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hs-2026 [style*="max-width:var(--shell)"],
+  .hs-2026 [style*="max-width:1240px"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .hs-2026 [style*="padding:80px"],
+  .hs-2026 [style*="padding:72px"],
+  .hs-2026 [style*="padding:64px"],
+  .hs-2026 [style*="padding:96px"],
+  .hs-2026 [style*="padding:88px"] {
+    padding-top: 28px !important;
+    padding-bottom: 24px !important;
+  }
+
+  .hs-2026 [style*="padding:20px 24px 56px"] {
+    padding: 18px 16px 22px !important;
+  }
+
+  .hs-2026 h1 {
+    font-size: clamp(28px, 8.4vw, 40px) !important;
+    line-height: 1.04 !important;
+  }
+
+  .hs-2026 h2 {
+    font-size: 22px !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .hs-2026 h3 {
+    font-size: 16.5px !important;
+  }
+
+  /* Every two-column split comes down to one, and the desktop gaps
+     between those columns stop being vertical gaps of the same size. */
+  .hs-2026 [data-split],
+  .hs-2026 div[style*="grid-template-columns:repeat(auto-fit"],
+  .hs-2026 ul[style*="grid-template-columns:repeat(auto-fit"],
+  .hs-2026 div[style*="grid-template-columns:1fr 1fr"],
+  .hs-2026 div[style*="fr 1."],
+  .hs-2026 div[style*="fr 0."] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .hs-2026 div[style*="align-items:flex-end"][style*="flex-wrap:wrap"] {
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .hs-2026 section p[style*="font-size:18px"],
+  .hs-2026 section p[style*="font-size:17px"] {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+  }
+
+  .hs-2026 [style*="position:sticky"] {
+    position: static !important;
+  }
+
+  .hs-2026 input,
+  .hs-2026 select,
+  .hs-2026 textarea {
+    font-size: 16px !important;
+  }
+
+  .hs-2026 a[style*="height:52px"],
+  .hs-2026 button[style*="height:52px"] {
+    width: 100%;
+    height: 48px !important;
+    justify-content: center;
+  }
+
+  /* ----------------------------------------------------------- intro */
+  .hs-2026 [data-intro] {
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 18px;
+    padding: 0 16px;
+  }
+
+  .hs-2026 [data-intro-head] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 60px;
+    padding: 14px 0;
+    cursor: pointer;
+  }
+
+  .hs-2026 [data-intro-head] h2 {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+  }
+
+  .hs-2026 [data-intro-note] {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .hs-2026 [data-intro-ico] {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+  }
+
+  .hs-2026 [data-intro][open] [data-intro-ico] svg {
+    transform: rotate(45deg);
+  }
+
+  .hs-2026 [data-intro-body] {
+    padding-bottom: 16px;
+  }
+
+  .hs-2026 [data-intro-body] p {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ------------------------------------------------------- the trades
+
+     Thirty-eight bordered cards, each with an icon and a line of
+     description, is nine screens. A trade on a phone is its name: the
+     group headings say what kind of work it is, and the description is
+     the first thing on the trade's own page. Chips let a reader see a
+     whole group at once, which is what this section is for. */
+  .hs-2026 [data-band-grid][data-band-grid] {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+
+  /* Named with the card attribute so it outranks the rule that brings
+     desktop card padding down; without that the chip keeps 14px of card
+     around it and every one of them is nearly two rows tall. */
+  .hs-2026 [data-band-grid] > li[data-card],
+  .hs-2026 [data-band-grid] > li {
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    display: block !important;
+  }
+
+  .hs-2026 [data-band-grid] > li > span:first-child {
+    display: none !important;
+  }
+
+  .hs-2026 [data-band-grid] h4 {
+    margin-bottom: 0 !important;
+  }
+
+  .hs-2026 [data-band-grid] h4 a {
+    display: inline-flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .hs-2026 [data-band-grid] p {
+    display: none !important;
+  }
+
+  /* The group heading is a line, not a banner. */
+  .hs-2026 [style*="border-bottom:2px solid var(--blue-900)"] {
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
+  }
+
+  .hs-2026 [style*="border-bottom:2px solid var(--blue-900)"] h3 {
+    font-size: 16px !important;
+  }
+
+  .hs-2026 [style*="border-bottom:2px solid var(--blue-900)"] span {
+    font-size: 13px !important;
+  }
+
+  .hs-2026 [style*="margin-bottom:44px"] {
+    margin-bottom: 20px !important;
+  }
+
+  /* -------------------------------------------------- rails and strips
+
+     A row of cards becomes a rail you swipe, which keeps the section
+     one screen tall and makes it obvious there is more beside it. */
+  .hs-2026 [data-jobs][data-jobs],
+  .hs-2026 [data-rank-rail][data-rank-rail] {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 10px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 16px;
+    padding: 2px 16px 12px !important;
+    margin: 0 -16px !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hs-2026 [data-jobs]::-webkit-scrollbar,
+  .hs-2026 [data-rank-rail]::-webkit-scrollbar,
+  .hs-2026 [data-trend-rail]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hs-2026 [data-jobs] > *,
+  .hs-2026 [data-rank-rail] > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    width: min(76vw, 285px) !important;
+  }
+
+  .hs-2026 [data-jobs] > [data-card] {
+    padding: 16px !important;
+  }
+
+  .hs-2026 [data-jobs] [style*="width:46px"] {
+    width: 42px !important;
+    height: 42px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .hs-2026 [data-jobs] h3 {
+    padding-bottom: 10px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .hs-2026 [data-jobs] [data-row] {
+    padding: 7px 8px !important;
+    font-size: 14px !important;
+  }
+
+  .hs-2026 [data-rank-rail] > [data-card] {
+    padding: 16px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* The trending chips scroll sideways rather than wrapping into six
+     rows of two. */
+  .hs-2026 [data-trend-rail] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border: 0 !important;
+    background: none !important;
+    border-radius: 0 !important;
+    margin: 12px -16px 0 !important;
+    padding: 2px 16px !important;
+  }
+
+  .hs-2026 [data-trend-rail] > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* ------------------------------------------------------ the criteria
+
+     Seven of these stacked is a screen and a half of tiles that each
+     say one short thing. Two across is the design's shape and reads as
+     a list of criteria rather than a series of statements. */
+  .hs-2026 [data-crit][data-crit] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 22px !important;
+  }
+
+  .hs-2026 [data-crit] > li {
+    padding: 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .hs-2026 [data-crit] h3 {
+    font-size: 14.5px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .hs-2026 [data-crit] p {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* --------------------------------------------------------- the cards
+
+     Everything else that is a card carries desktop padding, which on a
+     390px screen is most of the card. */
+  .hs-2026 [data-card][style*="padding:22px 24px"],
+  .hs-2026 [data-card][style*="padding:24px 22px 18px"],
+  .hs-2026 [data-card][style*="padding:20px"] {
+    padding: 14px !important;
+  }
+
+  .hs-2026 [data-lead-guides][data-lead-guides] {
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .hs-2026 [data-lead-guides] h3 {
+    font-size: 15px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .hs-2026 [data-lead-guides] p {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* An opening paragraph says what the section is; the section says the
+     rest. */
+  .hs-2026 section h2 + p,
+  .hs-2026 [data-split] > div > p:first-of-type {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 760px) {
+  /* A chip is 34px tall. Inside a heading it sits on a text baseline, and the
+     line box the heading keeps for text it no longer has adds most of another
+     line under every one of them. */
+  .hs-2026 [data-band-grid] h4 {
+    line-height: 0 !important;
+  }
+
+  .hs-2026 [data-band-grid] h4 a {
+    vertical-align: top;
+  }
+
+  /* --------------------------------------------------------- the guides
+
+     A guide on a phone is a title and who wrote it. The summary is the
+     first paragraph of the guide itself, one tap away. */
+  .hs-2026 [data-lead-guides] > [data-card] {
+    padding: 12px 14px !important;
+  }
+
+  .hs-2026 [data-lead-guides] h3 {
+    font-size: 14.5px !important;
+    line-height: 1.3 !important;
+  }
+
+  .hs-2026 [data-lead-guides] > li > p {
+    display: none !important;
+  }
+
+  .hs-2026 [data-lead-guides] ~ ul > li {
+    padding: 8px 0 !important;
+  }
+
+  .hs-2026 [data-lead-guides] ~ ul a {
+    font-size: 14px !important;
+  }
+
+  /* ---------------------------------------------------------- the places
+
+     Ten states and ten cities, one column each, is a screen and a half of
+     links. Two columns of short names is a block you can read at a glance,
+     and the "browse all" link beside each heading has the rest. */
+  .hs-2026 [data-places][data-places] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 0 14px !important;
+  }
+
+  .hs-2026 [data-places] a {
+    padding: 8px 0 !important;
+    font-size: 14px !important;
+  }
+
+  .hs-2026 [data-places] > li:nth-child(n + 11) {
+    display: none !important;
+  }
+
+  /* --------------------------------------------- the rows that repeat
+
+     Cards padded for a desktop column, brought to the size the design
+     draws them, with the supporting line held to two lines. */
+  .hs-2026 [data-checks] > li,
+  .hs-2026 [data-eeat] > li,
+  .hs-2026 [data-crit] > li {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .hs-2026 [data-checks] h3,
+  .hs-2026 [data-eeat] h4 {
+    font-size: 15px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .hs-2026 [data-checks] p,
+  .hs-2026 [data-eeat] p {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 6px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hs-2026 [data-eeat] a {
+    font-size: 13.5px !important;
+  }
+
+  .hs-2026 section h3 {
+    font-size: 17px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* ------------------------------------------------------------- the faqs
+
+     A question is a row you tap, at the height the design gives it. */
+  .hs-2026 [data-faqs] {
+    gap: 0 !important;
+  }
+
+  .hs-2026 [data-faqs] summary {
+    min-height: 56px;
+    padding: 12px 2px !important;
+    font-size: 15.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  .hs-2026 [data-faqs] > li {
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  /* ---------------------------------------------------------- the costs */
+  .hs-2026 table {
+    min-width: 0 !important;
+  }
+
+  .hs-2026 table td,
+  .hs-2026 table th {
+    padding: 10px 12px !important;
+    font-size: 13.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* ----------------------------------------------------------- the hero */
+  .hs-2026 [data-ten-outline] {
+    width: 180px !important;
+    height: 128px !important;
+    right: -44px !important;
+    top: 0 !important;
+  }
+
+  .hs-2026 section p[style*="font-size:19px"] {
+    font-size: 15.5px !important;
+    line-height: 1.6 !important;
+    margin-top: 12px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 760px) {
+  /* A project card lists the trades that job touches. Seven full-width rows
+     of one word each is most of the card; the design wraps them as chips, so
+     the whole list is visible at the size the words actually need. */
+  .hs-2026 [data-jobs] [data-card] > ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hs-2026 [data-jobs] [data-row] {
+    display: inline-flex !important;
+    height: 32px;
+    padding: 0 11px !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    background: var(--surface-page);
+    border: 1px solid var(--border-subtle);
+    font-size: 12.5px !important;
+    font-weight: 600;
+  }
+
+  .hs-2026 [data-jobs] [data-row] svg {
+    display: none;
+  }
+
+  /* The research rows are a title and where it goes. */
+  .hs-2026 [data-eeat] p {
+    -webkit-line-clamp: 1;
+    margin-bottom: 4px !important;
+  }
+
+  .hs-2026 [data-crit] > li {
+    padding: 10px 12px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Where a section's lead runs to a second paragraph, it is held to two
+     lines: the design gives every section one. */
+  .hs-2026 section p[style*="font-size:17px"] + p[style*="font-size:17px"],
+  .hs-2026 section p[style*="font-size:18px"] + p[style*="font-size:18px"] {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 8px !important;
+  }
+}
