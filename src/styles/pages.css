@@ -65,6 +65,56 @@
 
 .site-page a { color: var(--text-link); text-decoration: none; }
 
+/* --- links and controls on the dark bands ---
+
+   `.site-page a` above sets the light-surface link blue, and it comes
+   later in the file than the rules the dark bands write for their own
+   links, so at equal specificity it won. The business centre strip
+   drew blue-600 chips on navy at 2.68:1, and the info button on the
+   city hub's methodology band drew gray-600 on navy at 1.75:1: both
+   only readable if you already knew they were there.
+
+   A band declares itself dark by setting one of the ink backgrounds
+   inline, so that is what these match on. React serialises an inline
+   style two ways, `background:var(...)` when the server renders it and
+   `background: var(...)` after a client re-render, so both spellings
+   are listed or the rule works until the page hydrates. */
+.site-page [style*="background:var(--blue-900)"] a,
+.site-page [style*="background: var(--blue-900)"] a,
+.site-page [style*="background:var(--surface-ink)"] a,
+.site-page [style*="background: var(--surface-ink)"] a,
+.site-page [style*="background:var(--gray-900)"] a,
+.site-page [style*="background: var(--gray-900)"] a,
+.site-page .centre-nav a {
+  color: var(--text-on-ink-soft);
+}
+
+.site-page [style*="background:var(--blue-900)"] a:hover,
+.site-page [style*="background: var(--blue-900)"] a:hover,
+.site-page [style*="background:var(--surface-ink)"] a:hover,
+.site-page [style*="background: var(--surface-ink)"] a:hover,
+.site-page [style*="background:var(--gray-900)"] a:hover,
+.site-page [style*="background: var(--gray-900)"] a:hover,
+.site-page .centre-nav a:hover,
+.site-page .centre-nav a[data-on="true"] {
+  color: #fff;
+}
+
+.site-page [style*="background:var(--blue-900)"] [data-info],
+.site-page [style*="background: var(--blue-900)"] [data-info],
+.site-page [style*="background:var(--surface-ink)"] [data-info],
+.site-page [style*="background: var(--surface-ink)"] [data-info] {
+  color: var(--text-on-ink-soft);
+}
+
+.site-page [style*="background:var(--blue-900)"] [data-info] > span,
+.site-page [style*="background: var(--blue-900)"] [data-info] > span,
+.site-page [style*="background:var(--surface-ink)"] [data-info] > span,
+.site-page [style*="background: var(--surface-ink)"] [data-info] > span {
+  border-color: rgba(232, 237, 245, 0.5);
+  color: var(--text-on-ink);
+}
+
 .site-page a:hover { color: var(--color-primary-hover); text-decoration: underline; }
 
 .site-page a:focus-visible, .site-page button:focus-visible, .site-page input:focus-visible, .site-page summary:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 8px; }
@@ -327,7 +377,10 @@
 
 .site-page a:hover { color: var(--color-primary-hover); }
 
-.site-page .arrow-link { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--color-primary); white-space: nowrap; }
+/* blue-600, not blue-500: --color-primary is 4.34:1 on the tinted
+   section backgrounds, which is under AA for 15px text. It stays the
+   fill colour for buttons, where white on it reads 4.57:1. */
+.site-page .arrow-link { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--text-link); white-space: nowrap; }
 
 .site-page .arrow-link svg { transition: transform 200ms var(--ease-out); }
 
@@ -337,7 +390,7 @@
 
 .site-page [data-card]:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--blue-200); }
 
-.site-page [data-card]:hover [data-cat-name] { color: var(--color-primary); }
+.site-page [data-card]:hover [data-cat-name] { color: var(--text-link); }
 
 .site-page [data-row] > svg { opacity: 0; transform: translateX(-4px); transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); color: var(--color-primary); }
 
@@ -359,7 +412,7 @@
 
 .site-page [data-fq-ico] { transition: transform 220ms var(--ease-out); }
 
-.site-page [data-faq] > summary:hover { color: var(--color-primary); }
+.site-page [data-faq] > summary:hover { color: var(--text-link); }
 
 @media (max-width: 1080px) {
   .site-page [data-cat-grid] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
@@ -390,7 +443,7 @@
 
 .site-page [data-info]:hover { color: var(--color-primary-hover); }
 
-.site-page [data-info] > span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 11px; font-weight: 700; color: var(--color-primary); }
+.site-page [data-info] > span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 11px; font-weight: 700; color: var(--text-link); }
 
 .site-page dialog { border: 0; padding: 0; max-width: 620px; width: calc(100% - 32px); border-radius: 22px; box-shadow: var(--shadow-xl); color: var(--text-primary); }
 
@@ -882,13 +935,28 @@
     min-height: 44px;
   }
 
-  .site-page li > :not(a) + a:last-child {
+  .site-page :is(li, div) > :not(a) + a:last-child {
     display: flex;
     align-items: center;
     min-height: 44px;
   }
 
-  .site-page div > :is(h2, h3) + a:last-child {
+  /* The same shape in an inline context: a company name in a table
+     cell, a byline in a definition list, a trade chip in a card. These
+     keep `inline-flex` so they stay on their own line rather than
+     taking the width of the cell they sit in. */
+  .site-page :is(dd, td, th, span) > a:only-child,
+  .site-page :is(dd, td, th, span) > :not(a) + a:last-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* A row that is nothing but links, which is how the footer of a
+     methodology page offers its three related reads. No element
+     precedes the first one, so the rule above cannot see it; asking
+     whether the row holds two adjacent links can. */
+  .site-page div:has(> a + a) > a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;

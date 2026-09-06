@@ -433,7 +433,7 @@ export async function RankingPage({
                             gap: "6px",
                             fontSize: "13px",
                             fontWeight: "600",
-                            color: "var(--color-success)",
+                            color: "var(--text-success)",
                           }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -726,7 +726,7 @@ export async function RankingPage({
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
                             {likes.length > 0 ? (
                               <div>
-                                <h4 style={{ ...LABEL, color: "var(--color-success)", marginBottom: "10px" }}>What we like</h4>
+                                <h4 style={{ ...LABEL, color: "var(--text-success)", marginBottom: "10px" }}>What we like</h4>
                                 <ul style={{ display: "grid", gap: "8px" }}>
                                   {likes.map((item) => (
                                     <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", lineHeight: "1.55", color: "var(--text-secondary)" }}>

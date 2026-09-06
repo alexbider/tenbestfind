@@ -54,3 +54,24 @@
   }
   [data-fbrand] { grid-column: 1 / -1 !important; }
 }
+
+/* --- what a thumb can hit, in the footer ---
+
+   The tap-target work in the phone layer is scoped to `.site-page`,
+   which is the class on `<main>`, so it never reached down here: the
+   footer's link columns were 17px rows, and on a phone the footer is
+   where someone goes when the page above did not have what they
+   wanted. Same 44px as everywhere else. The links inside the two
+   sentences at the bottom keep their inline size. */
+@media (max-width: 760px) {
+  [data-ftr] nav li > a,
+  [data-ftr] [data-fbrand] > a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  [data-ftr] nav ul {
+    margin: 0;
+  }
+}

@@ -281,7 +281,7 @@ export async function SiteFooter() {
                 fontWeight: "700",
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: "rgba(232,237,245,0.45)",
+                color: "var(--text-on-ink-muted)",
                 marginBottom: "10px",
               }}
             >
@@ -377,7 +377,7 @@ export async function SiteFooter() {
             alignItems: "center",
           }}
         >
-          <p style={{ fontSize: "13.5px", color: "rgba(232,237,245,0.5)" }}>
+          <p style={{ fontSize: "13.5px", color: "var(--text-on-ink-soft)" }}>
             © {new Date().getFullYear()} TenBestFind. All rights reserved.
           </p>
           <p style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "13.5px", color: "rgba(232,237,245,0.6)" }}>

@@ -1,6 +1,13 @@
 /* ============================================================
-   Addiction Rehab Centers — Color System
-   Calm, clinical, trustworthy. Blue-led. Never pure black.
+   TenBestFind — Color System
+   Calm, editorial, trustworthy. Blue-led. Never pure black.
+
+   The three text steps are chosen so that every one of them
+   clears 4.5:1 against all three light surfaces the site uses
+   (white, --surface-page #F7F9FC and --surface-soft #EAF4FF).
+   The old ramp ended at #94A3B8, which reads 2.56:1 on white:
+   fine as a hairline or an icon tint, not readable as text, and
+   it was carrying bylines, review dates and card labels.
    ============================================================ */
 :root {
   /* ---- Brand: Blue ---- */
@@ -68,10 +75,21 @@
   --border-strong:   var(--gray-300);
   --border-focus:    var(--blue-500);
 
+  /* 12.0:1 / 11.4:1 / 10.8:1 on white / page / soft */
   --text-primary:    var(--gray-800);
-  --text-secondary:  var(--gray-500);
-  --text-muted:      var(--gray-400);
+  /* 7.6:1 / 7.2:1 / 6.8:1 */
+  --text-secondary:  var(--gray-600);
+  /* 5.3:1 / 5.0:1 / 4.8:1 — the lightest text the palette allows */
+  --text-muted:      #656C7A;
+  /* Green and amber are fills, not text: #1F9D6B is 3.45:1 on
+     white and #D99A1C is 2.44:1. These are their readable twins. */
+  --text-success:    #13704A;
+  --text-warning:    #8A5F0B;
   --text-on-ink:     #E8EDF5;
+  /* On --surface-ink. The footer used to fade this to 0.45 and 0.5,
+     which lands at 3.85:1 and 4.45:1; these clear 4.5:1. */
+  --text-on-ink-soft:  rgba(232, 237, 245, 0.72);
+  --text-on-ink-muted: rgba(232, 237, 245, 0.62);
   --text-link:       var(--blue-600);
 
   --focus-ring:      0 0 0 3px rgba(45, 116, 215, 0.32);

@@ -404,7 +404,7 @@
   gap: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--text-link);
   white-space: nowrap;
 }
 
@@ -1572,8 +1572,13 @@
     overflow: hidden;
   }
 
+  /* The country code pill is `position: absolute` at 22px from the top
+     of the card, which on a desktop floats over the empty upper half of
+     a 420px card. Here the card is 300px and its content starts at the
+     top, so "US" was being printed underneath the word "United States".
+     The top padding gives the pill the band it assumes it has. */
   .home-2026 [data-ctry] > div:last-child {
-    padding: 18px !important;
+    padding: 68px 18px 18px !important;
   }
 
 

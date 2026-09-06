@@ -1748,7 +1748,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                         fontWeight: "700",
                         letterSpacing: "var(--ls-wide)",
                         textTransform: "uppercase",
-                        color: "var(--color-success)",
+                        color: "var(--text-success)",
                         marginBottom: "12px",
                       }}
                     >

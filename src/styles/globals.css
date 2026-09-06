@@ -261,7 +261,7 @@ summary:focus-visible,
   gap: 7px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--text-link);
   white-space: nowrap;
 }
 
