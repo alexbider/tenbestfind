@@ -150,6 +150,12 @@ services:
         echo "==> fetching hero images"
         npx tsx scripts/ingest-hero-images.ts --yes || echo "hero images skipped"
 
+        # Re-encodes anything stored before the image pipeline existed and
+        # repoints its record. Skips images that are already optimised, so it
+        # does real work once and nothing on every deploy after that.
+        echo "==> optimising stored media"
+        npx tsx scripts/optimize-media.ts --yes || echo "media optimisation skipped"
+
         # Rescores how complete each listing is. The enrichment filters select on
         # this number, so it has to be right after any change to how it is
         # weighted. Cheap, and safe to repeat.

@@ -10,33 +10,27 @@
  * showing. A hero pointing at somebody else's CDN is a broken image waiting
  * for their retention policy.
  *
- * It is safe to run on every deploy: a file already in MEDIA_DIR is not
- * fetched again.
+ * Everything fetched goes through the image pipeline before it is stored, so
+ * a 2752px PNG becomes a capped WebP with an AVIF and WebP ladder beside it.
+ *
+ * It is safe to run on every deploy: a record that already has an image is
+ * skipped, so nothing is fetched twice.
  *
  *   npx tsx scripts/ingest-hero-images.ts          dry run
  *   npx tsx scripts/ingest-hero-images.ts --yes    write
  */
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { mkdir } from "node:fs/promises";
 import { db } from "../src/lib/db";
-import { MEDIA_DIR, MEDIA_PUBLIC_PATH, MEDIA_TYPES } from "../src/lib/media";
+import { optimizeImage } from "../src/lib/image-pipeline";
+import { MEDIA_DIR } from "../src/lib/media";
 import { HERO_IMAGES, type HeroImageSource } from "../prisma/data/hero-images";
 
 const write = process.argv.includes("--yes");
 
-/** Stable, so a second run finds the file it wrote the first time. */
-function filenameFor(source: HeroImageSource, extension: string): string {
+/** A readable stem; the pipeline adds its own hash and dimensions. */
+function baseNameFor(source: HeroImageSource): string {
   const slug = source.key.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-  return `hero-${source.kind}-${slug}${extension}`;
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    const info = await stat(file);
-    return info.size > 0;
-  } catch {
-    return false;
-  }
+  return `hero-${source.kind}-${slug}`;
 }
 
 /** Resolves the record this source belongs to, or null if it is not here. */
@@ -93,43 +87,31 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const extension = path.extname(new URL(source.url).pathname).toLowerCase();
-    if (!Object.values(MEDIA_TYPES).includes(extension)) {
-      console.log(`  ${source.key}: ${extension || "no extension"} is not an image type we serve`);
-      failed += 1;
+    if (!write) {
+      console.log(`  would fetch ${source.key}`);
+      filled += 1;
       continue;
     }
 
-    const filename = filenameFor(source, extension);
-    const file = path.join(MEDIA_DIR, filename);
-    const publicPath = `${MEDIA_PUBLIC_PATH}/${filename}`;
+    try {
+      const response = await fetch(source.url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = Buffer.from(await response.arrayBuffer());
+      if (body.length === 0) throw new Error("empty body");
 
-    if (!(await exists(file))) {
-      if (!write) {
-        console.log(`  would fetch ${source.key} -> ${filename}`);
-        filled += 1;
-        continue;
-      }
-      try {
-        const response = await fetch(source.url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const body = Buffer.from(await response.arrayBuffer());
-        if (body.length === 0) throw new Error("empty body");
-        await writeFile(file, body);
-      } catch (error) {
-        // A hero nobody can fetch is not worth failing a deploy over: the
-        // placeholder is a perfectly good fallback and the next run retries.
-        console.log(`  ${source.key}: could not fetch (${String(error)})`);
-        failed += 1;
-        continue;
-      }
+      const image = await optimizeImage(body, baseNameFor(source));
+      await save(target.id, source.kind, image.url);
+      console.log(
+        `  ${target.label} -> ${image.url} ` +
+          `(${Math.round(body.length / 1024)} KB in, ${Math.round(image.bytes / 1024)} KB out)`,
+      );
+      filled += 1;
+    } catch (error) {
+      // A hero nobody can fetch is not worth failing a deploy over: the
+      // placeholder is a perfectly good fallback and the next run retries.
+      console.log(`  ${source.key}: could not fetch (${String(error)})`);
+      failed += 1;
     }
-
-    if (write) {
-      await save(target.id, source.kind, publicPath);
-      console.log(`  ${target.label} -> ${publicPath}`);
-    }
-    filled += 1;
   }
 
   console.log(

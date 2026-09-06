@@ -589,7 +589,15 @@ export default async function HomePage() {
                     data-thumb=""
                     style={{ position: "relative", height: "176px", background: "#1B2D55", overflow: "hidden" }}
                   >
-                    <Media src={hero.city?.heroImage} alt="" tone="dark" />
+                    {/* Above the fold, so this one is fetched eagerly and at
+                        high priority; it is the page's LCP candidate. */}
+                    <Media
+                      src={hero.city?.heroImage}
+                      alt=""
+                      tone="dark"
+                      priority
+                      sizes="(max-width: 760px) 100vw, 420px"
+                    />
                     <span
                       aria-hidden="true"
                       style={{
@@ -1441,7 +1449,7 @@ export default async function HomePage() {
                     data-thumb=""
                     style={{ position: "absolute", inset: "0", background: "#1B2D55", overflow: "hidden" }}
                   >
-                    <Media src={country.heroImage} alt="" tone="dark" />
+                    <Media src={country.heroImage} alt="" tone="dark" sizes="(max-width: 760px) 92vw, 620px" />
                   </div>
                   <span
                     aria-hidden="true"

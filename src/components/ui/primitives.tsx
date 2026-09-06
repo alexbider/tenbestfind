@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight, Check, ChevronRight, Icon, type IconName } from "./Icon";
 import { STATUS_TONES } from "@/lib/enums";
+import { describeImage, srcSetFor } from "@/lib/image-srcset";
 import { humanizeStatus } from "@/lib/format";
 import type { Crumb } from "@/lib/urls";
 
@@ -270,6 +271,8 @@ export function Media({
   monogram,
   radius = 0,
   tone,
+  sizes = "(max-width: 760px) 100vw, (max-width: 1200px) 50vw, 640px",
+  priority = false,
 }: {
   src?: string | null;
   alt: string;
@@ -282,12 +285,56 @@ export function Media({
    * which on navy reads as a white panel rather than an empty photo.
    */
   tone?: "dark";
+  /**
+   * How wide this slot actually is, so the browser can pick a copy rather
+   * than assuming the image fills the viewport. The default suits a card in
+   * a grid; a full-bleed hero should pass "100vw".
+   */
+  sizes?: string;
+  /** Set on the one image above the fold. Everything else waits its turn. */
+  priority?: boolean;
 }) {
   if (src) {
-    // Photos come from arbitrary hosts, so this stays a plain img rather than
-    // next/image with a remote loader.
+    const info = describeImage(src);
+    const style = { width: "100%", height: "100%", objectFit: "cover" } as const;
+
+    // An image this site processed has its ladder and its intrinsic size
+    // recorded in the filename, so it can be offered as a set of copies with
+    // the aspect ratio declared up front. Anything else, an older upload or a
+    // photo on somebody else's host, is rendered as it always was.
+    if (info) {
+      return (
+        <picture>
+          <source type="image/avif" srcSet={srcSetFor(src, "avif") ?? undefined} sizes={sizes} />
+          <source type="image/webp" srcSet={srcSetFor(src, "webp") ?? undefined} sizes={sizes} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            width={info.width}
+            height={info.height}
+            sizes={sizes}
+            loading={priority ? "eager" : "lazy"}
+            decoding={priority ? "sync" : "async"}
+            fetchPriority={priority ? "high" : undefined}
+            style={style}
+          />
+        </picture>
+      );
+    }
+
+    // Photos can come from arbitrary hosts, so this stays a plain img rather
+    // than next/image with a remote loader.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding={priority ? "sync" : "async"}
+        style={style}
+      />
+    );
   }
   return (
     <span
