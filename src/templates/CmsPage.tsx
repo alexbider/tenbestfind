@@ -284,19 +284,20 @@ export async function CmsPage({ slug }: { slug: string }) {
                   more: "All services",
                   moreHref: routes.servicesIndex(),
                 },
-                {
-                  title: "Locations",
+                // One card per country rather than one "Locations" card with
+                // every country's name sitting as a sibling of every other
+                // country's regions: read down that list and "Canada" was
+                // just another entry between two American states.
+                ...countries.map((country) => ({
+                  title: country.name,
                   icon: "pin" as IconName,
-                  links: countries.flatMap((country) => [
-                    { name: country.name, href: routes.country(country.code) },
-                    ...country.regions.slice(0, 4).map((region) => ({
-                      name: region.name,
-                      href: routes.region(country.code, region.slug),
-                    })),
-                  ]),
-                  more: "All locations",
-                  moreHref: routes.locationsIndex(),
-                },
+                  links: country.regions.slice(0, 6).map((region) => ({
+                    name: region.name,
+                    href: routes.region(country.code, region.slug),
+                  })),
+                  more: `All ${country.name} ${country.regionLabel}`,
+                  moreHref: routes.country(country.code),
+                })),
                 {
                   title: "Editorial",
                   icon: "book" as IconName,

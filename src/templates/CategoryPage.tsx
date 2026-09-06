@@ -28,6 +28,7 @@ import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
+import { countriesOf, groupByCountry, regionNoun, regionNounAcross } from "@/lib/regions";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { serviceCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, serviceCrumbs } from "@/lib/breadcrumbs";
@@ -424,51 +425,71 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
         </section>
       ) : null}
 
-      {/* ----------------------------------------------------------- states */}
+      {/* ----------------------------------------------------------- states
+
+           Grouped by country, because a state and a province are the same
+           rung of the ladder and a different word. Ungrouped this printed
+           "Browse plumbers by provinces" over Florida and Ontario: the
+           plural of whichever region sorted first, applied to both, with
+           nothing to say which country either name belonged to. */}
       {regions.length > 0 ? (
         <section id="states" aria-labelledby="states-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={{ ...SHELL, padding: "80px 24px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "28px" }}>
               <h2 id="states-h2" style={{ fontSize: "clamp(28px, 3.2vw, 40px)", fontWeight: "700" }}>
-                Browse {category.name.toLowerCase()} by {regions[0].country.regionLabel ?? "state"}
+                Browse {category.name.toLowerCase()} by {regionNounAcross(countriesOf(regions))}
               </h2>
               <Link href={routes.locationsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
                 Every location →
               </Link>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
-              {regions.map((entry) => (
-                <li
-                  key={entry.id}
-                  data-card=""
-                  style={{
-                    background: "var(--surface-card)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "18px",
-                    boxShadow: "var(--shadow-xs)",
-                    padding: "22px 24px",
-                  }}
-                >
-                  <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "10px" }}>
-                    <Link href={routes.region(entry.country.code, entry.slug)} style={{ color: "var(--blue-900)" }}>
-                      {entry.name}
+            {groupByCountry(regions).map((group) => (
+              <div key={group.country.code} style={{ marginBottom: "34px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
+                  <h3 style={{ fontSize: "20px", fontWeight: "700", color: "var(--blue-900)" }}>
+                    <Link href={routes.country(group.country.code)} style={{ color: "var(--blue-900)" }}>
+                      {group.country.name}
                     </Link>
                   </h3>
-                  <ul style={{ display: "grid", gap: "4px" }}>
-                    {entry.cities.slice(0, 5).map((city) => (
-                      <li key={city.id}>
-                        <Link
-                          href={routes.ranking(entry.country.code, entry.slug, city.slug, category.slug)}
-                          style={{ fontSize: "14.5px", color: "var(--text-secondary)" }}
-                        >
-                          {city.name}
+                  <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    {group.regions.length} {regionNoun(group.country, group.regions.length)}
+                  </p>
+                </div>
+                <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+                  {group.regions.map((entry) => (
+                    <li
+                      key={entry.id}
+                      data-card=""
+                      style={{
+                        background: "var(--surface-card)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "18px",
+                        boxShadow: "var(--shadow-xs)",
+                        padding: "22px 24px",
+                      }}
+                    >
+                      <h4 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "10px" }}>
+                        <Link href={routes.region(entry.country.code, entry.slug)} style={{ color: "var(--blue-900)" }}>
+                          {entry.name}
                         </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+                      </h4>
+                      <ul style={{ display: "grid", gap: "4px" }}>
+                        {entry.cities.slice(0, 5).map((city) => (
+                          <li key={city.id}>
+                            <Link
+                              href={routes.ranking(entry.country.code, entry.slug, city.slug, category.slug)}
+                              style={{ fontSize: "14.5px", color: "var(--text-secondary)" }}
+                            >
+                              {city.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
 
             <details
               data-faq=""
@@ -498,22 +519,44 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                   <path d="m6 9 6 6 6-6" />
                 </svg>
               </summary>
-              <ul style={{ padding: "4px 0 22px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-                {regions
-                  .flatMap((entry) =>
-                    entry.cities.map((city) => ({
-                      key: city.id,
-                      name: `${city.name}, ${entry.code.toUpperCase()}`,
-                      href: routes.ranking(entry.country.code, entry.slug, city.slug, category.slug),
-                    })),
-                  )
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((item) => (
-                    <RowLink key={item.key} href={item.href} tight>
-                      {item.name}
-                    </RowLink>
-                  ))}
-              </ul>
+              {/* A-Z within each country rather than across both. "Miami, FL"
+                  next to "Toronto, ON" is only unambiguous to a reader who
+                  already knows every abbreviation on both sides of the
+                  border. */}
+              <div style={{ padding: "4px 0 22px", display: "grid", gap: "18px" }}>
+                {groupByCountry(regions).map((group) => (
+                  <div key={group.country.code}>
+                    <h4
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        letterSpacing: "var(--ls-wide)",
+                        textTransform: "uppercase",
+                        color: "var(--text-secondary)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {group.country.name}
+                    </h4>
+                    <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
+                      {group.regions
+                        .flatMap((entry) =>
+                          entry.cities.map((city) => ({
+                            key: city.id,
+                            name: `${city.name}, ${entry.code.toUpperCase()}`,
+                            href: routes.ranking(entry.country.code, entry.slug, city.slug, category.slug),
+                          })),
+                        )
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((item) => (
+                          <RowLink key={item.key} href={item.href} tight>
+                            {item.name}
+                          </RowLink>
+                        ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </details>
           </div>
         </section>

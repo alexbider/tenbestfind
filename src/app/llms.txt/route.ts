@@ -99,14 +99,22 @@ export async function GET() {
     })),
   );
 
-  section(
-    "Locations",
-    cities.map((city) => ({
-      label: `${city.name}, ${city.region.code.toUpperCase()}`,
-      path: routes.city(city.region.country.code, city.region.slug, city.slug),
-      note: city.blurb,
-    })),
-  );
+  // A heading per country. Read as one alphabetical run, "Toronto, ON" and
+  // "Tucson, AZ" are two lines apart and nothing says they are in different
+  // countries, which is exactly the thing a model quoting this file should
+  // not have to infer from a two-letter code.
+  for (const country of [...new Map(cities.map((c) => [c.region.country.code, c.region.country])).values()]) {
+    const inCountry = cities.filter((city) => city.region.country.code === country.code);
+    if (inCountry.length === 0) continue;
+    section(
+      `Locations in ${country.name}`,
+      inCountry.map((city) => ({
+        label: `${city.name}, ${city.region.code.toUpperCase()}`,
+        path: routes.city(city.region.country.code, city.region.slug, city.slug),
+        note: city.blurb,
+      })),
+    );
+  }
 
   section(
     "Guides",

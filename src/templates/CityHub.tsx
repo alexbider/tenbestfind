@@ -29,6 +29,7 @@ import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, type ConditionRow } from "@/lib/json";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
+import { regionNoun } from "@/lib/regions";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { cityCopy, rankingCardTitle } from "@/lib/seo-copy";
@@ -166,8 +167,22 @@ export async function CityHub({
     { label: "Companies researched", value: `${businessCount}`, icon: "store" },
     { label: "Trades covered", value: `${new Set(rankings.map((r) => r.category.slug)).size}`, icon: "grid" },
     city.population ? { label: "Population", value: compactNumber(city.population), icon: "users" } : null,
-    city.county ? { label: "County", value: city.county, icon: "map" } : null,
-    { label: "State", value: region.name, icon: "pin" },
+    // Canada has no counties: the field holds a census division there, and
+    // Toronto was being labelled "County — Toronto Division".
+    city.county
+      ? {
+          label: country.regionLabel === "provinces" ? "Census division" : "County",
+          value: city.county,
+          icon: "map" as IconName,
+        }
+      : null,
+    // "State" is only half the countries this template serves: a Toronto
+    // page was printing "State — Ontario".
+    {
+      label: regionNoun(country).replace(/^./, (c) => c.toUpperCase()),
+      value: region.name,
+      icon: "pin",
+    },
   ].filter(Boolean) as { label: string; value: string; icon: IconName }[];
 
   // Trades with a published ranking here come first, since those are the ones

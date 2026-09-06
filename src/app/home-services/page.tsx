@@ -19,6 +19,7 @@ import { monthYear, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
 import { getGlobalFaqs, rankingCardSelect } from "@/lib/queries";
+import { countriesOf, groupByCountry, regionNounAcross } from "@/lib/regions";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { homeServicesCopy } from "@/lib/seo-copy";
 
@@ -248,11 +249,15 @@ export default async function ServicesIndexPage() {
       take: 10,
       include: { category: { select: { slug: true } } },
     }),
+    // Sorted globally, `take: 10` was whichever ten regions happened to
+    // have the lowest sort order, which can be ten American states and no
+    // Canadian provinces at all. Take enough to see both, then show a few
+    // from each.
     db.region.findMany({
       where: { published: true },
       orderBy: { sortOrder: "asc" },
-      take: 10,
-      include: { country: { select: { code: true } } },
+      take: 30,
+      include: { country: { select: { code: true, name: true, regionLabel: true, sortOrder: true } } },
     }),
     db.city.findMany({
       where: { published: true, topMetro: true },
@@ -835,21 +840,42 @@ export default async function ServicesIndexPage() {
                   borderBottom: "1px solid var(--border-subtle)",
                 }}
               >
-                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>Popular states</h3>
+                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>
+                  Popular {regionNounAcross(countriesOf(regions), 2, "and")}
+                </h3>
                 <Link href={routes.locationsIndex()} style={{ fontSize: "14px", fontWeight: "600" }}>
-                  Browse all states
+                  Browse all
                 </Link>
               </div>
-              <ul data-places="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-                {regions.map((region) => (
-                  <li key={region.id}>
-                    <Link data-row="" href={routes.region(region.country.code, region.slug)} style={ROW}>
-                      {region.name}
-                      <Chevron />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {/* One list said "Popular states" over Ontario and Florida
+                  together. Each country gets its own short list under its own
+                  name, and its own word for what these places are. */}
+              {groupByCountry(regions).map((group) => (
+                <div key={group.country.code} style={{ marginBottom: "14px" }}>
+                  <p
+                    style={{
+                      fontSize: "11.5px",
+                      fontWeight: "700",
+                      letterSpacing: "var(--ls-wide)",
+                      textTransform: "uppercase",
+                      color: "var(--text-secondary)",
+                      margin: "10px 0 2px",
+                    }}
+                  >
+                    {group.country.name}
+                  </p>
+                  <ul data-places="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+                    {group.regions.slice(0, 6).map((region) => (
+                      <li key={region.id}>
+                        <Link data-row="" href={routes.region(region.country.code, region.slug)} style={ROW}>
+                          {region.name}
+                          <Chevron />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
             <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "18px", padding: "26px" }}>
               <div
