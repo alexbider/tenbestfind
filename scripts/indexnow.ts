@@ -19,7 +19,7 @@
  */
 import { db } from "../src/lib/db";
 import { indexNowKey, indexNowKeyLocation, submitToIndexNow } from "../src/lib/indexnow";
-import { SITEMAP_CHILDREN, sitemapChild, sitemapIndex } from "../src/lib/sitemap";
+import { sitemapChild, sitemapIndex } from "../src/lib/sitemap";
 
 const write = process.argv.includes("--yes");
 const everything = process.argv.includes("--all");
@@ -55,11 +55,9 @@ async function main(): Promise<void> {
   const since = await readWatermark();
   const startedAt = new Date();
 
-  // The company files are named by shard, so they are taken from the index
-  // rather than from the fixed list of children.
-  const names = index.map((child) => child.path.replace(/^\/sitemaps\/|\.xml$/g, ""));
-  const fromIndex = names.filter((name) => /^companies(-\d+)?$/.test(name));
-  const children = [...SITEMAP_CHILDREN.filter((child) => child !== "companies"), ...fromIndex];
+  // Taken from the index rather than from the list of kinds, because any
+  // child can be split across several files and only the index knows how many.
+  const children = index.map((child) => child.path.replace(/^\/sitemaps\/|\.xml$/g, ""));
 
   const paths: string[] = [];
   let seen = 0;
