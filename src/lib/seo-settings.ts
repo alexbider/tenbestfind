@@ -348,6 +348,14 @@ export const SEO_FIELDS: SeoField[] = [
     hint: "Tells Bing, Yandex and Naver within minutes of a page being published or edited. Google ignores the protocol and keeps using the sitemap.",
   },
   {
+    key: "seo.googleIndexing",
+    label: "Submit new pages to the Google Indexing API",
+    type: "boolean",
+    group: "sitemap",
+    default: true,
+    hint: "Needs a Google service account under Integrations. Google documents this API for job postings and live video, so treat it as an extra nudge on top of the sitemap rather than the way pages get indexed. Capped at 200 URLs a day.",
+  },
+  {
     key: "seo.sitemap.exclude",
     label: "Excluded paths",
     type: "lines",

@@ -11,6 +11,9 @@ export const SECRET_KEYS = {
   apify: "apify.token",
   anthropic: "anthropic.apiKey",
   resend: "resend.apiKey",
+  dataForSeoLogin: "dataforseo.login",
+  dataForSeoPassword: "dataforseo.password",
+  googleServiceAccount: "google.serviceAccount",
 } as const;
 
 export type SecretKey = (typeof SECRET_KEYS)[keyof typeof SECRET_KEYS];
@@ -19,6 +22,9 @@ export const SECRET_LABEL: Record<SecretKey, string> = {
   "apify.token": "Apify API token",
   "anthropic.apiKey": "Anthropic API key",
   "resend.apiKey": "Resend API key",
+  "dataforseo.login": "DataForSEO login",
+  "dataforseo.password": "DataForSEO password",
+  "google.serviceAccount": "Google service account JSON",
 };
 
 // Each key can also arrive as an environment variable, which wins over whatever
@@ -28,6 +34,9 @@ const ENV_NAME: Record<SecretKey, string> = {
   "apify.token": "APIFY_TOKEN",
   "anthropic.apiKey": "ANTHROPIC_API_KEY",
   "resend.apiKey": "RESEND_API_KEY",
+  "dataforseo.login": "DATAFORSEO_LOGIN",
+  "dataforseo.password": "DATAFORSEO_PASSWORD",
+  "google.serviceAccount": "GOOGLE_SERVICE_ACCOUNT_JSON",
 };
 
 const fromEnvironment = (key: SecretKey): string | undefined =>

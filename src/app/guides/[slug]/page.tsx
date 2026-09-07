@@ -26,6 +26,7 @@ import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
+import { breadcrumbSchema } from "@/lib/breadcrumbs";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
@@ -68,6 +69,9 @@ async function loadGuide(slug: string) {
       category: true,
       author: true,
       reviewer: true,
+      country: { select: { name: true, code: true } },
+      region: { select: { name: true, slug: true, country: { select: { code: true } } } },
+      city: { select: { name: true, slug: true, region: { select: { slug: true, country: { select: { code: true } } } } } },
       costs: { orderBy: { sortOrder: "asc" } },
       sources: { orderBy: { sortOrder: "asc" } },
       faqs: { orderBy: { sortOrder: "asc" } },
@@ -128,6 +132,17 @@ export default async function GuidePage({ params }: Props) {
   }
 
   const blocks = parseJson<GuideBlock[]>(guide.body, []);
+
+  // Where this guide applies, most specific first. Almost every guide is
+  // national and leaves all three null; the ones that are not say so on the
+  // page and in the schema rather than only in the database.
+  const place = guide.city
+    ? { name: `${guide.city.name}, ${guide.region?.name ?? ""}`.replace(/, $/, ""), href: routes.city(guide.city.region.country.code, guide.city.region.slug, guide.city.slug) }
+    : guide.region
+      ? { name: guide.region.name, href: routes.region(guide.region.country.code, guide.region.slug) }
+      : guide.country
+        ? { name: guide.country.name, href: routes.country(guide.country.code) }
+        : null;
   const takeaways = parseList(guide.keyTakeaways);
   const headings = blocks.filter(
     (block): block is Extract<GuideBlock, { kind: "heading" }> => block.kind === "heading",
@@ -135,6 +150,92 @@ export default async function GuidePage({ params }: Props) {
   const faqs = guide.faqs.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }));
   const isCost = guide.type === "COST";
   const service = guide.category?.serviceName ?? "home services";
+
+  const crumbs = [
+    { label: "Home", href: "/" },
+    { label: "Guides", href: routes.guidesIndex() },
+    ...(guide.category
+      ? [{ label: guide.category.serviceName, href: `${routes.guidesIndex()}${guide.category.slug}/` }]
+      : []),
+    { label: guide.title },
+  ];
+
+  /**
+   * The article, said properly.
+   *
+   * The two things that make this worth more than a headline and a date: the
+   * author and reviewer are linked to their own pages, so the byline is a claim
+   * a reader can follow rather than a name; and the publisher points at the
+   * sitewide node the root layout already publishes, so this article joins the
+   * same entity rather than declaring a second organisation with the same name.
+   *
+   * `about` and `spatialCoverage` are the tagging. They say what trade this is
+   * about and where it applies, which is the difference between a page an
+   * assistant can place and one it can only read.
+   */
+  const wordCount = blocks.reduce((total, block) => {
+    const text =
+      block.kind === "paragraph"
+        ? block.text
+        : block.kind === "heading"
+          ? block.text
+          : block.kind === "list" || block.kind === "checklist" || block.kind === "flags"
+            ? block.items.join(" ")
+            : "";
+    return total + text.split(/\s+/).filter(Boolean).length;
+  }, 0);
+
+  const personNode = (person: { name: string; slug: string; role: string | null }) => ({
+    "@type": "Person",
+    name: person.name,
+    url: absoluteUrl(routes.expert(person.slug)),
+    ...(person.role ? { jobTitle: person.role } : {}),
+  });
+
+  const articleSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${absoluteUrl(routes.guide(guide.slug))}#article`,
+    mainEntityOfPage: absoluteUrl(routes.guide(guide.slug)),
+    headline: guide.title,
+    description: guide.excerpt ?? undefined,
+    // The answer-first paragraph, which is the part an assistant quotes.
+    abstract: guide.shortAnswer ?? undefined,
+    url: absoluteUrl(routes.guide(guide.slug)),
+    inLanguage: "en",
+    datePublished: guide.publishedAt?.toISOString(),
+    dateModified: (guide.reviewedAt ?? guide.updatedAt).toISOString(),
+    ...(guide.heroImage ? { image: absoluteUrl(guide.heroImage) } : {}),
+    ...(wordCount > 0 ? { wordCount } : {}),
+    timeRequired: `PT${Math.max(1, guide.readingMinutes)}M`,
+    ...(guide.author ? { author: personNode(guide.author) } : {}),
+    ...(guide.reviewer ? { reviewedBy: personNode(guide.reviewer) } : {}),
+    publisher: { "@id": absoluteUrl("/#publisher") },
+    isPartOf: { "@id": absoluteUrl("/#website") },
+    ...(guide.category
+      ? { about: { "@type": "Service", name: guide.category.serviceName, serviceType: guide.category.name } }
+      : {}),
+    ...(place
+      ? {
+          spatialCoverage: {
+            "@type": "Place",
+            name: place.name,
+            url: absoluteUrl(place.href),
+          },
+        }
+      : {}),
+    ...(guide.sources.length > 0
+      ? {
+          citation: guide.sources
+            .filter((source) => source.url)
+            .map((source) => ({
+              "@type": "CreativeWork",
+              name: source.label,
+              url: source.url,
+            })),
+        }
+      : {}),
+  };
 
   const [relatedRankings, relatedGuides, relatedCategories, companies] = await Promise.all([
     guide.categoryId
@@ -221,20 +322,8 @@ export default async function GuidePage({ params }: Props) {
 
   return (
     <SiteChrome active="guides">
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: guide.title,
-          description: guide.excerpt,
-          url: absoluteUrl(routes.guide(guide.slug)),
-          datePublished: guide.publishedAt?.toISOString(),
-          dateModified: (guide.reviewedAt ?? guide.updatedAt).toISOString(),
-          author: guide.author ? { "@type": "Person", name: guide.author.name } : undefined,
-          reviewedBy: guide.reviewer ? { "@type": "Person", name: guide.reviewer.name } : undefined,
-          publisher: { "@type": "Organization", name: "TenBestFind" },
-        }}
-      />
+      <JsonLd data={articleSchema} />
+      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
 
       <article>
@@ -246,20 +335,16 @@ export default async function GuidePage({ params }: Props) {
           }}
         >
           <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
-            <Crumbs
-              items={[
-                { label: "Home", href: "/" },
-                { label: "Guides", href: routes.guidesIndex() },
-                ...(guide.category
-                  ? [{ label: guide.category.serviceName, href: routes.category(guide.category.slug) }]
-                  : []),
-                { label: guide.title },
-              ]}
-            />
+            {/* The same trail the BreadcrumbList publishes, from one array, so
+                the two cannot drift. The trade step points at the guide hub
+                rather than the service page: that is where the reader of a
+                guide actually wants to go next. */}
+            <Crumbs items={crumbs} />
 
             <div style={{ maxWidth: "820px" }}>
               <Eyebrow heroIn="1" gap="16px">
                 {isCost ? `${service} cost guide` : `${service} guide`}
+                {place ? ` · ${place.name}` : ""}
               </Eyebrow>
               <h1
                 data-hero-in="2"

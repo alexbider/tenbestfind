@@ -144,12 +144,18 @@ services:
         echo "==> checking company profile URLs"
         npx tsx scripts/relocate-company-slugs.ts --write || echo "profile URL check skipped"
 
-        # Pulls the generated hero images into the media volume the first time
-        # and points the records at the local copies. Skips anything already
-        # fetched or already set by an editor, so it is a no-op afterwards.
+        # Creates the four starter briefs the guide writer works from, once.
+        # A template an editor has changed is never overwritten.
+        echo "==> seeding the writer's prompt templates"
+        npx tsx scripts/seed-prompts.ts --yes || echo "prompt seeding skipped"
+
+        # Files guides written before the four-way split into their hubs.
         echo "==> filing guides into their hubs"
         npx tsx scripts/classify-guides.ts --yes || echo "guide classification skipped"
 
+        # Pulls the generated hero images into the media volume the first time
+        # and points the records at the local copies. Skips anything already
+        # fetched or already set by an editor, so it is a no-op afterwards.
         echo "==> fetching hero images"
         npx tsx scripts/ingest-hero-images.ts --yes || echo "hero images skipped"
 

@@ -20,6 +20,7 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
     items: [
       { name: "Pages", href: "/admin/pages", icon: "file" },
       { name: "Posts & guides", href: "/admin/guides", icon: "book" },
+      { name: "Guide writer", href: "/admin/writer", icon: "pen" },
       { name: "Top 10 rankings", href: "/admin/rankings", icon: "trophy" },
       { name: "Editorial team", href: "/admin/people", icon: "users" },
       { name: "Questions & criteria", href: "/admin/faqs", icon: "help" },
@@ -50,6 +51,8 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
     label: "System",
     items: [
       { name: "Global SEO", href: "/admin/seo", icon: "search" },
+      { name: "Indexing", href: "/admin/indexing", icon: "pulse" },
+      { name: "Prompt templates", href: "/admin/prompts", icon: "file" },
       { name: "Users & roles", href: "/admin/users", icon: "users" },
       { name: "Integrations & MCP", href: "/admin/integrations", icon: "plug" },
       { name: "Connected apps", href: "/admin/connections", icon: "key" },
