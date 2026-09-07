@@ -21,6 +21,7 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
       { name: "Pages", href: "/admin/pages", icon: "file" },
       { name: "Posts & guides", href: "/admin/guides", icon: "book" },
       { name: "Guide writer", href: "/admin/writer", icon: "pen" },
+      { name: "Topic radar", href: "/admin/topics", icon: "search" },
       { name: "Top 10 rankings", href: "/admin/rankings", icon: "trophy" },
       { name: "Editorial team", href: "/admin/people", icon: "users" },
       { name: "Questions & criteria", href: "/admin/faqs", icon: "help" },

@@ -324,3 +324,321 @@ export function briefAsText(brief: ResearchBrief): string {
 
   return lines.join("\n").trim();
 }
+
+// ---------------------------------------------------------------------------
+// Bulk probes
+//
+// Everything above answers one question about one phrase. Everything below
+// answers one question about a thousand of them, which is the difference
+// between topic research being affordable and not: DataForSEO charges per
+// call, not per keyword, so a thousand keywords in one array costs what one
+// keyword costs. The weekly plan is built entirely on that fact.
+//
+// Each probe is separately fallible on purpose. An account without the AI
+// Optimization subscription should lose the AI column and keep the rest, and a
+// parameter DataForSEO rejects on one endpoint should not cost the run the
+// other four. So the callers here catch, and the plan records what it missed.
+
+/** Comfortably under the documented ceiling of 1,000 per task. */
+const BULK_CHUNK = 700;
+
+export type PricedKeyword = {
+  keyword: string;
+  volume: number | null;
+  cpc: number | null;
+  competition: number | null;
+  /** Twelve months of search volume, oldest first, when the endpoint returns it. */
+  trend: number[];
+};
+
+export type IntentLabel = "informational" | "commercial" | "navigational" | "transactional";
+
+export type KeywordIntent = { label: IntentLabel; probability: number };
+
+export type SiteRanking = { rank: number; url: string };
+
+/** How many calls a list of keywords will cost on one bulk endpoint. */
+export function bulkCalls(count: number): number {
+  return Math.ceil(count / BULK_CHUNK);
+}
+
+function chunk<T>(items: T[], size = BULK_CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < items.length; index += size) out.push(items.slice(index, index + size));
+  return out;
+}
+
+/** Lower-cased and trimmed, which is how every one of these endpoints keys its answers. */
+const key = (value: unknown): string => str(value).toLowerCase();
+
+type BulkOutcome<T> = { values: Map<string, T>; calls: number; note: string | null };
+
+/**
+ * Runs one bulk endpoint over as many chunks as the list needs.
+ *
+ * A chunk that fails is skipped rather than throwing, because losing one
+ * seventh of a metric is a much better outcome than losing the run.
+ */
+async function overChunks<T>(
+  keywords: string[],
+  run: (batch: string[]) => Promise<Map<string, T>>,
+  label: string,
+): Promise<BulkOutcome<T>> {
+  const values = new Map<string, T>();
+  let calls = 0;
+  const failures: string[] = [];
+
+  for (const batch of chunk(keywords)) {
+    try {
+      const answered = await run(batch);
+      calls += 1;
+      for (const [phrase, value] of answered) values.set(phrase, value);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  return {
+    values,
+    calls,
+    note: failures.length > 0 ? `${label}: ${failures[0]}${failures.length > 1 ? ` (+${failures.length - 1} more)` : ""}` : null,
+  };
+}
+
+/** Monthly search volume, cost per click and the twelve-month shape of demand. */
+export async function bulkVolume(keywords: string[], market: string): Promise<BulkOutcome<PricedKeyword>> {
+  return overChunks(
+    keywords,
+    async (batch) => {
+      const result = await call("/keywords_data/google_ads/search_volume/live", {
+        keywords: batch,
+        location_name: market,
+        language_code: "en",
+        // Without this the endpoint answers only for keywords Google Ads has an
+        // exact match for, which throws away most of the long tail.
+        search_partners: false,
+      });
+
+      const out = new Map<string, PricedKeyword>();
+      for (const raw of result) {
+        const item = raw as {
+          keyword?: unknown;
+          search_volume?: unknown;
+          cpc?: unknown;
+          competition_index?: unknown;
+          monthly_searches?: unknown[];
+        };
+        const phrase = key(item.keyword);
+        if (!phrase) continue;
+        // The months arrive newest first; a trend line reads better the other way.
+        const months = Array.isArray(item.monthly_searches) ? item.monthly_searches : [];
+        const trend = months
+          .map((month) => num((month as { search_volume?: unknown }).search_volume))
+          .filter((value): value is number => value !== null)
+          .reverse();
+        out.set(phrase, {
+          keyword: str(item.keyword),
+          volume: num(item.search_volume),
+          cpc: num(item.cpc),
+          competition: num(item.competition_index),
+          trend,
+        });
+      }
+      return out;
+    },
+    "search volume",
+  );
+}
+
+/** How hard the first page is, 0 to 100. */
+export async function bulkDifficulty(keywords: string[], market: string): Promise<BulkOutcome<number>> {
+  return overChunks(
+    keywords,
+    async (batch) => {
+      const result = await call("/dataforseo_labs/google/bulk_keyword_difficulty/live", {
+        keywords: batch,
+        location_name: market,
+        language_code: "en",
+      });
+
+      const items = (result[0] as { items?: unknown[] } | undefined)?.items ?? [];
+      const out = new Map<string, number>();
+      for (const raw of items) {
+        const item = raw as { keyword?: unknown; keyword_difficulty?: unknown };
+        const phrase = key(item.keyword);
+        const difficulty = num(item.keyword_difficulty);
+        if (phrase && difficulty !== null) out.set(phrase, difficulty);
+      }
+      return out;
+    },
+    "difficulty",
+  );
+}
+
+/**
+ * What the searcher wants.
+ *
+ * This is the gate that keeps the plan honest about its own site. "Plumbers in
+ * Austin" is commercial: the answer to it is the ranking page that already
+ * exists, not a guide. "How to choose a plumber in Austin" is informational,
+ * and that is what a guide is for.
+ */
+export async function bulkIntent(keywords: string[]): Promise<BulkOutcome<KeywordIntent>> {
+  return overChunks(
+    keywords,
+    async (batch) => {
+      const result = await call("/dataforseo_labs/google/search_intent/live", {
+        keywords: batch,
+        language_code: "en",
+      });
+
+      const items = (result[0] as { items?: unknown[] } | undefined)?.items ?? [];
+      const out = new Map<string, KeywordIntent>();
+      for (const raw of items) {
+        const item = raw as {
+          keyword?: unknown;
+          keyword_intent?: { label?: unknown; probability?: unknown };
+        };
+        const phrase = key(item.keyword);
+        const label = str(item.keyword_intent?.label).toLowerCase();
+        if (!phrase || !label) continue;
+        out.set(phrase, {
+          label: label as IntentLabel,
+          probability: num(item.keyword_intent?.probability) ?? 0,
+        });
+      }
+      return out;
+    },
+    "search intent",
+  );
+}
+
+/**
+ * How often the phrase is put to an assistant rather than a search box.
+ *
+ * Part of DataForSEO's AI Optimization tier, which is a separate subscription.
+ * An account without it gets an error here and a plan that carries on without
+ * the column, which is why this is called last and caught like the rest.
+ */
+export async function bulkAiVolume(keywords: string[]): Promise<BulkOutcome<number>> {
+  return overChunks(
+    keywords,
+    async (batch) => {
+      const result = await call("/ai_optimization/ai_keyword_data/keywords_search_volume/live", {
+        keywords: batch,
+        language_code: "en",
+      });
+
+      const items = (result[0] as { items?: unknown[] } | undefined)?.items ?? [];
+      const out = new Map<string, number>();
+      for (const raw of items) {
+        const item = raw as { keyword?: unknown; ai_search_volume?: unknown };
+        const phrase = key(item.keyword);
+        const volume = num(item.ai_search_volume);
+        if (phrase && volume !== null) out.set(phrase, volume);
+      }
+      return out;
+    },
+    "AI search volume",
+  );
+}
+
+/**
+ * Every phrase this site already ranks for, and where.
+ *
+ * One call, and the most useful thing the plan knows. A phrase sitting at
+ * eleven is a page that needs one good guide pointing at it; a phrase sitting
+ * at two is a phrase to leave alone.
+ */
+export async function siteRankings(
+  domain: string,
+  market: string,
+  limit = 1000,
+): Promise<{ values: Map<string, SiteRanking>; calls: number; note: string | null }> {
+  const target = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  if (!target) return { values: new Map(), calls: 0, note: "no domain to check" };
+
+  try {
+    const result = await call("/dataforseo_labs/google/ranked_keywords/live", {
+      target,
+      location_name: market,
+      language_code: "en",
+      limit: Math.min(1000, limit),
+      order_by: ["ranked_serp_element.serp_item.rank_group,asc"],
+    });
+
+    const items = (result[0] as { items?: unknown[] } | undefined)?.items ?? [];
+    const values = new Map<string, SiteRanking>();
+    for (const raw of items) {
+      const item = raw as {
+        keyword_data?: { keyword?: unknown };
+        ranked_serp_element?: { serp_item?: { rank_group?: unknown; url?: unknown } };
+      };
+      const phrase = key(item.keyword_data?.keyword);
+      const rank = num(item.ranked_serp_element?.serp_item?.rank_group);
+      if (!phrase || rank === null) continue;
+      const existing = values.get(phrase);
+      if (!existing || rank < existing.rank) {
+        values.set(phrase, { rank, url: str(item.ranked_serp_element?.serp_item?.url) });
+      }
+    }
+    return { values, calls: 1, note: null };
+  } catch (error) {
+    return {
+      values: new Map(),
+      calls: 0,
+      note: `own rankings: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Phrases a seed suggests that nobody would have thought to write down.
+ *
+ * The generated candidates cover what the site knows it sells. This covers what
+ * people actually type, which is where the surprises are.
+ */
+export async function expandSeed(
+  seed: string,
+  market: string,
+  limit = 60,
+): Promise<{ keywords: string[]; calls: number; note: string | null }> {
+  try {
+    const result = await call("/dataforseo_labs/google/keyword_suggestions/live", {
+      keyword: seed,
+      location_name: market,
+      language_code: "en",
+      include_seed_keyword: false,
+      limit,
+      filters: [["keyword_data.keyword_info.search_volume", ">", 20]],
+      order_by: ["keyword_data.keyword_info.search_volume,desc"],
+    });
+
+    const items = (result[0] as { items?: unknown[] } | undefined)?.items ?? [];
+    const keywords: string[] = [];
+    for (const raw of items) {
+      const phrase = str((raw as { keyword_data?: { keyword?: unknown } }).keyword_data?.keyword);
+      if (phrase) keywords.push(phrase);
+    }
+    return { keywords, calls: 1, note: null };
+  } catch (error) {
+    return {
+      keywords: [],
+      calls: 0,
+      note: `expansion of "${seed}": ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/** The live first page for one candidate, as the plan needs it: cheap and shallow. */
+export async function probeSerp(
+  keyword: string,
+  market: string,
+): Promise<{ serp: SerpResult[]; questions: string[]; features: string[] } | null> {
+  try {
+    const page = await serp(keyword, market);
+    return { serp: page.results, questions: page.questions, features: page.features };
+  } catch {
+    return null;
+  }
+}

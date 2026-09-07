@@ -31,11 +31,12 @@ model Country {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  regions   Region[]
-  rankings  Ranking[]
-  faqs      Faq[]
-  guides    Guide[]
-  guideJobs GuideJob[]
+  regions    Region[]
+  rankings   Ranking[]
+  faqs       Faq[]
+  guides     Guide[]
+  guideJobs  GuideJob[]
+  topicIdeas TopicIdea[]
 
   @@index([published])
 }
@@ -62,11 +63,12 @@ model Region {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  country   Country    @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  cities    City[]
-  rankings  Ranking[]
-  guides    Guide[]
-  guideJobs GuideJob[]
+  country    Country     @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  cities     City[]
+  rankings   Ranking[]
+  guides     Guide[]
+  guideJobs  GuideJob[]
+  topicIdeas TopicIdea[]
 
   @@unique([countryId, slug])
   @@index([countryId, published])
@@ -103,6 +105,7 @@ model City {
   importItems  ImportItem[]
   guides       Guide[]
   guideJobs    GuideJob[]
+  topicIdeas   TopicIdea[]
 
   @@unique([regionId, slug])
   @@index([regionId, published])
@@ -144,6 +147,7 @@ model Category {
   posts         Post[]
   placements    SponsoredPlacement[]
   guideJobs     GuideJob[]
+  topicIdeas    TopicIdea[]
 
   @@index([published, sortOrder])
 }
@@ -1532,6 +1536,8 @@ model GuideJob {
   city     City?           @relation(fields: [cityId], references: [id])
   guide    Guide?          @relation(fields: [guideId], references: [id])
 
+  topicIdeas TopicIdea[]
+
   @@index([status, createdAt])
 }
 
@@ -1558,4 +1564,142 @@ model IndexRequest {
 
   @@index([status, createdAt])
   @@index([url])
+}
+
+// ------------------------------------------------------------- topic radar
+
+/// One weekly pass over every service and place, looking for what to write.
+///
+/// The expensive part of topic research is not the thinking, it is finding out
+/// what a phrase is worth. So a plan prices thousands of candidates in bulk,
+/// where a thousand keywords cost the same as one, keeps those prices in
+/// KeywordMetric, and spends its per-call money only on the shortlist that
+/// survived. Each stage writes back here, so a plan survives a restart and
+/// never buys the same answer twice.
+model TopicPlan {
+  id        String   @id @default(cuid())
+  /// QUEUED | PRICING | PROBING | DRAFTING | READY | FAILED | CANCELLED
+  status    String   @default("QUEUED")
+  /// The Monday of the week this covers. One automatic plan per week.
+  weekOf    DateTime
+  /// AUTO | MANUAL
+  trigger   String   @default("MANUAL")
+  /// JSON snapshot of the dials this ran under, so an old plan still explains
+  /// itself after the settings have moved on.
+  settings  String?
+  /// How many suggestions were asked for.
+  target    Int      @default(10)
+  /// JSON: the scored shortlist, carried between the pricing and probing steps.
+  shortlist String?
+
+  candidates Int @default(0)
+  priced     Int @default(0)
+  probed     Int @default(0)
+  /// Billable DataForSEO calls this plan has spent.
+  calls      Int @default(0)
+  /// Candidates answered from KeywordMetric rather than bought again.
+  cachedHits Int @default(0)
+
+  notes      String?
+  error      String?
+  hint       String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  ideas TopicIdea[]
+
+  @@index([status, createdAt])
+  @@index([weekOf])
+}
+
+/// One thing worth writing, with the numbers that argued for it.
+model TopicIdea {
+  id     String @id @default(cuid())
+  planId String
+  /// SUGGESTED | COMMISSIONED | DISMISSED | SNOOZED
+  status String @default("SUGGESTED")
+  rank   Int    @default(0)
+
+  /// The phrase this should rank for.
+  keyword   String
+  /// The working title.
+  topic     String
+  /// Why this one, and why now.
+  angle     String?
+  /// What it has to cover, as a JSON array of strings.
+  outline   String?
+  guideType String  @default("HOW_TO_CHOOSE")
+
+  categoryId String?
+  countryId  String?
+  regionId   String?
+  cityId     String?
+
+  volume     Int?
+  aiVolume   Int?
+  difficulty Int?
+  /// informational | commercial | navigational | transactional
+  intent     String?
+  score      Int     @default(0)
+  /// JSON array of { label, detail, delta }: what moved the score, and by how
+  /// much. A suggestion nobody can argue with is a suggestion nobody trusts.
+  reasons    String?
+  /// Where this site already ranks for the phrase, when it does at all.
+  ourRank    Int?
+  /// JSON: the SERP snapshot, the questions and the features behind the score.
+  evidence   String?
+
+  jobId        String?
+  guideId      String?
+  snoozedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  plan     TopicPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+  country  Country?  @relation(fields: [countryId], references: [id])
+  region   Region?   @relation(fields: [regionId], references: [id])
+  city     City?     @relation(fields: [cityId], references: [id])
+  job      GuideJob? @relation(fields: [jobId], references: [id])
+
+  @@index([planId, rank])
+  @@index([status, createdAt])
+  @@index([keyword])
+}
+
+/// What a phrase is worth, kept so the next weekly pass does not buy it again.
+///
+/// Search volume moves slowly and difficulty moves slower, so a price is good
+/// for weeks. This table is what turns a recurring plan from an expensive
+/// habit into a nearly free one: the first run prices the whole matrix, and
+/// every run after it pays only for what has gone stale or is new.
+model KeywordMetric {
+  id      String @id @default(cuid())
+  keyword String
+  /// The market it was priced in, as DataForSEO names locations.
+  market  String @default("United States")
+
+  volume      Int?
+  cpc         Float?
+  competition Float?
+  difficulty  Int?
+  intent      String?
+  intentScore Float?
+  /// How often the phrase is asked of AI assistants, when that is bought.
+  aiVolume    Int?
+  /// JSON: twelve months of search volume, oldest first.
+  trend       String?
+  /// Where this site ranks for it, from the last rank check.
+  ourRank     Int?
+  ourUrl      String?
+  /// When the volume and difficulty were last bought.
+  pricedAt    DateTime  @default(now())
+  /// When the rank check last saw it, which runs on its own clock.
+  rankedAt    DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([keyword, market])
+  @@index([pricedAt])
 }

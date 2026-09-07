@@ -4,6 +4,7 @@ import { advanceRefresh } from "../src/lib/reviews";
 import { advanceEnrichment } from "../src/lib/enrich-run";
 import { ACTIVE_JOB_STATUSES, advanceGuideJob } from "../src/lib/guide-jobs";
 import { flushIndexQueue } from "../src/lib/google-indexing";
+import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
 // The batch runner. It lives in its own container rather than inside a request
 // so a batch survives a deploy, a browser tab closing and a Next.js restart.
@@ -13,6 +14,8 @@ import { flushIndexQueue } from "../src/lib/google-indexing";
 const IDLE_MS = Number(process.env.IMPORT_POLL_MS ?? 10_000);
 /** How often the Google index queue is drained. Its quota is per day, not per minute. */
 const INDEX_EVERY_MS = Number(process.env.INDEX_FLUSH_MS ?? 15 * 60_000);
+/** How often the calendar is checked for a week that has not been planned yet. */
+const PLAN_EVERY_MS = Number(process.env.TOPIC_CHECK_MS ?? 60 * 60_000);
 const ACTIVE = ["QUEUED", "SCRAPING", "ENRICHING", "WRITING", "PUBLISHING"];
 const REFRESHING = ["QUEUED", "RUNNING"];
 
@@ -94,6 +97,51 @@ async function tickGuideJob(): Promise<boolean> {
 }
 
 /**
+ * Looking for topics. Behind the guide writer because a plan is not urgent and
+ * a job someone just started is, and ahead of an import because a plan step is
+ * seconds where an Apify run is minutes.
+ */
+async function tickTopicPlan(): Promise<boolean> {
+  const plan = await db.topicPlan.findFirst({
+    where: { status: { in: ACTIVE_PLAN_STATUSES } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, status: true, weekOf: true },
+  });
+  if (!plan) return false;
+
+  const before = plan.status;
+  try {
+    const result = await advanceTopicPlan(plan.id);
+    if (result.changed) {
+      console.log(`[topics] week of ${plan.weekOf.toISOString().slice(0, 10)}: ${before.toLowerCase()} -> ${result.note}`);
+    }
+    return result.changed;
+  } catch (error) {
+    console.error("[topics] unhandled:", error instanceof Error ? error.message : error);
+    await sleep(5_000);
+    return false;
+  }
+}
+
+/**
+ * Opens the week's plan once the configured day has come. Hourly, because the
+ * question it answers changes once a week and asking it more often costs a
+ * query for nothing.
+ */
+let nextPlanCheck = Date.now() + 120_000;
+
+async function tickWeeklyPlan(): Promise<void> {
+  if (Date.now() < nextPlanCheck) return;
+  nextPlanCheck = Date.now() + PLAN_EVERY_MS;
+  try {
+    const id = await ensureWeeklyPlan();
+    if (id) console.log(`[topics] opened this week's plan (${id})`);
+  } catch (error) {
+    console.error("[topics] weekly check:", error instanceof Error ? error.message : error);
+  }
+}
+
+/**
  * Drains the Google index queue on its own clock rather than in the busy loop.
  * The quota is 200 a day, so there is nothing to gain from checking often and
  * something to lose from spending it all in the first minute of a deploy.
@@ -141,8 +189,13 @@ async function main(): Promise<void> {
   console.log("==> import worker ready");
   while (!stopping) {
     await tickIndexQueue();
+    await tickWeeklyPlan();
     const busy =
-      (await tickRefresh()) || (await tickEnrichment()) || (await tickGuideJob()) || (await tick());
+      (await tickRefresh()) ||
+      (await tickEnrichment()) ||
+      (await tickGuideJob()) ||
+      (await tickTopicPlan()) ||
+      (await tick());
     // A step that changed something is followed immediately; an idle loop waits,
     // which is most of the time an Apify run is still going.
     await sleep(busy ? 250 : IDLE_MS);
