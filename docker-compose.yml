@@ -195,15 +195,24 @@ services:
       - site
     environment:
       - DATABASE_URL=file:/data/tenbestfind.db
+      # The guide writer and the index queue run in here too, so this container
+      # needs to know the site's own address and how to reach the media volume,
+      # not just how to talk to Apify and Anthropic.
+      - MEDIA_DIR=/media
+      - MEDIA_PUBLIC_PATH=/uploads
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       - SESSION_SECRET=${SESSION_SECRET}
       - APIFY_TOKEN=${APIFY_TOKEN:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DATAFORSEO_LOGIN=${DATAFORSEO_LOGIN:-}
+      - DATAFORSEO_PASSWORD=${DATAFORSEO_PASSWORD:-}
       - IMPORT_MODEL=${IMPORT_MODEL:-}
       - IMPORT_EFFORT=${IMPORT_EFFORT:-medium}
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
       - site-app:/srv
       - site-data:/data
+      - site-media:/media
     command:
       - bash
       - -lc
