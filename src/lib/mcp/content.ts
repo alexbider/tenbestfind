@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { GUIDE_TYPES } from "../enums";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseJson, parseList } from "../json";
@@ -338,7 +339,7 @@ export const CONTENT_TOOLS: Tool[] = [
         body: "json",
         keyTakeaways: "json",
       });
-      if (args.type !== undefined) data.type = oneOf(String(args.type), ["EDITORIAL", "COST"], "type");
+      if (args.type !== undefined) data.type = oneOf(String(args.type), [...GUIDE_TYPES], "type");
       if (args.status !== undefined) data.status = oneOf(String(args.status), CONTENT_STATUS, "status");
 
       if (!id) {

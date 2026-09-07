@@ -147,6 +147,9 @@ services:
         # Pulls the generated hero images into the media volume the first time
         # and points the records at the local copies. Skips anything already
         # fetched or already set by an editor, so it is a no-op afterwards.
+        echo "==> filing guides into their hubs"
+        npx tsx scripts/classify-guides.ts --yes || echo "guide classification skipped"
+
         echo "==> fetching hero images"
         npx tsx scripts/ingest-hero-images.ts --yes || echo "hero images skipped"
 

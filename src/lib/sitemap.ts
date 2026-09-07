@@ -26,6 +26,7 @@
 // expert indexes are listed whether or not anything is published under them.
 
 import { db } from "./db";
+import { getGuideHubs, guidesForHub } from "./guide-hubs";
 import { loadSeoSettings } from "./seo-settings";
 import { absoluteUrl, routes } from "./urls";
 import { SUBSERVICE_MIN_BUSINESSES } from "./seo-copy";
@@ -370,13 +371,33 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
     case "guides": {
       if (!g.include("guides")) return [];
       const guides = await db.guide.findMany({ where: { status: "PUBLISHED" } });
-      return guides
-        .filter((guide) => keeps(routes.guide(guide.slug), `guide:${guide.id}`))
-        .map((guide) => ({
-          path: routes.guide(guide.slug),
-          lastModified: guide.reviewedAt ?? guide.updatedAt,
-          images: [guide.heroImage],
-        }));
+
+      // The hubs the guides section navigates by, offered alongside the guides
+      // themselves. A hub with nothing on it publishes noindex, so it is left
+      // out here for the same reason an empty city hub is.
+      const hubs = await getGuideHubs();
+      const hubEntries: SitemapEntry[] = [];
+      for (const hub of hubs) {
+        if (!g.keep(hub.path)) continue;
+        const onHub = await guidesForHub(hub);
+        if (onHub.length === 0) continue;
+        hubEntries.push({
+          path: hub.path,
+          lastModified: newest(...onHub.map((entry) => entry.reviewedAt ?? entry.updatedAt)),
+          images: [onHub.find((entry) => entry.heroImage)?.heroImage],
+        });
+      }
+
+      return [
+        ...hubEntries,
+        ...guides
+          .filter((guide) => keeps(routes.guide(guide.slug), `guide:${guide.id}`))
+          .map((guide) => ({
+            path: routes.guide(guide.slug),
+            lastModified: guide.reviewedAt ?? guide.updatedAt,
+            images: [guide.heroImage],
+          })),
+      ];
     }
 
     case "posts": {

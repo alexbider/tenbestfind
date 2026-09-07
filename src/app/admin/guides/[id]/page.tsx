@@ -10,6 +10,7 @@ import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
+import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
 
 export const metadata = { title: "Guide" };
 
@@ -69,7 +70,7 @@ export default async function AdminGuideDetail({ params }: Props) {
         title={guide ? guide.title : "New guide"}
         description={
           guide
-            ? `/guides/${guide.slug}/ · ${guide.type === "COST" ? "cost guide" : "editorial guide"} · updated ${fullDate(guide.updatedAt)}`
+            ? `/guides/${guide.slug}/ · ${GUIDE_TYPE_LABELS[guideTypeOf(guide.type)].toLowerCase()} · updated ${fullDate(guide.updatedAt)}`
             : "Write an editorial or cost guide."
         }
         actions={
@@ -106,7 +107,7 @@ export default async function AdminGuideDetail({ params }: Props) {
               id: guide?.id,
               title: guide?.title ?? "",
               slug: guide?.slug ?? "",
-              type: guide?.type ?? "EDITORIAL",
+              type: guide?.type ?? "HOW_TO_CHOOSE",
               categoryId: guide?.categoryId ?? "",
               authorId: guide?.authorId ?? "",
               reviewerId: guide?.reviewerId ?? "",

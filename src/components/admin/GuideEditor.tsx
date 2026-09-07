@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { GuideBlock } from "../../../prisma/data/editorial";
 import { saveGuide, type ActionState } from "@/app/actions/admin-content";
+import { GUIDE_TYPES, GUIDE_TYPE_LABELS } from "@/lib/enums";
 import { BlockEditor } from "./BlockEditor";
 import { RepeatableEditor, StringListEditor } from "./RepeatableEditor";
 import { MediaField } from "./MediaField";
@@ -77,9 +78,15 @@ export function GuideEditor({
         </div>
         <div className="field">
           <label htmlFor="guide-type">Type</label>
+          {/* The type is not a label, it is the hub this guide appears on.
+              A legacy row stored as EDITORIAL matches no option, so the
+              browser preselects the first and saving files it correctly. */}
           <select id="guide-type" name="type" defaultValue={guide.type}>
-            <option value="EDITORIAL">Editorial guide</option>
-            <option value="COST">Cost guide</option>
+            {GUIDE_TYPES.map((value) => (
+              <option key={value} value={value}>
+                {GUIDE_TYPE_LABELS[value]}
+              </option>
+            ))}
           </select>
         </div>
       </div>

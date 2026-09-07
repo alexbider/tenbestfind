@@ -348,7 +348,7 @@ export const RANKINGS: SeedRanking[] = [
 export type SeedGuide = {
   title: string;
   slug: string;
-  type: "EDITORIAL" | "COST";
+  type: "HOW_TO_CHOOSE" | "COST" | "QUESTIONS" | "CHECKLIST";
   categorySlug?: string;
   excerpt: string;
   shortAnswer: string;
@@ -388,7 +388,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "How to choose a roofing contractor",
     slug: "how-to-choose-a-roofing-contractor",
-    type: "EDITORIAL",
+    type: "HOW_TO_CHOOSE",
     categorySlug: "roofing",
     excerpt:
       "What a licence actually covers, how quoting should work, and the questions worth asking before anyone gets on your roof.",
@@ -591,7 +591,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "How to compare moving quotes",
     slug: "compare-moving-quotes",
-    type: "EDITORIAL",
+    type: "HOW_TO_CHOOSE",
     categorySlug: "moving-companies",
     excerpt: "Binding versus non-binding estimates, and what a legitimate mover puts in writing before moving day.",
     shortAnswer:
@@ -627,7 +627,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "When should you have your chimney inspected?",
     slug: "chimney-inspection-timing",
-    type: "EDITORIAL",
+    type: "CHECKLIST",
     categorySlug: "chimney-services",
     excerpt: "The three inspection levels, seasonal timing, and the signs that should not wait for autumn.",
     shortAnswer:
@@ -688,7 +688,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "Questions to ask a remodeling contractor",
     slug: "questions-remodeling-contractor",
-    type: "EDITORIAL",
+    type: "QUESTIONS",
     categorySlug: "home-remodeling",
     excerpt: "Settle payment schedule, timeline and change orders before anyone signs.",
     shortAnswer:
@@ -718,7 +718,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "How to verify a contractor's licence",
     slug: "verify-a-license",
-    type: "EDITORIAL",
+    type: "CHECKLIST",
     excerpt: "Where to look, state by state and province by province, and what to check for once you find the record.",
     shortAnswer:
       "Go to the issuing authority's own register rather than a directory. Confirm the licence is active, that the name matches the company on your estimate, that the classification covers your work, and that there are no open disciplinary actions.",
@@ -742,7 +742,7 @@ export const GUIDES: SeedGuide[] = [
   {
     title: "How to compare three contractor quotes",
     slug: "compare-contractor-quotes",
-    type: "EDITORIAL",
+    type: "HOW_TO_CHOOSE",
     excerpt: "Scope, materials and warranty terms rarely match. Here is how to line them up.",
     shortAnswer:
       "Build a single line-item sheet and transfer each quote onto it. Differences in price nearly always turn out to be differences in scope, material grade or warranty length, and the sheet makes that visible in a few minutes.",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { GuideBlock } from "../../../../prisma/data/editorial";
 import { GuideBody } from "@/components/site/blocks";
+import { GuideHub } from "@/templates/GuideHub";
 import { CostEstimator, CostSummary, CostTables, priceModal } from "@/components/site/CostGuide";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
@@ -24,6 +25,7 @@ import { dollars, fullDate, monthYear, priceRange, shortMonthYear } from "@/lib/
 import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
+import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
@@ -76,7 +78,33 @@ async function loadGuide(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const guide = await loadGuide(slug);
-  if (!guide) return {};
+
+  // A real guide always wins its own URL; only a slug no guide has claimed can
+  // be a hub. That ordering is what makes the four reserved question slugs
+  // reserved rather than enforced.
+  if (!guide) {
+    const hub = await findGuideHub(slug);
+    if (!hub) return {};
+    const guides = await guidesForHub(hub);
+    return {
+      title: { absolute: hub.title },
+      description: hub.description,
+      alternates: { canonical: hub.path },
+      // A hub with nothing on it is a real page with no content, which is
+      // exactly what the empty-archive rule is for.
+      robots: guides.length === 0 ? { index: false, follow: true } : undefined,
+      openGraph: {
+        title: hub.title,
+        description: hub.description,
+        url: absoluteUrl(hub.path),
+        type: "website",
+        images: guides.find((entry) => entry.heroImage)?.heroImage
+          ? [absoluteUrl(guides.find((entry) => entry.heroImage)!.heroImage!)]
+          : undefined,
+      },
+    };
+  }
+
   return seoFor("guide", guide.id, {
     title: guide.title,
     description: guide.excerpt,
@@ -91,7 +119,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GuidePage({ params }: Props) {
   const { slug } = await params;
   const guide = await loadGuide(slug);
+
   if (!guide || guide.status !== "PUBLISHED") {
+    const hub = await findGuideHub(slug);
+    if (hub) return <GuideHub slug={slug} />;
     await redirectIfKnown(routes.guide(slug));
     notFound();
   }

@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
 
 export const metadata = { title: "Posts & guides" };
 
@@ -92,7 +93,7 @@ export default async function AdminGuidesList() {
                       /guides/{guide.slug}/ · updated {fullDate(guide.updatedAt)}
                     </span>
                   </td>
-                  <td>{guide.type === "COST" ? "Cost" : "Editorial"}</td>
+                  <td>{GUIDE_TYPE_LABELS[guideTypeOf(guide.type)]}</td>
                   <td>{guide.category?.name ?? "General"}</td>
                   <td>{guide.author?.name ?? "—"}</td>
                   <td>{guide.reviewer?.name ?? "Not required"}</td>

@@ -237,7 +237,7 @@ const guideSchema = z.object({
     .min(1)
     .max(140)
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers and hyphens"),
-  type: z.enum(["EDITORIAL", "COST"]),
+  type: z.enum(["HOW_TO_CHOOSE", "COST", "QUESTIONS", "CHECKLIST"]),
   categoryId: z.string().optional(),
   authorId: z.string().optional(),
   reviewerId: z.string().optional(),

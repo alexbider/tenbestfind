@@ -89,8 +89,37 @@ export const SEO_ENTITY_TYPES = [
 ] as const;
 export type SeoEntityType = (typeof SEO_ENTITY_TYPES)[number];
 
-export const GUIDE_TYPES = ["EDITORIAL", "COST"] as const;
+/**
+ * What question a guide answers.
+ *
+ * These are the four buckets the site navigates by, so the type is not
+ * decoration: it decides which hub a guide appears on. COST additionally
+ * switches the template, because a cost guide carries price ranges and a
+ * sourced table that the others have no use for.
+ */
+export const GUIDE_TYPES = ["HOW_TO_CHOOSE", "COST", "QUESTIONS", "CHECKLIST"] as const;
 export type GuideType = (typeof GUIDE_TYPES)[number];
+
+/**
+ * What guides were called before the split, still readable from the database
+ * until the backfill has run. Accepted on read, never written, and treated as
+ * HOW_TO_CHOOSE, which is the bucket the old editorial guides mostly were.
+ */
+export const LEGACY_GUIDE_TYPE = "EDITORIAL";
+
+export const GUIDE_TYPE_LABELS: Record<GuideType, string> = {
+  HOW_TO_CHOOSE: "How to choose a pro",
+  COST: "What things cost",
+  QUESTIONS: "Questions to ask",
+  CHECKLIST: "Project checklists",
+};
+
+/** Reads a stored value as one of the four, so a legacy row still lands somewhere. */
+export function guideTypeOf(stored: string | null | undefined): GuideType {
+  return (GUIDE_TYPES as readonly string[]).includes(stored ?? "")
+    ? (stored as GuideType)
+    : "HOW_TO_CHOOSE";
+}
 
 export const PLAN_KEYS = ["claim", "listing", "top10", "advertising"] as const;
 export type PlanKey = (typeof PLAN_KEYS)[number];

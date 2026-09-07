@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CrumbBar, FinalSearch } from "@/components/site/blocks";
+import { CrumbBar, FinalSearch, LinkGrid } from "@/components/site/blocks";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { JsonLd, Media, Section, SectionHead } from "@/components/ui/primitives";
 import { monthYear } from "@/lib/format";
 import { db } from "@/lib/db";
+import { GUIDE_TYPES, GUIDE_TYPE_LABELS, guideTypeOf, type GuideType } from "@/lib/enums";
+import { getGuideHubs } from "@/lib/guide-hubs";
 import { absoluteUrl, routes } from "@/lib/urls";
 import { guidesCopy } from "@/lib/seo-copy";
 
@@ -18,8 +20,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/guides/" },
 };
 
+/** How many cards one section shows before it sends the reader to the hub. */
+const PREVIEW = 6;
+
+const SECTION_LEAD: Record<GuideType, string> = {
+  HOW_TO_CHOOSE:
+    "Reading a quote, checking a licence, and the differences that actually predict whether a job goes well.",
+  COST: "Sourced ranges with the reasoning behind them, and an honest note wherever we have no figure to publish.",
+  QUESTIONS:
+    "What to ask before anyone starts, and what a good answer to each one sounds like.",
+  CHECKLIST: "What to confirm before the work starts, while it runs, and before the last invoice.",
+};
+
 export default async function GuidesIndexPage() {
-  const [guides, categories] = await Promise.all([
+  const [guides, hubs] = await Promise.all([
     db.guide.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
@@ -28,14 +42,19 @@ export default async function GuidesIndexPage() {
         author: { select: { name: true, slug: true } },
       },
     }),
-    db.category.findMany({
-      where: { published: true, guides: { some: { status: "PUBLISHED" } } },
-      orderBy: { sortOrder: "asc" },
-    }),
+    getGuideHubs(),
   ]);
 
-  const costGuides = guides.filter((guide) => guide.type === "COST");
-  const editorialGuides = guides.filter((guide) => guide.type === "EDITORIAL");
+  // Grouped once in memory rather than queried per section: there is one list
+  // of published guides and four questions to ask of it.
+  const byType = new Map<GuideType, typeof guides>();
+  for (const guide of guides) {
+    const type = guideTypeOf(guide.type);
+    byType.set(type, [...(byType.get(type) ?? []), guide]);
+  }
+
+  const questionHubs = hubs.filter((hub) => hub.kind === "question");
+  const tradeHubs = hubs.filter((hub) => hub.kind === "trade");
 
   return (
     <SiteChrome active="guides">
@@ -59,12 +78,14 @@ export default async function GuidesIndexPage() {
             Written by named editors, and reviewed by people who have done the work where the trade
             warrants it.
           </p>
-          {categories.length > 0 ? (
+          {tradeHubs.length > 0 ? (
             <div className="filter-bar">
-              <span style={{ fontSize: 14, color: "var(--text-secondary)", marginRight: 4 }}>By service:</span>
-              {categories.map((category) => (
-                <Link key={category.slug} className="chip" href={routes.category(category.slug)}>
-                  {category.serviceName}
+              <span style={{ fontSize: 14, color: "var(--text-secondary)", marginRight: 4 }}>
+                By trade:
+              </span>
+              {tradeHubs.map((hub) => (
+                <Link key={hub.slug} className="chip" href={hub.path}>
+                  {hub.h1.replace(/ guides$/, "")}
                 </Link>
               ))}
             </div>
@@ -72,76 +93,98 @@ export default async function GuidesIndexPage() {
         </div>
       </section>
 
-      {editorialGuides.length > 0 ? (
-        <Section labelledBy="ed-h2">
-          <SectionHead id="ed-h2" title="How to choose and what to ask" />
-          <div className="card-grid">
-            {editorialGuides.map((guide) => (
-              <article key={guide.id} className="card card--lift" style={{ overflow: "hidden" }}>
-                <div className="thumb" style={{ height: 150 }}>
-                  <Media src={guide.heroImage} alt="" />
-                </div>
-                <div style={{ padding: "20px 22px 22px" }}>
-                  <p className="eyebrow" style={{ marginBottom: 8 }}>
-                    {guide.category?.serviceName ?? "General"}
-                  </p>
-                  <h3 style={{ fontSize: 18, lineHeight: 1.3, marginBottom: 8 }}>
-                    <Link href={routes.guide(guide.slug)} style={{ color: "var(--ink)" }}>
-                      {guide.title}
-                    </Link>
-                  </h3>
-                  <p style={{ fontSize: 14.5, lineHeight: 1.55, color: "var(--text-secondary)", marginBottom: 10 }}>
-                    {guide.excerpt}
-                  </p>
-                  <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                    By {guide.author?.name} · {monthYear(guide.publishedAt)} · {guide.readingMinutes} min
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </Section>
-      ) : null}
+      {GUIDE_TYPES.map((type, index) => {
+        const list = byType.get(type) ?? [];
+        if (list.length === 0) return null;
+        const hub = questionHubs.find((candidate) => candidate.guideType === type);
+        const shown = list.slice(0, PREVIEW);
 
-      {costGuides.length > 0 ? (
-        <Section tone="page" labelledBy="cost-h2" ruleBottom={false}>
+        return (
+          <Section
+            key={type}
+            tone={index % 2 === 1 ? "page" : "card"}
+            labelledBy={`guides-${type}-h2`}
+          >
+            <SectionHead
+              id={`guides-${type}-h2`}
+              eyebrow="By question"
+              title={GUIDE_TYPE_LABELS[type]}
+              lead={SECTION_LEAD[type]}
+              linkHref={hub?.path}
+              linkLabel={
+                hub ? (list.length > PREVIEW ? `All ${list.length} guides` : "See the hub") : undefined
+              }
+            />
+            <div className={type === "COST" ? "card-grid card-grid--2" : "card-grid"}>
+              {shown.map((guide) => (
+                <article key={guide.id} className="card card--lift" style={{ overflow: "hidden" }}>
+                  {guide.heroImage ? (
+                    <div className="thumb" style={{ height: 150 }}>
+                      <Media
+                        src={guide.heroImage}
+                        alt=""
+                        sizes="(max-width: 760px) 100vw, (max-width: 1200px) 50vw, 380px"
+                      />
+                    </div>
+                  ) : null}
+                  <div style={{ padding: "20px 22px 22px" }}>
+                    <p className="eyebrow" style={{ marginBottom: 8 }}>
+                      {guide.category?.serviceName ?? "General"}
+                    </p>
+                    <h3 style={{ fontSize: 18, lineHeight: 1.3, marginBottom: 8 }}>
+                      <Link href={routes.guide(guide.slug)} style={{ color: "var(--ink)" }}>
+                        {guide.title}
+                      </Link>
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: 14.5,
+                        lineHeight: 1.55,
+                        color: "var(--text-secondary)",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {guide.excerpt}
+                    </p>
+                    {type === "COST" && guide.typicalLow && guide.typicalHigh ? (
+                      <p
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          color: "var(--ink)",
+                          fontVariantNumeric: "tabular-nums",
+                          marginBottom: 10,
+                        }}
+                      >
+                        ${guide.typicalLow.toLocaleString()}–${guide.typicalHigh.toLocaleString()}
+                      </p>
+                    ) : null}
+                    <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                      By {guide.author?.name} · {monthYear(guide.publishedAt)} ·{" "}
+                      {guide.readingMinutes} min
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </Section>
+        );
+      })}
+
+      {tradeHubs.length > 0 ? (
+        <Section tone="soft" labelledBy="guides-trades-h2" ruleBottom={false}>
           <SectionHead
-            id="cost-h2"
-            title="What things cost"
-            lead="Sourced ranges with the reasoning behind them, and an honest note wherever we have no figure to publish."
+            id="guides-trades-h2"
+            eyebrow="By trade"
+            title="Every guide for one kind of work"
+            lead="The same research, sorted by the job rather than the question."
           />
-          <div className="card-grid card-grid--2">
-            {costGuides.map((guide) => (
-              <article key={guide.id} className="card card--lift" style={{ padding: "24px 26px" }}>
-                <p className="eyebrow" style={{ marginBottom: 8 }}>
-                  {guide.category?.serviceName ?? "Cost guide"}
-                </p>
-                <h3 style={{ fontSize: 20, lineHeight: 1.3, marginBottom: 10 }}>
-                  <Link href={routes.guide(guide.slug)} style={{ color: "var(--ink)" }}>
-                    {guide.title}
-                  </Link>
-                </h3>
-                <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--text-secondary)", marginBottom: 14 }}>
-                  {guide.excerpt}
-                </p>
-                {guide.typicalLow && guide.typicalHigh ? (
-                  <p
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 700,
-                      color: "var(--ink)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    ${guide.typicalLow.toLocaleString()}–${guide.typicalHigh.toLocaleString()}
-                  </p>
-                ) : null}
-                <p style={{ marginTop: 10, fontSize: 13, color: "var(--text-muted)" }}>
-                  By {guide.author?.name} · Updated {monthYear(guide.reviewedAt ?? guide.publishedAt)}
-                </p>
-              </article>
-            ))}
-          </div>
+          <LinkGrid
+            items={tradeHubs.map((hub) => ({
+              label: hub.h1.replace(/ guides$/, ""),
+              href: hub.path,
+            }))}
+          />
         </Section>
       ) : null}
 
