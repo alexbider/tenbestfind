@@ -216,6 +216,20 @@ export async function flushIndexQueue(limit = DAILY_QUOTA): Promise<FlushResult>
         });
         sent += 1;
       } else {
+        // A 403 on a real publish is the answer to the question the Test button
+        // asks, arriving unprompted. Recording it turns the light red the day
+        // access is lost rather than the next time somebody thinks to check.
+        if (response.status === 403 || response.status === 401) {
+          await recordIndexingCheck();
+          note = "Google refused the account. The Indexing screen says what to fix; the rest stay queued.";
+          await db.indexRequest.update({
+            where: { id: row.id },
+            data: { attempts: { increment: 1 }, error: `HTTP ${response.status}: ${text}` },
+          });
+          failed += 1;
+          break;
+        }
+
         await db.indexRequest.update({
           where: { id: row.id },
           data: {
@@ -340,4 +354,34 @@ export async function recordIndexingCheck(): Promise<IndexingCheck> {
     update: { value: JSON.stringify(check) },
   });
   return check;
+}
+
+
+/** How long a check is trusted before the worker takes another one. */
+const CHECK_GOOD_FOR_MS = 24 * 60 * 60_000;
+
+/**
+ * Re-checks access once a day, unprompted.
+ *
+ * An indicator that only updates when somebody presses a button is an
+ * indicator that is wrong for however long nobody presses it, and the thing
+ * being watched here is a permission in someone else's console that can be
+ * revoked without any signal reaching this side. Returns null when there was
+ * nothing to do.
+ */
+export async function refreshIndexingCheck(now = Date.now()): Promise<IndexingCheck | null> {
+  if (!(await serviceAccount())) return null;
+
+  const row = await db.setting.findUnique({ where: { key: INDEXING_CHECK_KEY } });
+  if (row) {
+    try {
+      const previous = JSON.parse(row.value) as { at?: unknown };
+      const at = typeof previous.at === "string" ? Date.parse(previous.at) : NaN;
+      if (Number.isFinite(at) && now - at < CHECK_GOOD_FOR_MS) return null;
+    } catch {
+      // An unreadable record is a reason to take a fresh one, not to skip.
+    }
+  }
+
+  return recordIndexingCheck();
 }

@@ -3,7 +3,7 @@ import { advanceBatch } from "../src/lib/import-pipeline";
 import { advanceRefresh } from "../src/lib/reviews";
 import { advanceEnrichment } from "../src/lib/enrich-run";
 import { ACTIVE_JOB_STATUSES, advanceGuideJob } from "../src/lib/guide-jobs";
-import { flushIndexQueue } from "../src/lib/google-indexing";
+import { flushIndexQueue, refreshIndexingCheck } from "../src/lib/google-indexing";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
 // The batch runner. It lives in its own container rather than inside a request
@@ -151,6 +151,17 @@ let nextIndexFlush = Date.now() + 60_000;
 async function tickIndexQueue(): Promise<void> {
   if (Date.now() < nextIndexFlush) return;
   nextIndexFlush = Date.now() + INDEX_EVERY_MS;
+
+  // Before spending any of the quota, make sure the account is still one
+  // Google accepts. It only does real work once a day, and it is what keeps
+  // the light on the admin honest without anybody pressing anything.
+  try {
+    const check = await refreshIndexingCheck();
+    if (check) console.log(`[index] access check: ${check.ok ? "ok" : "FAILED"} ${check.status}`);
+  } catch (error) {
+    console.error("[index] access check:", error instanceof Error ? error.message : error);
+  }
+
   try {
     const result = await flushIndexQueue(50);
     if (result.sent > 0 || result.failed > 0) {

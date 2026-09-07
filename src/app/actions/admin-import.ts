@@ -211,5 +211,22 @@ export async function saveSecret(_prev: ActionState, formData: FormData): Promis
     summary: value.trim() ? `${key} set` : `${key} cleared`,
   });
   revalidatePath("/admin/integrations");
+
+  // The Google key is the one credential whose validity is decided somewhere
+  // else, so the moment it is pasted is the moment to find out. One read call,
+  // nothing from the daily quota, and the answer is on the screen before
+  // anyone has to wonder whether Search Console took it.
+  if (key === SECRET_KEYS.googleServiceAccount && value.trim()) {
+    const { recordIndexingCheck } = await import("@/lib/google-indexing");
+    const check = await recordIndexingCheck().catch(() => null);
+    revalidatePath("/admin/indexing");
+    if (check) {
+      return {
+        status: check.ok ? "ok" : "error",
+        message: check.ok ? `Saved. ${check.detail}` : `Saved. ${check.status}. ${check.detail}`,
+      };
+    }
+  }
+
   return { status: "ok", message: value.trim() ? "Saved and encrypted." : "Removed." };
 }
