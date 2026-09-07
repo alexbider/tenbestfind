@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminHeader, Panel } from "@/components/admin/shell";
 import { BatchForm } from "@/components/admin/BatchForm";
 import { requireAdmin } from "@/lib/auth";
-import { secretStatus } from "@/lib/secrets";
+import { isConnected, SECRET_KEYS, secretStatus } from "@/lib/secrets";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "New import batch" };
@@ -26,7 +26,11 @@ export default async function NewBatchPage() {
   const existing: Record<string, number> = {};
   for (const row of counts) existing[`${row.categoryId}:${row.cityId}`] = row._count._all;
 
-  const missing = secrets.filter((secret) => !secret.set);
+  // Only what a batch actually needs. The other credentials belong to the
+  // guide writer and the indexing queue, and naming them here would tell an
+  // editor a batch cannot run when it can.
+  const needed: string[] = [SECRET_KEYS.apify, SECRET_KEYS.anthropic];
+  const missing = secrets.filter((secret) => needed.includes(secret.key) && !isConnected(secret));
 
   return (
     <>

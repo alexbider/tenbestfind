@@ -3,7 +3,7 @@ import { AdminHeader, EmptyState, Panel, StatRow } from "@/components/admin/shel
 import { Badge } from "@/components/ui/primitives";
 import { deleteBatch } from "@/app/actions/admin-import";
 import { requireStaff } from "@/lib/auth";
-import { secretStatus } from "@/lib/secrets";
+import { isConnected, SECRET_KEYS, secretStatus } from "@/lib/secrets";
 import { fullDate } from "@/lib/format";
 import { db } from "@/lib/db";
 
@@ -33,7 +33,11 @@ export default async function ImportsPage() {
   const running = batches.filter((batch) =>
     ["QUEUED", "SCRAPING", "ENRICHING", "WRITING", "PUBLISHING"].includes(batch.status),
   ).length;
-  const missing = secrets.filter((secret) => !secret.set);
+  // Only what a batch actually needs. The other credentials belong to the
+  // guide writer and the indexing queue, and naming them here would tell an
+  // editor a batch cannot run when it can.
+  const needed: string[] = [SECRET_KEYS.apify, SECRET_KEYS.anthropic];
+  const missing = secrets.filter((secret) => needed.includes(secret.key) && !isConnected(secret));
 
   return (
     <>

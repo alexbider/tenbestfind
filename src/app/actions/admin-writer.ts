@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { GUIDE_TYPES } from "@/lib/enums";
 import { acceptGuideJob, retryGuideJob } from "@/lib/guide-jobs";
 import { DEFAULT_INSTRUCTIONS, DEFAULT_SYSTEM, SKILLS } from "@/lib/guide-writer";
-import { flushIndexQueue, queueForIndexing } from "@/lib/google-indexing";
+import { flushIndexQueue, queueForIndexing, recordIndexingCheck } from "@/lib/google-indexing";
 import { stringify } from "@/lib/json";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
@@ -235,6 +235,20 @@ export async function flushIndexing(): Promise<void> {
   await requireStaff();
   await flushIndexQueue(50);
   revalidatePath("/admin/indexing");
+}
+
+/**
+ * Asks Google whether it accepts the service account.
+ *
+ * A read, so it costs nothing from the daily publishing quota, and it is the
+ * only thing that can turn "the key parses" into "Search Console has accepted
+ * this account".
+ */
+export async function testGoogleIndexing(): Promise<void> {
+  await requireStaff();
+  await recordIndexingCheck();
+  revalidatePath("/admin/indexing");
+  revalidatePath("/admin/integrations");
 }
 
 /** Puts everything the sitemap offers into the queue, oldest first. */

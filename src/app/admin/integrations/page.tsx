@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireAdmin } from "@/lib/auth";
 import { parseList } from "@/lib/json";
-import { secretStatus } from "@/lib/secrets";
+import { isConnected, secretStatus } from "@/lib/secrets";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Integrations & MCP" };
@@ -21,11 +21,20 @@ export default async function AdminIntegrationsPage() {
   ]);
 
   const HINT: Record<string, string> = {
-    "apify.token": "Used to run the Google Maps scraper. Apify console, Settings, Integrations.",
-    "anthropic.apiKey": "Used to write the imported listings. console.anthropic.com, API keys.",
+    "apify.token": "Runs the Google Maps scraper. Apify console, Settings, Integrations.",
+    "anthropic.apiKey":
+      "Writes the imported listings, the guides and the weekly topic plan. console.anthropic.com, API keys.",
     "resend.apiKey":
-      "Used to email quote requests to companies. resend.com, API keys. The sending domain has to be verified there first.",
+      "Emails quote requests to companies. resend.com, API keys. The sending domain has to be verified there first.",
+    "dataforseo.login":
+      "Search volume, keyword difficulty and live results, for the guide writer and the topic radar. app.dataforseo.com, API access. This is the API login, which is an email address, not the one you sign in to the dashboard with.",
+    "dataforseo.password":
+      "The API password shown next to the login on the same screen. Both have to be set before any research runs.",
+    "google.serviceAccount":
+      "Submits new pages to the Google Indexing API. Create a service account in Google Cloud, enable the Indexing API on the project, download its JSON key and paste the whole file here. The key alone does not authorise anything: the account is granted access in Google Search Console, under Settings, Users and permissions, by adding its client_email address as an Owner of the property. Anything less than Owner and every call is refused. Once a key is on file the address it needs is printed next to the light above.",
   };
+
+  const connected = secrets.filter(isConnected).length;
 
   const activeKeys = keys.filter((key) => !key.revokedAt);
 
@@ -146,7 +155,7 @@ export default async function AdminIntegrationsPage() {
 
       <Panel
         title="Outbound credentials"
-        description="Keys this platform uses to call other services. Stored encrypted, and only the last four characters are ever shown again."
+        description={`Keys this platform uses to call other services, ${connected} of ${secrets.length} connected. Stored encrypted; a secret is never shown again, though an account name is, because that is how you check the right account is on the other end.`}
       >
         <div className="panel-grid">
           {secrets.map((secret) => (
@@ -156,8 +165,10 @@ export default async function AdminIntegrationsPage() {
               label={secret.label}
               hint={HINT[secret.key] ?? ""}
               set={secret.set}
-              last4={secret.last4}
               fromEnv={secret.fromEnv}
+              connection={secret.state}
+              status={secret.status}
+              detail={secret.detail}
             />
           ))}
         </div>

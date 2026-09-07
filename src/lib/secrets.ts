@@ -90,22 +90,148 @@ export async function getSecret(key: SecretKey): Promise<string | null> {
   }
 }
 
-/** What the admin is allowed to show: presence and the last four characters. */
-export async function secretStatus(): Promise<
-  { key: SecretKey; label: string; set: boolean; last4: string | null; fromEnv: boolean }[]
-> {
+/* ------------------------------------------------------------ what is live */
+
+/**
+ * A service account as Google writes it.
+ *
+ * Parsed here rather than in google-indexing.ts so the admin can say whose
+ * account is on file without importing the indexing client, and so both agree
+ * on what counts as a usable key.
+ */
+export type ServiceAccount = { client_email: string; private_key: string };
+
+export function readServiceAccount(raw: string | null): ServiceAccount | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ServiceAccount>;
+    if (!parsed.client_email || !parsed.private_key) return null;
+    // A key pasted through a form usually arrives with its newlines escaped.
+    return { client_email: parsed.client_email, private_key: parsed.private_key.replace(/\\n/g, "\n") };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Connected, or one of the three ways not to be.
+ *
+ * "unreadable" is the one worth having a name for: the row is there but
+ * SESSION_SECRET has changed since it was written, so the value decrypts to
+ * nothing. Reporting that as connected is how a credential silently stops
+ * working and nobody notices for a month.
+ */
+export type SecretState = "connected" | "missing" | "unreadable" | "invalid";
+
+export type SecretReport = {
+  key: SecretKey;
+  label: string;
+  /** Kept for the callers that only ask whether something is there. */
+  set: boolean;
+  last4: string | null;
+  fromEnv: boolean;
+  state: SecretState;
+  /** The words that go next to the light. */
+  status: string;
+  /** Anything worth naming underneath it, such as whose account this is. */
+  detail: string | null;
+};
+
+/** The last real call to the Indexing API, when one has been made. */
+async function lastIndexingCheck(): Promise<{ ok: boolean; status: string; detail: string } | null> {
+  try {
+    const row = await db.setting.findUnique({ where: { key: "google.indexingCheck" } });
+    if (!row) return null;
+    const parsed = JSON.parse(row.value) as { ok?: unknown; status?: unknown; detail?: unknown };
+    if (typeof parsed.ok !== "boolean" || typeof parsed.status !== "string") return null;
+    return { ok: parsed.ok, status: parsed.status, detail: String(parsed.detail ?? "") };
+  } catch {
+    return null;
+  }
+}
+
+/** True only when the credential is genuinely usable. */
+export const isConnected = (report: { state: SecretState }): boolean => report.state === "connected";
+
+/**
+ * What the admin is allowed to show: whether each credential works, and the
+ * last four characters. The value itself is never returned.
+ */
+export async function secretStatus(): Promise<SecretReport[]> {
   const rows = await db.integrationSecret.findMany();
   const byKey = new Map(rows.map((row) => [row.key, row]));
 
-  return (Object.values(SECRET_KEYS) as SecretKey[]).map((key) => {
-    const fromEnv = Boolean(fromEnvironment(key));
-    const row = byKey.get(key);
-    return {
-      key,
-      label: SECRET_LABEL[key],
-      set: fromEnv || Boolean(row),
-      last4: row?.last4 ?? null,
-      fromEnv,
-    };
-  });
+  return Promise.all(
+    (Object.values(SECRET_KEYS) as SecretKey[]).map(async (key) => {
+      const fromEnv = Boolean(fromEnvironment(key));
+      const row = byKey.get(key);
+      const stored = Boolean(row);
+      const label = SECRET_LABEL[key];
+      const last4 = row?.last4 ?? null;
+      const base = { key, label, set: fromEnv || stored, last4, fromEnv };
+
+      if (!fromEnv && !stored) {
+        return { ...base, state: "missing" as const, status: "Not connected", detail: null };
+      }
+
+      // Decrypting is the only honest test of a stored value, and it is cheap.
+      const value = await getSecret(key);
+      if (!value) {
+        return {
+          ...base,
+          state: "unreadable" as const,
+          status: "Stored but unreadable",
+          detail: "SESSION_SECRET has changed since this was saved. Paste it again.",
+        };
+      }
+
+      if (key === SECRET_KEYS.googleServiceAccount) {
+        const account = readServiceAccount(value);
+        if (!account) {
+          return {
+            ...base,
+            state: "invalid" as const,
+            status: "Not usable",
+            detail: "That is not a service account key. Paste the whole JSON file, including client_email and private_key.",
+          };
+        }
+        // A readable key is not a working one: access is granted in Search
+        // Console, somewhere this platform cannot see. So the light reports
+        // the last real call if one has been made, and says plainly that it
+        // has not been when it has not.
+        const check = await lastIndexingCheck();
+        if (check && !check.ok) {
+          return { ...base, state: "invalid" as const, status: check.status, detail: check.detail };
+        }
+        return {
+          ...base,
+          state: "connected" as const,
+          status: check ? check.status : fromEnv ? "Key on the server, not yet verified" : "Key on file, not yet verified",
+          detail: check
+            ? check.detail
+            : `${account.client_email} must be an Owner of the property in Google Search Console. Press Test on the Indexing screen to find out whether it is.`,
+        };
+      }
+
+      // The DataForSEO login is an account name rather than a secret, and the
+      // last four characters of an email address say nothing. Showing it whole
+      // is how you confirm the right account is connected, same as the Google
+      // one below it.
+      if (key === SECRET_KEYS.dataForSeoLogin) {
+        return {
+          ...base,
+          state: "connected" as const,
+          status: fromEnv ? "Connected on the server" : "Connected",
+          detail: value,
+        };
+      }
+
+      return {
+        ...base,
+        state: "connected" as const,
+        status: fromEnv ? "Connected on the server" : last4 ? `Connected, ending ${last4}` : "Connected",
+        detail: null,
+      };
+    }),
+  );
 }

@@ -1086,3 +1086,61 @@
   font-size: 14px;
   font-weight: 700;
 }
+
+/* Whether an outbound credential actually works.
+   The colour is the glance and the words are the answer: a dot on its own
+   tells somebody who cannot separate red from green nothing at all. */
+.conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.conn__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--gray-400);
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.05);
+}
+
+.conn--on .conn__dot {
+  background: #1F9D6B;
+  box-shadow: 0 0 0 3px rgb(31 157 107 / 0.18);
+}
+
+.conn--off .conn__dot {
+  background: var(--maple-600);
+  box-shadow: 0 0 0 3px rgb(195 38 32 / 0.15);
+}
+
+.conn--on {
+  color: var(--green-600);
+}
+
+.conn--off {
+  color: var(--maple-600);
+}
+
+.conn__detail {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.secret-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}

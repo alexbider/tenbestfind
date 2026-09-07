@@ -18,20 +18,19 @@
 
 import { createSign } from "node:crypto";
 import { db } from "./db";
-import { getSecret, SECRET_KEYS } from "./secrets";
+import { getSecret, readServiceAccount, SECRET_KEYS, type ServiceAccount } from "./secrets";
 import { absoluteUrl } from "./urls";
 import { loadSeoSettings } from "./seo-settings";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const PUBLISH_URL = "https://indexing.googleapis.com/v3/urlNotifications:publish";
+const METADATA_URL = "https://indexing.googleapis.com/v3/urlNotifications/metadata";
 const SCOPE = "https://www.googleapis.com/auth/indexing";
 
 /** Google's own ceiling: 200 URLs a day on a default quota. */
 export const DAILY_QUOTA = 200;
 
 export type IndexAction = "URL_UPDATED" | "URL_DELETED";
-
-type ServiceAccount = { client_email: string; private_key: string };
 
 function base64url(input: Buffer | string): string {
   return Buffer.from(input)
@@ -43,16 +42,7 @@ function base64url(input: Buffer | string): string {
 
 /** The stored service account, or null when one has not been pasted in yet. */
 async function serviceAccount(): Promise<ServiceAccount | null> {
-  const raw = await getSecret(SECRET_KEYS.googleServiceAccount);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<ServiceAccount>;
-    if (!parsed.client_email || !parsed.private_key) return null;
-    // A key pasted through a form usually arrives with its newlines escaped.
-    return { client_email: parsed.client_email, private_key: parsed.private_key.replace(/\\n/g, "\n") };
-  } catch {
-    return null;
-  }
+  return readServiceAccount(await getSecret(SECRET_KEYS.googleServiceAccount));
 }
 
 export async function googleIndexingConfigured(): Promise<boolean> {
@@ -251,4 +241,103 @@ export async function flushIndexQueue(limit = DAILY_QUOTA): Promise<FlushResult>
 
   const remaining = await db.indexRequest.count({ where: { target: "GOOGLE", status: "QUEUED" } });
   return { sent, failed, remaining, note: note || `${DAILY_QUOTA - used - sent} left in today's quota` };
+}
+
+
+/* ---------------------------------------------------------- is it accepted */
+
+/**
+ * Where the last check landed, kept so the admin can show it without making a
+ * call on every page load. Written by verifyIndexingAccess, read by the
+ * credential status.
+ */
+export const INDEXING_CHECK_KEY = "google.indexingCheck";
+
+export type IndexingCheck = { ok: boolean; status: string; detail: string; at: string };
+
+/**
+ * Does Google actually accept this account?
+ *
+ * A well-formed key proves nothing: the account has to be an Owner of the
+ * property in Search Console, and that permission is granted somewhere this
+ * platform cannot see. So the only honest test is a call.
+ *
+ * getMetadata is the right call to make. It is a read, it does not spend any of
+ * the 200-a-day publishing quota, and its failure modes are exactly the
+ * question being asked: 403 means Search Console has not accepted the account,
+ * 404 means it has and this URL simply has no history yet.
+ */
+export async function verifyIndexingAccess(): Promise<IndexingCheck> {
+  const at = new Date().toISOString();
+  const fail = (status: string, detail: string): IndexingCheck => ({ ok: false, status, detail, at });
+
+  const account = await serviceAccount();
+  if (!account) {
+    return fail("No key on file", "Paste the service account JSON under Integrations first.");
+  }
+
+  let token: string;
+  try {
+    token = await accessToken();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // A private_key that will not sign is a mangled paste, not a permission
+    // problem, and saying so saves an hour in Search Console looking for
+    // something that was never wrong.
+    if (/DECODER|no start line|PEM|asn1|unsupported/i.test(message)) {
+      return fail(
+        "The key is not usable",
+        "The private_key in that JSON will not sign. Download a fresh key file from Google Cloud and paste the whole file, unedited.",
+      );
+    }
+    return fail(
+      "Google rejected the key",
+      `${message}. This is the key, not the Search Console permission: the account it names does not exist, or its key has been revoked.`,
+    );
+  }
+
+  const url = absoluteUrl("/");
+  let response: Response;
+  try {
+    response = await fetch(`${METADATA_URL}?url=${encodeURIComponent(url)}`, {
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    return fail("Could not reach Google", String(error));
+  }
+
+  if (response.status === 200 || response.status === 404) {
+    return {
+      ok: true,
+      status: "Verified in Search Console",
+      detail: `${account.client_email} is an Owner of ${url} and Google accepted the call.`,
+      at,
+    };
+  }
+
+  if (response.status === 403) {
+    return fail(
+      "Search Console has not accepted this account",
+      `Add ${account.client_email} as an Owner of the property in Search Console, under Settings, Users and permissions. Anything less than Owner is refused.`,
+    );
+  }
+
+  if (response.status === 401) {
+    return fail("Google rejected the key", "The service account key is not valid. Download a fresh one and paste it again.");
+  }
+
+  const body = await response.text().catch(() => "");
+  return fail(`Google answered ${response.status}`, body.slice(0, 300) || "No detail was returned.");
+}
+
+/** Runs the check and remembers what it said. */
+export async function recordIndexingCheck(): Promise<IndexingCheck> {
+  const check = await verifyIndexingAccess();
+  await db.setting.upsert({
+    where: { key: INDEXING_CHECK_KEY },
+    create: { key: INDEXING_CHECK_KEY, value: JSON.stringify(check), groupName: "seo", label: "Indexing API check" },
+    update: { value: JSON.stringify(check) },
+  });
+  return check;
 }
