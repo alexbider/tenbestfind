@@ -6,6 +6,7 @@ import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { refundAndCancel } from "@/lib/billing";
 import { db } from "@/lib/db";
+import { pingIndexNow } from "@/lib/indexnow";
 import { recordMove } from "@/lib/redirects";
 import { analyzeSeo } from "@/lib/seo";
 import { parseJson, stringify } from "@/lib/json";
@@ -211,6 +212,7 @@ export async function savePage(_prev: ActionState, formData: FormData): Promise<
   revalidatePath(`/${data.slug}/`);
   if (previous && previous.slug !== data.slug) revalidatePath(`/${previous.slug}/`);
   revalidatePath("/admin/pages");
+  if (data.status === "PUBLISHED") pingIndexNow([`/${data.slug}/`]);
   return ok("Page saved.");
 }
 
@@ -418,6 +420,7 @@ export async function saveGuide(_prev: ActionState, formData: FormData): Promise
   if (previous && previous.slug !== data.slug) revalidatePath(`/guides/${previous.slug}/`);
   revalidatePath("/guides/");
   revalidatePath("/admin/guides");
+  if (data.status === "PUBLISHED") pingIndexNow([`/guides/${data.slug}/`, "/guides/"]);
   return ok("Guide saved.");
 }
 
@@ -655,6 +658,7 @@ export async function saveRanking(_prev: ActionState, formData: FormData): Promi
   if (path) revalidatePath(path);
   revalidatePath("/rankings/");
   revalidatePath("/admin/rankings");
+  if (path && data.status === "PUBLISHED") pingIndexNow([path, "/rankings/"]);
   return ok("Ranking saved.");
 }
 
@@ -801,6 +805,7 @@ export async function savePost(_prev: ActionState, formData: FormData): Promise<
   revalidatePath(routes.post(data.slug));
   revalidatePath(routes.blogIndex());
   revalidatePath("/admin/guides");
+  if (data.status === "PUBLISHED") pingIndexNow([routes.post(data.slug), routes.blogIndex()]);
   return ok("Post saved.");
 }
 
@@ -1169,6 +1174,7 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
 
   revalidatePath(routes.business(data.slug));
   revalidatePath("/admin/businesses");
+  if (data.status === "PUBLISHED") pingIndexNow([routes.business(data.slug)]);
   return ok("Business saved.");
 }
 

@@ -960,7 +960,7 @@ export async function RankingPage({
             </div>
             <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "20px", overflow: "hidden", background: "var(--surface-card)" }}>
               <div style={{ height: "320px", background: "var(--surface-sunken)" }}>
-                <Media src={city.heroImage} alt="" />
+                <Media src={city.heroImage} alt={`${city.name}, ${region.name}`} />
               </div>
               <p style={{ padding: "14px 18px", fontSize: "13px", color: "var(--text-secondary)" }}>
                 Service coverage across {city.name}. Individual company areas are listed on each profile.

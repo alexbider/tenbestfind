@@ -5,7 +5,13 @@ import { AI_BOTS, loadSeoSettings } from "@/lib/seo-settings";
 // blocks, a crawl delay and whatever custom lines the admin has added, and the
 // metadata helper can only express a subset of that.
 
-export const dynamic = "force-dynamic";
+// Cached rather than dynamic. This file was reading the database on every
+// request, which puts the one document a crawler fetches before anything else
+// behind the availability of the database: a blip becomes a 500, and a 500 on
+// robots.txt is read as "crawl nothing" rather than "try again". An hour is
+// short enough that a change in the admin lands quickly, and saving the SEO
+// screen revalidates this path anyway.
+export const revalidate = 3600;
 
 export async function GET() {
   const settings = await loadSeoSettings();

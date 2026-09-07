@@ -373,7 +373,7 @@ export async function RegionHub({
 
             <div style={{ ...CARD, borderRadius: "20px", overflow: "hidden" }}>
               <div style={{ height: "260px", background: "var(--surface-sunken)" }}>
-                <Media src={region.heroImage} alt="" />
+                <Media src={region.heroImage} alt={`${region.name}, ${country.name}`} />
               </div>
               <dl style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", margin: "0" }}>
                 {glance.map((item) => (

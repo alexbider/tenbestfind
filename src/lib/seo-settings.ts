@@ -340,6 +340,14 @@ export const SEO_FIELDS: SeoField[] = [
   { key: "seo.sitemap.include.locations", label: "Include location hubs", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.categories", label: "Include service hubs", type: "boolean", group: "sitemap", default: true },
   {
+    key: "seo.indexnow",
+    label: "Push changes with IndexNow",
+    type: "boolean",
+    group: "sitemap",
+    default: true,
+    hint: "Tells Bing, Yandex and Naver within minutes of a page being published or edited. Google ignores the protocol and keeps using the sitemap.",
+  },
+  {
     key: "seo.sitemap.exclude",
     label: "Excluded paths",
     type: "lines",

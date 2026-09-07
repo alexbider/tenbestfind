@@ -165,6 +165,11 @@ services:
         echo "==> building"
         npm run build
 
+        # Backgrounded, and after a pause, on purpose: an engine that accepts
+        # a submission comes back to fetch the key file, and there is nothing
+        # to fetch until the server below is actually listening.
+        ( sleep 60; npx tsx scripts/indexnow.ts --yes || echo "indexnow skipped" ) &
+
         echo "==> starting"
         exec npm run start
 

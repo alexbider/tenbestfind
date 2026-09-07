@@ -23,7 +23,7 @@ import {
   TenOutline,
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { JsonLd } from "@/components/ui/primitives";
+import { JsonLd, Media } from "@/components/ui/primitives";
 import { compactNumber, money, monthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, type ConditionRow } from "@/lib/json";
@@ -406,6 +406,27 @@ export async function CityHub({
           <h2 id="glance-h2" style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", marginBottom: "24px" }}>
             {city.name} at a glance
           </h2>
+          {/* The city's own photograph. Every other template showed it and
+              this one did not, so the one page actually about the place was
+              the only page without a picture of it. */}
+          {city.heroImage ? (
+            <div
+              style={{
+                height: "clamp(200px, 32vw, 320px)",
+                marginBottom: "20px",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "20px",
+                overflow: "hidden",
+                background: "var(--surface-sunken)",
+              }}
+            >
+              <Media
+                src={city.heroImage}
+                alt={`${city.name}, ${region.name}`}
+                sizes="(max-width: 1240px) 100vw, 1192px"
+              />
+            </div>
+          ) : null}
           <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "14px", margin: "0" }}>
             {glance.map((fact) => (
               <div

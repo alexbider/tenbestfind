@@ -69,8 +69,13 @@ export async function saveSeoSettings(_prev: ActionState, formData: FormData): P
     summary: `Global SEO saved (${blockedBots.length} AI crawlers blocked)`,
   });
 
-  // The robots file, the sitemap and every page's metadata read these.
+  // The robots file, the sitemap and every page's metadata read these. The
+  // first two are cached route handlers, so they are named explicitly rather
+  // than trusted to fall out of the layout sweep: the visibility switch has to
+  // reach robots.txt the moment it is thrown.
   revalidatePath("/", "layout");
+  revalidatePath("/robots.txt");
+  revalidatePath("/sitemap.xml");
 
   return { status: "ok", message: "Global SEO saved." };
 }
