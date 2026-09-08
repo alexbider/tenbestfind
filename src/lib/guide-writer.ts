@@ -40,7 +40,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "text", "id"],
       properties: {
-        kind: { const: "heading" },
+        kind: { type: "string", const: "heading" },
         text: { type: "string", description: "An H2. Sentence case, no numbering." },
         id: { type: "string", description: "A short lowercase slug for the anchor." },
       },
@@ -50,7 +50,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "text"],
       properties: {
-        kind: { const: "paragraph" },
+        kind: { type: "string", const: "paragraph" },
         text: { type: "string", description: "One paragraph. No markdown, no bullet characters." },
       },
     },
@@ -59,7 +59,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "items"],
       properties: {
-        kind: { const: "list" },
+        kind: { type: "string", const: "list" },
         items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 8 },
       },
     },
@@ -68,7 +68,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "items"],
       properties: {
-        kind: { const: "steps" },
+        kind: { type: "string", const: "steps" },
         items: {
           type: "array",
           minItems: 3,
@@ -87,8 +87,8 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "tone", "title", "body"],
       properties: {
-        kind: { const: "callout" },
-        tone: { enum: ["note", "alert", "brand"] },
+        kind: { type: "string", const: "callout" },
+        tone: { type: "string", enum: ["note", "alert", "brand"] },
         title: { type: "string" },
         body: { type: "string" },
       },
@@ -98,7 +98,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "items"],
       properties: {
-        kind: { const: "criteria" },
+        kind: { type: "string", const: "criteria" },
         items: {
           type: "array",
           minItems: 3,
@@ -117,7 +117,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "title", "items"],
       properties: {
-        kind: { const: "checklist" },
+        kind: { type: "string", const: "checklist" },
         title: { type: "string" },
         items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 10 },
       },
@@ -127,7 +127,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "title", "rows"],
       properties: {
-        kind: { const: "compare" },
+        kind: { type: "string", const: "compare" },
         title: { type: "string" },
         intro: { type: "string" },
         rows: {
@@ -152,7 +152,7 @@ const blockSchema = {
       additionalProperties: false,
       required: ["kind", "title", "items"],
       properties: {
-        kind: { const: "flags" },
+        kind: { type: "string", const: "flags" },
         title: { type: "string", description: "For example: Walk away if you hear any of these" },
         items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 7 },
       },
@@ -242,7 +242,7 @@ export const guideJsonSchema = {
         properties: {
           label: { type: "string" },
           url: { type: "string", description: "Must be a URL that appeared in the research brief." },
-          tier: { enum: ["PRIMARY", "SECONDARY", "REPORTED", "EDITORIAL"] },
+          tier: { type: "string", enum: ["PRIMARY", "SECONDARY", "REPORTED", "EDITORIAL"] },
         },
       },
       description:

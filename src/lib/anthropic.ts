@@ -109,6 +109,37 @@ export type JsonAsk = {
  * Keeping one builder is the point. The batch tier is half price for a request
  * that is byte-identical to the direct one, and two builders would drift.
  */
+/**
+ * Walks a hand-written JSON schema looking for the mistake that is easy to
+ * make and expensive to find.
+ *
+ * A property written as `{ enum: [...] }` with no `type` is rejected by the
+ * API, but only at the moment of the call, which on a pipeline that spends
+ * money before it writes means the bill has already been run up. Checking here
+ * turns a wasted run into an error at the first call, and checking it up front
+ * turns it into an error before the first purchase.
+ */
+export function assertJsonSchema(schema: unknown, path = "schema"): void {
+  if (!schema || typeof schema !== "object") return;
+  if (Array.isArray(schema)) {
+    schema.forEach((item, index) => assertJsonSchema(item, `${path}[${index}]`));
+    return;
+  }
+
+  const node = schema as Record<string, unknown>;
+  const combinator = "anyOf" in node || "oneOf" in node || "allOf" in node || "$ref" in node;
+  if (!combinator && ("enum" in node || "const" in node) && !("type" in node)) {
+    throw new ContentError(
+      `${path} lists values but no type. Add type: "string" next to the enum, or the API rejects the whole request.`,
+    );
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "description" || key === "enum" || key === "required") continue;
+    assertJsonSchema(value, `${path}.${key}`);
+  }
+}
+
 export function jsonRequest({
   system,
   prompt,
@@ -117,6 +148,7 @@ export function jsonRequest({
   effort = "medium",
   maxTokens = 16000,
 }: JsonAsk) {
+  assertJsonSchema(jsonSchema);
   return {
     model,
     max_tokens: maxTokens,

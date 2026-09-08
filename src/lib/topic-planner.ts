@@ -42,7 +42,7 @@ export type ShortlistEntry = {
   features: string[];
 };
 
-const planJsonSchema = {
+export const planJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: ["picks", "notes"],
@@ -67,6 +67,7 @@ const planJsonSchema = {
               "What the guide should be called. Written for a reader, not stuffed with the keyword. Sentence case, under seventy characters.",
           },
           guideType: {
+            type: "string",
             enum: [...GUIDE_TYPES],
             description: "Which of the four kinds of guide this is. Usually the one suggested, but override it when the search results say otherwise.",
           },
@@ -218,12 +219,29 @@ export async function planTopics({
   // The check the schema cannot make. A keyword that was not on the list has no
   // numbers behind it, and a suggestion with no numbers behind it is a guess
   // wearing the same clothes as the rest of the week.
-  const byKeyword = new Map(entries.map((entry) => [entry.keyword.toLowerCase(), entry]));
+  //
+  // Matched loosely on purpose: a model that returns the right phrase with a
+  // question mark on the end, or a comma taken out, has picked from the list
+  // and dropping it would lose a good suggestion on a technicality. What is
+  // refused is a phrase that is not on the list at all.
+  const loose = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const byKeyword = new Map<string, ShortlistEntry>();
+  for (const entry of entries) {
+    byKeyword.set(entry.keyword.toLowerCase(), entry);
+    byKeyword.set(loose(entry.keyword), entry);
+  }
+
   const picks: (TopicPick & { entry: ShortlistEntry })[] = [];
   let dropped = 0;
 
   for (const pick of result.picks) {
-    const entry = byKeyword.get(pick.keyword.trim().toLowerCase());
+    const asked = pick.keyword.trim();
+    const entry = byKeyword.get(asked.toLowerCase()) ?? byKeyword.get(loose(asked));
     if (!entry) {
       dropped += 1;
       continue;

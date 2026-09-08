@@ -81,6 +81,8 @@ export async function retryPlan(formData: FormData): Promise<void> {
       // because the expensive half is bought and there is no reason to buy it
       // again to fix a bad minute at the end.
       status: plan?.shortlist ? "DRAFTING" : "QUEUED",
+      // A fresh set of attempts, or the retry gives up before it has tried.
+      attempts: 0,
       error: null,
       hint: null,
       finishedAt: null,

@@ -1595,6 +1595,9 @@ model TopicPlan {
   candidates Int @default(0)
   priced     Int @default(0)
   probed     Int @default(0)
+  /// How many times the briefing step has been tried. The research below it is
+  /// paid for, so a bad minute at the end is worth retrying rather than losing.
+  attempts   Int @default(0)
   /// Billable DataForSEO calls this plan has spent.
   calls      Int @default(0)
   /// Candidates answered from KeywordMetric rather than bought again.

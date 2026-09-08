@@ -12,7 +12,7 @@
 // in KeywordMetric so the second week costs a fraction of the first.
 
 import { db } from "./db";
-import { classify, PermanentError, type Effort } from "./anthropic";
+import { assertJsonSchema, classify, PermanentError, preflight, type Effort } from "./anthropic";
 import {
   bulkAiVolume,
   bulkDifficulty,
@@ -33,7 +33,7 @@ import {
   type CandidatePlace,
   type CandidateService,
 } from "./topic-candidates";
-import { planTopics, type ShortlistEntry } from "./topic-planner";
+import { planJsonSchema, planTopics, type ShortlistEntry } from "./topic-planner";
 import { countWeakResults, scoreTopic, spread } from "./topic-scoring";
 import { loadTopicSettings, weekStart, type TopicSettings } from "./topic-settings";
 
@@ -263,6 +263,46 @@ async function startPlan(plan: PlanRow, settings: TopicSettings): Promise<StepRe
       },
     });
     return { changed: true, note: "nothing to plan" };
+  }
+
+  // Before any of it is bought. The research is the expensive half and the
+  // writing is the half that turns it into something readable, so discovering
+  // at the end that there was never a key to write with wastes the lot. One
+  // token to find out now.
+  // The shape of what will be asked for, before anything is bought. A schema
+  // the API refuses fails at the last step of the run, which is the most
+  // expensive place there is for it to fail.
+  try {
+    assertJsonSchema(planJsonSchema);
+  } catch (error) {
+    await db.topicPlan.update({
+      where: { id: plan.id },
+      data: {
+        status: "FAILED",
+        error: `Nothing was bought: ${error instanceof Error ? error.message : String(error)}`,
+        hint: "This is a bug in the planner's own request, not anything you configured. Nothing was spent.",
+        finishedAt: new Date(),
+      },
+    });
+    return { changed: true, note: "stopped before spending: the planner's schema is malformed" };
+  }
+
+  try {
+    await preflight();
+  } catch (error) {
+    const classified = classify(error);
+    if (classified instanceof PermanentError) {
+      await db.topicPlan.update({
+        where: { id: plan.id },
+        data: {
+          status: "FAILED",
+          error: `Nothing was bought: ${classified.message}`,
+          hint: `${classified.hint} A plan spends real money on research and then needs a model to turn it into topics, so it stops here rather than paying for the first half.`,
+          finishedAt: new Date(),
+        },
+      });
+      return { changed: true, note: `stopped before spending: ${classified.message}` };
+    }
   }
 
   let notes = withNote(plan.notes, `${candidates.length.toLocaleString()} candidate phrases across ${matrix.services.length} trades and ${matrix.places.length} places.`);
@@ -668,49 +708,33 @@ function shortlistMarket(entry: { countryId: string | null }, matrix: Matrix): s
   return country?.market ?? null;
 }
 
-/** One call to Claude, then the week's ideas. */
-async function draftPlan(plan: PlanRow, settings: TopicSettings): Promise<StepResult> {
-  const shortlist = parseJson<(ShortlistEntry & { serviceId: string; placeId: string | null })[]>(plan.shortlist, []);
-  if (shortlist.length === 0) {
-    await db.topicPlan.update({
-      where: { id: plan.id },
-      data: { status: "READY", finishedAt: new Date() },
-    });
-    return { changed: true, note: "nothing to draft" };
-  }
+/** How many times the briefing is tried before the shortlist is used as it stands. */
+const DRAFT_ATTEMPTS = 3;
 
-  const matrix = await loadMatrix(settings);
-  const target = Math.min(plan.target, shortlist.length);
+/**
+ * Writes one idea per row, from whatever is known about it.
+ *
+ * Used both for the briefed picks and, when the briefing will not run, for the
+ * shortlist as it stands. Fifty calls of research is not something to throw
+ * away because the last minute of the run went wrong.
+ */
+async function writeIdeas(
+  planId: string,
+  rows: { entry: ShortlistEntry; title: string; guideType: GuideType; angle: string | null; outline: string[] }[],
+): Promise<void> {
+  await db.topicIdea.deleteMany({ where: { planId, status: "SUGGESTED" } });
 
-  const { picks, notes, dropped } = await planTopics({
-    entries: shortlist,
-    target,
-    existing: matrix.publishedTitles.slice(0, 60),
-    effort: "high" as Effort,
-  });
-
-  // A model that returned nothing usable is a failure worth reporting, not a
-  // quiet empty week.
-  if (picks.length === 0) {
-    throw new PermanentError(
-      "The planner returned no usable picks.",
-      "Every keyword it named was outside the shortlist. Run it again, or lower the gates so the shortlist is bigger.",
-    );
-  }
-
-  await db.topicIdea.deleteMany({ where: { planId: plan.id, status: "SUGGESTED" } });
-
-  for (const [index, pick] of picks.entries()) {
-    const entry = pick.entry;
+  for (const [index, row] of rows.entries()) {
+    const entry = row.entry;
     await db.topicIdea.create({
       data: {
-        planId: plan.id,
+        planId,
         rank: index + 1,
         keyword: entry.keyword,
-        topic: pick.title,
-        angle: [pick.angle, pick.whyNow].filter(Boolean).join("\n\n"),
-        outline: stringify(pick.outline),
-        guideType: pick.guideType,
+        topic: row.title,
+        angle: row.angle,
+        outline: stringify(row.outline),
+        guideType: row.guideType,
         categoryId: entry.serviceId,
         countryId: entry.countryId,
         regionId: entry.regionId,
@@ -730,14 +754,116 @@ async function draftPlan(plan: PlanRow, settings: TopicSettings): Promise<StepRe
       },
     });
   }
+}
+
+/** A title from the phrase itself, for when nothing wrote a better one. */
+function titleFrom(entry: ShortlistEntry): string {
+  const phrase = entry.keyword.charAt(0).toUpperCase() + entry.keyword.slice(1);
+  return phrase.length > 70 ? `${phrase.slice(0, 67).trimEnd()}...` : phrase;
+}
+
+/** One call to Claude, then the week's ideas. */
+async function draftPlan(plan: PlanRow, settings: TopicSettings): Promise<StepResult> {
+  const shortlist = parseJson<(ShortlistEntry & { serviceId: string; placeId: string | null })[]>(plan.shortlist, []);
+  if (shortlist.length === 0) {
+    await db.topicPlan.update({
+      where: { id: plan.id },
+      data: { status: "READY", finishedAt: new Date() },
+    });
+    return { changed: true, note: "nothing to draft" };
+  }
+
+  const matrix = await loadMatrix(settings);
+  const target = Math.min(plan.target, shortlist.length);
+  const attempt = plan.attempts + 1;
+
+  let picks: Awaited<ReturnType<typeof planTopics>>["picks"] = [];
+  let notes = plan.notes;
+  let dropped = 0;
+  let failure: Error | null = null;
+
+  try {
+    const result = await planTopics({
+      entries: shortlist,
+      target,
+      existing: matrix.publishedTitles.slice(0, 60),
+      effort: "high" as Effort,
+    });
+    picks = result.picks;
+    dropped = result.dropped;
+    notes = withNote(notes, result.notes.trim() || null);
+    if (picks.length === 0) {
+      failure = new Error("Every keyword the planner named was outside the shortlist.");
+    }
+  } catch (error) {
+    failure = error instanceof Error ? classify(error) : new Error(String(error));
+  }
+
+  if (failure) {
+    const permanent = failure instanceof PermanentError;
+    // Worth another go: a rate limit or a bad minute should not cost a week of
+    // research. A permanent failure will not improve with repetition.
+    if (!permanent && attempt < DRAFT_ATTEMPTS) {
+      await db.topicPlan.update({
+        where: { id: plan.id },
+        data: {
+          attempts: attempt,
+          notes: withNote(notes, `Briefing attempt ${attempt} failed: ${failure.message.slice(0, 200)}`),
+        },
+      });
+      return { changed: true, note: `briefing failed, retrying (${attempt}/${DRAFT_ATTEMPTS})` };
+    }
+
+    // Out of attempts, or it was never going to work. The research is bought
+    // and the shortlist is still the answer to the question that was asked, so
+    // it goes out as it stands rather than as nothing, plainly labelled.
+    const unbriefed = shortlist.slice(0, target);
+    await writeIdeas(
+      plan.id,
+      unbriefed.map((entry) => ({
+        entry,
+        title: titleFrom(entry),
+        guideType: entry.guideType,
+        angle: null,
+        outline: entry.questions.slice(0, 6),
+      })),
+    );
+
+    await db.topicPlan.update({
+      where: { id: plan.id },
+      data: {
+        status: "READY",
+        attempts: attempt,
+        finishedAt: new Date(),
+        error: `The research is here, but the briefing step failed: ${failure.message.slice(0, 500)}`,
+        hint: `${permanent && "hint" in failure ? `${(failure as PermanentError).hint} ` : ""}These ${unbriefed.length} are the shortlist as the numbers ranked it, with no title or angle written for them. Fix the cause and press Run it again: the research is already paid for, so only the writing step repeats.`,
+        notes: withNote(notes, `Briefing failed after ${attempt} ${attempt === 1 ? "attempt" : "attempts"}; the shortlist was published unbriefed.`),
+      },
+    });
+    return { changed: true, note: `briefing failed, published ${unbriefed.length} unbriefed` };
+  }
+
+  await writeIdeas(
+    plan.id,
+    picks.map((pick) => ({
+      entry: pick.entry,
+      title: pick.title,
+      guideType: pick.guideType,
+      angle: [pick.angle, pick.whyNow].filter(Boolean).join("\n\n"),
+      outline: pick.outline,
+    })),
+  );
 
   await db.topicPlan.update({
     where: { id: plan.id },
     data: {
       status: "READY",
+      attempts: attempt,
       finishedAt: new Date(),
+      error: null,
+      hint: null,
       notes: withNote(
-        withNote(plan.notes, notes.trim() || null),
+        notes,
         dropped > 0 ? `${dropped} picks named a phrase that was not on the shortlist and were dropped.` : null,
       ),
     },
