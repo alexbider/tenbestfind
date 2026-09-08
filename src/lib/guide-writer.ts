@@ -18,6 +18,7 @@
 
 import { z } from "zod";
 import { askForJson, ContentError, type Effort } from "./anthropic";
+import { authorityPromptBlock, isAuthorityUrl } from "./guide-authorities";
 import { briefAsText, type ResearchBrief } from "./dataforseo";
 import { GUIDE_TYPE_LABELS, type GuideType } from "./enums";
 import { SKILLS } from "./guide-skills";
@@ -133,7 +134,7 @@ const blockSchema = {
         rows: {
           type: "array",
           minItems: 3,
-          maxItems: 8,
+          maxItems: 12,
           items: {
             type: "object",
             additionalProperties: false,
@@ -202,13 +203,14 @@ export const guideJsonSchema = {
       type: "array",
       items: { type: "string" },
       minItems: 4,
-      maxItems: 6,
-      description: "One line each, each a claim rather than a topic. A reader should be able to act on any one of them.",
+      maxItems: 8,
+      description:
+        "The extraction-ready half of the opening. One line each, each a claim with a number or a named qualifier attached rather than a topic. A reader should be able to act on any one of them, and an assistant should be able to quote any one of them.",
     },
     body: {
       type: "array",
       minItems: 8,
-      maxItems: 40,
+      maxItems: 70,
       items: blockSchema,
       description:
         "The guide. Open with a heading, then alternate prose and structure. Every heading must be a question or a claim a reader has, not a label like 'Introduction'.",
@@ -220,7 +222,7 @@ export const guideJsonSchema = {
     faqs: {
       type: "array",
       minItems: 3,
-      maxItems: 8,
+      maxItems: 18,
       items: {
         type: "object",
         additionalProperties: false,
@@ -230,11 +232,12 @@ export const guideJsonSchema = {
           answer: { type: "string", description: "40 to 90 words. Answers in the first sentence." },
         },
       },
-      description: "Drawn from the questions in the research wherever they are relevant.",
+      description:
+        "Fifteen to eighteen on a full-length guide, drawn from the questions in the research first and the gaps second.",
     },
     sources: {
       type: "array",
-      maxItems: 8,
+      maxItems: 12,
       items: {
         type: "object",
         additionalProperties: false,
@@ -324,23 +327,51 @@ export type GuideDraft = z.infer<typeof guideDraftSchema>;
  */
 export const DEFAULT_SYSTEM = `You write research guides for ${BRAND}, a directory that publishes shortlists of local service companies along with the reasoning behind them. The site's entire argument is that it can be trusted, so a guide that is confidently wrong costs more than no guide at all.
 
+LENGTH
+Three thousand words is the floor, not the target. A guide under it is not finished. But length is a consequence of covering the subject properly and never the goal: if you find yourself restating a section in different words, or writing a paragraph that would survive being cut, you have stopped writing and started padding. Get there by covering more ground, not by covering the same ground more slowly.
+
 WHAT YOU MAY ASSERT
-Only what you actually know, and only what the research brief supports. You may not invent a statistic, a price, a percentage, a study, a regulation, a licence requirement, a date or a quotation. Where a figure would help and you do not have one, write the sentence without it, or say plainly that it varies and what it varies with. "Roofers are licensed in Florida and not in Texas" is worth publishing; a made-up national average is not.
+Only what you actually know, and only what the research brief supports. You may not invent a statistic, a price, a percentage, a study, a regulation, a licence requirement, a permit fee, a code section, a warranty term, a certification body, a date or a quotation. Where a figure would help and you do not have one, write the sentence without it, or say plainly that it varies and what it varies with. "Roofers are licensed in Florida and not in Texas" is worth publishing; a made-up national average is not.
 
 SOURCES
-Cite only URLs that appear in the research brief. Do not construct a URL that looks plausible. An empty sources array is a correct answer when the brief contained nothing worth citing, and it is far better than a fabricated citation.
+Cite only URLs that appear in the research brief, plus the authorities listed at the end of these rules where they are genuinely relevant. Never construct a URL that looks plausible. For an authority, link the section you are certain of rather than a deep link you are guessing at. An empty sources array is a correct answer when there was nothing worth citing, and it is far better than a fabricated citation.
+
+THE DISTINCTIONS THAT KEEP THIS HONEST
+Keep these apart every time, and make clear which one you mean:
+  general guidance from advice about a specific property or job
+  a legal requirement from a common practice
+  licensed from insured from bonded from certified
+  a manufacturer warranty from a workmanship warranty
+  what a state requires from what a city requires from what a building or an association requires
+  a permit from an inspection from a certificate of occupancy
+  a trade association's membership from an accreditation with a testable standard
+  a typical range from a quote
+  what usually happens from what is guaranteed
+Never claim a job is simple, safe, cheap, quick or risk free in general. Never tell a reader they do not need a permit, an inspection or a licensed contractor. Where the honest answer is to check with the local building department, say that, and say what to ask when they do.
+
+ANSWER FIRST
+The short answer is the answer, complete, for a reader who stops there and for an assistant that quotes one paragraph. Lead with the specific: a number, a range, a name, a rule. No throat clearing, no "there are several factors to consider", no restating the question.
 
 EXPERIENCE AND EXPERTISE
 Write as someone who has seen the work go wrong. Specifics carry the expertise: the line item people forget, the certificate that comes from the insurer rather than the contractor, the question whose answer tells you who you are dealing with. Generalities carry nothing. Prefer one concrete detail to three abstract reassurances.
 
-ANSWER FIRST
-The short answer is not an introduction. It is the answer, complete, for a reader who stops there and for an assistant that quotes one paragraph. No throat-clearing, no "there are several factors to consider", no restating the question.
-
 VOICE
-Write like a person who knows the subject talking to someone who does not. Plain sentences of varied length. No em dashes. No emoji. No marketing register: nothing is seamless, robust, comprehensive, cutting-edge, or a game changer. No "not just X, but Y". No three-item lists that exist because three sounds complete. Do not open a paragraph with a participle. Do not end a section by summarising what it just said. Contractions where they read naturally. If a sentence would survive being cut, cut it.
+Write like a person who knows the subject talking to someone who does not. Plain sentences of varied length. No em dashes. No emoji. No marketing register: nothing is seamless, robust, comprehensive, cutting edge, or a game changer. No "not just X, but Y". No three-item lists that exist because three sounds complete. Do not open a paragraph with a participle. Do not end a section by summarising what it just said. Contractions where they read naturally.
 
 WHAT NOT TO DO
-Never claim the site tested, measured, inspected or surveyed anything. Never address the reader as "you" more than the prose needs. Never write a heading that is only a label. Never pad to hit a word count: a shorter guide that is entirely true beats a longer one carrying filler.`;
+Never claim the site tested, measured, inspected or surveyed anything. Never write a heading that is only a label. Never shame a reader for the state of their home or their budget. Never promise an outcome beyond the work itself.
+
+BEFORE YOU RETURN, CHECK
+  The short answer stands alone and leads with something specific.
+  Every number came from the brief or is described as varying.
+  Every source URL was in the brief or is on the authority list below.
+  Fifteen or more FAQs, each answering in its first sentence.
+  At least one compare block used as a real table, where a table beats prose.
+  Three thousand words or more, with nothing in it that could be cut.
+  No em dash anywhere.
+Use the confidence field to say what you were unsure about, what you left out for lack of evidence, and anything an editor should check before this is published. That field is read, and being candid in it costs you nothing.
+
+${authorityPromptBlock()}`;
 
 /**
  * The instructions an editor gets by default, and the tokens they can use.
@@ -348,15 +379,31 @@ Never claim the site tested, measured, inspected or surveyed anything. Never add
  * A template is a starting point rather than a fixed form: this one is what
  * ships, and it is expected to be edited.
  */
-export const DEFAULT_INSTRUCTIONS = `Write a guide of about %wordcount% words answering: %topic%
+export const DEFAULT_INSTRUCTIONS = `Write a guide of at least %wordcount% words answering: %topic%
 
-It is a "%type%" guide%service%%location%.
+It is a "%type%" guide%service%%location%. The phrase it should rank for is %keyword%.
 
-The phrase it should rank for is %keyword%.
+OPEN IN FOUR PARTS
+The opening is what an assistant quotes and what a featured snippet lifts, so it is built rather than written.
 
-Structure it around the questions in the research rather than around a template. Where the research shows a question Google is already asking on this topic, answer it, either in the body or in the FAQs. Where the pages that currently rank all say the same thing, either say it better or say why it is incomplete. Do not simply cover the same ground in the same order.
+  shortAnswer: the direct answer. The phrase above and a concrete number, range or rule in the first sentence, then the typical case, then the two or three things that move it. Sixty to ninety words. No hedging opener, no call to action.
 
-Use the structured blocks where they earn their place: a checklist where a reader needs to work through something, a compare block where two things need lining up side by side, a flags block for the things that should end a conversation. Do not use all of them in one guide.
+  keyTakeaways: extraction-ready facts, one per line, each a claim with a number or a named qualifier attached. Not topics.
+
+  The first body block: a criteria or list block of definition-style one-liners covering the terms a reader has to know to follow the rest.
+
+  Then one paragraph on how much this varies between properties and jobs, and the single caution that matters most here. Nothing promotional.
+
+STRUCTURE
+Every heading is a question a reader actually has or a claim, never a label. The first sentence under a question-style heading answers it. Build the section order from the questions in the research rather than from a template. Where the pages that currently rank all say the same thing, either say it better or say why it is incomplete.
+
+Answer every question the research shows being asked, in the body or in the FAQs. Then cover at least two things none of the ranking pages cover.
+
+USE THE BLOCKS
+At least one compare block, used as a real table, where lining things up side by side beats prose. A checklist where a reader works through something in order. A flags block for what should end a conversation. A steps block where sequence matters. Not all of them in every guide, but three thousand words of unbroken paragraphs is a wall.
+
+FAQS
+Fifteen to eighteen, from the research questions first and the gaps second. Each answers in its first sentence, then adds the qualifier.
 
 RESEARCH BRIEF
 %research%`;
@@ -412,6 +459,137 @@ export { SKILLS, SKILL_LABELS } from "./guide-skills";
 
 export type WriteResult = { draft: GuideDraft; prompt: string };
 
+/** How long a citation gets to prove it exists. */
+const LINK_TIMEOUT_MS = 8_000;
+
+/** Identifies the fetch, which several government sites require before answering. */
+const LINK_AGENT = `${BRAND}LinkCheck/1.0 (+link verification for an editorial citation)`;
+
+export type LinkVerdict = "live" | "dead" | "unknown";
+
+const alive = (status: number) => status >= 200 && status < 400;
+const gone = (status: number) => status === 404 || status === 410 || status === 451;
+
+/**
+ * Does this URL answer?
+ *
+ * HEAD first, because none of the content is wanted and these pages are large.
+ * A refusal is not a verdict: plenty of sites reject HEAD outright, and plenty
+ * more reject a request whose user agent they do not recognise, so anything
+ * that is neither a clear yes nor a clear no is retried once as a GET and then
+ * reported as unknown rather than guessed at.
+ */
+export async function probe(url: string): Promise<LinkVerdict> {
+  const headers = { "user-agent": LINK_AGENT, accept: "text/html,*/*" };
+
+  try {
+    const head = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      headers,
+      signal: AbortSignal.timeout(LINK_TIMEOUT_MS),
+    });
+    if (alive(head.status)) return "live";
+    if (gone(head.status)) return "dead";
+  } catch {
+    // Fall through to the GET, which sometimes succeeds where HEAD does not.
+  }
+
+  try {
+    const get = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers,
+      signal: AbortSignal.timeout(LINK_TIMEOUT_MS),
+    });
+    if (alive(get.status)) return "live";
+    if (gone(get.status)) return "dead";
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * Every source is either one the research handed over or one this fetches.
+ *
+ * The research URLs are taken on trust because a search engine returned them
+ * minutes ago. Everything else has to be on the authority list and has to
+ * answer, because the failure this exists to prevent is a guide that links a
+ * licensing board at a URL nobody ever checked.
+ *
+ * Only a definite negative removes a link. A timeout, a proxy refusal or a
+ * connection reset means this side could not tell, and a live page dropped
+ * because the network had a bad second is a worse outcome than an uncertain
+ * one kept and mentioned.
+ */
+export async function checkSources(
+  sources: GuideDraft["sources"],
+  research: ResearchBrief,
+): Promise<{ sources: GuideDraft["sources"]; note: string | null }> {
+  const fromBrief = new Set(research.serp.map((result) => result.url));
+  const kept: GuideDraft["sources"] = [];
+  const invented: string[] = [];
+  const dead: string[] = [];
+  const unknown: string[] = [];
+
+  const checks = sources.map(async (source) => {
+    if (fromBrief.has(source.url)) return { source, verdict: "brief" as const };
+    if (!isAuthorityUrl(source.url)) return { source, verdict: "invented" as const };
+
+    try {
+      // Only a positive answer counts as verified. Anything else is unknown,
+      // because a network in front of this one can answer 403 for a page that
+      // is perfectly alive, and reading that as a pass would make the whole
+      // check falsely reassuring: every link would come back green whether or
+      // not anything had actually been reached.
+      const verdict = await probe(source.url);
+      return { source, verdict };
+    } catch {
+      return { source, verdict: "unknown" as const };
+    }
+  });
+
+  for (const result of await Promise.all(checks)) {
+    switch (result.verdict) {
+      case "invented":
+        invented.push(result.source.url);
+        break;
+      case "dead":
+        dead.push(result.source.url);
+        break;
+      case "unknown":
+        unknown.push(result.source.url);
+        kept.push(result.source);
+        break;
+      default:
+        kept.push(result.source);
+    }
+  }
+
+  // A draft whose citations are mostly made up is not a draft with a citation
+  // problem, it is a draft that invented its way through the whole subject.
+  if (invented.length > 2 && kept.length === 0) {
+    throw new ContentError(
+      `The draft cited ${invented.length} sources that were neither in the research nor on the authority list. Rejected rather than published.`,
+    );
+  }
+
+  const lines = [
+    invented.length > 0
+      ? `${invented.length} citation${invented.length === 1 ? " was" : "s were"} removed for coming from neither the research nor the authority list: ${invented.join(", ")}`
+      : null,
+    dead.length > 0
+      ? `${dead.length} authority link${dead.length === 1 ? "" : "s"} removed after returning not found: ${dead.join(", ")}`
+      : null,
+    unknown.length > 0
+      ? `${unknown.length} authority link${unknown.length === 1 ? "" : "s"} could not be confirmed from the server and ${unknown.length === 1 ? "was" : "were"} kept unverified. Open ${unknown.length === 1 ? "it" : "each of these"} before publishing: ${unknown.join(", ")}`
+      : null,
+  ].filter(Boolean);
+
+  return { sources: kept, note: lines.length > 0 ? `SOURCE CHECK\n${lines.join("\n")}` : null };
+}
+
 export async function writeGuide({
   system,
   instructions,
@@ -442,22 +620,17 @@ export async function writeGuide({
     jsonSchema: guideJsonSchema as unknown as Record<string, unknown>,
     model,
     effort,
-    // Long-form: a 1,400-word guide plus its blocks and FAQs is well past the
-    // default, and hitting the ceiling loses the whole draft.
-    maxTokens: 32_000,
+    // Long-form, with headroom. A three thousand word guide carrying eighteen
+    // FAQs and a dozen blocks lands somewhere near twelve thousand tokens once
+    // it is JSON, and running into the ceiling loses the entire draft rather
+    // than truncating it.
+    maxTokens: 48_000,
   });
 
   // The one check the schema cannot make: a citation the model was not given.
-  const allowed = new Set(research.serp.map((result) => result.url));
-  const invented = draft.sources.filter((source) => !allowed.has(source.url));
-  if (invented.length > 0) {
-    draft.sources = draft.sources.filter((source) => allowed.has(source.url));
-    if (draft.sources.length === 0 && invented.length > 2) {
-      throw new ContentError(
-        `The draft cited ${invented.length} sources that were not in the research. Rejected rather than published.`,
-      );
-    }
-  }
+  const { sources, note } = await checkSources(draft.sources, research);
+  draft.sources = sources;
+  if (note) draft.confidence = `${draft.confidence}\n\n${note}`.trim();
 
   return { draft, prompt };
 }

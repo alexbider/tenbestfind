@@ -312,7 +312,9 @@ export function briefAsText(brief: ResearchBrief): string {
   if (brief.serp.length > 0) {
     lines.push("What currently ranks, in order:");
     for (const result of brief.serp) {
-      lines.push(`  ${result.position}. ${result.title} — ${result.domain}`);
+      // No em dash. The writer is told never to use one, and a brief that uses
+      // ten of them is a worked example arguing the other way.
+      lines.push(`  ${result.position}. ${result.title} (${result.domain})`);
       if (result.description) lines.push(`     ${result.description}`);
     }
     lines.push("");

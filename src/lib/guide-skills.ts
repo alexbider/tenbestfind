@@ -30,7 +30,7 @@ export const SKILLS: Record<string, string> = {
   "eeat-signals":
     "Name what is verifiable and how to verify it: which register to search, which certificate comes from which party, what a document should say. Verifiability is the expertise.",
   "no-fluff":
-    "Cut anything that would survive being cut. No section that only restates the section above it. Prefer being 200 words shorter than padding.",
+    "Cut anything that would survive being cut. No section that only restates the section above it. When a guide comes up short the answer is more ground covered, never the same ground covered more slowly.",
 };
 
 export const SKILL_LABELS: Record<string, string> = {
