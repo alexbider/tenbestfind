@@ -144,6 +144,13 @@ services:
         echo "==> checking company profile URLs"
         npx tsx scripts/relocate-company-slugs.ts --write || echo "profile URL check skipped"
 
+        # The shapes the models are asked to fill, measured before anything
+        # asks one to fill them. A schema whose grammar is too large is refused
+        # by the API at the moment of the call, which on the guide pipeline is
+        # after the research has been paid for.
+        echo "==> checking the model schemas"
+        npx tsx scripts/check-schemas.ts || echo "schema check skipped"
+
         # Creates the four starter briefs the guide writer works from, once.
         # A template an editor has changed is never overwritten.
         echo "==> seeding the writer's prompt templates"

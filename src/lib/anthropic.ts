@@ -49,8 +49,14 @@ export function classify(error: unknown): Error {
         "Add credits at console.anthropic.com under Plans and Billing, then resume the batch. Nothing needs scraping again.",
       );
     }
+    if (/compiled grammar is too large/i.test(message)) {
+      return new PermanentError(
+        "The shape this asks for is too complicated to compile.",
+        "A bug in the request rather than anything you configured, and nothing was written. It is a bounded array in the schema: maxItems on an array of objects multiplies out. Report it.",
+      );
+    }
     return new PermanentError(
-      `Anthropic rejected the request: ${message.slice(0, 200)}`,
+      `Anthropic rejected the request: ${message.slice(0, 400)}`,
       "This will not fix itself on a retry. The request shape or the model name is wrong.",
     );
   }
@@ -140,6 +146,63 @@ export function assertJsonSchema(schema: unknown, path = "schema"): void {
   }
 }
 
+/**
+ * How big the grammar behind a schema is going to be.
+ *
+ * Structured output is compiled into a grammar the decoder walks, and the one
+ * thing that makes a grammar enormous is a bounded array: `maxItems: 70` is not
+ * a note about length, it is seventy copies of whatever the items are. Nest a
+ * bounded array of a union of eleven object shapes, each with bounded arrays of
+ * its own, and the copies multiply. Past a certain size the API refuses the
+ * request outright, and it refuses it at the moment of the call, which on this
+ * pipeline is after the research has been bought.
+ *
+ * So the counting here follows the multiplication rather than the JSON: an
+ * array costs its bound times its items, an unbounded array costs its items
+ * once, and a union costs the sum of its branches. It is an estimate, and it
+ * only has to be right about which schemas are enormous.
+ */
+export function grammarSize(schema: unknown): number {
+  if (!schema || typeof schema !== "object") return 1;
+  if (Array.isArray(schema)) return schema.reduce((sum, item) => sum + grammarSize(item), 0);
+
+  const node = schema as Record<string, unknown>;
+  const branches = node.anyOf ?? node.oneOf ?? node.allOf;
+  if (Array.isArray(branches)) {
+    return 1 + branches.reduce((sum: number, branch) => sum + grammarSize(branch), 0);
+  }
+
+  if (node.type === "array") {
+    const bound = typeof node.maxItems === "number" ? node.maxItems : 1;
+    return 1 + bound * grammarSize(node.items);
+  }
+  if (node.type === "object") {
+    const properties = (node.properties ?? {}) as Record<string, unknown>;
+    return 1 + Object.values(properties).reduce((sum: number, value) => sum + grammarSize(value), 0);
+  }
+  if (Array.isArray(node.enum)) return 1 + node.enum.length;
+  return 1;
+}
+
+/**
+ * The ceiling, in the same made-up units grammarSize counts in.
+ *
+ * A schema of 5,600 compiled and ran; one of 16,400 was refused. Two thousand
+ * is comfortably under both and well above every schema this codebase sends,
+ * the largest of which is around three hundred, so hitting this means a bound
+ * has been added somewhere rather than that the schema grew honestly.
+ */
+const GRAMMAR_CEILING = 2_000;
+
+/** Throws before the call, rather than letting the API refuse it after. */
+export function assertGrammarSize(schema: unknown): void {
+  const size = grammarSize(schema);
+  if (size <= GRAMMAR_CEILING) return;
+  throw new ContentError(
+    `The schema compiles to a grammar of about ${size.toLocaleString()} against a ceiling of ${GRAMMAR_CEILING.toLocaleString()}, and the API will refuse it. Almost always this is a maxItems on an array of objects: the bound is a multiplier, so say the count in the description and let the validator enforce it.`,
+  );
+}
+
 export function jsonRequest({
   system,
   prompt,
@@ -149,6 +212,7 @@ export function jsonRequest({
   maxTokens = 16000,
 }: JsonAsk) {
   assertJsonSchema(jsonSchema);
+  assertGrammarSize(jsonSchema);
   return {
     model,
     max_tokens: maxTokens,

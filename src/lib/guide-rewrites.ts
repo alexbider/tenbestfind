@@ -13,6 +13,7 @@
 
 import { db } from "./db";
 import { guideTypeOf } from "./enums";
+import { templateForGuideType } from "./guide-templates";
 
 export type RewriteCandidate = {
   guideId: string;
@@ -119,18 +120,14 @@ export async function queueRewrites({
     }
 
     const guideType = guideTypeOf(guide.type);
-    const template = await db.promptTemplate.findFirst({
-      where: { kind: "GUIDE", archived: false, OR: [{ guideType }, { isDefault: true }] },
-      orderBy: [{ guideType: "desc" }, { isDefault: "desc" }],
-      select: { id: true },
-    });
+    const templateId = await templateForGuideType(guideType);
 
     await db.guideJob.create({
       data: {
         topic: guide.title,
         keyword: candidate.keyword,
         guideType,
-        templateId: template?.id ?? null,
+        templateId,
         categoryId: guide.categoryId,
         countryId: guide.countryId,
         regionId: guide.regionId,

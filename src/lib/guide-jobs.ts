@@ -13,7 +13,15 @@
 
 import { db } from "./db";
 import { announce } from "./announce";
-import { ContentError, PermanentError, classify, preflight, type Effort } from "./anthropic";
+import {
+  ContentError,
+  PermanentError,
+  assertGrammarSize,
+  assertJsonSchema,
+  classify,
+  preflight,
+  type Effort,
+} from "./anthropic";
 import { emptyBrief, researchTopic, type ResearchBrief } from "./dataforseo";
 import { guideTypeOf, type GuideType } from "./enums";
 import { parseIllustrations } from "./guide-images";
@@ -21,11 +29,13 @@ import {
   DEFAULT_INSTRUCTIONS,
   DEFAULT_SYSTEM,
   guideDraftSchema,
+  guideJsonSchema,
   writeGuide,
   type GuideDraft,
 } from "./guide-writer";
-import { humanizeGuide } from "./guide-humanizer";
+import { humanizeGuide, humanizeJsonSchema } from "./guide-humanizer";
 import { linkTargets, linksAsText } from "./guide-links";
+import { templateForGuideType } from "./guide-templates";
 import { parseJson, parseList, stringify } from "./json";
 import { routes } from "./urls";
 
@@ -108,6 +118,27 @@ export async function advanceGuideJob(id: string): Promise<StepResult> {
   try {
     switch (job.status as GuideJobStatus) {
       case "QUEUED": {
+        // The same order of operations applies to the request itself: a schema
+        // the API will not compile fails at the writing step, which is after
+        // the research has been bought. It costs nothing to know here.
+        try {
+          for (const schema of [guideJsonSchema, humanizeJsonSchema]) {
+            assertJsonSchema(schema);
+            assertGrammarSize(schema);
+          }
+        } catch (error) {
+          await db.guideJob.update({
+            where: { id },
+            data: {
+              status: "FAILED",
+              error: `Nothing was bought: ${error instanceof Error ? error.message : String(error)}`,
+              hint: "This is a bug in the writer's own request rather than anything you configured. Nothing was spent.",
+              finishedAt: new Date(),
+            },
+          });
+          return { changed: true, note: "stopped before spending: the writer's schema is malformed" };
+        }
+
         // Research costs money and writing is what turns it into a page, so
         // finding out there is no usable key after paying for the first half is
         // the worst possible order to find out in. One token to check.
@@ -464,8 +495,27 @@ export async function retryGuideJob(id: string, fromResearch = false): Promise<v
       hint: null,
       finishedAt: null,
       ...(fromResearch ? { research: null } : {}),
+      // Jobs commissioned while the template was chosen by a database sort came
+      // out holding the default one, so a cost guide was queued against the
+      // hiring brief. Nothing assigns that combination on purpose any more, so
+      // where it is still on file it is that bug and a retry is the moment to
+      // undo it.
+      ...(await correctedTemplate(id)),
     },
   });
+}
+
+/** The template a job should have had, when what it has is the old bug. */
+async function correctedTemplate(id: string): Promise<{ templateId?: string }> {
+  const job = await db.guideJob.findUnique({
+    where: { id },
+    select: { guideType: true, template: { select: { isDefault: true, guideType: true } } },
+  });
+  if (!job?.template?.isDefault) return {};
+  if (job.template.guideType === job.guideType) return {};
+
+  const corrected = await templateForGuideType(guideTypeOf(job.guideType));
+  return corrected ? { templateId: corrected } : {};
 }
 
 /** Everything a guide's publication should announce. */

@@ -72,7 +72,7 @@ Rhythm. Every sentence the same length is as obvious as any phrase. So is a para
 
 Voicelessness. No opinion anywhere, nothing the writer will commit to, no acknowledgement that something is genuinely uncertain or annoying or contested. A guide with no view is a guide nobody trusts.`;
 
-const humanizeJsonSchema = {
+export const humanizeJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: ["tells", "draft"],

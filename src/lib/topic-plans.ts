@@ -12,7 +12,14 @@
 // in KeywordMetric so the second week costs a fraction of the first.
 
 import { db } from "./db";
-import { assertJsonSchema, classify, PermanentError, preflight, type Effort } from "./anthropic";
+import {
+  assertGrammarSize,
+  assertJsonSchema,
+  classify,
+  PermanentError,
+  preflight,
+  type Effort,
+} from "./anthropic";
 import {
   bulkAiVolume,
   bulkDifficulty,
@@ -34,6 +41,7 @@ import {
   type CandidateService,
 } from "./topic-candidates";
 import { planJsonSchema, planTopics, type ShortlistEntry } from "./topic-planner";
+import { templateForGuideType } from "./guide-templates";
 import { countWeakResults, scoreTopic, spread } from "./topic-scoring";
 import { loadTopicSettings, weekStart, type TopicSettings } from "./topic-settings";
 
@@ -287,6 +295,7 @@ async function startPlan(plan: PlanRow, settings: TopicSettings): Promise<StepRe
   // expensive place there is for it to fail.
   try {
     assertJsonSchema(planJsonSchema);
+    assertGrammarSize(planJsonSchema);
   } catch (error) {
     await db.topicPlan.update({
       where: { id: plan.id },
@@ -916,12 +925,8 @@ export async function commissionIdea(id: string): Promise<{ jobId: string }> {
   if (idea.jobId) return { jobId: idea.jobId };
 
   const guideType = guideTypeOf(idea.guideType) satisfies GuideType;
-  const template = await db.promptTemplate.findFirst({
-    where: { kind: "GUIDE", archived: false, OR: [{ guideType }, { isDefault: true }] },
-    // A template written for this exact kind beats the general default.
-    orderBy: [{ guideType: "desc" }, { isDefault: "desc" }],
-    select: { id: true },
-  });
+  // A template written for this exact kind beats the general default.
+  const templateId = await templateForGuideType(guideType);
 
   const outline = parseList(idea.outline);
   const brief = [
@@ -940,7 +945,7 @@ export async function commissionIdea(id: string): Promise<{ jobId: string }> {
       keyword: idea.keyword,
       guideType,
       brief: brief || null,
-      templateId: template?.id ?? null,
+      templateId,
       categoryId: idea.categoryId,
       countryId: idea.countryId,
       regionId: idea.regionId,

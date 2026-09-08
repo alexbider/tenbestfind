@@ -34,6 +34,16 @@ import { BRAND } from "./seo-copy";
  * asked for a quotation will produce an attributed one, and an invented
  * attribution is the single worst thing that could end up on a page whose whole
  * argument is that it can be trusted.
+ *
+ * Nothing below counts, and nothing below should be made to. A schema for
+ * structured output is compiled into a grammar, and `maxItems: 12` is not a
+ * note about length there, it is twelve copies of the rows. Twelve rows inside
+ * a union of eleven block shapes inside a body of up to seventy blocks is how
+ * this schema grew past what the API would compile, which it says so at the
+ * moment of the call, long after the research has been paid for. So the counts
+ * live in the descriptions, where the model reads them, and the shapes that
+ * would embarrass us if they came back wrong are enforced by the validator
+ * underneath. scripts/check-schemas.ts holds the line.
  */
 const blockSchema = {
   anyOf: [
@@ -56,7 +66,6 @@ const blockSchema = {
         text: { type: "string", description: "One paragraph. No markdown, no bullet characters." },
         links: {
           type: "array",
-          maxItems: 2,
           description:
             "Internal links, where this paragraph genuinely leads somewhere on this site. Each names a phrase that appears verbatim in the text above and a path from the list you were given. Write the sentence around the link rather than bolting the link onto a sentence; a phrase that is not in the paragraph links nothing. At most two, and most paragraphs should have none.",
           items: {
@@ -77,7 +86,11 @@ const blockSchema = {
       required: ["kind", "items"],
       properties: {
         kind: { type: "string", const: "list" },
-        items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 8 },
+        items: {
+          type: "array",
+          items: { type: "string" },
+          description: "Three to eight of them. Two is a sentence and nine is a wall.",
+        },
       },
     },
     {
@@ -88,8 +101,7 @@ const blockSchema = {
         kind: { type: "string", const: "steps" },
         items: {
           type: "array",
-          minItems: 3,
-          maxItems: 8,
+          description: "Three to eight steps, in the order they happen.",
           items: {
             type: "object",
             additionalProperties: false,
@@ -118,8 +130,7 @@ const blockSchema = {
         kind: { type: "string", const: "criteria" },
         items: {
           type: "array",
-          minItems: 3,
-          maxItems: 6,
+          description: "Three to six of them.",
           items: {
             type: "object",
             additionalProperties: false,
@@ -136,7 +147,11 @@ const blockSchema = {
       properties: {
         kind: { type: "string", const: "checklist" },
         title: { type: "string" },
-        items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 10 },
+        items: {
+          type: "array",
+          items: { type: "string" },
+          description: "Three to ten things to work through, in order.",
+        },
       },
     },
     {
@@ -149,8 +164,7 @@ const blockSchema = {
         intro: { type: "string" },
         rows: {
           type: "array",
-          minItems: 3,
-          maxItems: 12,
+          description: "Three to twelve rows. Fewer than three is a paragraph pretending to be a table.",
           items: {
             type: "object",
             additionalProperties: false,
@@ -171,7 +185,11 @@ const blockSchema = {
       properties: {
         kind: { type: "string", const: "flags" },
         title: { type: "string", description: "For example: Walk away if you hear any of these" },
-        items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 7 },
+        items: {
+          type: "array",
+          items: { type: "string" },
+          description: "Three to seven of them.",
+        },
       },
     },
     {
@@ -211,8 +229,6 @@ const blockSchema = {
         note: { type: "string", description: "Optional. What the ranges do not capture." },
         rows: {
           type: "array",
-          minItems: 3,
-          maxItems: 10,
           items: {
             type: "object",
             additionalProperties: false,
@@ -226,7 +242,7 @@ const blockSchema = {
             },
           },
           description:
-            "Every number here is published as a figure a reader will quote back. Use this block only where the research supports the ranges, and leave it out entirely rather than estimating.",
+            "Three to ten rows. Every number here is published as a figure a reader will quote back. Use this block only where the research supports the ranges, and leave it out entirely rather than estimating.",
         },
       },
     },
@@ -275,18 +291,14 @@ export const guideJsonSchema = {
     keyTakeaways: {
       type: "array",
       items: { type: "string" },
-      minItems: 4,
-      maxItems: 8,
       description:
-        "The extraction-ready half of the opening. One line each, each a claim with a number or a named qualifier attached rather than a topic. A reader should be able to act on any one of them, and an assistant should be able to quote any one of them.",
+        "Four to eight of them. The extraction-ready half of the opening. One line each, each a claim with a number or a named qualifier attached rather than a topic. A reader should be able to act on any one of them, and an assistant should be able to quote any one of them.",
     },
     body: {
       type: "array",
-      minItems: 8,
-      maxItems: 70,
       items: blockSchema,
       description:
-        "The guide. Open with a heading, then alternate prose and structure. Every heading must be a question or a claim a reader has, not a label like 'Introduction'.",
+        "The guide, and on a three thousand word piece that is somewhere between thirty and sixty blocks. Open with a heading, then alternate prose and structure. Every heading must be a question or a claim a reader has, not a label like 'Introduction'.",
     },
     bottomLine: {
       type: "string",
@@ -294,8 +306,6 @@ export const guideJsonSchema = {
     },
     faqs: {
       type: "array",
-      minItems: 3,
-      maxItems: 18,
       items: {
         type: "object",
         additionalProperties: false,
@@ -310,7 +320,6 @@ export const guideJsonSchema = {
     },
     sources: {
       type: "array",
-      maxItems: 12,
       items: {
         type: "object",
         additionalProperties: false,
@@ -322,7 +331,7 @@ export const guideJsonSchema = {
         },
       },
       description:
-        "Only URLs that appeared in the brief. An empty array is correct and expected when the brief had nothing citable. Never invent one.",
+        "At most a dozen. Only URLs that appeared in the brief. An empty array is correct and expected when the brief had nothing citable. Never invent one.",
     },
     readingMinutes: { type: "number", description: "Honest estimate at 220 words a minute." },
     metaTitle: {
@@ -377,10 +386,10 @@ const blockValidator = z.discriminatedUnion("kind", [
     text: z.string(),
     links: z.array(z.object({ text: z.string(), href: z.string() })).optional(),
   }),
-  z.object({ kind: z.literal("list"), items: z.array(z.string()) }),
+  z.object({ kind: z.literal("list"), items: z.array(z.string()).min(2) }),
   z.object({
     kind: z.literal("steps"),
-    items: z.array(z.object({ title: z.string(), body: z.string() })),
+    items: z.array(z.object({ title: z.string(), body: z.string() })).min(2),
   }),
   z.object({
     kind: z.literal("callout"),
@@ -390,16 +399,16 @@ const blockValidator = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("criteria"),
-    items: z.array(z.object({ title: z.string(), body: z.string() })),
+    items: z.array(z.object({ title: z.string(), body: z.string() })).min(2),
   }),
-  z.object({ kind: z.literal("checklist"), title: z.string(), items: z.array(z.string()) }),
+  z.object({ kind: z.literal("checklist"), title: z.string(), items: z.array(z.string()).min(2) }),
   z.object({
     kind: z.literal("compare"),
     title: z.string(),
     intro: z.string().optional(),
-    rows: z.array(z.object({ factor: z.string(), check: z.string(), why: z.string() })),
+    rows: z.array(z.object({ factor: z.string(), check: z.string(), why: z.string() })).min(2),
   }),
-  z.object({ kind: z.literal("flags"), title: z.string(), items: z.array(z.string()) }),
+  z.object({ kind: z.literal("flags"), title: z.string(), items: z.array(z.string()).min(2) }),
   z.object({
     kind: z.literal("figure"),
     key: z.string(),
@@ -412,15 +421,17 @@ const blockValidator = z.discriminatedUnion("kind", [
     unit: z.string(),
     intro: z.string().optional(),
     note: z.string().optional(),
-    rows: z.array(
-      z.object({
-        label: z.string(),
-        low: z.number(),
-        high: z.number(),
-        typical: z.number().optional(),
-        note: z.string().optional(),
-      }),
-    ),
+    rows: z
+      .array(
+        z.object({
+          label: z.string(),
+          low: z.number(),
+          high: z.number(),
+          typical: z.number().optional(),
+          note: z.string().optional(),
+        }),
+      )
+      .min(2),
   }),
 ]);
 
@@ -815,7 +826,8 @@ export async function writeGuide({
     let dropped = 0;
     draft.body = draft.body.map((block) => {
       if (block.kind !== "paragraph" || !block.links) return block;
-      const kept = keepKnownLinks(block.links, context.linkTargets ?? []);
+      // Two per paragraph, which the schema used to say and now nothing does.
+      const kept = keepKnownLinks(block.links, context.linkTargets ?? []).slice(0, 2);
       dropped += block.links.length - kept.length;
       return kept.length > 0 ? { ...block, links: kept } : { ...block, links: undefined };
     });

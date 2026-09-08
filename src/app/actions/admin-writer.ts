@@ -7,6 +7,7 @@ import { audit, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { GUIDE_TYPES } from "@/lib/enums";
 import { acceptGuideJob, retryGuideJob } from "@/lib/guide-jobs";
+import { templateForGuideType } from "@/lib/guide-templates";
 import { DEFAULT_INSTRUCTIONS, DEFAULT_SYSTEM, SKILLS } from "@/lib/guide-writer";
 import { flushIndexQueue, queueForIndexing, recordIndexingCheck } from "@/lib/google-indexing";
 import { stringify } from "@/lib/json";
@@ -159,13 +160,9 @@ export async function createGuideJob(_prev: ActionState, formData: FormData): Pr
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the brief.");
   const data = parsed.data;
 
-  const templateId =
-    data.templateId ||
-    (await db.promptTemplate.findFirst({
-      where: { kind: "GUIDE", archived: false, isDefault: true },
-      select: { id: true },
-    }))?.id ||
-    null;
+  // An editor who picked one gets it. Otherwise the template written for this
+  // kind of guide, and the default only when there is none.
+  const templateId = data.templateId || (await templateForGuideType(data.guideType));
 
   const job = await db.guideJob.create({
     data: {
