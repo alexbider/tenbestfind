@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { AdminHeader, EmptyState, Panel, StatRow } from "@/components/admin/shell";
 import { GuideJobForm } from "@/components/admin/GuideJobForm";
+import { RewriteButton } from "@/components/admin/RewriteButton";
 import { StatusPill } from "@/components/ui/primitives";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { researchConfigured } from "@/lib/dataforseo";
+import { rewriteCandidates } from "@/lib/guide-rewrites";
 import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
 import { fullDate } from "@/lib/format";
 
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function WriterConsole() {
   await requireStaff();
 
-  const [jobs, templates, categories, countries, regions, cities, researchReady] = await Promise.all([
+  const [jobs, templates, categories, countries, regions, cities, researchReady, behind] = await Promise.all([
     db.guideJob.findMany({
       orderBy: { createdAt: "desc" },
       take: 60,
@@ -44,6 +46,7 @@ export default async function WriterConsole() {
       select: { id: true, name: true, regionId: true, region: { select: { countryId: true } } },
     }),
     researchConfigured(),
+    rewriteCandidates(),
   ]);
 
   const running = jobs.filter((job) => ["QUEUED", "RESEARCHING", "WRITING"].includes(job.status)).length;
@@ -101,6 +104,20 @@ export default async function WriterConsole() {
         />
       </Panel>
 
+      <Panel
+        title="Bring the older guides up to standard"
+        description="Guides written before the writer existed are short. A rewrite replaces the page in place rather than publishing a second one, which is how a site ends up competing with itself."
+      >
+        <RewriteButton
+          pending={behind.filter((candidate) => !candidate.hasJob).length}
+          words={
+            behind.length > 0
+              ? Math.round(behind.reduce((sum, candidate) => sum + candidate.words, 0) / behind.length)
+              : 0
+          }
+        />
+      </Panel>
+
       <Panel title="Jobs" padded={false}>
         {jobs.length === 0 ? (
           <div style={{ padding: 24 }}>
@@ -130,6 +147,11 @@ export default async function WriterConsole() {
                   <tr key={job.id}>
                     <td>
                       <Link href={`/admin/writer/${job.id}`}>{job.topic}</Link>
+                      {job.rewriteOfId ? (
+                        <span style={{ display: "block", fontSize: 12, color: "var(--text-muted)" }}>
+                          rewrite, replaces the page in place
+                        </span>
+                      ) : null}
                       {job.keyword ? (
                         <span style={{ display: "block", fontSize: 12, color: "var(--text-muted)" }}>
                           {job.keyword}

@@ -31,6 +31,7 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
         region: { select: { name: true } },
         country: { select: { name: true } },
         guide: { select: { id: true, slug: true, title: true, status: true } },
+        rewriteOf: { select: { id: true, slug: true, title: true, status: true } },
       },
     }),
     db.person.findMany({ where: { published: true }, orderBy: { name: "asc" }, select: { id: true, name: true, isReviewer: true } }),
@@ -84,6 +85,14 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
             <p className="form-error">{job.error}</p>
             {job.hint ? <p style={META}>{job.hint}</p> : null}
           </>
+        ) : null}
+        {job.rewriteOf ? (
+          <p style={{ ...META, marginBottom: 10 }}>
+            This replaces{" "}
+            <Link href={`/admin/guides/${job.rewriteOf.id}`}>{job.rewriteOf.title}</Link> at /guides/
+            {job.rewriteOf.slug}/. Accepting it rewrites that page rather than publishing a second one, so the URL, the
+            author and the review history all survive.
+          </p>
         ) : null}
         {job.guide ? (
           <p>

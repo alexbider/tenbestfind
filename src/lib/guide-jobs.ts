@@ -13,9 +13,10 @@
 
 import { db } from "./db";
 import { announce } from "./announce";
-import { ContentError, PermanentError, classify, type Effort } from "./anthropic";
+import { ContentError, PermanentError, classify, preflight, type Effort } from "./anthropic";
 import { emptyBrief, researchTopic, type ResearchBrief } from "./dataforseo";
 import { guideTypeOf, type GuideType } from "./enums";
+import { parseIllustrations } from "./guide-images";
 import {
   DEFAULT_INSTRUCTIONS,
   DEFAULT_SYSTEM,
@@ -106,12 +107,34 @@ export async function advanceGuideJob(id: string): Promise<StepResult> {
 
   try {
     switch (job.status as GuideJobStatus) {
-      case "QUEUED":
+      case "QUEUED": {
+        // Research costs money and writing is what turns it into a page, so
+        // finding out there is no usable key after paying for the first half is
+        // the worst possible order to find out in. One token to check.
+        try {
+          await preflight(job.template?.model ?? undefined);
+        } catch (error) {
+          const classified = classify(error);
+          if (classified instanceof PermanentError) {
+            await db.guideJob.update({
+              where: { id },
+              data: {
+                status: "FAILED",
+                error: `Nothing was bought: ${classified.message}`,
+                hint: classified.hint,
+                finishedAt: new Date(),
+              },
+            });
+            return { changed: true, note: `stopped before spending: ${classified.message}` };
+          }
+        }
+
         await db.guideJob.update({
           where: { id },
           data: { status: "RESEARCHING", startedAt: job.startedAt ?? new Date(), error: null, hint: null },
         });
         return { changed: true, note: "researching" };
+      }
 
       case "RESEARCHING": {
         const keyword = job.keyword?.trim() || job.topic;
@@ -229,6 +252,124 @@ async function freeSlug(preferred: string): Promise<string> {
 }
 
 /**
+ * Puts a rewrite over the guide it replaces.
+ *
+ * Everything that identifies the page survives: the slug, and with it the URL
+ * and every link anybody has ever made to it; the author and the reviewer,
+ * because a byline is not something a rewrite gets to reassign; the publication
+ * date, because the page did not stop existing. What changes is the writing.
+ *
+ * The pictures survive too. A rewrite arrives with new illustration briefs and
+ * new figure keys, and honouring those would orphan images that were already
+ * generated and paid for. So the existing illustrations are kept and the new
+ * body's figure blocks are remapped onto them in order.
+ *
+ * The old FAQs and sources are replaced rather than merged. They belong to the
+ * text that cited them, and half of one draft's citations beside half of
+ * another's is a page nobody can vouch for.
+ */
+async function replaceGuide(jobId: string, guideId: string, draft: GuideDraft): Promise<{ guideId: string; slug: string }> {
+  const existing = await db.guide.findUnique({
+    where: { id: guideId },
+    select: { id: true, slug: true, title: true, illustrations: true, status: true },
+  });
+  if (!existing) throw new ContentError("The guide this was meant to replace has been deleted.");
+
+  const kept = parseIllustrations(existing.illustrations);
+  const body = kept.length > 0 ? remapFigures(draft.body, kept) : draft.body;
+
+  await db.$transaction([
+    db.faq.deleteMany({ where: { guideId, scope: "GUIDE" } }),
+    db.source.deleteMany({ where: { guideId } }),
+    db.guide.update({
+      where: { id: guideId },
+      data: {
+        title: draft.title,
+        excerpt: draft.excerpt,
+        shortAnswer: draft.shortAnswer,
+        bottomLine: draft.bottomLine,
+        keyTakeaways: stringify(draft.keyTakeaways),
+        body: stringify(body),
+        readingMinutes: Math.max(1, Math.round(draft.readingMinutes)),
+        // A rewrite is a review. Somebody accepted it, so the date is honest.
+        reviewedAt: new Date(),
+        ...(kept.length > 0 ? {} : { illustrations: stringify(draft.illustrations) }),
+        faqs: {
+          create: draft.faqs.map((faq, index) => ({
+            question: faq.question,
+            answer: faq.answer,
+            scope: "GUIDE",
+            sortOrder: index,
+          })),
+        },
+        sources: {
+          create: draft.sources.map((source, index) => ({
+            label: source.label,
+            url: source.url,
+            tier: source.tier,
+            sortOrder: index,
+            accessedAt: new Date(),
+          })),
+        },
+      },
+    }),
+  ]);
+
+  await db.seoMeta.upsert({
+    where: { entityType_entityId: { entityType: "guide", entityId: guideId } },
+    update: { title: draft.metaTitle, description: draft.metaDescription, focusKeyword: draft.focusKeyword },
+    create: {
+      entityType: "guide",
+      entityId: guideId,
+      title: draft.metaTitle,
+      description: draft.metaDescription,
+      focusKeyword: draft.focusKeyword,
+    },
+  });
+
+  await db.guideJob.update({ where: { id: jobId }, data: { status: "PUBLISHED", guideId } });
+
+  // A live page that has changed is worth telling the engines about. A draft is
+  // not, and announcing one would be a lie about what is at that URL.
+  if (existing.status === "PUBLISHED") announceGuide(existing.slug);
+
+  return { guideId, slug: existing.slug };
+}
+
+/**
+ * Points a rewrite's figure blocks at the pictures the guide already has.
+ *
+ * In order: the first inline figure in the new body takes the first inline
+ * illustration, and so on. A body with more figures than there are pictures
+ * loses the extras rather than rendering gaps.
+ */
+function remapFigures(body: GuideDraft["body"], kept: ReturnType<typeof parseIllustrations>): GuideDraft["body"] {
+  const inline = kept.filter((illustration) => illustration.slot === "inline");
+  const out: GuideDraft["body"] = [];
+  let used = 0;
+
+  for (const block of body) {
+    if (block.kind !== "figure") {
+      out.push(block);
+      continue;
+    }
+    const target = inline[used];
+    used += 1;
+    if (!target) continue;
+
+    const caption = target.caption ?? block.caption;
+    out.push({
+      kind: "figure",
+      key: target.key,
+      alt: target.alt || block.alt,
+      ...(caption ? { caption } : {}),
+    });
+  }
+
+  return out;
+}
+
+/**
  * Turns a READY job into a real guide.
  *
  * Created as a draft, never published. Somebody has to put their name on it as
@@ -246,6 +387,8 @@ export async function acceptGuideJob(
   const parsed = guideDraftSchema.safeParse(parseJson<unknown>(job.draft, null));
   if (!parsed.success) throw new ContentError("The stored draft no longer matches the expected shape.");
   const draft: GuideDraft = parsed.data;
+
+  if (job.rewriteOfId) return replaceGuide(job.id, job.rewriteOfId, draft);
 
   const slug = await freeSlug(draft.slug || draft.title);
 

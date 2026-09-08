@@ -74,7 +74,7 @@ export type Matrix = {
 
 /** Everything the generator needs, in four queries. */
 export async function loadMatrix(settings: TopicSettings): Promise<Matrix> {
-  const [categories, countries, regions, cities, guides, businesses, decided] = await Promise.all([
+  const [categories, countries, regions, cities, guides, businesses, targeted, decided] = await Promise.all([
     db.category.findMany({
       where: { published: true, ...(settings.services.length > 0 ? { slug: { in: settings.services } } : {}) },
       select: { id: true, name: true, singular: true, serviceName: true, slug: true },
@@ -105,6 +105,11 @@ export async function loadMatrix(settings: TopicSettings): Promise<Matrix> {
       where: { status: "PUBLISHED", cityId: { not: null } },
       _count: { _all: true },
     }),
+    // The phrases the site's own guides already target. A guide's focus keyword
+    // is the exact phrase it was written to win, so proposing it again is
+    // proposing to compete with yourself, which is the one outcome worth
+    // preventing outright rather than scoring down.
+    db.seoMeta.findMany({ where: { entityType: "guide" }, select: { focusKeyword: true } }),
     // Anything already ruled on. A snooze expires; a dismissal does not, and a
     // phrase somebody is already writing about should not come back next
     // Monday looking like a fresh idea.
@@ -171,7 +176,15 @@ export async function loadMatrix(settings: TopicSettings): Promise<Matrix> {
     covered,
     listings,
     publishedTitles: guides.filter((guide) => guide.status === "PUBLISHED").map((guide) => guide.title),
-    blocked: new Set(decided.map((idea) => idea.keyword)),
+    blocked: new Set([
+      ...decided.map((idea) => idea.keyword),
+      ...targeted
+        .map((meta) => meta.focusKeyword?.toLowerCase().replace(/\s+/g, " ").trim())
+        .filter((keyword): keyword is string => Boolean(keyword)),
+      // A guide's own title, normalised the way a candidate phrase is, catches
+      // the case where the focus keyword was never filled in.
+      ...guides.map((guide) => guide.title.toLowerCase().replace(/\s+/g, " ").trim()),
+    ]),
   };
 }
 

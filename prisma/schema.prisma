@@ -682,7 +682,8 @@ model Guide {
   sources  Source[]
   faqs     Faq[]
 
-  jobs GuideJob[]
+  jobs     GuideJob[]
+  rewrites GuideJob[] @relation("GuideRewrite")
 
   @@index([status, publishedAt])
   @@index([type])
@@ -1516,6 +1517,14 @@ model GuideJob {
   regionId   String?
   cityId     String?
 
+  /// The guide this replaces, when it is a rewrite rather than a new page.
+  ///
+  /// A rewrite updates that guide in place: same slug, same URL, same author,
+  /// same position in the sitemap. Creating a second guide for a topic the site
+  /// already covers is the duplication this exists to avoid, so the accept step
+  /// branches on this field rather than always creating.
+  rewriteOfId String?
+
   /// JSON: what DataForSEO returned, normalised.
   research String?
   /// JSON: the draft exactly as the model returned it.
@@ -1545,12 +1554,13 @@ model GuideJob {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  template PromptTemplate? @relation(fields: [templateId], references: [id])
-  category Category?       @relation(fields: [categoryId], references: [id])
-  country  Country?        @relation(fields: [countryId], references: [id])
-  region   Region?         @relation(fields: [regionId], references: [id])
-  city     City?           @relation(fields: [cityId], references: [id])
-  guide    Guide?          @relation(fields: [guideId], references: [id])
+  template  PromptTemplate? @relation(fields: [templateId], references: [id])
+  category  Category?       @relation(fields: [categoryId], references: [id])
+  country   Country?        @relation(fields: [countryId], references: [id])
+  region    Region?         @relation(fields: [regionId], references: [id])
+  city      City?           @relation(fields: [cityId], references: [id])
+  guide     Guide?          @relation(fields: [guideId], references: [id])
+  rewriteOf Guide?          @relation("GuideRewrite", fields: [rewriteOfId], references: [id])
 
   topicIdeas TopicIdea[]
 

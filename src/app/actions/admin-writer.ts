@@ -260,6 +260,35 @@ export async function flushIndexing(): Promise<void> {
  * only thing that can turn "the key parses" into "Search Console has accepted
  * this account".
  */
+/**
+ * Queues a rewrite for every guide short of the current standard.
+ *
+ * Spread a day apart, because the value of the first one back is knowing
+ * whether the other seven are worth writing.
+ */
+export async function rewriteOlderGuides(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireStaff();
+  const { queueRewrites, rewriteCandidates } = await import("@/lib/guide-rewrites");
+
+  const everyHours = Number(formData.get("everyHours") ?? 24) || 24;
+  const candidates = await rewriteCandidates();
+  if (candidates.length === 0) return ok("Nothing to rewrite. Every guide is already at the standard.");
+
+  const { queued, skipped } = await queueRewrites({ candidates, everyHours });
+  await audit({
+    userId: user.id,
+    action: "guides.rewrite",
+    entityType: "guideJob",
+    summary: `${queued} rewrites queued`,
+  });
+
+  revalidatePath("/admin/writer");
+  if (queued === 0) return ok(`All ${skipped} are already queued.`);
+  return ok(
+    `${queued} queued, one every ${everyHours} hours${skipped > 0 ? `, ${skipped} already had a rewrite waiting` : ""}. Each one replaces its guide in place rather than adding a second page.`,
+  );
+}
+
 export async function testGoogleIndexing(): Promise<void> {
   await requireStaff();
   await recordIndexingCheck();
