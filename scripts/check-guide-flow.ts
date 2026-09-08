@@ -7,7 +7,10 @@
 // call. Nothing here talks to Anthropic or DataForSEO, so it costs nothing and
 // can be run on any checkout.
 //
-// It cleans up after itself. Run it against dev.db, not production.
+// It cleans up after itself, but it does write to whatever database it is
+// pointed at, so it is not part of the deploy: run it on a development copy.
+//
+//   npx tsx -r ./scripts/_server-only-stub.cjs scripts/check-guide-flow.ts
 
 import { db } from "../src/lib/db";
 import { TOOLS } from "../src/lib/mcp";
