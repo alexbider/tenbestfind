@@ -2,7 +2,7 @@ import { db } from "../src/lib/db";
 import { advanceBatch } from "../src/lib/import-pipeline";
 import { advanceRefresh } from "../src/lib/reviews";
 import { advanceEnrichment } from "../src/lib/enrich-run";
-import { ACTIVE_JOB_STATUSES, advanceGuideJob } from "../src/lib/guide-jobs";
+import { ACTIVE_JOB_STATUSES, advanceGuideJob, publishDueGuides } from "../src/lib/guide-jobs";
 import { flushIndexQueue, refreshIndexingCheck } from "../src/lib/google-indexing";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
@@ -78,8 +78,12 @@ async function tickEnrichment(): Promise<boolean> {
  */
 async function tickGuideJob(): Promise<boolean> {
   const job = await db.guideJob.findFirst({
-    where: { status: { in: ACTIVE_JOB_STATUSES } },
-    orderBy: { createdAt: "asc" },
+    where: {
+      status: { in: ACTIVE_JOB_STATUSES },
+      // A commission with a date on it waits for it. Everything else is due now.
+      OR: [{ scheduledFor: null }, { scheduledFor: { lte: new Date() } }],
+    },
+    orderBy: [{ scheduledFor: "asc" }, { createdAt: "asc" }],
     select: { id: true, topic: true, status: true },
   });
   if (!job) return false;
@@ -146,6 +150,26 @@ async function tickWeeklyPlan(): Promise<void> {
  * The quota is 200 a day, so there is nothing to gain from checking often and
  * something to lose from spending it all in the first minute of a deploy.
  */
+/**
+ * Puts the guides whose publish time has arrived on the site.
+ *
+ * Checked every minute rather than every loop, because a schedule is only
+ * accurate to the minute anyway and the query is not free.
+ */
+let nextPublishCheck = 0;
+
+async function tickScheduledPublishes(): Promise<void> {
+  if (Date.now() < nextPublishCheck) return;
+  nextPublishCheck = Date.now() + 60_000;
+  try {
+    const result = await publishDueGuides();
+    if (result.published > 0) console.log(`[guide] published ${result.published} on schedule`);
+    if (result.held > 0) console.log(`[guide] ${result.held} due but held back for having no author`);
+  } catch (error) {
+    console.error("[guide] scheduled publish:", error instanceof Error ? error.message : error);
+  }
+}
+
 let nextIndexFlush = Date.now() + 60_000;
 
 async function tickIndexQueue(): Promise<void> {
@@ -201,6 +225,7 @@ async function main(): Promise<void> {
   while (!stopping) {
     await tickIndexQueue();
     await tickWeeklyPlan();
+    await tickScheduledPublishes();
     const busy =
       (await tickRefresh()) ||
       (await tickEnrichment()) ||

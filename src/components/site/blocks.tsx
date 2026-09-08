@@ -11,6 +11,50 @@ import { routes } from "@/lib/urls";
 import { SearchForm } from "./SearchForm";
 import { PricingDisclosure } from "./disclosures";
 
+/* --------------------------------------------------------- linked paragraph */
+
+/**
+ * Wraps the named phrases in a paragraph with links.
+ *
+ * Plain string matching on the first occurrence of each phrase, longest first
+ * so a phrase that contains another does not get cut in half. Anything the
+ * paragraph does not actually contain is skipped rather than appended, because
+ * a link the sentence was not written around reads as an advert.
+ */
+export function LinkedText({ text, links }: { text: string; links?: { text: string; href: string }[] }) {
+  if (!links || links.length === 0) return <>{text}</>;
+
+  type Cut = { start: number; end: number; href: string };
+  const cuts: Cut[] = [];
+
+  for (const link of [...links].sort((a, b) => b.text.length - a.text.length)) {
+    const phrase = link.text.trim();
+    if (!phrase) continue;
+    const start = text.toLowerCase().indexOf(phrase.toLowerCase());
+    if (start === -1) continue;
+    const end = start + phrase.length;
+    if (cuts.some((cut) => start < cut.end && end > cut.start)) continue;
+    cuts.push({ start, end, href: link.href });
+  }
+
+  if (cuts.length === 0) return <>{text}</>;
+  cuts.sort((a, b) => a.start - b.start);
+
+  const parts: ReactNode[] = [];
+  let at = 0;
+  for (const [index, cut] of cuts.entries()) {
+    if (cut.start > at) parts.push(text.slice(at, cut.start));
+    parts.push(
+      <Link key={`${cut.href}-${index}`} href={cut.href} className="prose-link">
+        {text.slice(cut.start, cut.end)}
+      </Link>,
+    );
+    at = cut.end;
+  }
+  if (at < text.length) parts.push(text.slice(at));
+  return <>{parts}</>;
+}
+
 /* ------------------------------------------------------------ figure block */
 
 /**
@@ -552,7 +596,7 @@ export function GuideBody({ blocks, images = {} }: { blocks: GuideBlock[]; image
           case "paragraph":
             return (
               <p key={index} style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)" }}>
-                {block.text}
+                <LinkedText text={block.text} links={block.links} />
               </p>
             );
           case "list":

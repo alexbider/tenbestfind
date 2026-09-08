@@ -10,7 +10,7 @@ import type { ResearchBrief } from "@/lib/dataforseo";
 import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
 import { guideDraftSchema } from "@/lib/guide-writer";
 import { fullDate } from "@/lib/format";
-import { parseJson } from "@/lib/json";
+import { parseJson, parseList } from "@/lib/json";
 
 export const metadata = { title: "Guide job" };
 export const dynamic = "force-dynamic";
@@ -38,6 +38,7 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
   if (!job) notFound();
 
   const research = parseJson<ResearchBrief | null>(job.research, null);
+  const tells = parseList(job.tells);
   const parsed = guideDraftSchema.safeParse(parseJson<unknown>(job.draft, null));
   const draft = parsed.success ? parsed.data : null;
   const scope = [job.category?.serviceName, job.city?.name ?? job.region?.name ?? job.country?.name]
@@ -88,6 +89,12 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
           <p>
             Accepted as{" "}
             <Link href={`/admin/guides/${job.guide.id}`}>{job.guide.title}</Link> ({job.guide.status.toLowerCase()}).
+          </p>
+        ) : null}
+        {job.scheduledFor || job.publishAt ? (
+          <p style={META}>
+            {job.scheduledFor ? `Writing starts ${fullDate(job.scheduledFor)}. ` : ""}
+            {job.publishAt ? `Set to publish ${fullDate(job.publishAt)}, once it has an author.` : ""}
           </p>
         ) : null}
         {job.brief ? (
@@ -148,6 +155,21 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
               </p>
             </>
           ) : null}
+        </Panel>
+      ) : null}
+
+      {tells.length > 0 ? (
+        <Panel
+          title="What the second pass found"
+          description="The editing call is asked what still reads as machine writing before it is allowed to fix anything. This is its answer, and the draft below has already been revised against it."
+        >
+          <ul style={{ paddingLeft: 18, lineHeight: 1.75 }}>
+            {tells.map((tell) => (
+              <li key={tell} style={{ fontSize: 14, marginBottom: 4 }}>
+                {tell}
+              </li>
+            ))}
+          </ul>
         </Panel>
       ) : null}
 

@@ -175,6 +175,22 @@ export function GuideJobForm({
         </span>
       </div>
 
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="job-scheduled">Start writing at</label>
+          <input id="job-scheduled" name="scheduledFor" type="datetime-local" />
+          <span className="field__hint">Leave empty and the worker starts within seconds.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="job-publish">Publish at</label>
+          <input id="job-publish" name="publishAt" type="datetime-local" />
+          <span className="field__hint">
+            Only takes effect once you have accepted the draft and set an author. A guide with no byline is never
+            published on a timer.
+          </span>
+        </div>
+      </div>
+
       <button type="submit" className="btn btn--primary" disabled={pending}>
         {pending ? "Queueing…" : "Commission this guide"}
       </button>

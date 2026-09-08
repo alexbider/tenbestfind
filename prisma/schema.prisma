@@ -1501,7 +1501,7 @@ model PromptTemplate {
 /// again.
 model GuideJob {
   id        String  @id @default(cuid())
-  /// QUEUED | RESEARCHING | WRITING | READY | PUBLISHED | FAILED | CANCELLED
+  /// QUEUED | RESEARCHING | WRITING | POLISHING | READY | PUBLISHED | FAILED | CANCELLED
   status    String  @default("QUEUED")
   topic     String
   /// The phrase this guide should rank for.
@@ -1530,6 +1530,16 @@ model GuideJob {
   outputTokens  Int     @default(0)
   researchCalls Int     @default(0)
 
+  /// What the second pass said still read as machine writing, as JSON.
+  tells String?
+
+  /// Nothing is picked up before this. Left empty means as soon as the worker
+  /// gets to it; set, it is a commission with a date on it.
+  scheduledFor DateTime?
+  /// When the accepted guide should go live. The worker publishes it then, or
+  /// it waits in Draft when nobody set a time.
+  publishAt    DateTime?
+
   startedAt  DateTime?
   finishedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -1545,6 +1555,7 @@ model GuideJob {
   topicIdeas TopicIdea[]
 
   @@index([status, createdAt])
+  @@index([status, scheduledFor])
 }
 
 /// A URL waiting to be told to a search engine, and what happened when it was.

@@ -370,7 +370,11 @@ export type SeedGuide = {
 
 export type GuideBlock =
   | { kind: "heading"; text: string; id: string }
-  | { kind: "paragraph"; text: string }
+  // A paragraph, optionally with internal anchors. Each link names an exact
+  // phrase from the paragraph's own text and a path on this site; the renderer
+  // wraps the first occurrence. A phrase that is not there links nothing, so a
+  // bad anchor costs a link rather than a sentence.
+  | { kind: "paragraph"; text: string; links?: { text: string; href: string }[] }
   | { kind: "list"; items: string[] }
   | { kind: "steps"; items: { title: string; body: string }[] }
   | { kind: "callout"; tone: "note" | "alert" | "brand"; title: string; body: string }

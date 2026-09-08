@@ -19,6 +19,7 @@
 import { z } from "zod";
 import { askForJson, ContentError, type Effort } from "./anthropic";
 import { authorityPromptBlock, isAuthorityUrl } from "./guide-authorities";
+import { keepKnownLinks, type LinkTarget } from "./guide-links";
 import { briefAsText, type ResearchBrief } from "./dataforseo";
 import { GUIDE_TYPE_LABELS, type GuideType } from "./enums";
 import { SKILLS } from "./guide-skills";
@@ -53,6 +54,21 @@ const blockSchema = {
       properties: {
         kind: { type: "string", const: "paragraph" },
         text: { type: "string", description: "One paragraph. No markdown, no bullet characters." },
+        links: {
+          type: "array",
+          maxItems: 2,
+          description:
+            "Internal links, where this paragraph genuinely leads somewhere on this site. Each names a phrase that appears verbatim in the text above and a path from the list you were given. Write the sentence around the link rather than bolting the link onto a sentence; a phrase that is not in the paragraph links nothing. At most two, and most paragraphs should have none.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["text", "href"],
+            properties: {
+              text: { type: "string", description: "The exact phrase to link, copied from this paragraph." },
+              href: { type: "string", description: "A path copied exactly from the list of pages on this site." },
+            },
+          },
+        },
       },
     },
     {
@@ -309,8 +325,16 @@ export const guideJsonSchema = {
         "Only URLs that appeared in the brief. An empty array is correct and expected when the brief had nothing citable. Never invent one.",
     },
     readingMinutes: { type: "number", description: "Honest estimate at 220 words a minute." },
-    metaTitle: { type: "string", description: "50 to 60 characters. May differ from the H1." },
-    metaDescription: { type: "string", description: "140 to 158 characters. Written to be clicked, not to be keyword stuffed." },
+    metaTitle: {
+      type: "string",
+      description:
+        "50 to 60 characters. The phrase this ranks for, in words a person would search, plus whatever separates this page from the nine others in the results. No brand name, no pipe-separated keyword list, no year unless the guide is genuinely annual.",
+    },
+    metaDescription: {
+      type: "string",
+      description:
+        "140 to 158 characters, and it is the short answer compressed rather than a summary of the page. Lead with the number or the rule, then what the guide adds. If Google is already showing an AI overview for this search, this is the sentence competing with it.",
+    },
     focusKeyword: { type: "string", description: "The single phrase this page should rank for." },
     confidence: {
       type: "string",
@@ -348,7 +372,11 @@ export const guideJsonSchema = {
 
 const blockValidator = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("heading"), text: z.string(), id: z.string() }),
-  z.object({ kind: z.literal("paragraph"), text: z.string() }),
+  z.object({
+    kind: z.literal("paragraph"),
+    text: z.string(),
+    links: z.array(z.object({ text: z.string(), href: z.string() })).optional(),
+  }),
   z.object({ kind: z.literal("list"), items: z.array(z.string()) }),
   z.object({
     kind: z.literal("steps"),
@@ -472,10 +500,14 @@ EXPERIENCE AND EXPERTISE
 Write as someone who has seen the work go wrong. Specifics carry the expertise: the line item people forget, the certificate that comes from the insurer rather than the contractor, the question whose answer tells you who you are dealing with. Generalities carry nothing. Prefer one concrete detail to three abstract reassurances.
 
 VOICE
-Write like a person who knows the subject talking to someone who does not. Plain sentences of varied length. No em dashes. No emoji. No marketing register: nothing is seamless, robust, comprehensive, cutting edge, or a game changer. No "not just X, but Y". No three-item lists that exist because three sounds complete. Do not open a paragraph with a participle. Do not end a section by summarising what it just said. Contractions where they read naturally.
+Write like a person who knows the subject talking to someone who does not, and who has a view. Contractions where they read naturally. The occasional aside of the kind an experienced tradesperson drops into a sentence, never chatty and never cute. Say when something is genuinely uncertain, when the usual advice is wrong, or when a step is tedious but worth doing anyway. A guide with no opinion anywhere in it is a guide nobody trusts.
+
+Vary the rhythm without thinking about it. A short sentence lands. Then a longer one takes its time getting where it is going. Paragraphs that are all three sentences long read as machine-set as any phrase does.
+
+Never: em dashes. Emoji. Curly quotes. Title case in a heading. Bold used as a layout device. A list whose items are all shaped "Thing: explanation of thing". Marketing register, so nothing is seamless, robust, comprehensive, cutting edge or a game changer. "Not just X, but Y", or a clipped negation tacked on the end like "no guessing". Three-item lists that exist because three sounds complete. A paragraph opening with a participle, or a sentence ending with one doing the work of analysis. Announcing what you are about to do instead of doing it. A heading followed by a line that restates the heading. Calling the same thing four different names in four sentences because repeating a word felt wrong. Hyphenating every common word pair with perfect consistency. "The real question is", "at its core", "what really matters". Ending on how bright the future is.
 
 WHAT NOT TO DO
-Never claim the site tested, measured, inspected or surveyed anything. Never write a heading that is only a label. Never shame a reader for the state of their home or their budget. Never promise an outcome beyond the work itself.
+Never claim the site tested, measured, inspected or surveyed anything. Never write a heading that is only a label. Never shame a reader for the state of their home, their budget or the state anything is in. Never promise an outcome beyond the work itself: a good contractor fixes a roof, and that is the whole claim. Nothing here changes how anybody feels about their house, their neighbours or their life.
 
 BEFORE YOU RETURN, CHECK
   The short answer stands alone and leads with something specific.
@@ -498,6 +530,13 @@ ${authorityPromptBlock()}`;
 export const DEFAULT_INSTRUCTIONS = `Write a guide of at least %wordcount% words answering: %topic%
 
 It is a "%type%" guide%service%%location%. The phrase it should rank for is %keyword%.
+
+BEAT WHAT IS ALREADY THERE
+If the brief carries Google's own AI overview, that is the answer you are competing with and the version an assistant is already giving people. Read it, then be better than it: more specific where it generalises, honest about a variable it flattens, and carrying the thing it leaves out. Do not paraphrase it and do not contradict it without a reason you can point at.
+
+If there is no overview in the brief, write the opening as though you were composing the one Google should be showing.
+
+Either way, cover everything the ten ranking pages cover between them, then at least two things none of them do. The descriptions in the brief say what each of those pages leads with; where they all lead with the same thing, that is either the answer or the gap.
 
 OPEN IN FOUR PARTS
 The opening is what an assistant quotes and what a featured snippet lifts, so it is built rather than written.
@@ -531,6 +570,13 @@ Place a figure block for each inline picture where the picture belongs in the ar
 FAQS
 Fifteen to eighteen, from the research questions first and the gaps second. Each answers in its first sentence, then adds the qualifier.
 
+LINK INSIDE THE PROSE
+Somewhere between eight and fourteen paragraphs should carry an internal link, and the sentence should be written around the link rather than the link bolted on. Each one names a phrase from its own paragraph and a path copied exactly from the list below; anything not on that list is not a page and linking it is a broken promise to the reader.
+
+Link the trade hub and the place hub early, where a reader first needs them. Link a shortlist where the guide has just told somebody what to look for, because that is the moment they want the list. Link another guide where this one stops and that one carries on. Do not link the same page twice.
+
+%links%
+
 RESEARCH BRIEF
 %research%`;
 
@@ -540,6 +586,10 @@ export type WriteContext = {
   guideType: GuideType;
   /** The trade, when the guide is about one. */
   service?: string | null;
+  /** The pages this guide may link to, already rendered for the prompt. */
+  links?: string;
+  /** The same list, for checking what came back. */
+  linkTargets?: LinkTarget[];
   /** Where it applies, when it is not national. */
   location?: string | null;
   wordTarget: number;
@@ -563,6 +613,7 @@ export function renderInstructions(
     location: context.location ? ` written for ${context.location}` : "",
     wordcount: String(context.wordTarget),
     research: briefAsText(research),
+    links: context.links ?? "No internal pages are available to link to. Do not invent any.",
     sitename: BRAND,
   };
 
@@ -757,6 +808,22 @@ export async function writeGuide({
   const { sources, note } = await checkSources(draft.sources, research);
   draft.sources = sources;
   if (note) draft.confidence = `${draft.confidence}\n\n${note}`.trim();
+
+  // And the same rule for internal links. A path that was not on the list is a
+  // page that does not exist, however plausible it looks.
+  if (context.linkTargets && context.linkTargets.length > 0) {
+    let dropped = 0;
+    draft.body = draft.body.map((block) => {
+      if (block.kind !== "paragraph" || !block.links) return block;
+      const kept = keepKnownLinks(block.links, context.linkTargets ?? []);
+      dropped += block.links.length - kept.length;
+      return kept.length > 0 ? { ...block, links: kept } : { ...block, links: undefined };
+    });
+    if (dropped > 0) {
+      draft.confidence =
+        `${draft.confidence}\n\nLINK CHECK\n${dropped} internal link${dropped === 1 ? " pointed" : "s pointed"} at a path that is not a page on this site and ${dropped === 1 ? "was" : "were"} removed.`.trim();
+    }
+  }
 
   return { draft, prompt };
 }

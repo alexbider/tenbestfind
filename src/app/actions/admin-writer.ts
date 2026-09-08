@@ -16,6 +16,20 @@ export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
 const ok = (message: string): ActionState => ({ status: "ok", message });
 const fail = (message: string): ActionState => ({ status: "error", message });
 
+/**
+ * A datetime-local field, as a real date or nothing.
+ *
+ * The browser posts local wall-clock time with no zone, which Date reads as the
+ * server's zone. That is the right reading: somebody scheduling a post for
+ * Tuesday at nine means the clock on the wall, and the containers run UTC.
+ */
+const whenever = (value: FormDataEntryValue | null): Date | null => {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return null;
+  const when = new Date(text);
+  return Number.isNaN(when.getTime()) ? null : when;
+};
+
 const optional = (value: FormDataEntryValue | null): string | null => {
   const text = typeof value === "string" ? value.trim() : "";
   return text || null;
@@ -164,6 +178,8 @@ export async function createGuideJob(_prev: ActionState, formData: FormData): Pr
       regionId: data.regionId || null,
       cityId: data.cityId || null,
       brief: data.brief || null,
+      scheduledFor: whenever(formData.get("scheduledFor")),
+      publishAt: whenever(formData.get("publishAt")),
     },
     select: { id: true },
   });

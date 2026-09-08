@@ -56,6 +56,15 @@ export type ResearchBrief = {
   questions: string[];
   /** Which SERP features are present, so the writer knows what it is up against. */
   features: string[];
+  /**
+   * Google's own generated answer, when it is showing one.
+   *
+   * The single most useful thing in the brief. It is the answer the writer has
+   * to beat, and where an assistant is already getting its version of the
+   * topic, so a guide that does not account for it is arguing with something
+   * it has not read.
+   */
+  aiOverview: string | null;
   /** How many billable calls this cost. */
   calls: number;
   fetchedAt: string;
@@ -73,6 +82,7 @@ export function emptyBrief(keyword: string, note: string): ResearchBrief {
     serp: [],
     questions: [],
     features: [],
+    aiOverview: null,
     calls: 0,
     fetchedAt: new Date().toISOString(),
   };
@@ -173,10 +183,38 @@ async function keywordIdeas(keyword: string, locationName: string): Promise<Keyw
 }
 
 /** The live first page, with the questions Google attaches to it. */
+/**
+ * Pulls the readable text out of an AI overview item.
+ *
+ * Google nests the answer one or two levels down and mixes paragraphs with
+ * lists, so this walks whatever came back and keeps the text, rather than
+ * assuming a shape that will change next quarter.
+ */
+function overviewText(item: unknown, depth = 0): string {
+  if (depth > 4 || !item || typeof item !== "object") return "";
+  const node = item as Record<string, unknown>;
+
+  const parts: string[] = [];
+  for (const key of ["text", "title", "description", "snippet"]) {
+    const value = node[key];
+    if (typeof value === "string" && value.trim().length > 0) parts.push(value.trim());
+  }
+  for (const key of ["items", "references", "list"]) {
+    const value = node[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        const nested = overviewText(child, depth + 1);
+        if (nested) parts.push(nested);
+      }
+    }
+  }
+  return [...new Set(parts)].join("\n");
+}
+
 async function serp(
   keyword: string,
   locationName: string,
-): Promise<{ results: SerpResult[]; questions: string[]; features: string[] }> {
+): Promise<{ results: SerpResult[]; questions: string[]; features: string[]; aiOverview: string | null }> {
   const result = await call("/serp/google/organic/live/advanced", {
     keyword,
     location_name: locationName,
@@ -190,6 +228,7 @@ async function serp(
   const results: SerpResult[] = [];
   const questions: string[] = [];
   const features = new Set<string>();
+  let aiOverview: string | null = null;
 
   for (const raw of items) {
     const item = raw as {
@@ -203,6 +242,11 @@ async function serp(
     };
     const type = str(item.type);
     if (type) features.add(type);
+
+    if (type === "ai_overview" || type === "ai_overview_element") {
+      const text = overviewText(item);
+      if (text.length > (aiOverview?.length ?? 0)) aiOverview = text;
+    }
 
     if (type === "organic" && str(item.url)) {
       results.push({
@@ -226,7 +270,12 @@ async function serp(
     }
   }
 
-  return { results: results.slice(0, 10), questions: [...new Set(questions)].slice(0, 20), features: [...features] };
+  return {
+    results: results.slice(0, 10),
+    questions: [...new Set(questions)].slice(0, 20),
+    features: [...features],
+    aiOverview: aiOverview ? aiOverview.slice(0, 4000) : null,
+  };
 }
 
 /**
@@ -261,7 +310,7 @@ export async function researchTopic({
   if (ideas.status === "fulfilled") calls += 1;
   else notes.push(`keyword ideas failed (${ideas.reason})`);
 
-  const found = page.status === "fulfilled" ? page.value : { results: [], questions: [], features: [] };
+  const found = page.status === "fulfilled" ? page.value : { results: [], questions: [], features: [], aiOverview: null };
   if (page.status === "fulfilled") calls += 1;
   else notes.push(`SERP failed (${page.reason})`);
 
@@ -278,6 +327,7 @@ export async function researchTopic({
     serp: found.results,
     questions: found.questions,
     features: found.features,
+    aiOverview: found.aiOverview,
     calls,
     fetchedAt: new Date().toISOString(),
   };
@@ -300,6 +350,14 @@ export function briefAsText(brief: ResearchBrief): string {
     for (const idea of brief.related.slice(0, 20)) {
       lines.push(`  ${idea.keyword}${idea.volume !== null ? ` (${idea.volume.toLocaleString()})` : ""}`);
     }
+    lines.push("");
+  }
+
+  if (brief.aiOverview) {
+    lines.push("GOOGLE'S OWN AI OVERVIEW FOR THIS SEARCH");
+    lines.push("This is the answer Google is generating today. It is what you have to beat, and it is where");
+    lines.push("an assistant is already getting its version of this topic.");
+    lines.push(brief.aiOverview);
     lines.push("");
   }
 
