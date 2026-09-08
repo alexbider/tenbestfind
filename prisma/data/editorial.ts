@@ -382,7 +382,25 @@ export type GuideBlock =
   // Factor / what to check / why it matters, for comparing two quotes.
   | { kind: "compare"; title: string; intro?: string; rows: { factor: string; check: string; why: string }[] }
   // The things that should end a conversation.
-  | { kind: "flags"; title: string; items: string[] };
+  | { kind: "flags"; title: string; items: string[] }
+  // A photograph, referenced by key rather than by path. The guide holds the
+  // key-to-file map, so a block written before the image exists renders as
+  // nothing rather than as a broken image, and re-shooting a picture never
+  // means editing the body.
+  | { kind: "figure"; key: string; alt: string; caption?: string }
+  // A chart drawn from numbers, not generated as a picture. An image model
+  // asked for a cost chart produces invented axis labels and bars that mean
+  // nothing, which is the one thing this site cannot publish. So a chart is
+  // data, rendered.
+  | {
+      kind: "chart";
+      title: string;
+      /** What the numbers are: "dollars", "days", "per square foot". */
+      unit: string;
+      intro?: string;
+      note?: string;
+      rows: { label: string; low: number; high: number; typical?: number; note?: string }[];
+    };
 
 export const GUIDES: SeedGuide[] = [
   {

@@ -23,6 +23,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { dollars, fullDate, monthYear, priceRange, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
+import { coverOf, imageMap, parseIllustrations } from "@/lib/guide-images";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
@@ -79,6 +80,17 @@ async function loadGuide(slug: string) {
   });
 }
 
+/**
+ * The picture that represents a guide.
+ *
+ * A hero set by hand always wins. Otherwise the cover the guide commissioned
+ * for itself stands in, which is what makes a written guide illustrated
+ * without anybody editing it.
+ */
+function heroFor(guide: { heroImage: string | null; illustrations: string | null }): string | null {
+  return guide.heroImage ?? coverOf(parseIllustrations(guide.illustrations))?.path ?? null;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const guide = await loadGuide(slug);
@@ -113,7 +125,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: guide.title,
     description: guide.excerpt,
     path: routes.guide(guide.slug),
-    image: guide.heroImage,
+    image: heroFor(guide),
     type: "article",
     publishedAt: guide.publishedAt,
     modifiedAt: guide.reviewedAt ?? guide.updatedAt,
@@ -132,6 +144,8 @@ export default async function GuidePage({ params }: Props) {
   }
 
   const blocks = parseJson<GuideBlock[]>(guide.body, []);
+  const illustrations = parseIllustrations(guide.illustrations);
+  const hero = heroFor(guide);
 
   // Where this guide applies, most specific first. Almost every guide is
   // national and leaves all three null; the ones that are not say so on the
@@ -205,7 +219,7 @@ export default async function GuidePage({ params }: Props) {
     inLanguage: "en",
     datePublished: guide.publishedAt?.toISOString(),
     dateModified: (guide.reviewedAt ?? guide.updatedAt).toISOString(),
-    ...(guide.heroImage ? { image: absoluteUrl(guide.heroImage) } : {}),
+    ...(hero ? { image: absoluteUrl(hero) } : {}),
     ...(wordCount > 0 ? { wordCount } : {}),
     timeRequired: `PT${Math.max(1, guide.readingMinutes)}M`,
     ...(guide.author ? { author: personNode(guide.author) } : {}),
@@ -562,7 +576,7 @@ export default async function GuidePage({ params }: Props) {
               />
             ) : null}
 
-            <GuideBody blocks={blocks} />
+            <GuideBody blocks={blocks} images={imageMap(illustrations)} />
 
             {!isCost && guide.costs.length > 0 ? (
               <section id="cost" aria-labelledby="cost-h2">

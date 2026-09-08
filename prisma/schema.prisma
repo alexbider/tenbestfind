@@ -642,6 +642,12 @@ model Guide {
   // Body as an array of blocks: [{ kind, ...props }]
   body           String?
   heroImage      String?
+  /// The pictures this guide commissioned, as JSON:
+  /// [{ key, slot, scene, alt, caption, path }]. `scene` is what to generate
+  /// and `path` is where it ended up, so a guide written today can be
+  /// illustrated next week without touching its body: the body refers to a
+  /// figure by key and the key is looked up here.
+  illustrations  String?
   readingMinutes Int     @default(9)
 
   // Cost-guide summary fields

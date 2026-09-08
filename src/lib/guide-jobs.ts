@@ -225,6 +225,9 @@ export async function acceptGuideJob(
       bottomLine: draft.bottomLine,
       keyTakeaways: stringify(draft.keyTakeaways),
       body: stringify(draft.body),
+      // The briefs, with no paths yet. Whoever makes the pictures fills those
+      // in; until then the figure blocks in the body render as nothing.
+      illustrations: stringify(draft.illustrations),
       readingMinutes: Math.max(1, Math.round(draft.readingMinutes)),
       status: "DRAFT",
       authorId: options.authorId ?? null,

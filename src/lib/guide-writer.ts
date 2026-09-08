@@ -158,6 +158,62 @@ const blockSchema = {
         items: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 7 },
       },
     },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["kind", "key", "alt"],
+      properties: {
+        kind: { type: "string", const: "figure" },
+        key: {
+          type: "string",
+          description:
+            "The key of one of the inline illustrations you commissioned below. Lowercase and hyphenated. Place the block where the picture belongs in the argument, not where it would break up a wall of text.",
+        },
+        alt: {
+          type: "string",
+          description:
+            "What the picture shows, for a reader who cannot see it. Describe the scene, not the topic, and never start with 'image of'.",
+        },
+        caption: {
+          type: "string",
+          description: "Optional. A sentence that adds something the picture cannot say by itself.",
+        },
+      },
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["kind", "title", "unit", "rows"],
+      properties: {
+        kind: { type: "string", const: "chart" },
+        title: { type: "string" },
+        unit: {
+          type: "string",
+          description: "What the numbers are, as a short label: \"dollars\", \"dollars per square foot\", \"days\", \"hours\".",
+        },
+        intro: { type: "string", description: "Optional. One sentence on what the chart shows." },
+        note: { type: "string", description: "Optional. What the ranges do not capture." },
+        rows: {
+          type: "array",
+          minItems: 3,
+          maxItems: 10,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["label", "low", "high"],
+            properties: {
+              label: { type: "string" },
+              low: { type: "number" },
+              high: { type: "number" },
+              typical: { type: "number", description: "Optional. Marked inside the range." },
+              note: { type: "string", description: "Optional. One short line under the bar." },
+            },
+          },
+          description:
+            "Every number here is published as a figure a reader will quote back. Use this block only where the research supports the ranges, and leave it out entirely rather than estimating.",
+        },
+      },
+    },
   ],
 };
 
@@ -179,6 +235,7 @@ export const guideJsonSchema = {
     "metaDescription",
     "focusKeyword",
     "confidence",
+    "illustrations",
   ],
   properties: {
     title: {
@@ -260,6 +317,32 @@ export const guideJsonSchema = {
       description:
         "What you were unsure about, or where the research was thin, addressed to the editor who will review this. Say 'none' only if there is genuinely nothing.",
     },
+    illustrations: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      description:
+        "The three photographs this guide should carry: one cover and two inline. You are commissioning them, not making them, so describe a scene somebody could photograph. Real work, real materials, real hands. No text in the picture, no logos, no charts, no diagrams, no before-and-after, nobody recognisable, and nothing staged to look like stock photography. The two inline ones must each have a matching figure block in the body.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["key", "slot", "scene", "alt"],
+        properties: {
+          key: {
+            type: "string",
+            description: "Lowercase, hyphenated, specific to this guide. The figure blocks refer to it.",
+          },
+          slot: { type: "string", enum: ["cover", "inline"] },
+          scene: {
+            type: "string",
+            description:
+              "What to photograph, in two or three sentences. Name the subject, the setting, the light and the angle. Concrete enough that two people reading it would come back with the same picture.",
+          },
+          alt: { type: "string", description: "What the picture shows, for a reader who cannot see it." },
+          caption: { type: "string", description: "Optional, and only where it adds something." },
+        },
+      },
+    },
   },
 };
 
@@ -289,6 +372,28 @@ const blockValidator = z.discriminatedUnion("kind", [
     rows: z.array(z.object({ factor: z.string(), check: z.string(), why: z.string() })),
   }),
   z.object({ kind: z.literal("flags"), title: z.string(), items: z.array(z.string()) }),
+  z.object({
+    kind: z.literal("figure"),
+    key: z.string(),
+    alt: z.string(),
+    caption: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("chart"),
+    title: z.string(),
+    unit: z.string(),
+    intro: z.string().optional(),
+    note: z.string().optional(),
+    rows: z.array(
+      z.object({
+        label: z.string(),
+        low: z.number(),
+        high: z.number(),
+        typical: z.number().optional(),
+        note: z.string().optional(),
+      }),
+    ),
+  }),
 ]);
 
 export const guideDraftSchema = z.object({
@@ -312,6 +417,17 @@ export const guideDraftSchema = z.object({
   metaDescription: z.string().min(60),
   focusKeyword: z.string().min(2),
   confidence: z.string(),
+  illustrations: z
+    .array(
+      z.object({
+        key: z.string(),
+        slot: z.enum(["cover", "inline"]),
+        scene: z.string(),
+        alt: z.string(),
+        caption: z.string().optional(),
+      }),
+    )
+    .default([]),
 });
 
 export type GuideDraft = z.infer<typeof guideDraftSchema>;
@@ -401,6 +517,16 @@ Answer every question the research shows being asked, in the body or in the FAQs
 
 USE THE BLOCKS
 At least one compare block, used as a real table, where lining things up side by side beats prose. A checklist where a reader works through something in order. A flags block for what should end a conversation. A steps block where sequence matters. Not all of them in every guide, but three thousand words of unbroken paragraphs is a wall.
+
+CHARTS
+Where the research gives you real ranges, use a chart block and let the numbers be seen rather than described. Every figure in it is published as a number a reader will quote back, so use it only where the brief supports the ranges and leave it out entirely rather than estimating. A cost guide almost always earns one. A guide with no numbers in it does not.
+
+PICTURES
+Commission three photographs in the illustrations array: one cover and two inline. Describe scenes somebody could actually go and photograph. Real work, real materials, real hands, real weather. Name the subject, the setting, the light and the angle, concretely enough that two people reading the brief would come back with the same picture.
+
+Nothing in a picture may carry information the text has not earned: no text in the image, no logos, no signage, no numbers, no charts or diagrams, no before-and-after pairs, nobody recognisable, no branded vehicles or products. Prefer the specific and unglamorous over the polished: a hand on a moisture meter reads as true where a smiling family in a bright kitchen reads as stock.
+
+Place a figure block for each inline picture where the picture belongs in the argument, not wherever the text needs breaking up.
 
 FAQS
 Fifteen to eighteen, from the research questions first and the gaps second. Each answers in its first sentence, then adds the qualifier.

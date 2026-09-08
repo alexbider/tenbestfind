@@ -8,6 +8,7 @@ import { setGuideStatus } from "@/app/actions/admin-content";
 import { StatusPill } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
+import { parseIllustrations } from "@/lib/guide-images";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
@@ -48,6 +49,7 @@ export default async function AdminGuideDetail({ params }: Props) {
   ]);
 
   const blocks = guide ? parseJson<GuideBlock[]>(guide.body, []) : [];
+  const illustrations = guide ? parseIllustrations(guide.illustrations) : [];
   const contentSample = guide
     ? [
         guide.shortAnswer ?? "",
@@ -99,6 +101,49 @@ export default async function AdminGuideDetail({ params }: Props) {
           )
         }
       />
+
+      {illustrations.length > 0 ? (
+        <Panel
+          title="Pictures"
+          description="What this guide asked to be photographed. Generate each one from the brief exactly as written, then run the ingest so the files land in the media volume and the figure blocks start rendering."
+        >
+          <div style={{ display: "grid", gap: 18 }}>
+            {illustrations.map((illustration) => (
+              <div
+                key={illustration.key}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: illustration.path ? "160px 1fr" : "1fr",
+                  gap: 16,
+                  alignItems: "start",
+                  paddingBottom: 18,
+                  borderBottom: "1px solid var(--border-subtle)",
+                }}
+              >
+                {illustration.path ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- one thumbnail in an admin list
+                  <img
+                    src={illustration.path}
+                    alt={illustration.alt}
+                    style={{ width: "100%", borderRadius: 10, border: "1px solid var(--border-subtle)" }}
+                  />
+                ) : null}
+                <div>
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
+                    <code>{illustration.key}</code> · {illustration.slot}
+                    {illustration.path ? " · made" : " · not made yet"}
+                  </p>
+                  <p style={{ fontSize: 14, lineHeight: 1.65, marginBottom: 8 }}>{illustration.scene}</p>
+                  <p style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                    Alt: {illustration.alt}
+                    {illustration.caption ? ` · Caption: ${illustration.caption}` : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
 
       <div className="panel-grid panel-grid--wide">
         <Panel title="Guide content">

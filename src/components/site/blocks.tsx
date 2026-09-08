@@ -5,10 +5,244 @@ import { ArrowRight, Check, Icon, StarIcon, type IconName } from "@/components/u
 import { ArrowLink, Badge, Breadcrumbs, Shell } from "@/components/ui/primitives";
 import { fullDate, priceRange } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
+import { describeImage, srcSetFor } from "@/lib/image-srcset";
 import type { Crumb } from "@/lib/urls";
 import { routes } from "@/lib/urls";
 import { SearchForm } from "./SearchForm";
 import { PricingDisclosure } from "./disclosures";
+
+/* ------------------------------------------------------------ figure block */
+
+/**
+ * A photograph, looked up by key.
+ *
+ * A guide's body is written before its pictures exist, so a figure whose image
+ * has not been made yet renders as nothing at all. An empty space is a much
+ * better failure than a broken image icon, and it means the body never has to
+ * be edited when a picture arrives or is re-shot.
+ */
+export function GuideFigure({
+  image,
+  alt,
+  caption,
+}: {
+  image: string | null | undefined;
+  alt: string;
+  caption?: string;
+}) {
+  if (!image) return null;
+  const avif = srcSetFor(image, "avif");
+  const webp = srcSetFor(image, "webp");
+  const size = describeImage(image);
+
+  return (
+    <figure style={{ margin: 0 }}>
+      <div
+        style={{
+          borderRadius: "18px",
+          overflow: "hidden",
+          border: "1px solid var(--border-subtle)",
+          background: "var(--surface-page)",
+          lineHeight: 0,
+        }}
+      >
+        <picture>
+          {avif ? <source type="image/avif" srcSet={avif} sizes="(max-width: 860px) 100vw, 760px" /> : null}
+          {webp ? <source type="image/webp" srcSet={webp} sizes="(max-width: 860px) 100vw, 760px" /> : null}
+          <img
+            src={image}
+            alt={alt}
+            width={size?.width}
+            height={size?.height}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "auto", display: "block" }}
+          />
+        </picture>
+      </div>
+      {caption ? (
+        <figcaption
+          style={{
+            marginTop: "10px",
+            fontSize: "14px",
+            lineHeight: "1.6",
+            color: "var(--text-muted)",
+          }}
+        >
+          {caption}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+/* ------------------------------------------------------------- chart block */
+
+/**
+ * An axis a person would have drawn.
+ *
+ * Round the top up and cut it into quarters and you get ticks like 6.25 and
+ * 18.75, which nobody writes on a chart. So the step is chosen first, from the
+ * short list of numbers axes are actually marked in, and the top follows from
+ * it.
+ */
+function niceScale(max: number): { ceiling: number; ticks: number[] } {
+  if (!Number.isFinite(max) || max <= 0) return { ceiling: 1, ticks: [0, 1] };
+
+  const target = max / 5;
+  const magnitude = 10 ** Math.floor(Math.log10(target));
+  const step =
+    [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate >= target) ??
+    magnitude * 10;
+
+  const ceiling = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let tick = 0; tick <= ceiling + step / 2; tick += step) ticks.push(Math.round(tick * 1000) / 1000);
+  return { ceiling, ticks };
+}
+
+/** Money without the noise: 1200 reads as 1,200 and 12500 as 12,500. */
+function chartNumber(value: number, unit: string): string {
+  const formatted = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return /dollar|usd|cad|\$/i.test(unit) ? `$${formatted}` : formatted;
+}
+
+/**
+ * A range chart, built from the guide's own numbers.
+ *
+ * Bars rather than a picture of bars: the widths come from the data, the
+ * figures are printed as text beside them, and the whole thing is readable
+ * with images off, with a screen reader, and at any width. Nothing here can
+ * disagree with the sentence that introduced it, which is the entire reason it
+ * is not a generated image.
+ */
+export function GuideChart({
+  title,
+  unit,
+  intro,
+  note,
+  rows,
+}: {
+  title: string;
+  unit: string;
+  intro?: string;
+  note?: string;
+  rows: { label: string; low: number; high: number; typical?: number; note?: string }[];
+}) {
+  const usable = rows.filter((row) => Number.isFinite(row.low) && Number.isFinite(row.high));
+  if (usable.length === 0) return null;
+
+  const { ceiling, ticks } = niceScale(Math.max(...usable.map((row) => Math.max(row.low, row.high))));
+
+  return (
+    <section>
+      <h2 style={{ ...PROSE_H2, marginBottom: intro ? "8px" : "18px" }}>{title}</h2>
+      {intro ? (
+        <p style={{ marginBottom: "18px", fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)" }}>{intro}</p>
+      ) : null}
+
+      <div
+        style={{
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "18px",
+          padding: "22px 24px 18px",
+          background: "var(--surface-card)",
+        }}
+      >
+        <p style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
+          {unit}
+        </p>
+
+        <div style={{ display: "grid", gap: "18px" }}>
+          {usable.map((row) => {
+            const low = Math.max(0, Math.min(row.low, row.high));
+            const high = Math.max(row.low, row.high);
+            const left = (low / ceiling) * 100;
+            const width = Math.max(1.5, ((high - low) / ceiling) * 100);
+            const typical =
+              row.typical !== undefined && row.typical >= low && row.typical <= high
+                ? (row.typical / ceiling) * 100
+                : null;
+
+            return (
+              <div key={row.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "baseline", marginBottom: "7px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>{row.label}</span>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                    {chartNumber(low, unit)} to {chartNumber(high, unit)}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    position: "relative",
+                    height: "14px",
+                    borderRadius: "999px",
+                    background: "var(--surface-page)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: "-1px",
+                      bottom: "-1px",
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      borderRadius: "999px",
+                      background: "linear-gradient(90deg, var(--blue-500, #2D74D7), var(--blue-700, #1B4FA0))",
+                    }}
+                  />
+                  {typical !== null ? (
+                    <span
+                      aria-hidden="true"
+                      title="Typical"
+                      style={{
+                        position: "absolute",
+                        top: "-4px",
+                        bottom: "-4px",
+                        left: `${typical}%`,
+                        width: "2px",
+                        background: "var(--surface-card)",
+                        boxShadow: "0 0 0 1px var(--blue-900, #10305F)",
+                      }}
+                    />
+                  ) : null}
+                </div>
+
+                {row.note ? (
+                  <p style={{ marginTop: "6px", fontSize: "13.5px", lineHeight: "1.6", color: "var(--text-muted)" }}>{row.note}</p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          aria-hidden="true"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginTop: "18px",
+            paddingTop: "10px",
+            borderTop: "1px solid var(--border-subtle)",
+            fontSize: "12.5px",
+            color: "var(--text-muted)",
+          }}
+        >
+          {ticks.map((tick) => (
+            <span key={tick}>{chartNumber(tick, unit)}</span>
+          ))}
+        </div>
+      </div>
+
+      {note ? (
+        <p style={{ marginTop: "12px", fontSize: "14px", lineHeight: "1.65", color: "var(--text-muted)" }}>{note}</p>
+      ) : null}
+    </section>
+  );
+}
 
 /* --------------------------------------------------------------- crumb bar */
 
@@ -301,7 +535,10 @@ function HeadTile({ tone, children }: { tone: "blue" | "amber" | "red"; children
   );
 }
 
-export function GuideBody({ blocks }: { blocks: GuideBlock[] }) {
+/** Which file each figure key in the body points at. */
+export type GuideImageMap = Record<string, string | undefined>;
+
+export function GuideBody({ blocks, images = {} }: { blocks: GuideBlock[]; images?: GuideImageMap }) {
   return (
     <>
       {blocks.map((block, index) => {
@@ -577,6 +814,21 @@ export function GuideBody({ blocks }: { blocks: GuideBlock[] }) {
                   {block.attribution}
                 </cite>
               </blockquote>
+            );
+          case "figure":
+            return (
+              <GuideFigure key={index} image={images[block.key]} alt={block.alt} caption={block.caption} />
+            );
+          case "chart":
+            return (
+              <GuideChart
+                key={index}
+                title={block.title}
+                unit={block.unit}
+                intro={block.intro}
+                note={block.note}
+                rows={block.rows}
+              />
             );
           default:
             return null;

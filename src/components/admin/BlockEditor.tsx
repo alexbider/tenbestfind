@@ -38,6 +38,10 @@ function emptyBlock(kind: GuideBlock["kind"]): GuideBlock {
       return { kind: "compare", title: "What to compare", rows: [{ factor: "", check: "", why: "" }] };
     case "flags":
       return { kind: "flags", title: "Red flags", items: [""] };
+    case "figure":
+      return { kind: "figure", key: "", alt: "" };
+    case "chart":
+      return { kind: "chart", title: "", unit: "dollars", rows: [{ label: "", low: 0, high: 0 }] };
     default:
       return { kind: "paragraph", text: "" };
   }
@@ -63,6 +67,10 @@ function summarize(block: GuideBlock): string {
       return block.items.filter(Boolean).join(" · ");
     case "compare":
       return block.rows.map((row) => row.factor).filter(Boolean).join(" · ");
+    case "figure":
+      return block.alt || block.key;
+    case "chart":
+      return `${block.title}: ${block.rows.map((row) => row.label).filter(Boolean).join(" · ")}`;
     default:
       return "";
   }

@@ -159,6 +159,12 @@ services:
         echo "==> fetching hero images"
         npx tsx scripts/ingest-hero-images.ts --yes || echo "hero images skipped"
 
+        # The same, for the pictures and charts inside guides. Also places the
+        # figure and chart blocks, once, so a guide written before it had any
+        # illustrations gains them without anybody editing its prose.
+        echo "==> fetching guide images"
+        npx tsx scripts/ingest-guide-images.ts --yes || echo "guide images skipped"
+
         # Re-encodes anything stored before the image pipeline existed and
         # repoints its record. Skips images that are already optimised, so it
         # does real work once and nothing on every deploy after that.

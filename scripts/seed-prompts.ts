@@ -30,10 +30,10 @@ import { stringify } from "../src/lib/json";
  * afternoon on the next deploy.
  */
 const SHIPPED_INSTRUCTIONS: Record<string, string[]> = {
-  "how-to-choose": ["6df1326dfb808b40"],
-  cost: ["3281d77007a1d640"],
-  "questions-to-ask": ["69acfe0f221b80a4"],
-  checklists: ["fd120ec972d5d483"],
+  "how-to-choose": ["6df1326dfb808b40", "8fb603f65dfeeff9"],
+  cost: ["3281d77007a1d640", "38a71c4f3ad0718d"],
+  "questions-to-ask": ["69acfe0f221b80a4", "61f3369c3d5dc73c"],
+  checklists: ["fd120ec972d5d483", "9dd874afbe72cdab"],
 };
 
 /** Every version of the standing rules this script has ever written. */
@@ -62,6 +62,16 @@ Answer every question the research shows being asked, in the body or in the FAQs
 
 USE THE BLOCKS
 At least one compare block, used as a real table, where lining things up side by side beats prose. A checklist where a reader works through something in order. A flags block for what should end a conversation. A steps block where sequence matters. Not all of them in every guide, but three thousand words of unbroken paragraphs is a wall.
+
+CHARTS
+Where the research gives you real ranges, use a chart block and let the numbers be seen rather than described. Every figure in it is published as a number a reader will quote back, so use it only where the brief supports the ranges and leave it out entirely rather than estimating. A cost guide almost always earns one. A guide with no numbers in it does not.
+
+PICTURES
+Commission three photographs in the illustrations array: one cover and two inline. Describe scenes somebody could actually go and photograph. Real work, real materials, real hands, real weather. Name the subject, the setting, the light and the angle, concretely enough that two people reading the brief would come back with the same picture.
+
+Nothing in a picture may carry information the text has not earned: no text in the image, no logos, no signage, no numbers, no charts or diagrams, no before-and-after pairs, nobody recognisable, no branded vehicles or products. Prefer the specific and unglamorous over the polished: a hand on a moisture meter reads as true where a smiling family in a bright kitchen reads as stock.
+
+Place a figure block for each inline picture where the picture belongs in the argument, not wherever the text needs breaking up.
 
 FAQS
 Fifteen to eighteen, from the research questions first and the gaps second. Each answers in its first sentence, then adds the qualifier.
@@ -103,7 +113,7 @@ This covers pricing%service%%location%. The phrase it should rank for is %keywor
 
 Open with the range, then spend the guide on what moves a quote inside it and what pushes it outside. Give the range a shape: what the low end buys, what the high end buys, and what the middle usually includes.
 
-Name the line items people forget to budget for. Where two quotes for the same job differ, say what usually accounts for the difference. Build at least one table of cost factors against what each one does to the price and why.
+Name the line items people forget to budget for. Where two quotes for the same job differ, say what usually accounts for the difference. Build at least one table of cost factors against what each one does to the price and why, and one chart of the ranges the research actually supports.
 
 Do not publish a single national average as if it were a fact. If the research does not support a number, say what the price depends on and what to ask a company for instead. A cost guide that admits what it does not know is worth more than one that guesses.
 
