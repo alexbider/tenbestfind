@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GuideBody } from "@/components/site/blocks";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { InfoModal } from "@/components/site/InfoModal";
@@ -32,6 +33,9 @@ import { countriesOf, groupByCountry, regionNoun, regionNounAcross } from "@/lib
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { serviceCopy, rankingCardTitle } from "@/lib/seo-copy";
 import { breadcrumbSchema, serviceCrumbs } from "@/lib/breadcrumbs";
+import { faqsFor } from "@/lib/faqs";
+import { parseHubBody } from "@/lib/hub-body";
+import { graph, pageEntity, serviceEntity, serviceId } from "@/lib/schema";
 
 /** The checks that separate a company worth calling from one worth avoiding. */
 const CHOOSE_STEPS = [
@@ -91,9 +95,10 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
 
   const copy = serviceCopy(category, { publishedRankings: rankings.length });
   const crumbs = serviceCrumbs(category);
+  const body = parseHubBody(category.body);
 
   const singular = category.singular.toLowerCase();
-  const faqs = [
+  const generatedFaqs = [
     {
       question: `What does ${/^[aeiou]/i.test(category.singular) ? "an" : "a"} ${singular} do?`,
       answer:
@@ -128,23 +133,47 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
   ];
 
 
+  // A question written for this service replaces the generated set.
+  const faqs = await faqsFor(
+    "CATEGORY",
+    category.id,
+    generatedFaqs.map((faq, index) => ({ id: String(index), ...faq })),
+  );
+
   const icon = (key: string | null | undefined): IconName => (key && hasIcon(key) ? (key as IconName) : "house");
   const article = /^[aeiou]/i.test(category.singular) ? "an" : "a";
   const latest = rankings[0];
 
   return (
     <SiteChrome active="services">
+      {/* CollectionPage says the page lists things. The Service beside it says
+          which trade and where it is covered, which is the part an engine needs
+          to answer a question about the trade rather than about the page. */}
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "CollectionPage",
-          name: copy.h1,
-          description: copy.description,
-          url: absoluteUrl(routes.category(category.slug)),
-        }}
+        data={graph(
+          pageEntity({
+            path: routes.category(category.slug),
+            name: copy.h1,
+            description: copy.description,
+            type: "CollectionPage",
+            dateModified: category.updatedAt,
+            mainEntity: { "@id": serviceId(routes.category(category.slug)) },
+          }),
+          serviceEntity({
+            path: routes.category(category.slug),
+            name: category.serviceName,
+            serviceType: category.serviceName,
+            description: category.description,
+            areaServed: regions.map((region) => `${region.name}, ${region.country.name}`),
+            offers: category.subservices.map((sub) => ({
+              name: sub.name,
+              path: routes.subservice(category.slug, sub.slug),
+            })),
+          }),
+        )}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
-      <FaqJsonLd faqs={faqs.map((faq, index) => ({ id: String(index), ...faq }))} />
+      <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
       <section style={GRID_BACKDROP}>
@@ -295,10 +324,17 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
             What does {article} {singular} do?
           </h2>
           <div>
-            <p style={{ fontSize: "17px", lineHeight: "1.8", color: "var(--text-secondary)" }}>
-              {category.description ??
-                `${category.serviceName} covers the work most households need at some point, from routine maintenance to the jobs that cannot wait. What a licence actually permits varies by state or province, which is why every ranking opens with the local rules before it lists a single company.`}
-            </p>
+            {/* A written body replaces the one-liner rather than joining it. */}
+            {body.length > 0 ? (
+              <div className="prose">
+                <GuideBody blocks={body} />
+              </div>
+            ) : (
+              <p style={{ fontSize: "17px", lineHeight: "1.8", color: "var(--text-secondary)" }}>
+                {category.description ??
+                  `${category.serviceName} covers the work most households need at some point, from routine maintenance to the jobs that cannot wait. What a licence actually permits varies by state or province, which is why every ranking opens with the local rules before it lists a single company.`}
+              </p>
+            )}
             {category.subservices.length > 0 ? (
               <ul style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "22px" }}>
                 {category.subservices.map((sub) => (

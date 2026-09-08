@@ -374,6 +374,9 @@ export async function CmsPage({ slug }: { slug: string }) {
                   </ul>
                 </nav>
               ) : null}
+              {/* An empty box under a heading that says Related is worse than
+                  no box: it reads as something that failed to load. */}
+              {related.length > 0 ? (
               <div style={{ background: "var(--surface-page)", border: "1px solid var(--border-subtle)", borderRadius: "18px", padding: "20px" }}>
                 <h2 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px" }}>
                   Related
@@ -388,6 +391,7 @@ export async function CmsPage({ slug }: { slug: string }) {
                   ))}
                 </ul>
               </div>
+              ) : null}
             </aside>
 
             <div style={{ maxWidth: "780px" }}>

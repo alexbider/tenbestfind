@@ -18,6 +18,7 @@ import { queueEnrichment } from "@/lib/enrich-run";
 import { recomputeCompleteness } from "@/lib/completeness";
 import { parseFilter, orderFor, whereFor } from "@/lib/enrich-filter";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
+import { RANKING_MIN_ENTRIES } from "@/lib/seo-copy";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
 
@@ -771,10 +772,24 @@ export async function setGuideStatus(formData: FormData) {
   revalidatePath("/admin/guides");
 }
 
+/** Whether a ranking has enough published companies on it to go live. */
+async function rankingIsLongEnough(id: string): Promise<boolean> {
+  const entries = await db.rankingEntry.count({
+    where: { rankingId: id, business: { status: "PUBLISHED" } },
+  });
+  return entries >= RANKING_MIN_ENTRIES;
+}
+
 export async function setRankingStatus(formData: FormData) {
   const user = await requireStaff();
   const parsed = statusSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
+
+  // A shortlist of one is not a shortlist. The page renders, the title reads
+  // as nonsense and there is nothing on it to compare, so publishing is held
+  // until there are enough companies to be worth landing on.
+  if (parsed.data.status === "PUBLISHED" && !(await rankingIsLongEnough(parsed.data.id))) return;
+
   const ranking = await db.ranking.update({
     where: { id: parsed.data.id },
     data: {

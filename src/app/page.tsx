@@ -289,16 +289,6 @@ export default async function HomePage() {
 
   return (
     <SiteChrome active="none">
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "TenBestFind",
-          url: absoluteUrl("/"),
-          description:
-            "Independent research into local service companies, published one city and one trade at a time.",
-        }}
-      />
       {faqs.length > 0 ? (
         <JsonLd
           data={{
@@ -593,7 +583,7 @@ export default async function HomePage() {
                         high priority; it is the page's LCP candidate. */}
                     <Media
                       src={hero.city?.heroImage}
-                      alt=""
+                      alt={hero.city ? `${hero.category.name} in ${hero.city.name}` : hero.category.name}
                       tone="dark"
                       priority
                       sizes="(max-width: 760px) 100vw, 420px"
@@ -1058,7 +1048,14 @@ export default async function HomePage() {
                       overflow: "hidden",
                     }}
                   >
-                    <Media src={leadRanking.city?.heroImage} alt="" />
+                    <Media
+                      src={leadRanking.city?.heroImage}
+                      alt={
+                        leadRanking.city
+                          ? `${leadRanking.category.name} in ${leadRanking.city.name}`
+                          : leadRanking.category.name
+                      }
+                    />
                     <span
                       data-badge-ten=""
                       aria-hidden="true"
@@ -1213,7 +1210,10 @@ export default async function HomePage() {
                           minHeight: "124px",
                         }}
                       >
-                        <Media src={ranking.city?.heroImage} alt="" />
+                        <Media
+                          src={ranking.city?.heroImage}
+                          alt={ranking.city ? `${ranking.category.name} in ${ranking.city.name}` : ranking.category.name}
+                        />
                       </span>
                       <span
                         style={{
@@ -1449,7 +1449,12 @@ export default async function HomePage() {
                     data-thumb=""
                     style={{ position: "absolute", inset: "0", background: "#1B2D55", overflow: "hidden" }}
                   >
-                    <Media src={country.heroImage} alt="" tone="dark" sizes="(max-width: 760px) 92vw, 620px" />
+                    <Media
+                      src={country.heroImage}
+                      alt={`Local service companies in ${country.name}`}
+                      tone="dark"
+                      sizes="(max-width: 760px) 92vw, 620px"
+                    />
                   </div>
                   <span
                     aria-hidden="true"
@@ -1756,7 +1761,7 @@ export default async function HomePage() {
                   }}
                 >
                   <div data-thumb="" style={{ height: "250px", background: "var(--surface-sunken)", overflow: "hidden" }}>
-                    <Media src={leadGuide.heroImage} alt="" />
+                    <Media src={leadGuide.heroImage} alt={leadGuide.title} />
                   </div>
                   <div style={{ padding: "28px 28px 30px" }}>
                     <p

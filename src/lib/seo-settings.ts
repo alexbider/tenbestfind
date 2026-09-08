@@ -83,7 +83,7 @@ export const SEO_GROUPS: { id: SeoGroupId; title: string; description: string }[
     id: "sitemap",
     title: "XML sitemap",
     description:
-      "What the generated sitemap contains. /sitemap.xml is an index of one file per kind of page, with company profiles split across as many files as they need, so a crawler can re-read only the part that changed.",
+      "What the generated sitemap contains. /sitemap.xml is an index of one file per kind of page, with company profiles split across as many files as they need, so a crawler can re-read only the part that changed. Everything here is subject to search engine visibility above: with that off the sitemap is deliberately empty.",
   },
   {
     id: "robots",
@@ -329,7 +329,14 @@ export const SEO_FIELDS: SeoField[] = [
   { key: "seo.schema.breadcrumbs", label: "Publish breadcrumb schema", type: "boolean", group: "schema", default: true },
 
   /* sitemap */
-  { key: "seo.sitemapEnabled", label: "Generate the XML sitemap", type: "boolean", group: "sitemap", default: true },
+  {
+    key: "seo.sitemapEnabled",
+    label: "Generate the XML sitemap",
+    type: "boolean",
+    group: "sitemap",
+    default: true,
+    hint: "The sitemap also needs search engine visibility, at the top of this page, to be on. With that off it answers as an empty index however many boxes below are ticked, which reads like a fault rather than a switch.",
+  },
   { key: "seo.sitemap.include.rankings", label: "Include rankings", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.guides", label: "Include guides", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.businesses", label: "Include business profiles", type: "boolean", group: "sitemap", default: true },
@@ -554,11 +561,37 @@ export function renderTemplate(
   const sep = (tokens.sep ?? "|").trim() || "|";
   const escaped = sep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  return filled
+  const rendered = filled
     .replace(/\s+/g, " ")
     .trim()
     // A dropped token can leave a dangling or doubled separator behind.
     .replace(new RegExp(`\\s*${escaped}\\s*(?:${escaped}\\s*)+`, "g"), ` ${sep} `)
     .replace(new RegExp(`^${escaped}\\s*|\\s*${escaped}$`, "g"), "")
     .trim();
+
+  return trimSiteName(rendered, tokens.sitename, sep);
+}
+
+/** Where a title stops being read in full. Not a rule, but the practical width. */
+export const TITLE_LIMIT = 60;
+
+/**
+ * Drops the site name from a title that is already too long.
+ *
+ * Every template ends "%title% %sep% %sitename%", which is right until the page
+ * title is itself sixty characters, at which point the brand is the part that
+ * gets cut off in the result anyway. Losing it deliberately keeps the words
+ * that describe the page; losing it by truncation keeps whichever happened to
+ * fit.
+ */
+export function trimSiteName(title: string, sitename: string | null | undefined, sep: string): string {
+  if (title.length <= TITLE_LIMIT || !sitename) return title;
+
+  const suffix = `${sep} ${sitename}`;
+  if (!title.endsWith(suffix)) return title;
+
+  const trimmed = title.slice(0, -suffix.length).trim();
+  // Only when the rest can stand on its own. A title that is nothing but the
+  // brand keeps the brand.
+  return trimmed.length > 0 ? trimmed : title;
 }

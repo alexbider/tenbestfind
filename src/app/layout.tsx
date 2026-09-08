@@ -26,7 +26,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        {schema.length > 0 ? <JsonLd data={schema} /> : null}
+        {/* One graph, one @context, so the two entities are related to each
+            other rather than sitting beside each other as two islands. */}
+        {schema.length > 0 ? <JsonLd data={{ "@context": "https://schema.org", "@graph": schema }} /> : null}
         {children}
       </body>
     </html>

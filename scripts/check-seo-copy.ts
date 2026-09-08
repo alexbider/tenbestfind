@@ -12,9 +12,12 @@ import {
   rankingCopy,
   regionCopy,
   serviceCopy,
+  nearYou,
   subserviceCopy,
+  tradesPhrase,
 } from "../src/lib/seo-copy";
 import { breadcrumbSchema, companyCrumbs, cityCrumbs, rankingCrumbs } from "../src/lib/breadcrumbs";
+import { renderTemplate, trimSiteName } from "../src/lib/seo-settings";
 
 let failures = 0;
 function check(label: string, actual: unknown, expected: unknown): void {
@@ -65,12 +68,12 @@ check(
     plumbers,
     { businesses: 8, publishedRankings: 2 },
   ).h1,
-  "Emergency Plumbers Near You",
+  "Emergency Plumbers near you",
 );
 check(
   "subservice h1 falls back to the name",
   subserviceCopy({ name: "Drain Cleaning" }, plumbers, { businesses: 8, publishedRankings: 2 }).h1,
-  "Drain Cleaning Near You",
+  "Drain Cleaning near you",
 );
 
 console.log("\nthe Top 10 rule:");
@@ -189,6 +192,57 @@ check(
   "the trade crumb points at the ranking",
   schema.itemListElement[4]!.item,
   "https://tenbestfind.com/us/oh/columbus/plumbers/",
+);
+
+
+
+/* --------------------------------------------------- trades, mid-sentence */
+
+// The bug this replaced put "AC repair is handled by hvac." on 69 pages, so
+// the acronyms are the cases that matter.
+console.log("\ntrades, in the middle of a sentence:");
+for (const [singular, expected] of [
+  ["HVAC company", "HVAC companies"],
+  ["Plumber", "plumbers"],
+  ["Roofing company", "roofing companies"],
+  ["General contractor", "general contractors"],
+  ["Tree service", "tree services"],
+  ["Mason", "masons"],
+  ["Appliance repair company", "appliance repair companies"],
+  ["Locksmith", "locksmiths"],
+] as const) {
+  check(`${singular} -> ${expected}`, tradesPhrase({ singular }), expected);
+}
+
+console.log("\nheadings that carry an acronym:");
+check("AC repair keeps its capitals", nearYou("AC repair"), "AC repair near you");
+check("and an ordinary name is left alone", nearYou("Drain cleaning"), "Drain cleaning near you");
+
+
+
+/* -------------------------------------------------- titles that are too long */
+
+// Thirteen live titles ran past sixty characters because the template appends
+// the site name whatever the page title already costs.
+console.log("\nthe site name, when the title is already long:");
+check(
+  "a long title drops the brand",
+  renderTemplate("%title% %sep% %sitename%", {
+    title: "Best Chimney Services in Saint John's, Newfoundland and Labrador",
+    sitename: "TenBestFind",
+    sep: "|",
+  }),
+  "Best Chimney Services in Saint John's, Newfoundland and Labrador",
+);
+check(
+  "a short one keeps it",
+  renderTemplate("%title% %sep% %sitename%", { title: "Best Plumbers in Austin, TX", sitename: "TenBestFind", sep: "|" }),
+  "Best Plumbers in Austin, TX | TenBestFind",
+);
+check(
+  "and a title that is only the brand keeps it",
+  trimSiteName("TenBestFind", "TenBestFind", "|"),
+  "TenBestFind",
 );
 
 console.log(failures === 0 ? "\nall good" : `\n${failures} wrong`);

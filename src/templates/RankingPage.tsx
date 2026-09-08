@@ -34,6 +34,9 @@ import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { rankingCopy } from "@/lib/seo-copy";
 import { breadcrumbSchema, rankingCrumbs } from "@/lib/breadcrumbs";
+import { graph, listId, pageEntity, personEntity, personFromRow, personRef, rankingListEntity } from "@/lib/schema";
+import { relatedForRanking } from "@/lib/related";
+import { RelatedContent } from "@/components/site/RelatedContent";
 
 const HIRING_STEPS = [
   {
@@ -218,6 +221,15 @@ export async function RankingPage({
   ].slice(0, 12);
 
   const localNotes = parseNotes(ranking.localNotes);
+  const related = await relatedForRanking({
+    rankingId: ranking.id,
+    categoryId: category.id,
+    cityId: city.id,
+    regionId: region.id,
+    countryCode: country.code,
+    cityName: city.name,
+    categoryName: category.name,
+  });
 
   const toc = [
     { href: "#rankings", label: `All ${ranking.entries.length}` },
@@ -233,21 +245,49 @@ export async function RankingPage({
   return (
     <SiteChrome active="rankings">
       <div className="rank-2026">
+      {/* One graph: the page, the list it carries, and the two editors who
+          signed it. A "best of" claim with nobody's name on it is the one thing
+          an engine has no way to weigh, and the names are already on the page. */}
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "ItemList",
-          name: copy.h1,
-          description: copy.description,
-          url: absoluteUrl(path4),
-          numberOfItems: ranking.entries.length,
-          itemListElement: ranking.entries.map((entry, index) => ({
-            "@type": "ListItem",
-            position: index + 1,
-            name: entry.business.name,
-            url: absoluteUrl(routes.business(entry.business.slug)),
-          })),
-        }}
+        data={graph(
+          pageEntity({
+            path: path4,
+            name: copy.h1,
+            description: copy.description,
+            type: "CollectionPage",
+            datePublished: ranking.publishedAt,
+            dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
+            mainEntity: { "@id": listId(path4) },
+            author: ranking.author ? personRef(ranking.author.slug) : null,
+            reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
+          }),
+          rankingListEntity({
+            path: path4,
+            name: copy.h1,
+            description: copy.description,
+            datePublished: ranking.publishedAt,
+            dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
+            businesses: ranking.entries.map((entry) => ({
+              slug: entry.business.slug,
+              name: entry.business.name,
+              website: entry.business.website,
+              phone: entry.business.phone,
+              image: entry.business.logoUrl,
+              addressLine: entry.business.addressLine,
+              postalCode: entry.business.postalCode,
+              cityName: city.name,
+              regionCode: region.code,
+              countryCode: country.code,
+              rating: entry.business.googleRating,
+              reviewCount: entry.business.googleReviewCount,
+            })),
+          }),
+          ranking.author ? personEntity(personFromRow(ranking.author)) : null,
+          // Only once when the same person did both.
+          ranking.reviewer && ranking.reviewer.id !== ranking.author?.id
+            ? personEntity(personFromRow(ranking.reviewer))
+            : null,
+        )}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
@@ -1414,6 +1454,8 @@ export async function RankingPage({
           </div>
         </div>
       </section>
+
+      <RelatedContent groups={related} title="Keep comparing" />
 
       <FinalSearchBand
         heading={`Need a ${category.singular.toLowerCase()} in ${city.name}?`}

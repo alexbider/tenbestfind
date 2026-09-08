@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BusinessCta, CheckList, CrumbBar, FinalSearch, LinkGrid } from "@/components/site/blocks";
+import { BusinessCta, CheckList, CrumbBar, FinalSearch, GuideBody, LinkGrid } from "@/components/site/blocks";
 import { FaqJsonLd, FaqList } from "@/components/site/FaqSection";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SearchForm } from "@/components/site/SearchForm";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { Icon } from "@/components/ui/Icon";
@@ -9,11 +10,15 @@ import { ArrowLink, JsonLd, Section, SectionHead } from "@/components/ui/primiti
 import { monthYear, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
+import { faqsFor } from "@/lib/faqs";
+import { relatedForSubservice } from "@/lib/related";
+import { parseHubBody } from "@/lib/hub-body";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { subserviceCopy, rankingCardTitle } from "@/lib/seo-copy";
+import { subserviceCopy, rankingCardTitle, tradesPhrase } from "@/lib/seo-copy";
 import { breadcrumbSchema, subserviceCrumbs } from "@/lib/breadcrumbs";
+import { graph, pageEntity, serviceEntity, serviceId } from "@/lib/schema";
 
 export async function SubservicePage({
   categorySlug,
@@ -66,11 +71,12 @@ export async function SubservicePage({
     publishedRankings: rankings.length,
   });
   const crumbs = subserviceCrumbs(category, subservice);
+  const body = parseHubBody(subservice.body);
 
-  const faqs = [
+  const generatedFaqs = [
     {
       question: `Who handles ${subservice.name.toLowerCase()}?`,
-      answer: `${subservice.name} is handled by ${category.name.toLowerCase()}. Not every company in the trade takes this work on, so each ranking lists the services a company genuinely performs rather than everything it advertises.`,
+      answer: `${subservice.name} is handled by ${tradesPhrase(category)}. Not every company in the trade takes this work on, so each ranking lists the services a company genuinely performs rather than everything it advertises.`,
     },
     {
       question: `What should I ask before booking ${subservice.name.toLowerCase()}?`,
@@ -84,18 +90,49 @@ export async function SubservicePage({
     },
   ];
 
+  const related = await relatedForSubservice({
+    categoryId: category.id,
+    categorySlug: category.slug,
+    categoryName: category.serviceName,
+    categorySingular: category.singular,
+    subserviceId: subservice.id,
+  });
+
+  const faqs = await faqsFor(
+    "SUBSERVICE",
+    subservice.id,
+    generatedFaqs.map((faq, index) => ({ id: String(index), ...faq })),
+  );
+
   return (
     <SiteChrome active="services">
+      {/* The page is a collection of companies that do this work. The Service
+          beside it names the work itself, which is what a question about the
+          trade is actually asking about. */}
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          // A collection of companies that do this work, which is what the
-          // page is. Service schema described an offer nobody here makes.
-          "@type": "CollectionPage",
-          name: copy.h1,
-          description: copy.description,
-          url: absoluteUrl(routes.subservice(category.slug, subservice.slug)),
-        }}
+        data={graph(
+          pageEntity({
+            path: routes.subservice(category.slug, subservice.slug),
+            name: copy.h1,
+            description: copy.description,
+            type: "CollectionPage",
+            dateModified: subservice.updatedAt,
+            mainEntity: { "@id": serviceId(routes.subservice(category.slug, subservice.slug)) },
+          }),
+          serviceEntity({
+            path: routes.subservice(category.slug, subservice.slug),
+            name: subservice.name,
+            serviceType: subservice.name,
+            description: subservice.description,
+            areaServed: [
+              ...new Set(
+                rankings
+                  .map((ranking) => (ranking.city ? `${ranking.city.name}, ${ranking.city.region.name}` : null))
+                  .filter((place): place is string => Boolean(place)),
+              ),
+            ],
+          }),
+        )}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
@@ -122,7 +159,7 @@ export async function SubservicePage({
           </h1>
           <p className="hero__lead" style={{ maxWidth: 640 }}>
             {subservice.description ??
-              `${subservice.name} is part of the ${category.serviceName.toLowerCase()} trade. Here is who does it, what to check, and where we have published a researched shortlist.`}
+              `${subservice.name} is part of the ${category.serviceName} trade. Here is who does it, what to check, and where we have published a researched shortlist.`}
           </p>
           <div style={{ marginTop: 28, maxWidth: 720 }}>
             <SearchForm
@@ -140,12 +177,20 @@ export async function SubservicePage({
             <h2 id="about-h2" className="h2" style={{ marginBottom: 18, textWrap: "balance" }}>
               What this work involves
             </h2>
-            <p className="lead" style={{ marginBottom: 20 }}>
-              {subservice.description ??
-                `${subservice.name} sits within ${category.serviceName.toLowerCase()}. Scope, pricing and licensing follow the parent trade, so start with the ${category.name.toLowerCase()} research for your city.`}
-            </p>
+            {/* A written body replaces the one-liner rather than joining it.
+                Until somebody writes one the page reads exactly as it did. */}
+            {body.length > 0 ? (
+              <div className="prose" style={{ marginBottom: 20 }}>
+                <GuideBody blocks={body} />
+              </div>
+            ) : (
+              <p className="lead" style={{ marginBottom: 20 }}>
+                {subservice.description ??
+                  `${subservice.name} sits within ${category.serviceName}. Scope, pricing and licensing follow the parent trade, so start with the ${tradesPhrase(category)} research for your city.`}
+              </p>
+            )}
             <ArrowLink href={routes.category(category.slug)}>
-              All {category.name.toLowerCase()} research
+              All {tradesPhrase(category)} research
             </ArrowLink>
           </div>
           <div className="card" style={{ padding: "26px 28px" }}>
@@ -214,7 +259,7 @@ export async function SubservicePage({
 
       {category.subservices.length > 1 ? (
         <Section labelledBy="sib-h2">
-          <SectionHead id="sib-h2" title={`Other ${category.serviceName.toLowerCase()} services`} />
+          <SectionHead id="sib-h2" title={`Other ${category.serviceName} services`} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {category.subservices
               .filter((item) => item.id !== subservice.id)
@@ -259,6 +304,8 @@ export async function SubservicePage({
       <Section tone="page" labelledBy="biz2-h2" ruleBottom={false}>
         <BusinessCta />
       </Section>
+
+      <RelatedContent groups={related} />
 
       <FinalSearch
         title={`Find ${subservice.name.toLowerCase()} near you`}

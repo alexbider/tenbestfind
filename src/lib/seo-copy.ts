@@ -41,6 +41,47 @@ export type PageCopy = {
 
 const brand = (title: string) => `${title} | ${BRAND}`;
 
+/**
+ * The plural of a trade, as it reads in the middle of a sentence.
+ *
+ * `name` on a category is already plural, but only sometimes plural of a
+ * person: "Plumbers" and "Electricians" work, "HVAC", "Roofing" and "Flooring"
+ * do not, and lowercasing them produced "AC repair is handled by hvac". The
+ * singular is always a noun phrase for the people who do the work, so this
+ * pluralises that instead and lowercases only the words that are not acronyms.
+ */
+export function tradesPhrase(category: { singular: string }): string {
+  const plural = category.singular
+    .split(" ")
+    .map((word, index, words) => (index === words.length - 1 ? pluralise(word) : word))
+    .join(" ");
+
+  return plural
+    .split(" ")
+    .map((word) => (isAcronym(word) ? word : word.toLowerCase()))
+    .join(" ");
+}
+
+/** Two or more letters, all capitals: HVAC, AC, GC. Left alone everywhere. */
+const isAcronym = (word: string) => word.length >= 2 && word === word.toUpperCase() && /[A-Z]/.test(word);
+
+function pluralise(word: string): string {
+  if (/y$/i.test(word) && !/[aeiou]y$/i.test(word)) return `${word.slice(0, -1)}ies`;
+  if (/(s|x|z|ch|sh)$/i.test(word)) return `${word}es`;
+  return `${word}s`;
+}
+
+/**
+ * A "near you" heading that does not fight the name in front of it.
+ *
+ * The name is written however the trade writes it, acronyms and all, and the
+ * suffix used to be title case, which produced "AC repair Near You". Sentence
+ * case on the suffix leaves the name alone and reads as one phrase.
+ */
+export function nearYou(term: string): string {
+  return `${term} near you`;
+}
+
 /** "Columbus, OH", the way every page in the site writes a place. */
 export function placeLabel(city: { name: string }, region: { code: string }): string {
   return `${city.name}, ${region.code.toUpperCase()}`;
@@ -173,7 +214,7 @@ export function subserviceCopy(
   counts: { businesses: number; publishedRankings: number },
 ): PageCopy {
   const term = subservice.searchTerm?.trim() || subservice.name;
-  const heading = `${term} Near You`;
+  const heading = nearYou(term);
   const enough = counts.businesses >= SUBSERVICE_MIN_BUSINESSES;
 
   return {
@@ -247,6 +288,36 @@ export function cityCopy(
 
 /** A ranking is a Top 10 only when ten published companies are on it. */
 export const TOP_TEN = 10;
+
+/**
+ * Below this, a ranking is not a shortlist, it is a company with a page.
+ *
+ * The importer used to name whatever it found, which put "1 Best Plumbers in
+ * Minneapolis, MN" on a live URL. Naming the count is the smaller half of the
+ * problem: at one entry the page has nothing to compare, so it is held back
+ * rather than renamed.
+ */
+export const RANKING_MIN_ENTRIES = 5;
+
+/**
+ * What a ranking should be called, given how many companies are really on it.
+ *
+ * The number appears only at a full ten. Anything else is "Best X in Y", which
+ * stays true as entries come and go, and a title that stops churning is worth
+ * more than one that counts.
+ */
+export function rankingTitle(
+  category: Trade,
+  city: { name: string },
+  region: { code: string },
+  publishedEntries: number,
+): string {
+  const service = tradePlural(category);
+  const place = placeLabel(city, region);
+  return publishedEntries === TOP_TEN
+    ? `${TOP_TEN} Best ${service} in ${place}`
+    : `Best ${service} in ${place}`;
+}
 
 /**
  * A city and trade ranking.

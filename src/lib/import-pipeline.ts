@@ -22,6 +22,7 @@ import { recomputeCompleteness } from "./completeness";
 import { openingFingerprint } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
+import { RANKING_MIN_ENTRIES, rankingTitle } from "./seo-copy";
 import { uniqueCompanySlug } from "./company-slug";
 import { stringify } from "./json";
 import { routes } from "./urls";
@@ -1306,7 +1307,11 @@ async function buildRankings(batchId: string): Promise<void> {
     });
     if (businesses.length === 0) continue;
 
-    const title = `${businesses.length} Best ${batch.category.name} in ${city.name}, ${city.region.code.toUpperCase()}`;
+    // The count goes in only at a full ten. A title built from whatever turned
+    // up reads as "1 Best Plumbers in Minneapolis, MN" at the low end and
+    // changes every time an entry is added or dropped, which is churn on a URL
+    // that may already rank.
+    const title = rankingTitle(batch.category, city, city.region, businesses.length);
     const slug = slugify(`${batch.category.slug}-${city.slug}`);
     const summary =
       `${businesses[0].name} leads this list of ${batch.category.name.toLowerCase()} in ${city.name}. ` +
@@ -1339,8 +1344,11 @@ async function buildRankings(batchId: string): Promise<void> {
             methodologyNote:
               "This list was assembled from Google Maps results for the trade and city, then each company was written up from its own public profile. Positions follow Google's order and are not an editorial judgement until an editor reviews them.",
             companiesReviewed: businesses.length,
-            status: "PUBLISHED",
-            publishedAt: new Date(),
+            // A list this short has nothing to compare, so it is created as a
+            // draft and waits for more companies rather than going live as a
+            // shortlist of one.
+            status: businesses.length >= RANKING_MIN_ENTRIES ? "PUBLISHED" : "DRAFT",
+            publishedAt: businesses.length >= RANKING_MIN_ENTRIES ? new Date() : null,
             lastReviewedAt: new Date(),
           },
         });

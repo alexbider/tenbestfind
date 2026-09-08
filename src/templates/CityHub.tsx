@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GuideBody } from "@/components/site/blocks";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { InfoModal } from "@/components/site/InfoModal";
@@ -30,6 +32,9 @@ import { parseJson, type ConditionRow } from "@/lib/json";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { regionNoun } from "@/lib/regions";
+import { faqsFor } from "@/lib/faqs";
+import { parseHubBody } from "@/lib/hub-body";
+import { relatedForCity } from "@/lib/related";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { cityCopy, rankingCardTitle } from "@/lib/seo-copy";
@@ -135,8 +140,9 @@ export async function CityHub({
   // page cannot promise one thing in the tab and another on the page.
   const copy = cityCopy(city, region, { publishedRankings: rankings.length });
   const crumbs = cityCrumbs(country, region, city);
+  const body = parseHubBody(city.body);
 
-  const faqs = [
+  const generatedFaqs = [
     {
       question: `How do you decide which ${city.name} companies make a list?`,
       answer: `We start with every company that genuinely serves ${city.name}, then check licensing or registration with the issuing authority, years working in the market, the range of work actually performed, and patterns in public feedback. The criteria for each trade are published on the ranking itself.`,
@@ -195,6 +201,20 @@ export async function CityHub({
 
   const icon = (key: string | null | undefined): IconName => (key && hasIcon(key) ? (key as IconName) : "house");
 
+  const related = await relatedForCity({
+    cityId: city.id,
+    regionId: region.id,
+    regionSlug: region.slug,
+    countryCode: country.code,
+    cityName: city.name,
+  });
+
+  const faqs = await faqsFor(
+    "CITY",
+    city.id,
+    generatedFaqs.map((faq, index) => ({ id: String(index), ...faq })),
+  );
+
   return (
     <SiteChrome active="locations">
       <JsonLd
@@ -207,7 +227,7 @@ export async function CityHub({
         }}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
-      <FaqJsonLd faqs={faqs.map((faq, index) => ({ id: String(index), ...faq }))} />
+      <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
       <section style={GRID_BACKDROP}>
@@ -470,6 +490,20 @@ export async function CityHub({
           </dl>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ about */}
+      {body.length > 0 ? (
+        <section id="about" aria-labelledby="about-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={{ ...SHELL, padding: "64px 24px" }}>
+            <h2 id="about-h2" style={{ ...H2, marginBottom: "22px", textWrap: "balance" }}>
+              Hiring in {city.name}
+            </h2>
+            <div className="prose" style={{ maxWidth: "760px" }}>
+              <GuideBody blocks={body} />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* --------------------------------------------------------- services */}
       <section id="services" aria-labelledby="svc-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
@@ -1093,6 +1127,8 @@ export async function CityHub({
           </div>
         </div>
       </section>
+
+      <RelatedContent groups={related} title={`More around ${city.name}`} />
 
       <FinalSearchBand heading={`Find the right local service in ${city.name}`} />
     </SiteChrome>

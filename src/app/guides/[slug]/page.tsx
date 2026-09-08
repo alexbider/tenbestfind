@@ -28,6 +28,7 @@ import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
 import { breadcrumbSchema } from "@/lib/breadcrumbs";
+import { personId } from "@/lib/schema";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
@@ -199,8 +200,12 @@ export default async function GuidePage({ params }: Props) {
     return total + text.split(/\s+/).filter(Boolean).length;
   }, 0);
 
+  // The @id is the point: it resolves to the Person defined on that editor's
+  // own page, so a byline here and a byline on a ranking are the same person
+  // rather than two people who happen to share a name.
   const personNode = (person: { name: string; slug: string; role: string | null }) => ({
     "@type": "Person",
+    "@id": personId(person.slug),
     name: person.name,
     url: absoluteUrl(routes.expert(person.slug)),
     ...(person.role ? { jobTitle: person.role } : {}),

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GuideBody } from "@/components/site/blocks";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { SiteChrome } from "@/components/site/SiteChrome";
@@ -22,6 +24,9 @@ import { compactNumber, fullDate, monthYear, priceRange, shortMonthYear } from "
 import { hasIcon } from "@/lib/icon-paths";
 import { parseJson, type ConditionRow, type LicensingRow } from "@/lib/json";
 import { db } from "@/lib/db";
+import { faqsFor } from "@/lib/faqs";
+import { parseHubBody } from "@/lib/hub-body";
+import { relatedForRegion } from "@/lib/related";
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
@@ -122,6 +127,7 @@ export async function RegionHub({
 
   const copy = regionCopy(region, { publishedRankings: allRankings.length });
   const crumbs = regionCrumbs(country, region);
+  const body = parseHubBody(region.body);
 
   const licensing = parseJson<LicensingRow[]>(region.licensing, []);
   const conditions = parseJson<ConditionRow[]>(region.conditions, []);
@@ -149,7 +155,7 @@ export async function RegionHub({
 
   const lastReviewed = rankings[0]?.lastReviewedAt ?? rankings[0]?.publishedAt ?? null;
 
-  const faqs = [
+  const generatedFaqs = [
     {
       id: "coverage",
       question: `How does TenBestFind choose which ${region.name} cities to cover?`,
@@ -217,6 +223,14 @@ export async function RegionHub({
       at is published beside it.
     </InfoModal>
   );
+
+  const related = await relatedForRegion({
+    regionId: region.id,
+    countryId: country.id,
+    countryCode: country.code,
+  });
+
+  const faqs = await faqsFor("REGION", region.id, generatedFaqs);
 
   return (
     <SiteChrome active="locations">
@@ -426,6 +440,23 @@ export async function RegionHub({
           </ul>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ about */}
+      {/* Twenty-nine of these hubs ran three-quarters identical to each other,
+          which is what happens when a page has one line and a list. A written
+          body is the difference between a state page and a template. */}
+      {body.length > 0 ? (
+        <section id="about" aria-labelledby="about-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={SECTION}>
+            <h2 id="about-h2" style={{ ...SECTION_H2, marginBottom: "22px", textWrap: "balance" }}>
+              Hiring in {region.name}
+            </h2>
+            <div className="prose" style={{ maxWidth: "760px" }}>
+              <GuideBody blocks={body} />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* ----------------------------------------------------------- cities */}
       <section id="cities" aria-labelledby="ci-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
@@ -1196,6 +1227,8 @@ export async function RegionHub({
           </div>
         </div>
       </section>
+
+      <RelatedContent groups={related} title={`More in ${region.name}`} />
 
       <FinalSearchBand
         heading={`Find the right local pro in ${region.name}`}

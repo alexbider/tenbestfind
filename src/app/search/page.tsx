@@ -11,7 +11,7 @@ import { parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { rankingCardSelect } from "@/lib/queries";
 import { loadSeoSettings } from "@/lib/seo-settings";
-import { rankingUrl, routes } from "@/lib/urls";
+import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { rankingCardTitle } from "@/lib/seo-copy";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Search",
     description: "Search researched rankings, business profiles and guides.",
     robots: { index: indexable, follow: true },
+    // Its own address, without the query. Inheriting the layout's canonical
+    // made every search claim to be the homepage, which is a worse thing to
+    // say than nothing at all.
+    alternates: { canonical: absoluteUrl(routes.search()) },
   };
 }
 

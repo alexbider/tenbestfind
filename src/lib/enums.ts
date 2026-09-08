@@ -5,6 +5,29 @@
 export const CONTENT_STATUSES = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"] as const;
 export type ContentStatus = (typeof CONTENT_STATUSES)[number];
 
+/**
+ * What a question can be attached to.
+ *
+ * GLOBAL is the fallback pool every page draws on when it has nothing of its
+ * own. The rest attach to one record, and each one names the column that holds
+ * the link, so a scope cannot be added without saying where it is stored.
+ */
+export const FAQ_SCOPE_FIELDS = {
+  RANKING: "rankingId",
+  GUIDE: "guideId",
+  COUNTRY: "countryId",
+  PAGE: "pageId",
+  BUSINESS: "businessId",
+  CATEGORY: "categoryId",
+  SUBSERVICE: "subserviceId",
+  REGION: "regionId",
+  CITY: "cityId",
+} as const;
+
+export type FaqAttachment = keyof typeof FAQ_SCOPE_FIELDS;
+export const FAQ_SCOPES = ["GLOBAL", ...(Object.keys(FAQ_SCOPE_FIELDS) as FaqAttachment[])] as const;
+export type FaqScope = (typeof FAQ_SCOPES)[number];
+
 export const BUSINESS_STATUSES = [
   "DRAFT",
   "PENDING",

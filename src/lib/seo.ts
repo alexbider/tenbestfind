@@ -193,15 +193,24 @@ export async function globalMetadata(): Promise<Metadata> {
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
     title: { default: homeTitle, template: `%s ${sep} ${siteName}` },
     description,
-    alternates: { canonical: absoluteUrl("/") },
+    // No canonical here. This block is the root layout's, so anything set on it
+    // becomes the default for every page under it, and a page that forgot to
+    // set its own was quietly claiming to be the homepage. The homepage sets
+    // its own; a page with none is better off with none.
     robots: robotsFor(settings, null),
     ...(google ? { verification: { google } } : {}),
     ...(Object.keys(other).length > 0 ? { other } : {}),
     openGraph: {
       siteName,
       type: "website",
+      // The homepage inherits this block and had no og:url at all, which every
+      // other page gets from its canonical. A share card with no URL on it is
+      // the one page on the site a crawler cannot place.
+      url: absoluteUrl("/"),
+      title: homeTitle,
+      description,
       locale: settings.text("seo.social.ogLocale") || undefined,
-      images: image ? [image] : undefined,
+      images: image ? [absoluteUrl(image)] : undefined,
     },
     twitter: {
       card: (settings.text("seo.social.twitterCard") || "summary_large_image") as
@@ -215,10 +224,16 @@ export async function globalMetadata(): Promise<Metadata> {
 /**
  * The publisher entity and, optionally, the sitelinks search box. Rendered once
  * in the root layout so every page carries the same knowledge-graph node.
+ *
+ * Not gated on the site-wide visibility switch, and that is deliberate. Schema
+ * describes what a page is; it does not ask to be indexed, and robots and the
+ * canonical tag say that separately. Withholding it while the switch is off
+ * left every reference to #website and #publisher pointing at nothing, on a
+ * site whose company profiles emit both on every page, which is worse than
+ * either publishing it or not referencing it.
  */
 export async function publisherSchema(): Promise<Record<string, unknown>[]> {
   const settings = await loadSeoSettings();
-  if (!settings.bool("seo.searchEngineVisible")) return [];
 
   const siteName = settings.text("seo.siteName") || FALLBACK_SITE_NAME;
   const name = settings.text("seo.schema.name") || siteName;
@@ -237,7 +252,6 @@ export async function publisherSchema(): Promise<Record<string, unknown>[]> {
   if (country) address.addressCountry = country;
 
   const publisher: Record<string, unknown> = {
-    "@context": "https://schema.org",
     "@type": settings.text("seo.schema.type") || "Organization",
     "@id": id,
     name,
@@ -250,25 +264,32 @@ export async function publisherSchema(): Promise<Record<string, unknown>[]> {
   const phone = settings.text("seo.schema.phone");
   const founded = settings.text("seo.schema.foundingDate");
   const sameAs = settings.list("seo.schema.sameAs");
+  const description = settings.text("seo.homeDescription") || settings.text("seo.defaultDescription");
 
+  // Every one of these is optional and most are empty until somebody fills them
+  // in under Global SEO. A property with no value is left out rather than
+  // emitted blank, because an empty string is a claim that the answer is
+  // nothing rather than that nobody has said.
   if (legalName) publisher.legalName = legalName;
   if (logo) publisher.logo = { "@type": "ImageObject", url: absoluteUrl(logo) };
   if (email) publisher.email = email;
   if (phone) publisher.telephone = phone;
   if (founded) publisher.foundingDate = founded;
+  if (description) publisher.description = description;
   if (Object.keys(address).length > 0) publisher.address = { "@type": "PostalAddress", ...address };
   if (sameAs.length > 0) publisher.sameAs = sameAs;
 
   const graph: Record<string, unknown>[] = [publisher];
 
   const website: Record<string, unknown> = {
-    "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": absoluteUrl("/#website"),
     name: siteName,
     url: absoluteUrl("/"),
     publisher: { "@id": id },
+    inLanguage: (settings.text("seo.social.ogLocale") || "en_US").replace("_", "-"),
   };
+  if (description) website.description = description;
 
   if (settings.bool("seo.schema.searchbox")) {
     website.potentialAction = {
@@ -333,6 +354,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       return fromCopy(copy, "country", country.id, {
         path,
         image: country.heroImage,
+        modifiedAt: country.updatedAt,
         tokens: { country: country.name },
         indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
@@ -351,6 +373,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       return fromCopy(copy, "region", region.id, {
         path,
         image: region.heroImage,
+        modifiedAt: region.updatedAt,
         tokens: { region: region.name, country: country.name },
         indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
@@ -371,6 +394,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       return fromCopy(copy, "city", city.id, {
         path,
         image: city.heroImage,
+        modifiedAt: city.updatedAt,
         tokens: { city: city.name, region: region.name, country: country.name },
         indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
@@ -416,6 +440,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       const copy = serviceCopy(category, { publishedRankings: published });
       return fromCopy(copy, "category", category.id, {
         path,
+        modifiedAt: category.updatedAt,
         tokens: { category: category.name },
         indexable: copy.indexable || !(await emptyArchivesHidden()),
       });
@@ -434,6 +459,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       const copy = subserviceCopy(subservice, category, { businesses, publishedRankings });
       return fromCopy(copy, "subservice", subservice.id, {
         path,
+        modifiedAt: subservice.updatedAt,
         tokens: { category: category.name, subservice: subservice.name },
         indexable: copy.indexable,
       });

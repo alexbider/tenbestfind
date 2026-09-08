@@ -16,6 +16,7 @@ import {
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
+import { graph, pageEntity, personEntity, personFromRow, personId } from "@/lib/schema";
 import { fullDate, monthYear, shortMonthYear } from "@/lib/format";
 import { parseJson, parseList, type LinkRow } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -257,17 +258,21 @@ export default async function ExpertProfilePage({ params }: Props) {
 
   return (
     <SiteChrome active="trust">
+      {/* The Person here is the definition; every ranking and guide this
+          person signed points back at this @id rather than repeating a name. */}
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Person",
-          name: person.name,
-          jobTitle: person.role,
-          description: person.bio,
-          url: absoluteUrl(routes.expert(person.slug)),
-          knowsAbout: specializations,
-          worksFor: { "@type": "Organization", name: "TenBestFind" },
-        }}
+        data={graph(
+          pageEntity({
+            path: routes.expert(person.slug),
+            name: person.name,
+            description: person.bio,
+            type: "ProfilePage",
+            dateModified: person.updatedAt,
+            image: person.portrait,
+            mainEntity: { "@id": personId(person.slug) },
+          }),
+          personEntity(personFromRow(person)),
+        )}
       />
       <FaqJsonLd faqs={faqs.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }))} />
 

@@ -48,6 +48,10 @@ model Region {
   slug       String
   countryId  String
   blurb      String?
+  /// Real content, as the same block array a guide uses. Absent, the hub falls
+  /// back to the blurb as it always did. This is what keeps twenty-nine state
+  /// pages from reading as the same page with the name swapped.
+  body       String?
   heroImage  String?
   groupName  String? // header mega menu grouping: Northeast, South, Central, ...
   // Trade licensing notes rendered on the region hub, as JSON:
@@ -65,6 +69,7 @@ model Region {
 
   country    Country     @relation(fields: [countryId], references: [id], onDelete: Cascade)
   cities     City[]
+  faqs       Faq[]
   rankings   Ranking[]
   guides     Guide[]
   guideJobs  GuideJob[]
@@ -84,6 +89,9 @@ model City {
   longitude     Float?
   population    Int?
   blurb         String?
+  /// Real content, as the same block array a guide uses. Absent, the hub falls
+  /// back to the blurb.
+  body          String?
   heroImage     String?
   // Local market conditions rendered on the city hub, as JSON:
   // [{ title, body, iconKey }]
@@ -98,6 +106,7 @@ model City {
 
   region       Region               @relation(fields: [regionId], references: [id], onDelete: Cascade)
   businesses   Business[]
+  faqs         Faq[]
   rankings     Ranking[]
   serviceAreas BusinessArea[]
   placements   SponsoredPlacement[]
@@ -128,6 +137,11 @@ model Category {
   iconKey     String   @default("wrench")
   tagline     String? // "Repairs · Drains · Water heaters"
   description String?
+  /// Real content, as the same block array a guide uses: [{ kind, ...props }].
+  /// The one-line description is a label; this is the page. Absent, the page
+  /// falls back to the description as it always did, so nothing breaks by
+  /// being empty. Written through the connector as often as by hand.
+  body        String?
   groupName   String? // editorial band on the services index
   navGroup    String? // header mega menu column, null keeps it out of the menu
   navOrder    Int      @default(0)
@@ -140,6 +154,7 @@ model Category {
   updatedAt   DateTime @updatedAt
 
   subservices   Subservice[]
+  faqs          Faq[]
   importBatches ImportBatch[]
   businesses    Business[]
   rankings      Ranking[]
@@ -162,6 +177,11 @@ model Subservice {
   /// falls back to the name, which is right more often than not.
   searchTerm  String?
   description String?
+  /// Real content, as the same block array a guide uses: [{ kind, ...props }].
+  /// The one-line description is a label; this is the page. Absent, the page
+  /// falls back to the description as it always did, so nothing breaks by
+  /// being empty. Written through the connector as often as by hand.
+  body        String?
   iconKey     String?
   trending    Boolean  @default(false)
   sortOrder   Int      @default(0)
@@ -170,6 +190,7 @@ model Subservice {
 
   category Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   offered  BusinessService[]
+  faqs     Faq[]
 
   @@unique([categoryId, slug])
 }
@@ -714,22 +735,40 @@ model Faq {
   id         String  @id @default(cuid())
   question   String
   answer     String
-  scope      String  @default("GLOBAL") // GLOBAL | RANKING | GUIDE | COUNTRY | PAGE | BUSINESS
-  rankingId  String?
-  guideId    String?
-  countryId  String?
-  pageId     String?
-  businessId String?
-  sortOrder  Int     @default(0)
+  /// GLOBAL | RANKING | GUIDE | COUNTRY | PAGE | BUSINESS | CATEGORY |
+  /// SUBSERVICE | REGION | CITY
+  ///
+  /// The last four were missing, which is why a service, subservice, state or
+  /// city page had no way to carry a real question and fell back to text
+  /// generated from its own name.
+  scope        String  @default("GLOBAL")
+  rankingId    String?
+  guideId      String?
+  countryId    String?
+  pageId       String?
+  businessId   String?
+  categoryId   String?
+  subserviceId String?
+  regionId     String?
+  cityId       String?
+  sortOrder    Int     @default(0)
 
-  ranking  Ranking?  @relation(fields: [rankingId], references: [id], onDelete: Cascade)
-  guide    Guide?    @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  country  Country?  @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  page     Page?     @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ranking    Ranking?    @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  guide      Guide?      @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  country    Country?    @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  page       Page?       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  business   Business?   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subservice Subservice? @relation(fields: [subserviceId], references: [id], onDelete: Cascade)
+  region     Region?     @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  city       City?       @relation(fields: [cityId], references: [id], onDelete: Cascade)
 
   @@index([scope, sortOrder])
   @@index([businessId, sortOrder])
+  @@index([categoryId, sortOrder])
+  @@index([subserviceId, sortOrder])
+  @@index([regionId, sortOrder])
+  @@index([cityId, sortOrder])
 }
 
 // ---------------------------------------------------------------- CMS

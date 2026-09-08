@@ -1,6 +1,8 @@
 import { db } from "../db";
 import { recordMove } from "../redirects";
 import { slugify } from "../format";
+import { parseHubBody, vetHubBody } from "../hub-body";
+import { stringify } from "../json";
 import { routes } from "../urls";
 import {
   arr,
@@ -36,7 +38,12 @@ export const TAXONOMY_TOOLS: Tool[] = [
         singular: str("For example Plumber."),
         serviceName: str("The trade, used in searches and titles. For example Plumbing."),
         slug: str("URL slug."),
-        description: str("What this service covers."),
+        description: str("One line: what this service covers. The label, not the page."),
+        body: {
+          type: "array",
+          description: "Real content for this page, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. Left unset, the page keeps showing its one-line description.",
+          items: { type: "object", additionalProperties: true },
+        },
         iconKey: str("Icon name from the design system."),
         navOrder: int("Order in the navigation."),
         sortOrder: int("Order in listings."),
@@ -52,6 +59,11 @@ export const TAXONOMY_TOOLS: Tool[] = [
             name: { type: "string" },
             slug: { type: "string" },
             description: { type: "string" },
+            body: {
+              type: "array",
+              description: "The subservice page's own content, same block shape as the service body.",
+              items: { type: "object", additionalProperties: true },
+            },
             trending: { type: "boolean" },
           },
         }),
@@ -73,6 +85,17 @@ export const TAXONOMY_TOOLS: Tool[] = [
         wide: "bool",
         published: "bool",
       });
+
+      // Links are checked before the body is stored, the same way a guide's
+      // are, so a path that is not a page on this site never renders.
+      const dropped: string[] = [];
+      if (args.body !== undefined) {
+        const vetted = await vetHubBody(parseHubBody(stringify(args.body)));
+        data.body = vetted.blocks.length > 0 ? stringify(vetted.blocks) : null;
+        if (vetted.dropped > 0) {
+          dropped.push(`${vetted.dropped} link${vetted.dropped === 1 ? "" : "s"} removed from the service body`);
+        }
+      }
 
       let category;
       if (!id) {
@@ -112,10 +135,18 @@ export const TAXONOMY_TOOLS: Tool[] = [
           const slug = slugify(row.slug ? String(row.slug) : name);
           const match = existing.find((entry) => entry.slug === slug);
 
+          const vetted = row.body !== undefined
+            ? await vetHubBody(parseHubBody(stringify(row.body)))
+            : null;
+          if (vetted && vetted.dropped > 0) {
+            dropped.push(`${vetted.dropped} removed from ${name}`);
+          }
+
           const payload = {
             name,
             slug,
             description: row.description ? String(row.description) : null,
+            ...(vetted ? { body: vetted.blocks.length > 0 ? stringify(vetted.blocks) : null } : {}),
             trending: row.trending === true,
             sortOrder: index,
             categoryId: category.id,
@@ -142,7 +173,14 @@ export const TAXONOMY_TOOLS: Tool[] = [
         summary: `service ${category.name}`,
         paths: ["/", routes.servicesIndex(), routes.category(category.slug)],
       });
-      return { id: category.id, slug: category.slug, url: routes.category(category.slug) };
+      return {
+        id: category.id,
+        slug: category.slug,
+        url: routes.category(category.slug),
+        // Said out loud rather than dropped quietly, so the same dead link is
+        // not written again next time.
+        ...(dropped.length > 0 ? { linksRemoved: dropped } : {}),
+      };
     },
   },
 
@@ -160,7 +198,13 @@ export const TAXONOMY_TOOLS: Tool[] = [
         slug: str("URL slug."),
         code: str("Country: the two-letter code such as us. Region: the state or province code such as tx."),
         parentId: str("Region: the country id. City: the region id."),
-        blurb: str("Short description shown on the hub."),
+        blurb: str("One line under the heading on the hub. The label, not the page."),
+        body: {
+          type: "array",
+          description:
+            "Real content for a region or city hub, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. This is what stops twenty-nine state hubs reading as the same page with the name swapped.",
+          items: { type: "object", additionalProperties: true },
+        },
         heroImage: str("Image URL."),
         currency: str("Country only, for example USD."),
         regionLabel: str("Country only, what a region is called there. For example State or Province."),
@@ -173,6 +217,18 @@ export const TAXONOMY_TOOLS: Tool[] = [
     handler: async (args, ctx) => {
       const kind = reqStr(args, "kind").toLowerCase();
       const id = optStr(args, "id");
+
+      // Region and city hubs take a body; a country hub does not, because it is
+      // an index of states rather than a page about a place.
+      const removed: string[] = [];
+      const bodyFor = async () => {
+        if (args.body === undefined) return {};
+        const vetted = await vetHubBody(parseHubBody(stringify(args.body)));
+        if (vetted.dropped > 0) {
+          removed.push(`${vetted.dropped} link${vetted.dropped === 1 ? "" : "s"} pointed at a page that does not exist`);
+        }
+        return { body: vetted.blocks.length > 0 ? stringify(vetted.blocks) : null };
+      };
 
       if (kind === "country") {
         const data = patch(args, {
@@ -213,6 +269,7 @@ export const TAXONOMY_TOOLS: Tool[] = [
           published: "bool",
         });
         if (args.code !== undefined) data.code = String(args.code).toLowerCase();
+        Object.assign(data, await bodyFor());
 
         if (!id) {
           const countryId = reqStr(args, "parentId");
@@ -229,7 +286,7 @@ export const TAXONOMY_TOOLS: Tool[] = [
             },
           });
           await recordWrite(ctx, { action: "create", entityType: "region", entityId: row.id, summary: row.name });
-          return { id: row.id, url: routes.region(country.code, row.slug) };
+          return { id: row.id, url: routes.region(country.code, row.slug), ...(removed.length > 0 ? { linksRemoved: removed } : {}) };
         }
 
         const existing = await db.region.findUnique({ where: { id }, include: { country: true } });
@@ -241,7 +298,11 @@ export const TAXONOMY_TOOLS: Tool[] = [
           routes.region(existing.country.code, row.slug),
         );
         await recordWrite(ctx, { action: "update", entityType: "region", entityId: row.id, summary: row.name });
-        return { id: row.id, url: routes.region(existing.country.code, row.slug) };
+        return {
+          id: row.id,
+          url: routes.region(existing.country.code, row.slug),
+          ...(removed.length > 0 ? { linksRemoved: removed } : {}),
+        };
       }
 
       if (kind === "city") {
@@ -253,6 +314,7 @@ export const TAXONOMY_TOOLS: Tool[] = [
           sortOrder: "int",
           published: "bool",
         });
+        Object.assign(data, await bodyFor());
 
         if (!id) {
           const regionId = reqStr(args, "parentId");
@@ -263,7 +325,11 @@ export const TAXONOMY_TOOLS: Tool[] = [
             data: { name, slug: slugify(optStr(args, "slug") ?? name), regionId, ...data },
           });
           await recordWrite(ctx, { action: "create", entityType: "city", entityId: row.id, summary: row.name });
-          return { id: row.id, url: routes.city(region.country.code, region.slug, row.slug) };
+          return {
+            id: row.id,
+            url: routes.city(region.country.code, region.slug, row.slug),
+            ...(removed.length > 0 ? { linksRemoved: removed } : {}),
+          };
         }
 
         const existing = await db.city.findUnique({
@@ -279,7 +345,11 @@ export const TAXONOMY_TOOLS: Tool[] = [
           routes.city(code, existing.region.slug, row.slug),
         );
         await recordWrite(ctx, { action: "update", entityType: "city", entityId: row.id, summary: row.name });
-        return { id: row.id, url: routes.city(code, existing.region.slug, row.slug) };
+        return {
+          id: row.id,
+          url: routes.city(code, existing.region.slug, row.slug),
+          ...(removed.length > 0 ? { linksRemoved: removed } : {}),
+        };
       }
 
       throw new ToolError("kind must be country, region or city.");

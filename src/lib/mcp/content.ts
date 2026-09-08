@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { GUIDE_TYPES } from "../enums";
+import { FAQ_SCOPE_FIELDS, FAQ_SCOPES, GUIDE_TYPES } from "../enums";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseJson, parseList } from "../json";
@@ -551,13 +551,13 @@ export const CONTENT_TOOLS: Tool[] = [
     title: "List questions",
     description: "The FAQ entries, filtered by what they are attached to.",
     schema: object({
-      scope: str("GLOBAL, RANKING, GUIDE, COUNTRY, PAGE or BUSINESS."),
+      scope: str(`One of ${FAQ_SCOPES.join(", ")}.`),
       parentId: str("The id of the thing they hang off, when the scope is not GLOBAL."),
       limit: int("Default 50."),
     }),
     handler: async (args) => {
       const scope = args.scope
-        ? oneOf(String(args.scope), ["GLOBAL", "RANKING", "GUIDE", "COUNTRY", "PAGE", "BUSINESS"], "scope")
+        ? oneOf(String(args.scope), FAQ_SCOPES, "scope")
         : undefined;
       const parentId = optStr(args, "parentId");
 
@@ -566,13 +566,10 @@ export const CONTENT_TOOLS: Tool[] = [
           ...(scope ? { scope } : {}),
           ...(parentId
             ? {
-                OR: [
-                  { rankingId: parentId },
-                  { guideId: parentId },
-                  { countryId: parentId },
-                  { pageId: parentId },
-                  { businessId: parentId },
-                ],
+                // Whichever column holds it. Built from the same map the writer
+                // uses, so a new scope cannot be searchable in one and not the
+                // other.
+                OR: Object.values(FAQ_SCOPE_FIELDS).map((field) => ({ [field]: parentId })),
               }
             : {}),
         },
@@ -603,7 +600,9 @@ export const CONTENT_TOOLS: Tool[] = [
         id: str("Omit to create."),
         question: str("The question as a person would type it."),
         answer: str("Answer first, then the detail."),
-        scope: str("GLOBAL, RANKING, GUIDE, COUNTRY, PAGE or BUSINESS."),
+        scope: str(
+          "GLOBAL, RANKING, GUIDE, COUNTRY, PAGE, BUSINESS, CATEGORY, SUBSERVICE, REGION or CITY. A page with no question of its own falls back to text generated from its name, so a real one is always better.",
+        ),
         parentId: str("The id it attaches to, required unless the scope is GLOBAL."),
         sortOrder: int("Where it sits in the list."),
       },
@@ -611,19 +610,17 @@ export const CONTENT_TOOLS: Tool[] = [
     ),
     handler: async (args, ctx) => {
       const id = optStr(args, "id");
-      const scope = args.scope
-        ? oneOf(String(args.scope), ["GLOBAL", "RANKING", "GUIDE", "COUNTRY", "PAGE", "BUSINESS"], "scope")
-        : undefined;
+      const scope = args.scope ? oneOf(String(args.scope), FAQ_SCOPES, "scope") : undefined;
       const parentId = optStr(args, "parentId");
 
+      // Every foreign key is written, the unused ones as null, so moving a
+      // question from one scope to another cannot leave it attached to both.
       const link: Record<string, string | null> = {};
       if (scope) {
         if (scope !== "GLOBAL" && !parentId) throw new ToolError(`A ${scope} question needs a parentId.`);
-        link.rankingId = scope === "RANKING" ? parentId! : null;
-        link.guideId = scope === "GUIDE" ? parentId! : null;
-        link.countryId = scope === "COUNTRY" ? parentId! : null;
-        link.pageId = scope === "PAGE" ? parentId! : null;
-        link.businessId = scope === "BUSINESS" ? parentId! : null;
+        for (const [name, field] of Object.entries(FAQ_SCOPE_FIELDS)) {
+          link[field] = scope === name ? parentId! : null;
+        }
       }
 
       const data = {
