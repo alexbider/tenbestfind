@@ -144,7 +144,6 @@ model Category {
   businesses    Business[]
   rankings      Ranking[]
   guides        Guide[]
-  posts         Post[]
   placements    SponsoredPlacement[]
   guideJobs     GuideJob[]
   topicIdeas    TopicIdea[]
@@ -590,7 +589,6 @@ model Person {
   reviewedRankings Ranking[]          @relation("RankingReviewer")
   authoredGuides   Guide[]            @relation("GuideAuthor")
   reviewedGuides   Guide[]            @relation("GuideReviewer")
-  posts            Post[]
 
   @@index([published])
 }
@@ -761,25 +759,6 @@ model Page {
   @@index([status])
 }
 
-model Post {
-  id          String    @id @default(cuid())
-  title       String
-  slug        String    @unique
-  excerpt     String?
-  body        String?
-  heroImage   String?
-  categoryId  String?
-  authorId    String?
-  status      String    @default("DRAFT") // DRAFT | REVIEW | PUBLISHED | ARCHIVED
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  category Category? @relation(fields: [categoryId], references: [id])
-  author   Person?   @relation(fields: [authorId], references: [id])
-
-  @@index([status, publishedAt])
-}
 
 // Rank Math style per-entity SEO record. entityType is one of the CMS model
 // names; entityId is that row's id.
@@ -1502,8 +1481,15 @@ model PromptTemplate {
 /// again.
 model GuideJob {
   id        String  @id @default(cuid())
-  /// QUEUED | RESEARCHING | WRITING | POLISHING | READY | PUBLISHED | FAILED | CANCELLED
-  status    String  @default("QUEUED")
+  /// PLANNED | RESEARCHING | BRIEFED | WRITING | DRAFTED | PUBLISHED | FAILED | CANCELLED
+  ///
+  /// The guide itself is written by Claude over MCP rather than by this
+  /// application, so these are the states of a piece of work rather than the
+  /// steps of a pipeline. What this side still does is buy the research, hold
+  /// the brief, record what happened and turn an accepted draft into a page.
+  /// BRIEFED is the one that matters: it means everything a writer needs is on
+  /// file and nobody has picked it up.
+  status    String  @default("PLANNED")
   topic     String
   /// The phrase this guide should rank for.
   keyword   String?
@@ -1535,12 +1521,15 @@ model GuideJob {
   error         String?
   hint          String?
   attempts      Int     @default(0)
-  inputTokens   Int     @default(0)
-  outputTokens  Int     @default(0)
   researchCalls Int     @default(0)
 
-  /// What the second pass said still read as machine writing, as JSON.
-  tells String?
+  /// Who is writing it, as the connector name the MCP token belongs to. Set
+  /// when the work is claimed and left in place afterwards, so the tracker can
+  /// still say who wrote a guide months later.
+  writer String?
+  /// What the writer said about the draft it handed over: the notes a person
+  /// reviewing it should read first. Free text, from the submission.
+  notes  String?
 
   /// Nothing is picked up before this. Left empty means as soon as the worker
   /// gets to it; set, it is a commission with a date on it.
@@ -1563,9 +1552,34 @@ model GuideJob {
   rewriteOf Guide?          @relation("GuideRewrite", fields: [rewriteOfId], references: [id])
 
   topicIdeas TopicIdea[]
+  events     GuideJobEvent[]
 
   @@index([status, createdAt])
   @@index([status, scheduledFor])
+}
+
+/// One line in a commission's history.
+///
+/// The point of the tracker is that somebody can open a commission and read
+/// what has happened to it without reconstructing it from timestamps: who
+/// picked it up, what they asked for, what came back, where it stalled. Every
+/// status change writes one of these, and a writer can add its own notes as it
+/// goes, so a guide that takes an afternoon reads as an afternoon of work
+/// rather than a row that silently changed colour.
+model GuideJobEvent {
+  id     String @id @default(cuid())
+  jobId  String
+  /// The name of whoever did it: a connector, a staff email, or "system".
+  actor  String
+  /// The status the commission was in after this happened.
+  status String
+  note   String
+  at     DateTime @default(now())
+
+  job GuideJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, at])
+  @@index([at])
 }
 
 /// A URL waiting to be told to a search engine, and what happened when it was.

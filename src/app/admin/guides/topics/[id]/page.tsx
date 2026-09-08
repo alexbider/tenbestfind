@@ -49,7 +49,7 @@ export default async function TopicPlanDetail({ params }: { params: Promise<{ id
         description={`${plan.trigger === "AUTO" ? "Opened on schedule" : "Started by hand"} · asked for ${plan.target} · created ${fullDate(plan.createdAt)}`}
         actions={
           <>
-            <Link href="/admin/topics" className="btn btn--secondary btn--sm">
+            <Link href="/admin/guides/topics" className="btn btn--secondary btn--sm">
               All plans
             </Link>
             {plan.status === "FAILED" || plan.status === "READY" ? (

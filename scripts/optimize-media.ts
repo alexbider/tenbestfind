@@ -60,12 +60,6 @@ const COLUMNS = [
     set: (id: string, url: string) => db.guide.update({ where: { id }, data: { heroImage: url } }),
   },
   {
-    label: "post.heroImage",
-    read: () => db.post.findMany({ select: { id: true, heroImage: true, title: true } }),
-    value: (row: { heroImage: string | null }) => row.heroImage,
-    set: (id: string, url: string) => db.post.update({ where: { id }, data: { heroImage: url } }),
-  },
-  {
     label: "business.logoUrl",
     read: () => db.business.findMany({ select: { id: true, logoUrl: true, name: true } }),
     value: (row: { logoUrl: string | null }) => row.logoUrl,

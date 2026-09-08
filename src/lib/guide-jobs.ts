@@ -1,58 +1,63 @@
-// One commissioned guide, moved along one step at a time.
+// One commissioned guide, from the idea to the page.
 //
-// The same shape as the import pipeline, for the same reason: each call does a
-// single step and writes the result back, so a run survives a deploy, a
-// restart, and a browser tab closing. Research that has been paid for is never
-// bought twice, because a job that fails while writing keeps the brief it
-// already has and resumes from there.
+// The writing itself does not happen here. A guide is written by Claude over
+// MCP, using the tools in mcp/guides.ts, because a writer with a browser, a
+// search engine and its own judgement produces something better than a single
+// constrained API call ever did, and because the thing that kept breaking was
+// the constraint rather than the writing.
 //
-// Nothing here publishes. A finished job is READY, and a person decides whether
-// what came back is worth putting on the site. That is not caution about the
-// model; it is that a guide carries a named author and a review date, and those
-// claims need somebody willing to make them.
+// What is left on this side is everything a writer should not have to do
+// twice: buying the research, holding the brief and the house style, recording
+// what happened to a commission, turning an accepted draft into a real page,
+// and publishing it when its time comes. Each of those is a step that writes
+// its result back, so a commission survives a deploy, a restart and a closed
+// browser tab.
+//
+// Nothing here publishes on its own. A finished commission is DRAFTED, and a
+// person decides whether what came back is worth putting on the site. That is
+// not caution about the writer; it is that a guide carries a named author and a
+// review date, and those claims need somebody willing to make them.
 
 import { db } from "./db";
 import { announce } from "./announce";
-import {
-  ContentError,
-  PermanentError,
-  assertGrammarSize,
-  assertJsonSchema,
-  classify,
-  preflight,
-  type Effort,
-} from "./anthropic";
+import { ContentError } from "./anthropic";
 import { emptyBrief, researchTopic, type ResearchBrief } from "./dataforseo";
 import { guideTypeOf, type GuideType } from "./enums";
 import { parseIllustrations } from "./guide-images";
-import {
-  DEFAULT_INSTRUCTIONS,
-  DEFAULT_SYSTEM,
-  guideDraftSchema,
-  guideJsonSchema,
-  writeGuide,
-  type GuideDraft,
-} from "./guide-writer";
-import { humanizeGuide, humanizeJsonSchema } from "./guide-humanizer";
-import { linkTargets, linksAsText } from "./guide-links";
+import { guideDraftSchema, type GuideDraft } from "./guide-writer";
 import { templateForGuideType } from "./guide-templates";
-import { parseJson, parseList, stringify } from "./json";
+import { parseJson, stringify } from "./json";
 import { routes } from "./urls";
 
 export const GUIDE_JOB_STATUSES = [
-  "QUEUED",
+  "PLANNED",
   "RESEARCHING",
+  "BRIEFED",
   "WRITING",
-  "POLISHING",
-  "READY",
+  "DRAFTED",
   "PUBLISHED",
   "FAILED",
   "CANCELLED",
 ] as const;
 export type GuideJobStatus = (typeof GUIDE_JOB_STATUSES)[number];
 
-/** The statuses the worker should keep picking up. */
-export const ACTIVE_JOB_STATUSES: GuideJobStatus[] = ["QUEUED", "RESEARCHING", "WRITING", "POLISHING"];
+/** What each status means, in the words the tracker uses. */
+export const GUIDE_JOB_MEANING: Record<GuideJobStatus, string> = {
+  PLANNED: "Commissioned. Nothing bought yet.",
+  RESEARCHING: "Buying the search data.",
+  BRIEFED: "Everything a writer needs is on file, and nobody has picked it up.",
+  WRITING: "Claimed by a writer.",
+  DRAFTED: "A draft is waiting for somebody to read it.",
+  PUBLISHED: "Accepted into a guide.",
+  FAILED: "Stopped, with a reason.",
+  CANCELLED: "Called off.",
+};
+
+/** The statuses the worker still moves along by itself. */
+export const ACTIVE_JOB_STATUSES: GuideJobStatus[] = ["PLANNED", "RESEARCHING"];
+
+/** Waiting on a person or a writer rather than on this application. */
+export const OPEN_JOB_STATUSES: GuideJobStatus[] = ["BRIEFED", "WRITING", "DRAFTED"];
 
 export type StepResult = { changed: boolean; note: string };
 
@@ -86,30 +91,50 @@ function marketName(job: NonNullable<JobRow>): string {
   return "United States";
 }
 
-async function fail(id: string, error: unknown): Promise<StepResult> {
-  const classified = error instanceof Error ? classify(error) : new Error(String(error));
-  const hint =
-    classified instanceof PermanentError
-      ? classified.hint
-      : "Retry the job. If it fails the same way twice, the brief or the credentials are the problem.";
+/**
+ * One line in a commission's history.
+ *
+ * Every status change writes one, and a writer can add its own as it goes. The
+ * point is that a commission can be read as a story rather than reconstructed
+ * from timestamps, so the note should say what happened, not restate the
+ * status next to it.
+ */
+export async function logJobEvent(
+  jobId: string,
+  input: { actor: string; status: string; note: string },
+): Promise<void> {
+  await db.guideJobEvent.create({
+    data: {
+      jobId,
+      actor: input.actor.slice(0, 120),
+      status: input.status,
+      note: input.note.slice(0, 600),
+    },
+  });
+}
+
+async function fail(id: string, error: unknown, actor = "system"): Promise<StepResult> {
+  const message = error instanceof Error ? error.message : String(error);
 
   await db.guideJob.update({
     where: { id },
     data: {
       status: "FAILED",
-      error: classified.message.slice(0, 800),
-      hint,
+      error: message.slice(0, 800),
+      hint: "Look at the reason, fix it, and put the commission back in the queue.",
       finishedAt: new Date(),
     },
   });
-  return { changed: true, note: `failed: ${classified.message.slice(0, 120)}` };
+  await logJobEvent(id, { actor, status: "FAILED", note: message.slice(0, 400) });
+  return { changed: true, note: `failed: ${message.slice(0, 120)}` };
 }
 
 /**
- * Moves one job forward by exactly one step.
+ * Moves one commission forward by exactly one step.
  *
- * Returns changed:false when the job is in a state nothing can be done to,
- * which is how the worker knows to go back to sleep.
+ * There are only two steps left on this side, and both are about the research:
+ * starting it and storing it. Everything after BRIEFED is somebody else's turn,
+ * so this returns changed:false and the worker goes back to sleep.
  */
 export async function advanceGuideJob(id: string): Promise<StepResult> {
   const job = await db.guideJob.findUnique({ where: { id }, include: jobWithContext });
@@ -117,53 +142,12 @@ export async function advanceGuideJob(id: string): Promise<StepResult> {
 
   try {
     switch (job.status as GuideJobStatus) {
-      case "QUEUED": {
-        // The same order of operations applies to the request itself: a schema
-        // the API will not compile fails at the writing step, which is after
-        // the research has been bought. It costs nothing to know here.
-        try {
-          for (const schema of [guideJsonSchema, humanizeJsonSchema]) {
-            assertJsonSchema(schema);
-            assertGrammarSize(schema);
-          }
-        } catch (error) {
-          await db.guideJob.update({
-            where: { id },
-            data: {
-              status: "FAILED",
-              error: `Nothing was bought: ${error instanceof Error ? error.message : String(error)}`,
-              hint: "This is a bug in the writer's own request rather than anything you configured. Nothing was spent.",
-              finishedAt: new Date(),
-            },
-          });
-          return { changed: true, note: "stopped before spending: the writer's schema is malformed" };
-        }
-
-        // Research costs money and writing is what turns it into a page, so
-        // finding out there is no usable key after paying for the first half is
-        // the worst possible order to find out in. One token to check.
-        try {
-          await preflight(job.template?.model ?? undefined);
-        } catch (error) {
-          const classified = classify(error);
-          if (classified instanceof PermanentError) {
-            await db.guideJob.update({
-              where: { id },
-              data: {
-                status: "FAILED",
-                error: `Nothing was bought: ${classified.message}`,
-                hint: classified.hint,
-                finishedAt: new Date(),
-              },
-            });
-            return { changed: true, note: `stopped before spending: ${classified.message}` };
-          }
-        }
-
+      case "PLANNED": {
         await db.guideJob.update({
           where: { id },
           data: { status: "RESEARCHING", startedAt: job.startedAt ?? new Date(), error: null, hint: null },
         });
+        await logJobEvent(id, { actor: "system", status: "RESEARCHING", note: "Buying the search data." });
         return { changed: true, note: "researching" };
       }
 
@@ -181,81 +165,19 @@ export async function advanceGuideJob(id: string): Promise<StepResult> {
         await db.guideJob.update({
           where: { id },
           data: {
-            status: "WRITING",
+            status: "BRIEFED",
             research: stringify(brief),
             researchCalls: { increment: brief.calls },
           },
         });
+        await logJobEvent(id, {
+          actor: "system",
+          status: "BRIEFED",
+          note: brief.ok
+            ? `Research in, ${brief.calls} call${brief.calls === 1 ? "" : "s"}. Ready for a writer.`
+            : `No research (${brief.note}). Ready for a writer anyway.`,
+        });
         return { changed: true, note: brief.ok ? `researched (${brief.calls} calls)` : `no research: ${brief.note}` };
-      }
-
-      case "WRITING": {
-        const brief = parseJson<ResearchBrief>(job.research, emptyBrief(job.topic, "No research stored."));
-        const template = job.template;
-
-        // Every page this guide may point at, chosen for its trade and place.
-        const targets = await linkTargets({
-          categoryId: job.categoryId,
-          countryId: job.countryId,
-          regionId: job.regionId,
-          cityId: job.cityId,
-        });
-
-        const { draft } = await writeGuide({
-          system: template?.system || DEFAULT_SYSTEM,
-          instructions: template?.instructions || DEFAULT_INSTRUCTIONS,
-          model: template?.model,
-          effort: (template?.effort ?? "high") as Effort,
-          research: brief,
-          context: {
-            topic: job.topic,
-            keyword: job.keyword?.trim() || job.topic,
-            guideType: guideTypeOf(job.guideType),
-            service: job.category?.serviceName ?? null,
-            location: locationName(job),
-            wordTarget: template?.wordTarget ?? 1400,
-            skills: parseList(template?.skills),
-            brief: job.brief,
-            links: linksAsText(targets),
-            linkTargets: targets,
-          },
-        });
-
-        await db.guideJob.update({
-          where: { id },
-          data: {
-            status: "POLISHING",
-            draft: stringify(draft),
-            attempts: { increment: 1 },
-          },
-        });
-        return { changed: true, note: `drafted "${draft.title}"` };
-      }
-
-      case "POLISHING": {
-        // A separate call doing one job. It names what still reads as machine
-        // writing and then fixes exactly that, and it may not add a fact.
-        const parsed = guideDraftSchema.safeParse(parseJson<unknown>(job.draft, null));
-        if (!parsed.success) {
-          throw new ContentError("The stored draft no longer matches the expected shape, so it cannot be polished.");
-        }
-
-        const { draft, tells } = await humanizeGuide({
-          draft: parsed.data,
-          model: job.template?.model,
-          effort: (job.template?.effort ?? "high") as Effort,
-        });
-
-        await db.guideJob.update({
-          where: { id },
-          data: {
-            status: "READY",
-            draft: stringify(draft),
-            tells: stringify(tells),
-            finishedAt: new Date(),
-          },
-        });
-        return { changed: true, note: `polished, ${tells.length} tell${tells.length === 1 ? "" : "s"} found` };
       }
 
       default:
@@ -413,7 +335,7 @@ export async function acceptGuideJob(
 ): Promise<{ guideId: string; slug: string }> {
   const job = await db.guideJob.findUnique({ where: { id } });
   if (!job) throw new ContentError("No such job.");
-  if (job.status !== "READY") throw new ContentError("That job has no draft waiting.");
+  if (job.status !== "DRAFTED") throw new ContentError("That commission has no draft waiting.");
 
   const parsed = guideDraftSchema.safeParse(parseJson<unknown>(job.draft, null));
   if (!parsed.success) throw new ContentError("The stored draft no longer matches the expected shape.");
@@ -490,7 +412,10 @@ export async function retryGuideJob(id: string, fromResearch = false): Promise<v
   await db.guideJob.update({
     where: { id },
     data: {
-      status: fromResearch ? "QUEUED" : "WRITING",
+      // Back to the queue with the brief it already has, or all the way back to
+      // before the research when the brief itself is the problem.
+      status: fromResearch ? "PLANNED" : "BRIEFED",
+      writer: null,
       error: null,
       hint: null,
       finishedAt: null,
@@ -502,6 +427,11 @@ export async function retryGuideJob(id: string, fromResearch = false): Promise<v
       // undo it.
       ...(await correctedTemplate(id)),
     },
+  });
+  await logJobEvent(id, {
+    actor: "system",
+    status: fromResearch ? "PLANNED" : "BRIEFED",
+    note: fromResearch ? "Put back in the queue, research and all." : "Put back in the queue with its brief.",
   });
 }
 

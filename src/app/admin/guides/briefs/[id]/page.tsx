@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { DEFAULT_INSTRUCTIONS, DEFAULT_SYSTEM } from "@/lib/guide-writer";
 import { parseList } from "@/lib/json";
 
-export const metadata = { title: "Prompt template" };
+export const metadata = { title: "Brief" };
 
 export default async function PromptTemplateEditor({ params }: { params: Promise<{ id: string }> }) {
   await requireStaff();

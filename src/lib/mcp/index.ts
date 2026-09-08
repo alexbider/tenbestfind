@@ -4,6 +4,7 @@ import { fullDate, slugify } from "../format";
 import { rankingUrl, routes } from "../urls";
 import { canRun, int, limitOf, object, str, ToolError, type Tool, type ToolContext } from "./kit";
 import { CONTENT_TOOLS } from "./content";
+import { GUIDE_TOOLS } from "./guides";
 import { TAXONOMY_TOOLS } from "./taxonomy";
 import { DIRECTORY_TOOLS } from "./directory";
 import { COMMERCE_TOOLS } from "./commerce";
@@ -25,13 +26,12 @@ const ORIENTATION: Tool[] = [
       "Counts of everything published and in draft, the SEO health summary, and whether indexing is on. Call this first.",
     schema: object({}),
     handler: async () => {
-      const [businesses, rankings, guides, pages, posts, cities, categories, people, seo, batches, visible] =
+      const [businesses, rankings, guides, pages, cities, categories, people, seo, batches, visible] =
         await Promise.all([
           db.business.groupBy({ by: ["status"], _count: true }),
           db.ranking.groupBy({ by: ["status"], _count: true }),
           db.guide.groupBy({ by: ["status"], _count: true }),
           db.page.groupBy({ by: ["status"], _count: true }),
-          db.post.count({ where: { status: "PUBLISHED" } }),
           db.city.count({ where: { published: true } }),
           db.category.count({ where: { published: true } }),
           db.person.count({ where: { published: true } }),
@@ -50,7 +50,6 @@ const ORIENTATION: Tool[] = [
         rankings: counts(rankings),
         guides: counts(guides),
         pages: counts(pages),
-        publishedPosts: posts,
         cities,
         services: categories,
         editorialTeam: people,
@@ -349,6 +348,7 @@ const ORIENTATION: Tool[] = [
 
 export const TOOLS: Tool[] = [
   ...ORIENTATION,
+  ...GUIDE_TOOLS,
   ...CONTENT_TOOLS,
   ...TAXONOMY_TOOLS,
   ...DIRECTORY_TOOLS,
@@ -360,6 +360,7 @@ export const TOOLS: Tool[] = [
 /** For the admin screen, so 50 tools read as a map rather than a wall. */
 export const TOOL_GROUPS: { label: string; tools: Tool[] }[] = [
   { label: "Orientation", tools: ORIENTATION },
+  { label: "Writing guides", tools: GUIDE_TOOLS },
   { label: "Content", tools: CONTENT_TOOLS },
   { label: "Services and locations", tools: TAXONOMY_TOOLS },
   { label: "Directory and people", tools: DIRECTORY_TOOLS },

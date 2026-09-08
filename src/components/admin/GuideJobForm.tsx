@@ -84,7 +84,7 @@ export function GuideJobForm({
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="job-template">Prompt template</label>
+          <label htmlFor="job-template">House brief</label>
           <select
             id="job-template"
             name="templateId"
@@ -177,9 +177,11 @@ export function GuideJobForm({
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="job-scheduled">Start writing at</label>
+          <label htmlFor="job-scheduled">Research it at</label>
           <input id="job-scheduled" name="scheduledFor" type="datetime-local" />
-          <span className="field__hint">Leave empty and the worker starts within seconds.</span>
+          <span className="field__hint">
+            Leave empty and the search data is bought within seconds. Either way it then waits for a writer.
+          </span>
         </div>
         <div className="field">
           <label htmlFor="job-publish">Publish at</label>

@@ -18,11 +18,12 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
   {
     label: "Content",
     items: [
-      { name: "Pages", href: "/admin/pages", icon: "file" },
-      { name: "Posts & guides", href: "/admin/guides", icon: "book" },
-      { name: "Guide writer", href: "/admin/writer", icon: "pen" },
-      { name: "Topic radar", href: "/admin/topics", icon: "search" },
+      // One entry, four tabs. Everything about a guide, from the topic that
+      // suggested it to the page it became, is one job of work and used to be
+      // four places in this list.
+      { name: "Guides", href: "/admin/guides", icon: "book" },
       { name: "Top 10 rankings", href: "/admin/rankings", icon: "trophy" },
+      { name: "Pages", href: "/admin/pages", icon: "file" },
       { name: "Editorial team", href: "/admin/people", icon: "users" },
       { name: "Questions & criteria", href: "/admin/faqs", icon: "help" },
       { name: "Services & locations", href: "/admin/taxonomy", icon: "sitemap" },
@@ -53,7 +54,6 @@ export const ADMIN_NAV: { label: string; items: { name: string; href: string; ic
     items: [
       { name: "Global SEO", href: "/admin/seo", icon: "search" },
       { name: "Indexing", href: "/admin/indexing", icon: "pulse" },
-      { name: "Prompt templates", href: "/admin/prompts", icon: "file" },
       { name: "Users & roles", href: "/admin/users", icon: "users" },
       { name: "Integrations & MCP", href: "/admin/integrations", icon: "plug" },
       { name: "Connected apps", href: "/admin/connections", icon: "key" },

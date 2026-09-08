@@ -23,7 +23,7 @@ import {
   type Tool,
 } from "./kit";
 
-// Pages, guides, blog posts, rankings, questions and criteria: everything the
+// Pages, guides, rankings, questions and criteria: everything the
 // editorial side of the admin edits.
 
 const CONTENT_STATUS = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"] as const;
@@ -47,10 +47,10 @@ export const CONTENT_TOOLS: Tool[] = [
     name: "list_content",
     title: "List content",
     description:
-      "Pages, guides, blog posts or rankings, with their status and URL. One place to see what exists before editing it.",
+      "Pages, guides or rankings, with their status and URL. One place to see what exists before editing it.",
     schema: object(
       {
-        kind: str("page, guide, post or ranking."),
+        kind: str("page, guide or ranking."),
         status: str("DRAFT, REVIEW, PUBLISHED or ARCHIVED."),
         query: str("Matches the title."),
         limit: int("Up to 200. Default 20."),
@@ -94,19 +94,6 @@ export const CONTENT_TOOLS: Tool[] = [
             })),
           };
         }
-        case "post": {
-          const rows = await db.post.findMany({ where, orderBy: { updatedAt: "desc" }, take });
-          return {
-            items: rows.map((row) => ({
-              id: row.id,
-              title: row.title,
-              slug: row.slug,
-              url: routes.post(row.slug),
-              status: row.status,
-              updated: fullDate(row.updatedAt),
-            })),
-          };
-        }
         case "ranking": {
           const rows = await db.ranking.findMany({
             where,
@@ -130,7 +117,7 @@ export const CONTENT_TOOLS: Tool[] = [
           };
         }
         default:
-          throw new ToolError("kind must be page, guide, post or ranking.");
+          throw new ToolError("kind must be page, guide or ranking.");
       }
     },
   },
@@ -139,7 +126,7 @@ export const CONTENT_TOOLS: Tool[] = [
     name: "get_content",
     title: "Get one piece of content",
     description: "The full record including the body blocks, so you can edit it and write it back.",
-    schema: object({ kind: str("page, guide, post or ranking."), id: str("The id or the slug.") }, [
+    schema: object({ kind: str("page, guide or ranking."),  id: str("The id or the slug.") }, [
       "kind",
       "id",
     ]),
@@ -170,11 +157,6 @@ export const CONTENT_TOOLS: Tool[] = [
           body: parseJson(row.body, []),
           keyTakeaways: parseList(row.keyTakeaways),
         };
-      }
-      if (kind === "post") {
-        const row = await db.post.findFirst({ where: by });
-        if (!row) throw new ToolError("No post matches that.");
-        return { ...row, url: routes.post(row.slug), body: parseJson(row.body, []) };
       }
       if (kind === "ranking") {
         const row = await db.ranking.findFirst({
@@ -212,7 +194,7 @@ export const CONTENT_TOOLS: Tool[] = [
           sources: row.sources.map((s) => ({ label: s.label, tier: s.tier })),
         };
       }
-      throw new ToolError("kind must be page, guide, post or ranking.");
+      throw new ToolError("kind must be page, guide or ranking.");
     },
   },
 
@@ -378,75 +360,6 @@ export const CONTENT_TOOLS: Tool[] = [
   },
 
   {
-    name: "upsert_post",
-    title: "Create or update a blog post",
-    write: true,
-    description: "Blog posts. Same shape as a guide but without the cost fields.",
-    schema: object(
-      {
-        id: str("Omit to create."),
-        title: str("The post title."),
-        slug: str("URL slug."),
-        excerpt: str("Short summary."),
-        body: blocksSchema,
-        heroImage: str("Image URL."),
-        categoryId: str("Service this belongs to."),
-        authorId: str("Person id."),
-        publishedAt: str("ISO date. Defaults to now when first published."),
-        status: str("DRAFT, REVIEW, PUBLISHED or ARCHIVED."),
-      },
-      [],
-    ),
-    handler: async (args, ctx) => {
-      const id = optStr(args, "id");
-      const data = patch(args, {
-        title: "string",
-        excerpt: "string",
-        heroImage: "string",
-        categoryId: "string",
-        authorId: "string",
-        body: "json",
-      });
-      if (args.status !== undefined) data.status = oneOf(String(args.status), CONTENT_STATUS, "status");
-      if (args.publishedAt !== undefined) {
-        const when = new Date(String(args.publishedAt));
-        if (Number.isNaN(when.getTime())) throw new ToolError("publishedAt is not a valid date.");
-        data.publishedAt = when;
-      }
-      if (data.status === "PUBLISHED" && data.publishedAt === undefined) data.publishedAt = new Date();
-
-      if (!id) {
-        const title = reqStr(args, "title");
-        const slug = slugify(optStr(args, "slug") ?? title);
-        if (await db.post.findUnique({ where: { slug } })) throw new ToolError(`A post already uses ${slug}.`);
-        const post = await db.post.create({ data: { title, slug, ...data } });
-        await recordWrite(ctx, {
-          action: "create",
-          entityType: "post",
-          entityId: post.id,
-          summary: `post ${post.title}`,
-          paths: ["/", routes.blogIndex(), routes.post(post.slug)],
-        });
-        return { id: post.id, url: routes.post(post.slug), status: post.status };
-      }
-
-      const existing = await db.post.findFirst({ where: { OR: [{ id }, { slug: id }] } });
-      if (!existing) throw new ToolError("No post matches that id.");
-      const slug = args.slug !== undefined ? slugify(String(args.slug)) : existing.slug;
-      const post = await db.post.update({ where: { id: existing.id }, data: { ...data, slug } });
-      await moveIfRenamed(routes.post(existing.slug), routes.post(post.slug));
-      await recordWrite(ctx, {
-        action: "update",
-        entityType: "post",
-        entityId: post.id,
-        summary: `post ${post.title}`,
-        paths: ["/", routes.blogIndex(), routes.post(post.slug)],
-      });
-      return { id: post.id, url: routes.post(post.slug), status: post.status };
-    },
-  },
-
-  {
     name: "upsert_ranking",
     title: "Create or update a ranking",
     description:
@@ -596,13 +509,13 @@ export const CONTENT_TOOLS: Tool[] = [
     name: "delete_content",
     title: "Delete content",
     description:
-      "Removes a page, guide, post or ranking. Prefer setting the status to ARCHIVED, which keeps the record and the URL history.",
+      "Removes a page, guide or ranking. Prefer setting the status to ARCHIVED, which keeps the record and the URL history.",
     write: true,
     admin: true,
     destructive: true,
     schema: object(
       {
-        kind: str("page, guide, post or ranking."),
+        kind: str("page, guide or ranking."),
         id: str("The id."),
         confirm: bool("Must be true. A guard against a deletion nobody meant."),
       },
@@ -613,8 +526,8 @@ export const CONTENT_TOOLS: Tool[] = [
       const kind = reqStr(args, "kind").toLowerCase();
       const id = reqStr(args, "id");
 
-      const table = { page: db.page, guide: db.guide, post: db.post, ranking: db.ranking } as const;
-      if (!(kind in table)) throw new ToolError("kind must be page, guide, post or ranking.");
+      const table = { page: db.page, guide: db.guide, ranking: db.ranking } as const;
+      if (!(kind in table)) throw new ToolError("kind must be page, guide or ranking.");
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the four
       // delegates share the shape this needs but not a common type.

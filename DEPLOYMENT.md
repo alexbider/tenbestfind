@@ -158,12 +158,22 @@ Claude registers itself (RFC 7591), you are sent to `/connect/` to sign in with
 your staff account and approve the scopes, and the token is bound to this server
 with a resource indicator (RFC 8707).
 
-The tool surface covers everything the admin console does: pages, guides, posts
-and rankings; services, subservices and the whole location tree; businesses with
+The tool surface covers everything the admin console does: pages, guides and
+rankings; services, subservices and the whole location tree; businesses with
 their services, hours, credentials and photos; the editorial team; claims and
 corrections; packages and sponsored inventory; every setting including the whole
 global SEO configuration; redirects, media, users, the audit log, analytics, and
 the import pipeline.
+
+Guides are the one thing this application no longer writes itself. The tools
+under **Writing guides** are the workflow: `guide_desk` for where everything
+stands, `guide_gaps` for what is worth writing, `get_commission` for the
+assignment (the house brief with the research already in it, the pages that
+exist to link to, the domains that may be cited), then `claim_commission`,
+`submit_guide`, `accept_commission`, `illustrate_guide` and `publish_guide`.
+This side still buys the DataForSEO research, still holds the briefs an editor
+maintains, still checks every citation and internal link on submission, and
+still records every step. **Admin, Guides** is where a person watches all of it.
 
 A connected app acts as the person who approved it and can do nothing that
 account cannot. Read tools need `mcp:read`, write tools need `mcp:write` and an

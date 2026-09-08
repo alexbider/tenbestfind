@@ -8,11 +8,12 @@ import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { ResearchBrief } from "@/lib/dataforseo";
 import { GUIDE_TYPE_LABELS, guideTypeOf } from "@/lib/enums";
+import { GUIDE_JOB_MEANING, type GuideJobStatus } from "@/lib/guide-jobs";
 import { guideDraftSchema } from "@/lib/guide-writer";
 import { fullDate } from "@/lib/format";
-import { parseJson, parseList } from "@/lib/json";
+import { parseJson } from "@/lib/json";
 
-export const metadata = { title: "Guide job" };
+export const metadata = { title: "Commission" };
 export const dynamic = "force-dynamic";
 
 const META = { fontSize: 13, color: "var(--text-muted)" } as const;
@@ -38,8 +39,9 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
   ]);
   if (!job) notFound();
 
+  const history = await db.guideJobEvent.findMany({ where: { jobId: job.id }, orderBy: { at: "asc" } });
+
   const research = parseJson<ResearchBrief | null>(job.research, null);
-  const tells = parseList(job.tells);
   const parsed = guideDraftSchema.safeParse(parseJson<unknown>(job.draft, null));
   const draft = parsed.success ? parsed.data : null;
   const scope = [job.category?.serviceName, job.city?.name ?? job.region?.name ?? job.country?.name]
@@ -53,18 +55,18 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
         description={`${GUIDE_TYPE_LABELS[guideTypeOf(job.guideType)]} · ${scope || "National"} · ${job.template?.name ?? "default template"} · created ${fullDate(job.createdAt)}`}
         actions={
           <>
-            <Link href="/admin/writer" className="btn btn--secondary btn--sm">
+            <Link href="/admin/guides/pipeline" className="btn btn--secondary btn--sm">
               All jobs
             </Link>
-            {job.status === "FAILED" || job.status === "READY" ? (
+            {job.status === "FAILED" || job.status === "DRAFTED" ? (
               <form action={retryJob}>
                 <input type="hidden" name="id" value={job.id} />
                 <button type="submit" className="btn btn--secondary btn--sm">
-                  Write it again
+                  Put it back in the queue
                 </button>
               </form>
             ) : null}
-            {["QUEUED", "RESEARCHING", "WRITING"].includes(job.status) ? (
+            {["PLANNED", "RESEARCHING", "BRIEFED", "WRITING"].includes(job.status) ? (
               <form action={cancelJob}>
                 <input type="hidden" name="id" value={job.id} />
                 <button type="submit" className="btn btn--secondary btn--sm">
@@ -78,8 +80,10 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
 
       <Panel title="Status">
         <p style={{ marginBottom: 10 }}>
-          <StatusPill status={job.status} />
+          <StatusPill status={job.status} />{" "}
+          <span style={META}>{GUIDE_JOB_MEANING[job.status as GuideJobStatus] ?? ""}</span>
         </p>
+        {job.writer ? <p style={{ ...META, marginBottom: 10 }}>Written by {job.writer}.</p> : null}
         {job.error ? (
           <>
             <p className="form-error">{job.error}</p>
@@ -112,6 +116,40 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
             <p style={{ whiteSpace: "pre-wrap" }}>{job.brief}</p>
           </>
         ) : null}
+        {job.notes ? (
+          <>
+            <h3 style={{ fontSize: 14, marginTop: 16, marginBottom: 6 }}>What the writer wants you to know</h3>
+            <p style={{ whiteSpace: "pre-wrap" }}>{job.notes}</p>
+          </>
+        ) : null}
+      </Panel>
+
+      <Panel
+        title="What has happened"
+        description="Every step, in order, from whoever took it. A commission that stalls says where."
+        padded={history.length === 0}
+      >
+        {history.length === 0 ? (
+          <p style={META}>Nothing logged yet.</p>
+        ) : (
+          <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {history.map((event) => (
+              <li
+                key={event.id}
+                style={{ display: "flex", gap: 14, padding: "10px 0", borderBottom: "1px solid var(--border-subtle)" }}
+              >
+                <span style={{ ...META, minWidth: 150, flexShrink: 0 }}>{fullDate(event.at)}</span>
+                <span style={{ minWidth: 110, flexShrink: 0 }}>
+                  <StatusPill status={event.status} />
+                </span>
+                <span style={{ fontSize: 14 }}>
+                  {event.note}
+                  <span style={{ ...META, display: "block" }}>{event.actor}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </Panel>
 
       {research ? (
@@ -164,21 +202,6 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
               </p>
             </>
           ) : null}
-        </Panel>
-      ) : null}
-
-      {tells.length > 0 ? (
-        <Panel
-          title="What the second pass found"
-          description="The editing call is asked what still reads as machine writing before it is allowed to fix anything. This is its answer, and the draft below has already been revised against it."
-        >
-          <ul style={{ paddingLeft: 18, lineHeight: 1.75 }}>
-            {tells.map((tell) => (
-              <li key={tell} style={{ fontSize: 14, marginBottom: 4 }}>
-                {tell}
-              </li>
-            ))}
-          </ul>
         </Panel>
       ) : null}
 
@@ -273,7 +296,7 @@ export default async function GuideJobDetail({ params }: { params: Promise<{ id:
             <p style={{ whiteSpace: "pre-wrap" }}>{draft.confidence}</p>
           </Panel>
 
-          {job.status === "READY" ? (
+          {job.status === "DRAFTED" ? (
             <Panel
               title="Accept it"
               description="Creates the guide in Draft status, with the FAQs, sources and SEO record attached. Nothing goes live until you publish it yourself."

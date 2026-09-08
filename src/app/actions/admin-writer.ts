@@ -6,7 +6,7 @@ import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { GUIDE_TYPES } from "@/lib/enums";
-import { acceptGuideJob, retryGuideJob } from "@/lib/guide-jobs";
+import { acceptGuideJob, logJobEvent, retryGuideJob } from "@/lib/guide-jobs";
 import { templateForGuideType } from "@/lib/guide-templates";
 import { DEFAULT_INSTRUCTIONS, DEFAULT_SYSTEM, SKILLS } from "@/lib/guide-writer";
 import { flushIndexQueue, queueForIndexing, recordIndexingCheck } from "@/lib/google-indexing";
@@ -111,9 +111,9 @@ export async function savePromptTemplate(
     summary: `${template.name} (${skills.length} house rules)`,
   });
 
-  revalidatePath("/admin/prompts");
-  revalidatePath(`/admin/prompts/${template.id}`);
-  if (!data.id) redirect(`/admin/prompts/${template.id}`);
+  revalidatePath("/admin/guides/briefs");
+  revalidatePath(`/admin/guides/briefs/${template.id}`);
+  if (!data.id) redirect(`/admin/guides/briefs/${template.id}`);
   return ok("Template saved.");
 }
 
@@ -136,8 +136,8 @@ export async function deletePromptTemplate(formData: FormData): Promise<void> {
     summary: template?.name ?? id,
   });
 
-  revalidatePath("/admin/prompts");
-  redirect("/admin/prompts");
+  revalidatePath("/admin/guides/briefs");
+  redirect("/admin/guides/briefs");
 }
 
 /* -------------------------------------------------------------------- jobs */
@@ -189,8 +189,8 @@ export async function createGuideJob(_prev: ActionState, formData: FormData): Pr
     summary: data.topic,
   });
 
-  revalidatePath("/admin/writer");
-  redirect(`/admin/writer/${job.id}`);
+  revalidatePath("/admin/guides/pipeline");
+  redirect(`/admin/guides/pipeline/${job.id}`);
 }
 
 export async function retryJob(formData: FormData): Promise<void> {
@@ -198,17 +198,18 @@ export async function retryJob(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await retryGuideJob(id, formData.get("fresh") === "on");
-  revalidatePath("/admin/writer");
-  revalidatePath(`/admin/writer/${id}`);
+  revalidatePath("/admin/guides/pipeline");
+  revalidatePath(`/admin/guides/pipeline/${id}`);
 }
 
 export async function cancelJob(formData: FormData): Promise<void> {
-  await requireStaff();
+  const user = await requireStaff();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.guideJob.update({ where: { id }, data: { status: "CANCELLED", finishedAt: new Date() } });
-  revalidatePath("/admin/writer");
-  revalidatePath(`/admin/writer/${id}`);
+  await logJobEvent(id, { actor: user.email, status: "CANCELLED", note: "Called off." });
+  revalidatePath("/admin/guides/pipeline");
+  revalidatePath(`/admin/guides/pipeline/${id}`);
 }
 
 /** Turns the draft into a real guide, as a draft for a person to finish. */
@@ -231,7 +232,7 @@ export async function acceptJob(_prev: ActionState, formData: FormData): Promise
       summary: `Accepted from the writer: /guides/${slug}/`,
     });
 
-    revalidatePath("/admin/writer");
+    revalidatePath("/admin/guides/pipeline");
     revalidatePath("/admin/guides");
     redirect(`/admin/guides/${guideId}`);
   } catch (error) {
@@ -279,7 +280,7 @@ export async function rewriteOlderGuides(_prev: ActionState, formData: FormData)
     summary: `${queued} rewrites queued`,
   });
 
-  revalidatePath("/admin/writer");
+  revalidatePath("/admin/guides/pipeline");
   if (queued === 0) return ok(`All ${skipped} are already queued.`);
   return ok(
     `${queued} queued, one every ${everyHours} hours${skipped > 0 ? `, ${skipped} already had a rewrite waiting` : ""}. Each one replaces its guide in place rather than adding a second page.`,

@@ -167,7 +167,7 @@ export function PromptTemplateForm({ template }: { template: TemplateDraft }) {
           <button type="submit" className="btn btn--primary" disabled={pending}>
             {pending ? "Saving…" : "Save template"}
           </button>
-          <Link href="/admin/prompts" className="btn btn--secondary">
+          <Link href="/admin/guides/briefs" className="btn btn--secondary">
             Back
           </Link>
         </div>

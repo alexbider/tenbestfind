@@ -22,8 +22,8 @@
 // belongs here when it returns 200, is canonical, and is allowed in the index.
 // A city with nothing published under it is not offered, because being offered
 // a page that says noindex is worse than not being offered it. The reverse
-// holds too: a page that is indexable is offered, which is why the blog and
-// expert indexes are listed whether or not anything is published under them.
+// holds too: a page that is indexable is offered, which is why the experts
+// index is listed whether or not anybody is published under it.
 
 import { db } from "./db";
 import { getGuideHubs, guidesForHub } from "./guide-hubs";
@@ -50,7 +50,6 @@ export const SITEMAP_CHILDREN = [
   "cities",
   "rankings",
   "guides",
-  "posts",
   "people",
   "companies",
 ] as const;
@@ -155,14 +154,13 @@ async function rankingCounts() {
  * worse than admitting there isn't one.
  */
 async function pagesChild(g: Awaited<ReturnType<typeof gate>>): Promise<SitemapEntry[]> {
-  const [rankings, guides, posts, people, categories, cities, regions, countries] =
+  const [rankings, guides, people, categories, cities, regions, countries] =
     await Promise.all([
       db.ranking.aggregate({
         where: { status: "PUBLISHED" },
         _max: { updatedAt: true, lastReviewedAt: true },
       }),
       db.guide.aggregate({ where: { status: "PUBLISHED" }, _max: { updatedAt: true } }),
-      db.post.aggregate({ where: { status: "PUBLISHED" }, _max: { updatedAt: true } }),
       db.person.aggregate({ where: { published: true }, _max: { updatedAt: true } }),
       db.category.aggregate({ where: { published: true }, _max: { updatedAt: true } }),
       db.city.aggregate({ where: { published: true }, _max: { updatedAt: true } }),
@@ -178,20 +176,19 @@ async function pagesChild(g: Awaited<ReturnType<typeof gate>>): Promise<SitemapE
   );
 
   const out: SitemapEntry[] = [
-    // The homepage carries the newest ranking, guide and post, so it changes
-    // when they do and not on a timer.
+    // The homepage carries the newest ranking and the newest guide, so it
+    // changes when they do and not on a timer.
     {
       path: "/",
-      lastModified: newest(newestRanking, guides._max.updatedAt, posts._max.updatedAt),
+      lastModified: newest(newestRanking, guides._max.updatedAt),
     },
     { path: routes.servicesIndex(), lastModified: categories._max.updatedAt },
     { path: routes.rankingsIndex(), lastModified: newestRanking },
     { path: routes.guidesIndex(), lastModified: guides._max.updatedAt },
     { path: routes.locationsIndex(), lastModified: newestLocation },
-    // Listed unconditionally: both pages are indexable whether or not anything
-    // is published under them, so leaving them out would be the sitemap
-    // disagreeing with the pages.
-    { path: routes.blogIndex(), lastModified: posts._max.updatedAt },
+    // Listed unconditionally: the page is indexable whether or not anybody is
+    // published under it, so leaving it out would be the sitemap disagreeing
+    // with the page.
     { path: routes.expertsIndex(), lastModified: people._max.updatedAt },
     { path: routes.howWeRank() },
     { path: routes.forBusinesses() },
@@ -398,18 +395,6 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
             images: [guide.heroImage],
           })),
       ];
-    }
-
-    case "posts": {
-      if (!g.include("posts")) return [];
-      const posts = await db.post.findMany({ where: { status: "PUBLISHED" } });
-      return posts
-        .filter((post) => keeps(routes.post(post.slug), `post:${post.id}`))
-        .map((post) => ({
-          path: routes.post(post.slug),
-          lastModified: post.updatedAt,
-          images: [post.heroImage],
-        }));
     }
 
     case "people": {

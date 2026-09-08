@@ -493,48 +493,22 @@ export const SYSTEM_TOOLS: Tool[] = [
     write: true,
     schema: object({ url: str("A public https URL to an image."), alt: str("Description, for the record.") }, ["url"]),
     handler: async (args, ctx) => {
-      const source = reqStr(args, "url");
-      let url: URL;
+      const { storeImageFromUrl } = await import("../media");
+
+      let stored;
       try {
-        url = new URL(source);
-      } catch {
-        throw new ToolError("That is not a valid URL.");
-      }
-      if (url.protocol !== "https:") throw new ToolError("The URL must be https.");
-
-      const { MEDIA_DIR, MEDIA_PUBLIC_PATH, MEDIA_TYPES } = await import("../media");
-      const { randomBytes } = await import("node:crypto");
-      const { mkdir, writeFile } = await import("node:fs/promises");
-      const { join } = await import("node:path");
-
-      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!response.ok) throw new ToolError(`Fetching that image returned ${response.status}.`);
-
-      // The extension comes from the content type the server actually sent,
-      // never from the URL, so a .jpg that is really something else is refused.
-      const type = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ?? "";
-      const extension = MEDIA_TYPES[type];
-      if (!extension) {
-        throw new ToolError(
-          `${type || "That file"} is not an image type this site accepts. Allowed: ${Object.keys(MEDIA_TYPES).join(", ")}.`,
-        );
+        stored = await storeImageFromUrl(reqStr(args, "url"));
+      } catch (error) {
+        throw new ToolError(error instanceof Error ? error.message : String(error));
       }
 
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.byteLength > 8 * 1024 * 1024) throw new ToolError("That image is larger than 8 MB.");
-
-      const name = `${Date.now().toString(36)}-${randomBytes(6).toString("hex")}${extension}`;
-      await mkdir(MEDIA_DIR, { recursive: true });
-      await writeFile(join(MEDIA_DIR, name), buffer);
-
-      const path = `${MEDIA_PUBLIC_PATH}/${name}`;
       await recordWrite(ctx, {
         action: "create",
         entityType: "media",
-        summary: `${name} from ${url.hostname}`,
+        summary: `stored ${stored.path}`,
         paths: [],
       });
-      return { url: path, bytes: buffer.byteLength, type };
+      return { url: stored.path, bytes: stored.bytes, type: stored.type };
     },
   },
 ];

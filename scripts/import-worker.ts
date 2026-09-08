@@ -72,9 +72,10 @@ async function tickEnrichment(): Promise<boolean> {
 }
 
 /**
- * Writing a guide. Ahead of an import because somebody is usually watching a
- * job they just started, and behind the cheap ticks because it is neither
- * cheap nor quick.
+ * The research half of a commission. The writing happens in Claude, over MCP,
+ * so all this does is buy the search data and put the commission in front of a
+ * writer. Ahead of an import because somebody is usually watching something
+ * they just commissioned.
  */
 async function tickGuideJob(): Promise<boolean> {
   const job = await db.guideJob.findFirst({

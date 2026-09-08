@@ -3,25 +3,26 @@
 // Structured output compiles the schema into a grammar, and a bounded array is
 // not a note about length: `maxItems: 70` is seventy copies of the items. Nest
 // a couple of those and the grammar stops compiling, which the API reports as a
-// 400 at the moment of the call, which on the guide pipeline is after the
-// research has been bought. This prints the sizes so the number is visible
-// rather than discovered.
+// 400 at the moment of the call, after whatever the call was going to use has
+// already been paid for. This prints the sizes so the number is visible rather
+// than discovered.
+//
+// Guides are not in this list any more. They are written by Claude over MCP,
+// where the shape is a tool argument rather than a compiled grammar, which is
+// the failure this check was written for happening once and then being
+// designed out.
 
 import { assertJsonSchema, grammarSize } from "../src/lib/anthropic";
-import { guideJsonSchema } from "../src/lib/guide-writer";
-import { humanizeJsonSchema } from "../src/lib/guide-humanizer";
 import { planJsonSchema } from "../src/lib/topic-planner";
 import { listingJsonSchema } from "../src/lib/listing-writer";
 import { extractionJsonSchema } from "../src/lib/site-extract";
 
 // The two numbers this ceiling is calibrated against, both observed against the
-// real API: a guide schema of about 5,600 compiled and wrote a guide, and one of
-// about 16,400 was refused with "the compiled grammar is too large".
+// real API: a schema of about 5,600 compiled and ran, and one of about 16,400
+// was refused with "the compiled grammar is too large".
 const CEILING = 2_000;
 
 const SCHEMAS: [string, unknown][] = [
-  ["guide writer", guideJsonSchema],
-  ["guide humanizer", humanizeJsonSchema],
   ["topic planner", planJsonSchema],
   ["listing writer", listingJsonSchema],
   ["site extractor", extractionJsonSchema],

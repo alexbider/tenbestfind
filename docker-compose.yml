@@ -146,10 +146,17 @@ services:
 
         # The shapes the models are asked to fill, measured before anything
         # asks one to fill them. A schema whose grammar is too large is refused
-        # by the API at the moment of the call, which on the guide pipeline is
-        # after the research has been paid for.
+        # by the API at the moment of the call, after whatever the call was
+        # going to use has already been paid for.
         echo "==> checking the model schemas"
         npx tsx scripts/check-schemas.ts || echo "schema check skipped"
+
+        # And the guides desk end to end, through the same tools a writer calls:
+        # commission, brief, claim, submit, accept, publish. It spends nothing
+        # and cleans up after itself, so a deploy that breaks the workflow says
+        # so here rather than the first time somebody tries to write something.
+        echo "==> checking the guides workflow"
+        npx tsx -r ./scripts/_server-only-stub.cjs scripts/check-guide-flow.ts || echo "guide flow check skipped"
 
         # Creates the four starter briefs the guide writer works from, once.
         # A template an editor has changed is never overwritten.

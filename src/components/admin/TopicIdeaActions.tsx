@@ -31,7 +31,7 @@ export function TopicIdeaActions({
 
   if (status === "COMMISSIONED" && jobId) {
     return (
-      <Link href={`/admin/writer/${jobId}`} className="btn btn--secondary btn--sm">
+      <Link href={`/admin/guides/pipeline/${jobId}`} className="btn btn--secondary btn--sm">
         See the job
       </Link>
     );

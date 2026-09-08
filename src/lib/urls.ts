@@ -47,8 +47,6 @@ export const routes = {
   },
 
   page: (slug: string) => `/${slug}/`,
-  post: (slug: string) => `/blog/${slug}/`,
-  blogIndex: () => "/blog/",
 
   howWeRank: () => "/how-we-rank/",
   editorialTeam: () => "/editorial-team/",

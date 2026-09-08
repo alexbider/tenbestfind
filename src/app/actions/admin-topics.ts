@@ -43,7 +43,7 @@ export async function saveTopicDials(_prev: ActionState, formData: FormData): Pr
   }
 
   await audit({ userId: user.id, action: "topics.settings", entityType: "settings", entityId: "topics" });
-  revalidatePath("/admin/topics");
+  revalidatePath("/admin/guides/topics");
   return ok("Saved.");
 }
 
@@ -53,8 +53,8 @@ export async function planThisWeek(): Promise<void> {
   const user = await requireStaff();
   const { id } = await openPlan({ trigger: "MANUAL" });
   await audit({ userId: user.id, action: "topics.plan", entityType: "topicPlan", entityId: id });
-  revalidatePath("/admin/topics");
-  redirect(`/admin/topics/${id}`);
+  revalidatePath("/admin/guides/topics");
+  redirect(`/admin/guides/topics/${id}`);
 }
 
 export async function cancelPlan(formData: FormData): Promise<void> {
@@ -65,8 +65,8 @@ export async function cancelPlan(formData: FormData): Promise<void> {
     where: { id },
     data: { status: "CANCELLED", finishedAt: new Date() },
   });
-  revalidatePath(`/admin/topics/${id}`);
-  revalidatePath("/admin/topics");
+  revalidatePath(`/admin/guides/topics/${id}`);
+  revalidatePath("/admin/guides/topics");
 }
 
 export async function retryPlan(formData: FormData): Promise<void> {
@@ -88,7 +88,7 @@ export async function retryPlan(formData: FormData): Promise<void> {
       finishedAt: null,
     },
   });
-  revalidatePath(`/admin/topics/${id}`);
+  revalidatePath(`/admin/guides/topics/${id}`);
 }
 
 export async function deletePlan(formData: FormData): Promise<void> {
@@ -96,8 +96,8 @@ export async function deletePlan(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.topicPlan.delete({ where: { id } });
-  revalidatePath("/admin/topics");
-  redirect("/admin/topics");
+  revalidatePath("/admin/guides/topics");
+  redirect("/admin/guides/topics");
 }
 
 /* ------------------------------------------------------------------- ideas */
@@ -110,13 +110,13 @@ export async function commissionTopic(_prev: ActionState, formData: FormData): P
   try {
     const { jobId } = await commissionIdea(id);
     await audit({ userId: user.id, action: "topics.commission", entityType: "topicIdea", entityId: id });
-    revalidatePath(`/admin/writer/${jobId}`);
+    revalidatePath(`/admin/guides/pipeline/${jobId}`);
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Could not commission it.");
   }
 
-  revalidatePath("/admin/topics", "layout");
-  revalidatePath("/admin/writer");
+  revalidatePath("/admin/guides/topics", "layout");
+  revalidatePath("/admin/guides/pipeline");
   return ok("Commissioned. It is in the writer's queue.");
 }
 
@@ -125,7 +125,7 @@ export async function dismissTopic(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await dismissIdea(id);
-  revalidatePath("/admin/topics", "layout");
+  revalidatePath("/admin/guides/topics", "layout");
 }
 
 export async function snoozeTopic(formData: FormData): Promise<void> {
@@ -133,7 +133,7 @@ export async function snoozeTopic(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await snoozeIdea(id, Number(formData.get("days") ?? 90) || 90);
-  revalidatePath("/admin/topics", "layout");
+  revalidatePath("/admin/guides/topics", "layout");
 }
 
 export async function restoreTopic(formData: FormData): Promise<void> {
@@ -141,5 +141,5 @@ export async function restoreTopic(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.topicIdea.update({ where: { id }, data: { status: "SUGGESTED", snoozedUntil: null } });
-  revalidatePath("/admin/topics", "layout");
+  revalidatePath("/admin/guides/topics", "layout");
 }

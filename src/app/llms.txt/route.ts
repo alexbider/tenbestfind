@@ -17,7 +17,7 @@ export async function GET() {
     return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   }
 
-  const [rankings, guides, categories, cities, pages, posts] = await Promise.all([
+  const [rankings, guides, categories, cities, pages] = await Promise.all([
     db.ranking.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { lastReviewedAt: "desc" },
@@ -33,7 +33,6 @@ export async function GET() {
       include: { region: { include: { country: true } } },
     }),
     db.page.findMany({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } }),
-    db.post.findMany({ where: { status: "PUBLISHED" }, orderBy: { publishedAt: "desc" }, take: 20 }),
   ]);
 
   const name = settings.text("seo.siteName") || "TenBestFind";
@@ -120,13 +119,6 @@ export async function GET() {
     "Guides",
     guides.map((guide) => ({ label: guide.title, path: routes.guide(guide.slug), note: guide.excerpt })),
   );
-
-  if (posts.length > 0) {
-    section(
-      "Blog",
-      posts.map((post) => ({ label: post.title, path: routes.post(post.slug), note: post.excerpt })),
-    );
-  }
 
   section(
     "Optional",

@@ -1,23 +1,19 @@
-// Commissioning a guide.
+// What a guide is, and what it has to survive before it becomes a page.
 //
-// The research says what the search results already contain; this decides what
-// the page says back. Two things are deliberately not in the code:
+// The writing happens in Claude now, over MCP. What lives here is the contract
+// between the two sides: the shape a submitted draft must have, the house style
+// an editor maintains and a writer is handed, and the two checks that cannot be
+// made by whoever wrote it.
 //
-//   The instructions. They live in a PromptTemplate an editor edits, because
-//   "open cost guides with the range" is an editorial decision and editorial
-//   decisions should not need a deploy.
-//
-//   The facts. The model is given the research and told it may not go beyond
-//   it. Every number it prints has to have come from the brief, every source it
-//   cites has to be a URL it was handed, and where it has nothing it is told to
-//   say so rather than produce a plausible figure. A directory whose guides
-//   invent prices is worth less than one with no guides.
-//
-// What is in the code is the shape: what a finished guide must contain before
-// it is worth publishing, expressed as a schema the model has to satisfy.
+// Those checks are the point of this file. A writer can be told not to invent a
+// citation and not to link a page that does not exist, and told well, and still
+// do both, because both look exactly like the real thing from the inside. So
+// every source is either one the research handed over or one that answers on
+// the authority list, and every internal link is a path that is really on this
+// site. Neither is a matter of trust.
 
 import { z } from "zod";
-import { askForJson, ContentError, type Effort } from "./anthropic";
+import { ContentError } from "./anthropic";
 import { authorityPromptBlock, isAuthorityUrl } from "./guide-authorities";
 import { keepKnownLinks, type LinkTarget } from "./guide-links";
 import { briefAsText, type ResearchBrief } from "./dataforseo";
@@ -25,360 +21,17 @@ import { GUIDE_TYPE_LABELS, type GuideType } from "./enums";
 import { SKILLS } from "./guide-skills";
 import { BRAND } from "./seo-copy";
 
-/* ------------------------------------------------------------- the schema */
+/* ---------------------------------------------------------- the validator */
 
 /**
- * The blocks the writer may use.
+ * What a submitted draft has to be.
  *
- * `quote` exists in the renderer and is deliberately withheld here: a model
- * asked for a quotation will produce an attributed one, and an invented
- * attribution is the single worst thing that could end up on a page whose whole
- * argument is that it can be trusted.
- *
- * Nothing below counts, and nothing below should be made to. A schema for
- * structured output is compiled into a grammar, and `maxItems: 12` is not a
- * note about length there, it is twelve copies of the rows. Twelve rows inside
- * a union of eleven block shapes inside a body of up to seventy blocks is how
- * this schema grew past what the API would compile, which it says so at the
- * moment of the call, long after the research has been paid for. So the counts
- * live in the descriptions, where the model reads them, and the shapes that
- * would embarrass us if they came back wrong are enforced by the validator
- * underneath. scripts/check-schemas.ts holds the line.
+ * This is the whole contract. A writer builds this object and hands it over;
+ * anything that does not parse is refused with the reason, and nothing half
+ * valid is ever stored. `quote` exists in the renderer and is deliberately not
+ * here: an attributed quotation that was invented is the single worst thing
+ * that could end up on a page whose argument is that it can be trusted.
  */
-const blockSchema = {
-  anyOf: [
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "text", "id"],
-      properties: {
-        kind: { type: "string", const: "heading" },
-        text: { type: "string", description: "An H2. Sentence case, no numbering." },
-        id: { type: "string", description: "A short lowercase slug for the anchor." },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "text"],
-      properties: {
-        kind: { type: "string", const: "paragraph" },
-        text: { type: "string", description: "One paragraph. No markdown, no bullet characters." },
-        links: {
-          type: "array",
-          description:
-            "Internal links, where this paragraph genuinely leads somewhere on this site. Each names a phrase that appears verbatim in the text above and a path from the list you were given. Write the sentence around the link rather than bolting the link onto a sentence; a phrase that is not in the paragraph links nothing. At most two, and most paragraphs should have none.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["text", "href"],
-            properties: {
-              text: { type: "string", description: "The exact phrase to link, copied from this paragraph." },
-              href: { type: "string", description: "A path copied exactly from the list of pages on this site." },
-            },
-          },
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "items"],
-      properties: {
-        kind: { type: "string", const: "list" },
-        items: {
-          type: "array",
-          items: { type: "string" },
-          description: "Three to eight of them. Two is a sentence and nine is a wall.",
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "items"],
-      properties: {
-        kind: { type: "string", const: "steps" },
-        items: {
-          type: "array",
-          description: "Three to eight steps, in the order they happen.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["title", "body"],
-            properties: { title: { type: "string" }, body: { type: "string" } },
-          },
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "tone", "title", "body"],
-      properties: {
-        kind: { type: "string", const: "callout" },
-        tone: { type: "string", enum: ["note", "alert", "brand"] },
-        title: { type: "string" },
-        body: { type: "string" },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "items"],
-      properties: {
-        kind: { type: "string", const: "criteria" },
-        items: {
-          type: "array",
-          description: "Three to six of them.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["title", "body"],
-            properties: { title: { type: "string" }, body: { type: "string" } },
-          },
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "title", "items"],
-      properties: {
-        kind: { type: "string", const: "checklist" },
-        title: { type: "string" },
-        items: {
-          type: "array",
-          items: { type: "string" },
-          description: "Three to ten things to work through, in order.",
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "title", "rows"],
-      properties: {
-        kind: { type: "string", const: "compare" },
-        title: { type: "string" },
-        intro: { type: "string" },
-        rows: {
-          type: "array",
-          description: "Three to twelve rows. Fewer than three is a paragraph pretending to be a table.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["factor", "check", "why"],
-            properties: {
-              factor: { type: "string" },
-              check: { type: "string" },
-              why: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "title", "items"],
-      properties: {
-        kind: { type: "string", const: "flags" },
-        title: { type: "string", description: "For example: Walk away if you hear any of these" },
-        items: {
-          type: "array",
-          items: { type: "string" },
-          description: "Three to seven of them.",
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "key", "alt"],
-      properties: {
-        kind: { type: "string", const: "figure" },
-        key: {
-          type: "string",
-          description:
-            "The key of one of the inline illustrations you commissioned below. Lowercase and hyphenated. Place the block where the picture belongs in the argument, not where it would break up a wall of text.",
-        },
-        alt: {
-          type: "string",
-          description:
-            "What the picture shows, for a reader who cannot see it. Describe the scene, not the topic, and never start with 'image of'.",
-        },
-        caption: {
-          type: "string",
-          description: "Optional. A sentence that adds something the picture cannot say by itself.",
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["kind", "title", "unit", "rows"],
-      properties: {
-        kind: { type: "string", const: "chart" },
-        title: { type: "string" },
-        unit: {
-          type: "string",
-          description: "What the numbers are, as a short label: \"dollars\", \"dollars per square foot\", \"days\", \"hours\".",
-        },
-        intro: { type: "string", description: "Optional. One sentence on what the chart shows." },
-        note: { type: "string", description: "Optional. What the ranges do not capture." },
-        rows: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["label", "low", "high"],
-            properties: {
-              label: { type: "string" },
-              low: { type: "number" },
-              high: { type: "number" },
-              typical: { type: "number", description: "Optional. Marked inside the range." },
-              note: { type: "string", description: "Optional. One short line under the bar." },
-            },
-          },
-          description:
-            "Three to ten rows. Every number here is published as a figure a reader will quote back. Use this block only where the research supports the ranges, and leave it out entirely rather than estimating.",
-        },
-      },
-    },
-  ],
-};
-
-export const guideJsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "title",
-    "slug",
-    "excerpt",
-    "shortAnswer",
-    "keyTakeaways",
-    "body",
-    "bottomLine",
-    "faqs",
-    "sources",
-    "readingMinutes",
-    "metaTitle",
-    "metaDescription",
-    "focusKeyword",
-    "confidence",
-    "illustrations",
-  ],
-  properties: {
-    title: {
-      type: "string",
-      description:
-        "The H1. What a reader would search, not a headline. 40 to 70 characters. No brand name, no year unless the guide is genuinely annual.",
-    },
-    slug: {
-      type: "string",
-      description: "Lowercase, hyphenated, no stop words padding it out. Derived from the title.",
-    },
-    excerpt: {
-      type: "string",
-      description: "One or two sentences for the card and the meta description fallback. 120 to 200 characters.",
-    },
-    shortAnswer: {
-      type: "string",
-      description:
-        "The answer, before any preamble, in 40 to 80 words. This is what gets quoted by an AI assistant and lifted into a featured snippet, so it must stand alone: complete, specific, and useful to someone who reads nothing else. No 'it depends' opening.",
-    },
-    keyTakeaways: {
-      type: "array",
-      items: { type: "string" },
-      description:
-        "Four to eight of them. The extraction-ready half of the opening. One line each, each a claim with a number or a named qualifier attached rather than a topic. A reader should be able to act on any one of them, and an assistant should be able to quote any one of them.",
-    },
-    body: {
-      type: "array",
-      items: blockSchema,
-      description:
-        "The guide, and on a three thousand word piece that is somewhere between thirty and sixty blocks. Open with a heading, then alternate prose and structure. Every heading must be a question or a claim a reader has, not a label like 'Introduction'.",
-    },
-    bottomLine: {
-      type: "string",
-      description: "The closing paragraph: what to actually do with everything above. Two to four sentences.",
-    },
-    faqs: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["question", "answer"],
-        properties: {
-          question: { type: "string", description: "Phrased the way a person would ask it." },
-          answer: { type: "string", description: "40 to 90 words. Answers in the first sentence." },
-        },
-      },
-      description:
-        "Fifteen to eighteen on a full-length guide, drawn from the questions in the research first and the gaps second.",
-    },
-    sources: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["label", "url", "tier"],
-        properties: {
-          label: { type: "string" },
-          url: { type: "string", description: "Must be a URL that appeared in the research brief." },
-          tier: { type: "string", enum: ["PRIMARY", "SECONDARY", "REPORTED", "EDITORIAL"] },
-        },
-      },
-      description:
-        "At most a dozen. Only URLs that appeared in the brief. An empty array is correct and expected when the brief had nothing citable. Never invent one.",
-    },
-    readingMinutes: { type: "number", description: "Honest estimate at 220 words a minute." },
-    metaTitle: {
-      type: "string",
-      description:
-        "50 to 60 characters. The phrase this ranks for, in words a person would search, plus whatever separates this page from the nine others in the results. No brand name, no pipe-separated keyword list, no year unless the guide is genuinely annual.",
-    },
-    metaDescription: {
-      type: "string",
-      description:
-        "140 to 158 characters, and it is the short answer compressed rather than a summary of the page. Lead with the number or the rule, then what the guide adds. If Google is already showing an AI overview for this search, this is the sentence competing with it.",
-    },
-    focusKeyword: { type: "string", description: "The single phrase this page should rank for." },
-    confidence: {
-      type: "string",
-      description:
-        "What you were unsure about, or where the research was thin, addressed to the editor who will review this. Say 'none' only if there is genuinely nothing.",
-    },
-    illustrations: {
-      type: "array",
-      minItems: 3,
-      maxItems: 3,
-      description:
-        "The three photographs this guide should carry: one cover and two inline. You are commissioning them, not making them, so describe a scene somebody could photograph. Real work, real materials, real hands. No text in the picture, no logos, no charts, no diagrams, no before-and-after, nobody recognisable, and nothing staged to look like stock photography. The two inline ones must each have a matching figure block in the body.",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["key", "slot", "scene", "alt"],
-        properties: {
-          key: {
-            type: "string",
-            description: "Lowercase, hyphenated, specific to this guide. The figure blocks refer to it.",
-          },
-          slot: { type: "string", enum: ["cover", "inline"] },
-          scene: {
-            type: "string",
-            description:
-              "What to photograph, in two or three sentences. Name the subject, the setting, the light and the angle. Concrete enough that two people reading it would come back with the same picture.",
-          },
-          alt: { type: "string", description: "What the picture shows, for a reader who cannot see it." },
-          caption: { type: "string", description: "Optional, and only where it adds something." },
-        },
-      },
-    },
-  },
-};
-
 const blockValidator = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("heading"), text: z.string(), id: z.string() }),
   z.object({
@@ -434,6 +87,30 @@ const blockValidator = z.discriminatedUnion("kind", [
       .min(2),
   }),
 ]);
+
+/**
+ * The same union, in words, for whoever is writing to it.
+ *
+ * A validator says what is refused; it does not say what any of it is for. This
+ * does, and it lives here so that adding a block kind without describing it is
+ * an obvious omission rather than an invisible one.
+ */
+export const BLOCK_REFERENCE: Record<string, string> = {
+  heading: "{ text, id }. An H2 and its anchor slug. Sentence case, a question or a claim, never a label like Introduction.",
+  paragraph:
+    "{ text, links? }. One paragraph, no markdown. links is at most two { text, href }, where text appears verbatim in the paragraph and href is a path from the internal link list. Most paragraphs have none.",
+  list: "{ items }. Two or more plain lines. Use it where order does not matter.",
+  steps: "{ items }. Two or more { title, body }, numbered on the page. Use it where order does.",
+  callout: "{ tone, title, body }. tone is note, alert or brand. One idea the reader must not miss.",
+  criteria: "{ items }. Two or more { title, body }. What to judge something on, one heading each.",
+  checklist: "{ title, items }. Two or more lines the reader works through in order.",
+  compare: "{ title, intro?, rows }. Two or more { factor, check, why }. A real table, where lining things up beats prose.",
+  flags: "{ title, items }. Two or more things that should end a conversation.",
+  figure:
+    "{ key, alt, caption? }. Places one of the pictures you commissioned in illustrations. key must match one of them. Put it where the picture belongs in the argument.",
+  chart:
+    "{ title, unit, intro?, note?, rows }. Two or more { label, low, high, typical?, note? }. Every number is published as a figure a reader will quote back, so use it only where the research supports the ranges and leave it out rather than estimating.",
+};
 
 export const guideDraftSchema = z.object({
   title: z.string().min(10),
@@ -778,64 +455,45 @@ export async function checkSources(
   return { sources: kept, note: lines.length > 0 ? `SOURCE CHECK\n${lines.join("\n")}` : null };
 }
 
-export async function writeGuide({
-  system,
-  instructions,
-  context,
-  research,
-  model,
-  effort,
-}: {
-  system: string;
-  instructions: string;
-  context: WriteContext;
-  research: ResearchBrief;
-  model?: string;
-  effort?: Effort;
-}): Promise<WriteResult> {
-  const prompt = [
-    renderInstructions(instructions, context, research),
-    skillNotes(context.skills),
-    context.brief ? `\n\nFOR THIS ONE\n${context.brief}` : "",
-  ]
-    .join("")
-    .trim();
+/**
+ * The two checks a writer cannot make about its own draft, made here.
+ *
+ * Sources first, then internal links, and both the same way: only something
+ * that was handed over or can be reached survives. Whatever is removed is said
+ * out loud in the confidence note rather than quietly dropped, because an
+ * editor reading the draft should know what was taken out of it.
+ */
+export async function vetDraft(
+  draft: GuideDraft,
+  input: { research: ResearchBrief; linkTargets?: LinkTarget[] },
+): Promise<{ draft: GuideDraft; notes: string[] }> {
+  const notes: string[] = [];
 
-  const draft = await askForJson({
-    schema: guideDraftSchema,
-    system: system || DEFAULT_SYSTEM,
-    prompt,
-    jsonSchema: guideJsonSchema as unknown as Record<string, unknown>,
-    model,
-    effort,
-    // Long-form, with headroom. A three thousand word guide carrying eighteen
-    // FAQs and a dozen blocks lands somewhere near twelve thousand tokens once
-    // it is JSON, and running into the ceiling loses the entire draft rather
-    // than truncating it.
-    maxTokens: 48_000,
-  });
-
-  // The one check the schema cannot make: a citation the model was not given.
-  const { sources, note } = await checkSources(draft.sources, research);
+  const { sources, note } = await checkSources(draft.sources, input.research);
   draft.sources = sources;
-  if (note) draft.confidence = `${draft.confidence}\n\n${note}`.trim();
+  if (note) {
+    notes.push(note);
+    draft.confidence = `${draft.confidence}\n\n${note}`.trim();
+  }
 
-  // And the same rule for internal links. A path that was not on the list is a
-  // page that does not exist, however plausible it looks.
-  if (context.linkTargets && context.linkTargets.length > 0) {
+  // A path that was not on the list is a page that does not exist, however
+  // plausible it looks. Two links to a paragraph, which is as many as a
+  // paragraph can carry without reading like a link farm.
+  const targets = input.linkTargets ?? [];
+  if (targets.length > 0) {
     let dropped = 0;
     draft.body = draft.body.map((block) => {
       if (block.kind !== "paragraph" || !block.links) return block;
-      // Two per paragraph, which the schema used to say and now nothing does.
-      const kept = keepKnownLinks(block.links, context.linkTargets ?? []).slice(0, 2);
+      const kept = keepKnownLinks(block.links, targets).slice(0, 2);
       dropped += block.links.length - kept.length;
       return kept.length > 0 ? { ...block, links: kept } : { ...block, links: undefined };
     });
     if (dropped > 0) {
-      draft.confidence =
-        `${draft.confidence}\n\nLINK CHECK\n${dropped} internal link${dropped === 1 ? " pointed" : "s pointed"} at a path that is not a page on this site and ${dropped === 1 ? "was" : "were"} removed.`.trim();
+      const line = `LINK CHECK\n${dropped} internal link${dropped === 1 ? " pointed" : "s pointed"} at a path that is not a page on this site and ${dropped === 1 ? "was" : "were"} removed.`;
+      notes.push(line);
+      draft.confidence = `${draft.confidence}\n\n${line}`.trim();
     }
   }
 
-  return { draft, prompt };
+  return { draft, notes };
 }

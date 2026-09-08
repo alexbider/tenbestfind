@@ -59,7 +59,6 @@ holds that logic; countries win over categories, and CMS pages come last.
 /us/tx/dallas/roofing/          ranking
 /companies/lone-star-roofing/   business profile
 /guides/roof-replacement-cost/  guide
-/blog/what-changed-this-year/   blog post
 /experts/marcus-reed/           expert profile
 /about/                         CMS page
 ```
@@ -126,7 +125,8 @@ Every entity that publishes something has an editor:
 
 | Entity | Where |
 | --- | --- |
-| Pages, guides, posts | `/admin/pages`, `/admin/guides`, `/admin/posts` |
+| Guides, and the commissions behind them | `/admin/guides` (Library, Pipeline, Topics, Briefs) |
+| Pages | `/admin/pages` |
 | Rankings, with entry order, criteria, costs, sources, FAQs | `/admin/rankings` |
 | Businesses, with services, areas, hours, credentials, photos | `/admin/businesses` |
 | Services and subservices | `/admin/taxonomy/services` |

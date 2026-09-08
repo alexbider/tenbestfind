@@ -203,7 +203,6 @@ export const SEO_FIELDS: SeoField[] = [
 
   /* templates */
   { key: "seo.template.page", label: "Pages", type: "text", group: "templates", default: "%title% %sep% %sitename%" },
-  { key: "seo.template.post", label: "Blog posts", type: "text", group: "templates", default: "%title% %sep% %sitename%" },
   {
     key: "seo.template.ranking",
     label: "Rankings",
@@ -333,7 +332,6 @@ export const SEO_FIELDS: SeoField[] = [
   { key: "seo.sitemapEnabled", label: "Generate the XML sitemap", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.rankings", label: "Include rankings", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.guides", label: "Include guides", type: "boolean", group: "sitemap", default: true },
-  { key: "seo.sitemap.include.posts", label: "Include blog posts", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.businesses", label: "Include business profiles", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.pages", label: "Include pages", type: "boolean", group: "sitemap", default: true },
   { key: "seo.sitemap.include.people", label: "Include expert profiles", type: "boolean", group: "sitemap", default: true },

@@ -43,6 +43,15 @@ const config: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  // The blog is gone: everything the site publishes is a guide. These are
+  // permanent because the old addresses were public, and a 301 is how you tell
+  // an engine that the page moved rather than that it vanished.
+  async redirects() {
+    return [
+      { source: "/blog", destination: "/guides/", permanent: true },
+      { source: "/blog/:slug", destination: "/guides/:slug/", permanent: true },
+    ];
+  },
   // The app router skips any directory starting with a dot, so the TDM
   // reservation is served by a normal route and mapped onto its well-known
   // address here.
