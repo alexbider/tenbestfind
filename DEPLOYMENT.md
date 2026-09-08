@@ -99,6 +99,10 @@ Both the first deploy and every redeploy are the same call to Hostinger's
 variables above as the environment. A project with the same name is replaced,
 and the named volumes survive, so the content survives with it.
 
+Send the file with its comment lines stripped. The endpoint answers a commented
+file with a bare 422 and no explanation, which reads like a broken deploy rather
+than a formatting complaint. Everything else goes verbatim.
+
 Watch the project logs afterwards. A good run says, in order: the branch and
 SHA, the install, the migrations ("All migrations have been successfully
 applied"), either the seed or "database already holds N countries, leaving it
