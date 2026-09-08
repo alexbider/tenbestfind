@@ -39,6 +39,37 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isApi = pathname.startsWith("/api/");
 
+  // /mcp is the address most people expect an MCP server to answer on, and the
+  // one they will type from memory. It is the same endpoint, rewritten rather
+  // than redirected so a POST arrives with its body intact and in one hop.
+  if (pathname === "/mcp" || pathname === "/mcp/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/api/mcp/";
+    return NextResponse.rewrite(url);
+  }
+
+  // Somebody pasted the bare domain into a connector. Nothing else posts JSON
+  // to the front page, and the alternative is an HTML 405 that reads like the
+  // site is broken rather than like one wrong character in a URL.
+  if (
+    request.method === "POST" &&
+    (pathname === "/" || pathname === "") &&
+    (request.headers.get("content-type") ?? "").includes("application/json")
+  ) {
+    const endpoint = new URL("/mcp", CANONICAL ?? request.url).toString();
+    return NextResponse.json(
+      {
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+          code: -32600,
+          message: `This is the website, not the connector. Use ${endpoint} as the server URL.`,
+        },
+      },
+      { status: 404, headers: { "access-control-allow-origin": "*" } },
+    );
+  }
+
   // The www host answers on the same certificate and serves the same app, so
   // without this every page exists at two addresses. The canonical tags
   // already name the apex; this makes the server say the same thing. Built

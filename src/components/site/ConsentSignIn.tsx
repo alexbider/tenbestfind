@@ -1,12 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { consentSignIn, type ConsentState } from "@/app/actions/mcp-consent";
 
 const initial: ConsentState = { status: "idle" };
 
 export function ConsentSignIn({ next }: { next: string }) {
   const [state, action, pending] = useActionState(consentSignIn, initial);
+
+  // The form is submitted by a client action, so before this component has
+  // hydrated the button does nothing at all: the page reloads and the typed
+  // password is gone. It is a short window, and somebody who types quickly
+  // will land in it and conclude the site is broken. So the button says it is
+  // not ready yet rather than pretending it is.
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   return (
     <form action={action}>
@@ -22,7 +30,7 @@ export function ConsentSignIn({ next }: { next: string }) {
         <input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
 
-      <button type="submit" className="btn btn--primary" disabled={pending}>
+      <button type="submit" className="btn btn--primary" disabled={pending || !ready}>
         {pending ? "Signing in…" : "Sign in to continue"}
       </button>
     </form>

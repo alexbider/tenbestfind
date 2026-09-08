@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth";
 import { fullDate } from "@/lib/format";
 import { parseList } from "@/lib/json";
 import { TOOLS, TOOL_GROUPS } from "@/lib/mcp";
+import { CopyField } from "@/components/admin/CopyField";
 import { absoluteUrl } from "@/lib/urls";
 import { db } from "@/lib/db";
 
@@ -53,15 +54,14 @@ export default async function ConnectionsPage() {
       <div className="panel-grid panel-grid--wide">
         <Panel
           title="Connect Claude to this site"
-          description="Add it as a custom connector. The sign-in and approval happen on this site, not in Claude."
+          description="One URL and one approval. There is no key to generate, copy or keep anywhere."
         >
-          <div className="field">
-            <label htmlFor="mcp-url">Connector URL</label>
-            <input id="mcp-url" type="text" readOnly value={absoluteUrl("/api/mcp")} />
-            <span className="field__hint">
-              Paste this into Claude, Settings, Connectors, Add custom connector.
-            </span>
-          </div>
+          <CopyField
+            id="mcp-url"
+            label="Connector URL"
+            value={absoluteUrl("/mcp")}
+            hint={`In Claude: Settings, Connectors, Add custom connector, paste, Add. ${absoluteUrl("/api/mcp")} is the same endpoint if a client already has it.`}
+          />
 
           <ol
             style={{
@@ -74,10 +74,10 @@ export default async function ConnectionsPage() {
               marginTop: 8,
             }}
           >
-            <li>Claude discovers this site&rsquo;s authorization server and registers itself. No key to copy.</li>
+            <li>Claude finds this site&rsquo;s sign-in server from that URL and registers itself.</li>
             <li>
-              You are sent here to sign in with your staff account and approve what it may do. Read
-              access and write access are approved separately.
+              A tab opens here. Sign in with your staff account and press Allow. That is the whole
+              approval.
             </li>
             <li>
               Access lasts an hour at a time and renews for thirty days. Revoke it below and the
@@ -89,6 +89,35 @@ export default async function ConnectionsPage() {
             A connected app acts as the person who approved it and can do nothing that account cannot.
             Every change it makes is written to the audit log with the application&rsquo;s name against it.
           </p>
+        </Panel>
+
+        <Panel
+          title="What to say once it is connected"
+          description="Claude is told what this site is and where to start the moment it connects, so plain questions work."
+        >
+          <ul style={{ display: "grid", gap: 10, listStyle: "none", padding: 0, margin: 0 }}>
+            {[
+              "What guides need writing?",
+              "Write the top one, then show me the draft.",
+              "Which of our published guides are too thin, and rewrite the worst.",
+              "What did the topic radar find this week?",
+              "Which businesses are missing an email address?",
+              "Check the SEO report and fix anything scoring under fifty.",
+            ].map((line) => (
+              <li
+                key={line}
+                style={{
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: 9,
+                  padding: "10px 13px",
+                  fontSize: 14,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {line}
+              </li>
+            ))}
+          </ul>
         </Panel>
 
         <Panel

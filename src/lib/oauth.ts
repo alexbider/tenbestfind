@@ -30,17 +30,21 @@ export function resourceId(): string {
 }
 
 /**
- * RFC 8707 audience comparison. Strict on origin and path, forgiving about a
- * trailing slash and letter case, because a person pasting the connector URL
- * into a client will not always match the canonical form and a token that
- * silently fails every call is a miserable thing to debug.
+ * RFC 8707 audience comparison. Strict on origin, forgiving about a trailing
+ * slash, letter case and which of the two addresses the endpoint answers on,
+ * because a person pasting the connector URL into a client will not always
+ * match the canonical form and a token that silently fails every call is a
+ * miserable thing to debug.
  */
 export function sameResource(candidate: string | null | undefined): boolean {
   if (!candidate) return true;
   const normalise = (value: string) => {
     try {
       const url = new URL(value);
-      return `${url.protocol}//${url.host.toLowerCase()}${url.pathname.replace(/\/+$/, "")}`;
+      // /mcp and /api/mcp are the same endpoint, so a token minted for one
+      // works on the other.
+      const path = url.pathname.replace(/\/+$/, "") === "/mcp" ? MCP_PATH : url.pathname.replace(/\/+$/, "");
+      return `${url.protocol}//${url.host.toLowerCase()}${path}`;
     } catch {
       return value.replace(/\/+$/, "");
     }
@@ -153,9 +157,41 @@ export async function registerClient(body: RegistrationRequest) {
     body.token_endpoint_auth_method === "client_secret_basic";
   const secret = confidential ? token() : null;
 
+  const name = String(body.client_name ?? "Unnamed client").slice(0, 120);
+
+  // A public client that registers again with the same name and the same
+  // redirect addresses is the same application coming back, which is what
+  // happens every time somebody reconnects. Registering it twice would leave
+  // two identical rows on the connected apps screen and no way to tell which
+  // one to revoke. There is nothing secret to hand out again, so the existing
+  // registration is simply returned.
+  //
+  // A client with a secret is always registered afresh, because handing back an
+  // old secret to whoever asks is not something to be clever about.
+  if (!confidential) {
+    const existing = await db.oAuthClient.findFirst({
+      where: { name, secretHash: null, redirectUris: JSON.stringify(uris) },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existing) {
+      return {
+        registration: {
+          client_id: existing.id,
+          client_id_issued_at: Math.floor(existing.createdAt.getTime() / 1000),
+          client_name: existing.name,
+          redirect_uris: uris,
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+          token_endpoint_auth_method: "none",
+          scope: existing.scope,
+        },
+      } as const;
+    }
+  }
+
   const client = await db.oAuthClient.create({
     data: {
-      name: String(body.client_name ?? "Unnamed client").slice(0, 120),
+      name,
       redirectUris: JSON.stringify(uris),
       secretHash: secret ? await bcrypt.hash(secret, 10) : null,
       scope: typeof body.scope === "string" && body.scope.trim() ? body.scope.trim() : SCOPES.join(" "),

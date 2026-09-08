@@ -151,6 +151,12 @@ services:
         echo "==> checking the model schemas"
         npx tsx scripts/check-schemas.ts || echo "schema check skipped"
 
+        # The connector, once the site is answering. Backgrounded behind the
+        # same pause the indexing ping uses, because there is nothing to check
+        # until the server below is listening. Read-only apart from one
+        # throwaway client registration.
+        ( sleep 75; BASE="$$NEXT_PUBLIC_SITE_URL" npx tsx scripts/check-connector.ts || echo "connector check failed" ) &
+
         # Creates the four starter briefs the guide writer works from, once.
         # A template an editor has changed is never overwritten.
         echo "==> seeding the writer's prompt templates"

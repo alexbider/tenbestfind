@@ -158,6 +158,14 @@ Claude registers itself (RFC 7591), you are sent to `/connect/` to sign in with
 your staff account and approve the scopes, and the token is bound to this server
 with a resource indicator (RFC 8707).
 
+`https://tenbestfind.com/mcp` and `https://tenbestfind.com/api/mcp` are the same
+endpoint, and a token minted for either works on both, because the short form is
+what people type from memory. Pasting the bare domain answers with a sentence
+saying which URL to use instead, rather than an HTML error that reads like an
+outage. **Admin, Connected apps** has the URL with a copy button, and
+`BASE=https://tenbestfind.com npx tsx scripts/check-connector.ts` checks every
+part of the flow except the human approval.
+
 The tool surface covers everything the admin console does: pages, guides and
 rankings; services, subservices and the whole location tree; businesses with
 their services, hours, credentials and photos; the editorial team; claims and

@@ -18,9 +18,10 @@ const one = (value: string | string[] | undefined): string =>
   Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 
 const SCOPE_TEXT: Record<string, string> = {
-  "mcp:read": "Read your content: businesses, rankings, guides, pages, SEO records and import batches.",
+  "mcp:read":
+    "Read everything this site holds: guides and the commissions behind them, businesses, rankings, services and locations, SEO records, analytics and import batches.",
   "mcp:write":
-    "Make changes: edit and publish businesses, write SEO records, add redirects and queue import batches.",
+    "Make changes: write and submit guides, edit and publish businesses and rankings, attach images, write SEO records, add redirects and queue import batches. Nothing is published without an author, and every change is logged against your name.",
 };
 
 /**

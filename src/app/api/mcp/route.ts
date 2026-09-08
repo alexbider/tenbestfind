@@ -19,6 +19,26 @@ const SERVER = {
   version: "1.0.0",
 };
 
+/**
+ * What the client is told the moment it connects.
+ *
+ * This is the only chance to explain the place before the first question is
+ * asked, so it says what the site is for, where to start, and the two rules
+ * that are not obvious from any tool description: that a guide is written here
+ * rather than by the site, and that nothing publishes without a person.
+ */
+const INSTRUCTIONS = [
+  "TenBestFind publishes researched shortlists of local service companies, and the guides that explain how to choose one.",
+  "",
+  "WRITING GUIDES is the main thing you do here, and you do the writing yourself: this site does not have a writer of its own. Start with guide_desk to see where everything stands. guide_gaps says what is worth writing, either from the weekly topic radar or from guides too thin to leave as they are. get_commission hands you one whole assignment at once: the house brief with the search research already in it, the word floor, every page on this site you may link to, the domains you may cite, and the block kinds you may use. Then claim_commission so the tracker knows you have it, note_commission as you go, and submit_guide when the draft is done. Two rules the tools enforce rather than ask about: a source that was neither in the research nor on the citable list is removed, and so is an internal link to a path that is not a real page. Both are reported back to you rather than dropped quietly.",
+  "",
+  "A submitted draft waits for a person. accept_commission turns it into a page in Draft, illustrate_guide attaches pictures you have generated elsewhere, and publish_guide needs a named author, because a byline is a claim somebody has to make.",
+  "",
+  "EVERYTHING ELSE the admin console can do is here too: businesses and their profiles, Top 10 rankings, services and the location tree, the editorial team, questions and criteria, packages and sponsorship, the whole SEO configuration, redirects, media, users, analytics and the import pipeline. site_overview is the fastest way to see the shape of the data.",
+  "",
+  "You act as the person who approved this connection and can do nothing their account cannot. Every change is written to the audit log with this application's name against it, and takes effect on the live site immediately.",
+].join("\n");
+
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, GET, DELETE, OPTIONS",
@@ -59,8 +79,7 @@ async function dispatch(message: Rpc, ctx: Bearer): Promise<unknown | null> {
         protocolVersion: SUPPORTED.includes(asked) ? asked : LATEST,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER,
-        instructions:
-          "TenBestFind publishes researched shortlists of local service companies. Read tools cover businesses, rankings, services, locations, SEO records and import batches. Write tools edit profiles, publish listings, write SEO records, add redirects and queue scrape-and-write batches. Call site_overview first to see the shape of the data. Everything you change is written to the audit log under the account that authorised this connection.",
+        instructions: INSTRUCTIONS,
       });
     }
 
