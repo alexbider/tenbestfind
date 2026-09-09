@@ -17,5 +17,16 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "project", "chats"]
+  "exclude": [
+    "node_modules",
+    "project",
+    "chats",
+    // Needs a browser to draw the icons, and the browser's package is not a
+    // dependency of this site: production installs from package.json and would
+    // fail type checking on an import it has no way to resolve, which takes the
+    // whole build down with it. The assets it writes are committed, so nothing
+    // on a deploy ever runs it. Check it with the browser installed:
+    //   npx tsc --noEmit scripts/build-brand-assets.ts
+    "scripts/build-brand-assets.ts"
+  ]
 }

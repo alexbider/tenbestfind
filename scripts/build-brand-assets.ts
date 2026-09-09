@@ -10,6 +10,13 @@
 //
 //   npx tsx scripts/build-brand-assets.ts
 //
+// It is excluded from tsconfig on purpose: it needs Playwright, which is not a
+// dependency of the site, and production installs from package.json and would
+// fail the whole build on an import it cannot resolve. Nothing on a deploy runs
+// this; what it writes is committed. Type check it by hand after changing it:
+//
+//   npx tsc --noEmit scripts/build-brand-assets.ts
+//
 // Writes:
 //   src/app/favicon.ico          16 and 32, what a browser tab reads
 //   src/app/icon.png             512, what everything modern reads
