@@ -156,6 +156,12 @@ services:
         # false claim about a real person. --prune drops those; anything else it
         # finds is printed and left for a person, and neither blocks the deploy,
         # because a stray string is not worth a dark site.
+        # What every page calls itself, checked against the rules rather than
+        # the code: a Top 10 that is not ten, a year nobody reviewed, and now
+        # a title too long to be read in full.
+        echo "==> checking the page copy rules"
+        npx tsx scripts/check-seo-copy.ts || echo "copy check skipped"
+
         echo "==> checking for placeholder content"
         npx tsx scripts/check-placeholders.ts --prune || echo "placeholders found, see above"
 
