@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/site/BrandMark";
 import { getSiteNav } from "@/lib/navigation";
 import { routes } from "@/lib/urls";
 
@@ -210,37 +211,7 @@ export async function SiteFooter() {
         >
           <div data-fbrand="" style={{ maxWidth: "320px" }}>
             <Link href="/" aria-label="TenBestFind home" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "18px" }}>
-              <span
-                data-fmark=""
-                aria-hidden="true"
-                style={{
-                  position: "relative",
-                  display: "inline-flex",
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "13px",
-                  overflow: "hidden",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14), 0 8px 20px -10px rgba(0,0,0,0.6)",
-                }}
-              >
-                <svg width="44" height="44" viewBox="0 0 42 42" aria-hidden="true" style={{ display: "block" }}>
-                  <defs>
-                    <linearGradient id="tbf-ftr-bg" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0" stopColor="#2D74D7" />
-                      <stop offset="1" stopColor="#1E3564" />
-                    </linearGradient>
-                    <linearGradient id="tbf-ftr-gold" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0" stopColor="#F2CF85" />
-                      <stop offset="1" stopColor="#D9A94A" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="42" height="42" rx="13" fill="url(#tbf-ftr-bg)" />
-                  <path d="M10.5 15.2 l4.6-3.4 v18.4" fill="none" stroke="#FFFFFF" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
-                  <ellipse cx="26.2" cy="21" rx="6.3" ry="9.2" fill="none" stroke="#FFFFFF" strokeWidth="3.4" />
-                  <path d="M23.3 21.4 l2.1 2.1 4.1-4.6" fill="none" stroke="url(#tbf-ftr-gold)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle data-fmark-dot="" cx="34.5" cy="8.5" r="2.2" fill="url(#tbf-ftr-gold)" style={{ transformOrigin: "34.5px 8.5px" }} />
-                </svg>
-              </span>
+              <BrandMark tone="dark" />
               <span style={{ display: "block", lineHeight: "1" }}>
                 <span style={{ display: "block", fontSize: "21px", fontWeight: "800", letterSpacing: "-0.045em", color: "#fff" }}>
                   TenBest<span style={{ color: "#7FB2F5" }}>Find</span>
@@ -259,7 +230,7 @@ export async function SiteFooter() {
                   }}
                 >
                   <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "1.5px", background: "var(--gold-ink)" }} />
-                  Local Rankings
+                  The best, verified
                 </span>
               </span>
             </Link>

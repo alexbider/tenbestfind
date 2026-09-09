@@ -102,10 +102,10 @@
 [data-macc] > summary::-webkit-details-marker { display: none; }
 [data-macc][open] > summary [data-chev] { transform: rotate(180deg); }
 [data-chev] { transition: transform 200ms var(--ease-out); }
-@keyframes markDot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.55; } }
+/* The mark is one image now, so its gold dot cannot pulse on its own any
+   more. The tilt on hover is the part that was worth keeping. */
 [data-mark] { transition: transform 320ms var(--ease-out), box-shadow 320ms var(--ease-out); }
 [data-mark]:hover { transform: rotate(-8deg) scale(1.04); box-shadow: 0 10px 24px -10px rgba(16,31,61,0.5); }
-[data-mark-dot] { animation: markDot 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { [data-hdr] * { transition: none !important; animation: none !important; } }
 @media (max-width: 1180px) {
   [data-desktop-nav] { display: none !important; }

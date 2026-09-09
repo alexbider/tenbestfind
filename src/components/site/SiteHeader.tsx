@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/site/BrandMark";
 import { ICON_PATHS, type IconName } from "@/lib/icon-paths";
 import { getSiteNav, type NavKey } from "@/lib/navigation";
 import { routes } from "@/lib/urls";
@@ -61,64 +62,6 @@ function Magnifier({ size = 17 }: { size?: number }) {
 }
 
 /** The "10" mark. The gold tick and the dot are what make it read as a badge. */
-function Mark() {
-  return (
-    <span
-      data-mark=""
-      aria-hidden="true"
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        width: "42px",
-        height: "42px",
-        borderRadius: "13px",
-        boxShadow: "0 6px 16px -8px rgba(16,31,61,0.55), inset 0 1px 0 rgba(255,255,255,0.12)",
-        overflow: "hidden",
-      }}
-    >
-      <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden="true" style={{ display: "block" }}>
-        <defs>
-          <linearGradient id="tbf-mark-bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#1E3564" />
-            <stop offset="1" stopColor="#0E1B36" />
-          </linearGradient>
-          <linearGradient id="tbf-mark-gold" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#F2CF85" />
-            <stop offset="1" stopColor="#D9A94A" />
-          </linearGradient>
-        </defs>
-        <rect width="42" height="42" rx="13" fill="url(#tbf-mark-bg)" />
-        <path d="M8.5 11.5 20.5 5.5 v0" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        <path
-          d="M10.5 15.2 l4.6-3.4 v18.4"
-          fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="3.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <ellipse cx="26.2" cy="21" rx="6.3" ry="9.2" fill="none" stroke="#FFFFFF" strokeWidth="3.4" />
-        <path
-          d="M23.3 21.4 l2.1 2.1 4.1-4.6"
-          fill="none"
-          stroke="url(#tbf-mark-gold)"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle
-          data-mark-dot=""
-          cx="34.5"
-          cy="8.5"
-          r="2.2"
-          fill="url(#tbf-mark-gold)"
-          style={{ transformOrigin: "34.5px 8.5px" }}
-        />
-      </svg>
-    </span>
-  );
-}
-
 const NAVLINK = {
   display: "inline-flex",
   alignItems: "center",
@@ -306,7 +249,7 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
           }}
         >
           <Link href="/" aria-label="TenBestFind home" style={{ display: "flex", alignItems: "center", gap: "11px", flexShrink: 0 }}>
-            <Mark />
+            <BrandMark />
             <span data-wordmark="" style={{ display: "block", lineHeight: "1" }}>
               <span style={{ display: "block", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.045em", color: "var(--ink)" }}>
                 TenBest<span style={{ color: "var(--color-primary)" }}>Find</span>
@@ -325,7 +268,7 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
                 }}
               >
                 <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "1.5px", background: "var(--gold-ink)" }} />
-                Local Rankings
+                The best, verified
               </span>
             </span>
           </Link>

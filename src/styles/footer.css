@@ -25,12 +25,11 @@
 [data-fsearch] input::placeholder { color: rgba(232,237,245,0.6); }
 [data-fsearch] input { transition: background 160ms var(--ease-out); }
 [data-fsearch] input:focus { background: rgba(255,255,255,0.16) !important; box-shadow: 0 0 0 3px rgba(231,184,99,0.45); }
-[data-fmark] { transition: transform 320ms var(--ease-out); }
-[data-fmark]:hover { transform: rotate(-8deg) scale(1.04); }
-@keyframes markDot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.55; } }
+/* Both marks are the shared component, so both answer to the same hook. */
+[data-ftr] [data-mark] { transition: transform 320ms var(--ease-out); }
+[data-ftr] [data-mark]:hover { transform: rotate(-8deg) scale(1.04); }
 @keyframes tenDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: no-preference) {
-  [data-fmark-dot] { animation: markDot 2.6s ease-in-out infinite; }
   [data-ften] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tenDraw 2.4s var(--ease-out) 300ms forwards; }
 }
 @media (prefers-reduced-motion: reduce) { [data-ftr] * { animation: none !important; transition: none !important; } }

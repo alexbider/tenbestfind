@@ -26,6 +26,9 @@
 //   public/logo-512.png          the Organization logo in the schema graph,
 //                                which needs a stable path rather than the
 //                                hashed one Next gives a file-based icon
+//   public/mark-light.png        the mark in the header, on a pale page
+//   public/mark-dark.png         the mark in the footer, which is the same navy
+//                                the tile is, so that one is drawn on blue
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -87,14 +90,14 @@ const socialCard = `
  * because the corner radius and the numeral weight have to keep the same
  * proportions at 16 pixels as at 512, and rounding each separately does not.
  */
-const iconTile = `
+const tile = (background: string) => `
 <!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="${FONT}">
 <style>
   html, body { margin: 0; padding: 0; background: transparent; }
   body { width: 512px; height: 512px; }
   .tile {
-    width: 512px; height: 512px; border-radius: 112px; background: ${INK};
+    width: 512px; height: 512px; border-radius: 112px; background: ${background};
     display: flex; align-items: center; justify-content: center;
     font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased;
   }
@@ -109,6 +112,17 @@ const iconTile = `
 </style></head><body>
   <div class="tile"><span class="num">10<span class="dot"></span></span></div>
 </body></html>`;
+
+/** The tile as the icons use it: navy, for a pale page. */
+const iconTile = tile(INK);
+
+/**
+ * The same tile for the footer, which is the navy the tile is.
+ *
+ * A navy mark on a navy panel is a mark nobody sees, so this one keeps the
+ * gradient the footer already used and only the shape changes.
+ */
+const darkTile = tile("linear-gradient(135deg, #2D74D7, #1E3564)");
 
 /* ----------------------------------------------------------------- the ico */
 
@@ -165,6 +179,7 @@ async function main(): Promise<void> {
 
   const card = await shoot(socialCard, 1200, 630);
   const tile = await shoot(iconTile, 512, 512);
+  const dark = await shoot(darkTile, 512, 512);
 
   await browser.close();
 
@@ -193,6 +208,9 @@ async function main(): Promise<void> {
     ["src/app/apple-icon.png", apple180],
     ["public/icon-192.png", icon192],
     ["public/logo-512.png", icon512],
+    // 192 for a 42px mark, so it stays sharp on a three-times display.
+    ["public/mark-light.png", await sharp(tile).resize(192, 192).png({ compressionLevel: 9 }).toBuffer()],
+    ["public/mark-dark.png", await sharp(dark).resize(192, 192).png({ compressionLevel: 9 }).toBuffer()],
     ["public/social-card.png", await sharp(card).png({ compressionLevel: 9 }).toBuffer()],
   ];
 
