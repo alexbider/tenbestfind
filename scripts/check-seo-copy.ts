@@ -15,6 +15,9 @@ import {
   nearYou,
   subserviceCopy,
   tradesPhrase,
+  BRAND,
+  TITLE_LIMIT,
+  expertTitle,
 } from "../src/lib/seo-copy";
 import { breadcrumbSchema, companyCrumbs, cityCrumbs, rankingCrumbs } from "../src/lib/breadcrumbs";
 import { renderTemplate, trimSiteName } from "../src/lib/seo-settings";
@@ -85,7 +88,7 @@ const full = rankingCopy(
   ohio,
   { publishedEntries: 10 },
 );
-check("ten published says ten", full.title, "10 Best Plumbers in Columbus, OH (2026)");
+check("ten published says ten", full.title, "10 Best Plumbers in Columbus, OH (2026) | TenBestFind");
 check("the h1 carries no year", full.h1, "10 Best Plumbers in Columbus, OH");
 check(
   "the description says ten",
@@ -100,7 +103,7 @@ const short = rankingCopy(
   ohio,
   { publishedEntries: 7 },
 );
-check("seven does not say ten", short.title, "Best Plumbers in Columbus, OH");
+check("seven does not say ten", short.title, "Best Plumbers in Columbus, OH | TenBestFind");
 check("seven h1 does not say ten", short.h1, "Best Plumbers in Columbus, OH");
 check("seven description does not say ten", short.description.includes("10 best"), false);
 check("seven carries no year either", short.title.includes("("), false);
@@ -113,7 +116,7 @@ const neverReviewed = rankingCopy(
   ohio,
   { publishedEntries: 10 },
 );
-check("no review date, no year", neverReviewed.title, "10 Best Plumbers in Columbus, OH");
+check("no review date, no year", neverReviewed.title, "10 Best Plumbers in Columbus, OH | TenBestFind");
 const lastYear = rankingCopy(
   { status: "PUBLISHED", lastReviewedAt: new Date("2025-11-02T00:00:00Z") },
   plumbers,
@@ -121,7 +124,7 @@ const lastYear = rankingCopy(
   ohio,
   { publishedEntries: 10 },
 );
-check("the year is the review year, not this one", lastYear.title, "10 Best Plumbers in Columbus, OH (2025)");
+check("the year is the review year, not this one", lastYear.title, "10 Best Plumbers in Columbus, OH (2025) | TenBestFind");
 
 console.log("\nindexability:");
 check("a draft ranking stays out", rankingCopy({ status: "DRAFT" }, plumbers, columbus, ohio, { publishedEntries: 10 }).indexable, false);
@@ -244,6 +247,56 @@ check(
   trimSiteName("TenBestFind", "TenBestFind", "|"),
   "TenBestFind",
 );
+
+
+/* -------------------------------------------------- titles that have to fit */
+
+// Google shows about sixty characters. These are the real names that used to
+// push past it: long provinces, long trade names, and the two-part editor
+// titles. Each is checked for the limit and for still carrying the brand,
+// because dropping the publisher to make room is the last resort, not the plan.
+console.log("\ntitle lengths:");
+
+function fits(label: string, title: string, wantBrand = true): void {
+  const long = title.length > TITLE_LIMIT;
+  const unbranded = wantBrand && !title.endsWith(`| ${BRAND}`);
+  if (long || unbranded) failures += 1;
+  console.log(`  ${long || unbranded ? "WRONG" : "ok   "} ${label.padEnd(34)} ${String(title.length).padStart(2)}  ${title}`);
+  if (long) console.log(`        over ${TITLE_LIMIT} characters`);
+  if (unbranded) console.log("        lost the brand with room to spare");
+}
+
+const LONG_PLACES: { name: string; code: string }[] = [
+  { name: "Newfoundland and Labrador", code: "nl" },
+  { name: "Northwest Territories", code: "nt" },
+  { name: "Prince Edward Island", code: "pe" },
+  { name: "British Columbia", code: "bc" },
+];
+
+for (const region of LONG_PLACES) {
+  fits(`region ${region.code}`, regionCopy(region, { publishedRankings: 4 }).title);
+}
+
+fits(
+  "city charlottetown",
+  cityCopy({ name: "Charlottetown" }, { code: "pe" }, { publishedRankings: 2 }).title,
+);
+fits(
+  "city philadelphia",
+  cityCopy({ name: "Philadelphia" }, { code: "pa" }, { publishedRankings: 9 }).title,
+);
+fits(
+  "ranking with a long trade",
+  rankingCopy(
+    { status: "PUBLISHED", lastReviewedAt: new Date("2026-03-02") },
+    { name: "Chimney Services", singular: "Chimney sweep" },
+    { name: "Charlottetown" },
+    { code: "pe" },
+    { publishedEntries: 10 },
+  ).title,
+);
+fits("expert with a long role", expertTitle("Marcus Reed", "Expert reviewer, exteriors and structure"));
+fits("expert with a short role", expertTitle("Dana Whitfield", "Senior editor, home services"));
 
 console.log(failures === 0 ? "\nall good" : `\n${failures} wrong`);
 process.exit(failures === 0 ? 0 : 1);

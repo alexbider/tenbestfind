@@ -39,7 +39,34 @@ export type PageCopy = {
   reason?: string;
 };
 
-const brand = (title: string) => `${title} | ${BRAND}`;
+/** Where a title stops being read in full. Not a rule, but the practical width. */
+export const TITLE_LIMIT = 60;
+
+/**
+ * A title with the brand on the end, in the longest form that fits.
+ *
+ * Two things pull against each other here. Every page wants the brand, because
+ * a result with a publisher on it is a result somebody recognises. And a few
+ * titles start with a long name: "Best Home Service Companies in Newfoundland
+ * and Labrador" is fifty-six characters before the brand is anywhere near it.
+ * Appending regardless produced eleven titles Google cuts off mid-word.
+ *
+ * So a caller passes the ways it would have written the same title, longest
+ * first, and the longest one that still leaves room wins. Shortening the
+ * sentence is better than losing the publisher, and losing the publisher is
+ * better than being truncated by a machine that stops at a character count.
+ */
+export const brandedTitle = (...forms: string[]): string => {
+  const suffix = ` | ${BRAND}`;
+  const fits = forms.find((form) => form.length + suffix.length <= TITLE_LIMIT);
+  if (fits) return fits + suffix;
+
+  // Nothing fits with the brand on it, so the words that describe the page keep
+  // the space. This is the deliberate version of what truncation does badly.
+  return forms[forms.length - 1]!;
+};
+
+const brand = brandedTitle;
 
 /**
  * The plural of a trade, as it reads in the middle of a sentence.
@@ -234,6 +261,22 @@ export function subserviceCopy(
   };
 }
 
+/* ------------------------------------------------------------- the people */
+
+/**
+ * An editor's own page.
+ *
+ * The separator used to be an em dash, which is not house style and read as
+ * punctuation nobody chose. A comma is what a person types. The role is dropped
+ * to its first clause, and then entirely, when the full line will not fit:
+ * "Marcus Reed, Expert reviewer, exteriors and structure" is fifty-two
+ * characters before the brand.
+ */
+export function expertTitle(name: string, role: string): string {
+  const head = role.split(",")[0]!.trim();
+  return brand(`${name}, ${role}`, `${name}, ${head}`, name);
+}
+
 /* ------------------------------------------------------------ the places */
 
 export function countryCopy(
@@ -246,7 +289,7 @@ export function countryCopy(
   const long = country.code.toLowerCase() === "us" ? "the United States" : country.name;
 
   return {
-    title: brand(`Best Home Service Companies in ${short}`),
+    title: brand(`Best Home Service Companies in ${short}`, `Home Services in ${short}`),
     h1: `Best Home Service Companies in ${long}`,
     description: `Find researched home service companies across ${long}. Browse TenBestFind rankings by ${
       country.code.toLowerCase() === "ca" ? "province" : "state"
@@ -261,7 +304,11 @@ export function regionCopy(
   counts: { publishedRankings: number },
 ): PageCopy {
   return {
-    title: brand(`Best Home Service Companies in ${region.name}`),
+    title: brand(
+      `Best Home Service Companies in ${region.name}`,
+      `Home Service Companies in ${region.name}`,
+      `Home Services in ${region.name}`,
+    ),
     h1: `Best Home Service Companies in ${region.name}`,
     description: `Find researched home service companies across ${region.name}. Explore TenBestFind rankings, cities, services and detailed business profiles.`,
     indexable: counts.publishedRankings > 0,
@@ -276,7 +323,11 @@ export function cityCopy(
 ): PageCopy {
   const place = placeLabel(city, region);
   return {
-    title: brand(`Best Home Service Companies in ${place}`),
+    title: brand(
+      `Best Home Service Companies in ${place}`,
+      `Home Service Companies in ${place}`,
+      `Home Services in ${place}`,
+    ),
     h1: `Best Home Service Companies in ${place}`,
     description: `Find researched home service companies in ${place}. Explore local rankings, reviews, business profiles and service guides from TenBestFind.`,
     indexable: counts.publishedRankings > 0,
@@ -340,9 +391,13 @@ export function rankingCopy(
   const complete = counts.publishedEntries === TOP_TEN;
   const year = ranking.lastReviewedAt ? ranking.lastReviewedAt.getFullYear() : null;
 
+  // The brand goes back on. Removing the entry count from the heading took the
+  // suffix with it, which left four ranking titles at twenty-seven characters
+  // and every one of them unattributed. The year is the first thing dropped
+  // when the line runs long, because it is the least of what the title says.
   const title = complete
-    ? `${TOP_TEN} Best ${service} in ${place}${year ? ` (${year})` : ""}`
-    : `Best ${service} in ${place}`;
+    ? brand(`${TOP_TEN} Best ${service} in ${place}${year ? ` (${year})` : ""}`, `${TOP_TEN} Best ${service} in ${place}`)
+    : brand(`Best ${service} in ${place}`);
 
   const h1 = complete ? `${TOP_TEN} Best ${service} in ${place}` : `Best ${service} in ${place}`;
 

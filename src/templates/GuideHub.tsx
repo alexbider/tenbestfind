@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CrumbBar, FinalSearch, LinkGrid } from "@/components/site/blocks";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { JsonLd, Media, Section, SectionHead } from "@/components/ui/primitives";
 import { breadcrumbSchema } from "@/lib/breadcrumbs";
+import { db } from "@/lib/db";
 import { getGuideHubs, guidesForHub, type GuideHub as Hub, type HubGuide } from "@/lib/guide-hubs";
 import { monthYear } from "@/lib/format";
+import { relatedForGuideHub } from "@/lib/related";
 import { absoluteUrl, routes } from "@/lib/urls";
 
 /**
@@ -192,6 +195,15 @@ export async function GuideHub({ slug }: { slug: string }) {
 
   const guides = await guidesForHub(hub);
   const [lead, ...rest] = guides;
+
+  const category = hub.categoryId
+    ? await db.category.findUnique({ where: { id: hub.categoryId }, select: { name: true, slug: true } })
+    : null;
+  const related = await relatedForGuideHub({
+    categoryId: hub.categoryId,
+    categoryName: category?.name,
+    categorySlug: category?.slug,
+  });
 
   const siblings = hubs.filter((other) => other.kind === hub.kind && other.slug !== hub.slug);
   const otherAxis = hubs.filter((other) => other.kind !== hub.kind);
@@ -395,6 +407,8 @@ export async function GuideHub({ slug }: { slug: string }) {
           />
         </Section>
       ) : null}
+
+      <RelatedContent groups={related} title="Keep reading" />
 
       <FinalSearch title="Ready to find someone?" />
     </SiteChrome>

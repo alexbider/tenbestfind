@@ -115,9 +115,32 @@ export function personFromRow(row: {
     knowsAbout: specializations,
     sameAs: (Array.isArray(links) ? links : [])
       .map((link) => (typeof link?.url === "string" ? link.url.trim() : ""))
-      .filter((url) => url.startsWith("http")),
+      .filter(isRealProfile),
   };
 }
+
+/**
+ * The profile links a person's own page may show.
+ *
+ * Same rule as `sameAs`, applied to the visible list, because a link a reader
+ * can click has to survive the click.
+ */
+export const realProfileLinks = <T extends { url?: string }>(links: T[]): T[] =>
+  links.filter((link) => typeof link?.url === "string" && isRealProfile(link.url));
+
+/**
+ * Hosts that mean "somebody will fill this in later".
+ *
+ * RFC 2606 reserves these for documentation, so nothing real is ever behind
+ * one, and two of them shipped to production as `sameAs` on the editor pages.
+ * `sameAs` says the page at the other end is this person; pointing it at a
+ * reserved domain says it under oath and is false. An absent property is
+ * merely quiet, so absent is the default and this is what enforces it.
+ */
+const PLACEHOLDER = /^(https?:\/\/)?([^/]*\.)?(example\.(com|org|net)|localhost|test|invalid)(\/|:|$)/i;
+
+export const isRealProfile = (url: string): boolean =>
+  /^https?:\/\//i.test(url) && !PLACEHOLDER.test(url) && !/\b(lorem|ipsum|todo|placeholder)\b/i.test(url);
 
 /* ------------------------------------------------------------------- pages */
 

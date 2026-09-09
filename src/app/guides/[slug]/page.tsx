@@ -7,6 +7,7 @@ import { GuideHub } from "@/templates/GuideHub";
 import { CostEstimator, CostSummary, CostTables, priceModal } from "@/components/site/CostGuide";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import {
   Chevron,
@@ -28,6 +29,7 @@ import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
 import { breadcrumbSchema } from "@/lib/breadcrumbs";
+import { relatedForGuide } from "@/lib/related";
 import { personId } from "@/lib/schema";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
@@ -143,6 +145,13 @@ export default async function GuidePage({ params }: Props) {
     await redirectIfKnown(routes.guide(slug));
     notFound();
   }
+
+  const related = await relatedForGuide({
+    guideId: guide.id,
+    categoryId: guide.categoryId,
+    categoryName: guide.category?.name,
+    categorySlug: guide.category?.slug,
+  });
 
   const blocks = parseJson<GuideBlock[]>(guide.body, []);
   const illustrations = parseIllustrations(guide.illustrations);
@@ -1301,6 +1310,8 @@ export default async function GuidePage({ params }: Props) {
           ) : null}
         </div>
       </section>
+
+      <RelatedContent groups={related} title="Keep reading" />
     </SiteChrome>
   );
 }

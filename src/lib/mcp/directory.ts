@@ -4,6 +4,7 @@ import { LEAD_STATUSES } from "../leads";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
+import { isRealProfile } from "../schema";
 import { routes } from "../urls";
 import {
   arr,
@@ -985,12 +986,15 @@ export const DIRECTORY_TOOLS: Tool[] = [
         yearsExperience: int("Years in the field."),
         specializations: arr("Areas they cover."),
         markets: arr("Cities or regions they know."),
-        links: arr("Profile links.", {
-          type: "object",
-          additionalProperties: false,
-          required: ["label", "url"],
-          properties: { label: { type: "string" }, url: { type: "string" } },
-        }),
+        links: arr(
+          "Profile links that have actually been checked. Each one becomes sameAs on the person, which asserts that the page at the other end is them, so a reserved or invented URL is refused rather than stored. Nothing here is better than something made up.",
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["label", "url"],
+            properties: { label: { type: "string" }, url: { type: "string" } },
+          },
+        ),
         isAuthor: bool("May be credited as an author."),
         isReviewer: bool("May be credited as a reviewer."),
         isExpert: bool("Shown as a subject expert."),
@@ -1000,6 +1004,21 @@ export const DIRECTORY_TOOLS: Tool[] = [
     ),
     handler: async (args, ctx) => {
       const id = optStr(args, "id");
+
+      // Refused at the door rather than filtered at render time. A stored link
+      // nobody can follow is a claim about a real person sitting in the
+      // database waiting for the next thing that reads it.
+      if (Array.isArray(args.links)) {
+        for (const row of args.links as { url?: unknown }[]) {
+          const url = typeof row?.url === "string" ? row.url.trim() : "";
+          if (!isRealProfile(url)) {
+            throw new ToolError(
+              `${url || "an empty link"} is not a profile anybody can open. Leave links out rather than filling them in.`,
+            );
+          }
+        }
+      }
+
       const data = patch(args, {
         name: "string",
         role: "string",

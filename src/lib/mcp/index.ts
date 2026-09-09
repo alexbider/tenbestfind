@@ -383,6 +383,29 @@ export function visibleTools(scope: string, role: UserRole): Tool[] {
   return TOOLS.filter((tool) => canRun(tool, scope, role));
 }
 
+/**
+ * A version that moves when the tools do.
+ *
+ * A client caches the tool list it was handed at connection time, so a deploy
+ * that adds an argument changes nothing for a session that is already open:
+ * the body field and the four new question scopes were live for a day while
+ * the connector still offered the shape from before them, and from the outside
+ * the only way to tell was to call a tool and read the error.
+ *
+ * Hashing the surface rather than writing a number by hand means it cannot be
+ * forgotten. Same tools, same version; one argument different, different
+ * version, and a reconnect picks the new one up.
+ */
+export const TOOL_SURFACE_VERSION: string = (() => {
+  const surface = JSON.stringify(TOOLS.map((tool) => [tool.name, tool.schema]));
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < surface.length; index += 1) {
+    hash ^= surface.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `2.${TOOLS.length}.${hash.toString(16).padStart(8, "0")}`;
+})();
+
 export function describe(tool: Tool) {
   return {
     name: tool.name,

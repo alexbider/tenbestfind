@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CrumbBar, FinalSearch } from "@/components/site/blocks";
 import { EditorialDisclosure } from "@/components/site/disclosures";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { Badge, JsonLd, Monogram, Section, SectionHead } from "@/components/ui/primitives";
 import { parseList } from "@/lib/json";
 import { db } from "@/lib/db";
+import { relatedForPerson } from "@/lib/related";
 import { absoluteUrl, routes } from "@/lib/urls";
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Editorial team — who writes and reviews the rankings",
+  title: "Who writes and reviews our rankings",
   description:
     "The people who research, write and review what gets published here, with their credentials and the limits of what each one covers.",
   alternates: { canonical: "/experts/" },
@@ -25,6 +27,8 @@ export default async function ExpertsIndexPage() {
       _count: { select: { authoredRankings: true, reviewedRankings: true, authoredGuides: true } },
     },
   });
+
+  const related = await relatedForPerson();
 
   return (
     <SiteChrome active="trust">
@@ -92,6 +96,8 @@ export default async function ExpertsIndexPage() {
           ))}
         </ul>
       </Section>
+
+      <RelatedContent groups={related} title="How the work is checked" />
 
       <FinalSearch title="Start with the shortlist" />
     </SiteChrome>

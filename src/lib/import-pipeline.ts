@@ -22,6 +22,7 @@ import { recomputeCompleteness } from "./completeness";
 import { openingFingerprint } from "./humanize";
 import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
+import { bylineCandidates, bylineFor } from "./byline";
 import { RANKING_MIN_ENTRIES, rankingTitle } from "./seo-copy";
 import { uniqueCompanySlug } from "./company-slug";
 import { stringify } from "./json";
@@ -1292,6 +1293,7 @@ async function buildRankings(batchId: string): Promise<void> {
   if (!batch) return;
 
   const cityIds = JSON.parse(batch.cityIds) as string[];
+  const people = await bylineCandidates();
 
   for (const cityId of cityIds) {
     const city = await db.city.findUnique({
@@ -1322,6 +1324,15 @@ async function buildRankings(batchId: string): Promise<void> {
       where: { categoryId_cityId: { categoryId: batch.categoryId, cityId } },
     });
 
+    // Signed at creation rather than left for somebody to notice. Every list
+    // the importer made went out with nobody's name on it, which is the one
+    // thing a reader checks before deciding whether a "best of" page is worth
+    // anything. Nulls when no editor's stated field covers the trade.
+    const byline = bylineFor(people, {
+      trade: [batch.category.name, batch.category.serviceName, batch.category.singular ?? ""],
+      market: [city.name, city.region.name],
+    });
+
     const ranking = existing
       ? await db.ranking.update({
           where: { id: existing.id },
@@ -1330,6 +1341,9 @@ async function buildRankings(batchId: string): Promise<void> {
             summary,
             companiesReviewed: businesses.length,
             lastReviewedAt: new Date(),
+            // Only fills what is empty, so an editor's own assignment stands.
+            ...(existing.authorId || !byline.authorId ? {} : { authorId: byline.authorId }),
+            ...(existing.reviewerId || !byline.reviewerId ? {} : { reviewerId: byline.reviewerId }),
           },
         })
       : await db.ranking.create({
@@ -1350,6 +1364,8 @@ async function buildRankings(batchId: string): Promise<void> {
             status: businesses.length >= RANKING_MIN_ENTRIES ? "PUBLISHED" : "DRAFT",
             publishedAt: businesses.length >= RANKING_MIN_ENTRIES ? new Date() : null,
             lastReviewedAt: new Date(),
+            authorId: byline.authorId,
+            reviewerId: byline.reviewerId,
           },
         });
 

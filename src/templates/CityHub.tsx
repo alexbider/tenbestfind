@@ -205,6 +205,7 @@ export async function CityHub({
     cityId: city.id,
     regionId: region.id,
     regionSlug: region.slug,
+    regionName: region.name,
     countryCode: country.code,
     cityName: city.name,
   });

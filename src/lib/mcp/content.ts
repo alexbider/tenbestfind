@@ -583,7 +583,15 @@ export const CONTENT_TOOLS: Tool[] = [
           scope: row.scope,
           question: row.question,
           answer: row.answer,
-          attachedTo: row.rankingId ?? row.guideId ?? row.countryId ?? row.pageId ?? row.businessId ?? null,
+          // Read through the same map the write path uses, rather than a
+          // hand-written chain that has to be remembered every time a scope is
+          // added. The four new ones were missing from that chain, so a
+          // question attached to a service came back saying it was attached to
+          // nothing.
+          attachedTo:
+            Object.values(FAQ_SCOPE_FIELDS)
+              .map((field) => (row as Record<string, unknown>)[field])
+              .find((value): value is string => typeof value === "string") ?? null,
         })),
       };
     },

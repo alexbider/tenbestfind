@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CrumbBar, FinalSearch, LinkGrid } from "@/components/site/blocks";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { JsonLd, Media, Section, SectionHead } from "@/components/ui/primitives";
 import { monthYear } from "@/lib/format";
 import { db } from "@/lib/db";
 import { GUIDE_TYPES, GUIDE_TYPE_LABELS, guideTypeOf, type GuideType } from "@/lib/enums";
 import { getGuideHubs } from "@/lib/guide-hubs";
+import { relatedForGuideHub } from "@/lib/related";
 import { absoluteUrl, routes } from "@/lib/urls";
 import { guidesCopy } from "@/lib/seo-copy";
 
@@ -33,6 +35,8 @@ const SECTION_LEAD: Record<GuideType, string> = {
 };
 
 export default async function GuidesIndexPage() {
+  const related = await relatedForGuideHub({});
+
   const [guides, hubs] = await Promise.all([
     db.guide.findMany({
       where: { status: "PUBLISHED" },
@@ -187,6 +191,8 @@ export default async function GuidesIndexPage() {
           />
         </Section>
       ) : null}
+
+      <RelatedContent groups={related} title="Elsewhere on the site" />
 
       <FinalSearch title="Ready to find someone?" />
     </SiteChrome>

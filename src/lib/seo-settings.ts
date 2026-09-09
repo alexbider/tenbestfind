@@ -189,7 +189,7 @@ export const SEO_FIELDS: SeoField[] = [
     label: "Homepage title",
     type: "text",
     group: "titles",
-    default: "TenBestFind — the ten best local businesses, researched",
+    default: "TenBestFind: the ten best local businesses, researched",
   },
   {
     key: "seo.homeDescription",
@@ -569,7 +569,25 @@ export function renderTemplate(
     .replace(new RegExp(`^${escaped}\\s*|\\s*${escaped}$`, "g"), "")
     .trim();
 
-  return trimSiteName(rendered, tokens.sitename, sep);
+  return trimSiteName(dedupeSiteName(rendered, tokens.sitename, sep), tokens.sitename, sep);
+}
+
+/**
+ * Stops a title saying the brand twice.
+ *
+ * A page an editor called "Contact TenBestFind" came out as "Contact
+ * TenBestFind | TenBestFind", because the template appends the site name and
+ * has no idea the title already carries it. Dropping the appended copy keeps
+ * the editor's wording, which is the half somebody chose.
+ */
+function dedupeSiteName(title: string, sitename: string | null | undefined, sep: string): string {
+  if (!sitename) return title;
+
+  const suffix = `${sep} ${sitename}`;
+  if (!title.endsWith(suffix)) return title;
+
+  const rest = title.slice(0, -suffix.length).trim();
+  return rest.toLowerCase().includes(sitename.toLowerCase()) && rest.length > 0 ? rest : title;
 }
 
 /** Where a title stops being read in full. Not a rule, but the practical width. */

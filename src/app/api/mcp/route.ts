@@ -1,5 +1,5 @@
 import { challengeHeader, verifyBearer, type Bearer } from "@/lib/oauth";
-import { describe, runTool, ToolError, visibleTools } from "@/lib/mcp";
+import { describe, runTool, TOOL_SURFACE_VERSION, ToolError, visibleTools } from "@/lib/mcp";
 
 // The MCP endpoint, spoken over streamable HTTP.
 //
@@ -13,10 +13,20 @@ export const dynamic = "force-dynamic";
 const SUPPORTED = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const LATEST = "2025-06-18";
 
+/**
+ * What the connector reports about itself.
+ *
+ * The version moves with the tool surface rather than staying at 1.0.0
+ * forever. A client holds the tool list it was handed when it connected, so
+ * after a deploy that adds an argument the old shape is still what it offers,
+ * and the only way to tell from the outside was to call a tool and read the
+ * error. Now the version says which surface you are talking to: if this does
+ * not match, the connection predates the change and reconnecting picks it up.
+ */
 const SERVER = {
   name: "tenbestfind",
   title: "TenBestFind",
-  version: "1.0.0",
+  version: TOOL_SURFACE_VERSION,
 };
 
 /**
@@ -77,6 +87,9 @@ async function dispatch(message: Rpc, ctx: Bearer): Promise<unknown | null> {
         // Echo the client's version when we speak it, otherwise name ours and
         // let the client decide whether to continue.
         protocolVersion: SUPPORTED.includes(asked) ? asked : LATEST,
+        // Still false: there is no server-initiated stream here to send a
+        // notification down, and claiming otherwise would have a client wait
+        // for one. The version above is how a change becomes visible.
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER,
         instructions: INSTRUCTIONS,

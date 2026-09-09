@@ -9,6 +9,12 @@ export type SeedPerson = {
   bio: string;
   limits?: string;
   specializations: string[];
+  /**
+   * Profiles elsewhere that we have actually checked. These become `sameAs` on
+   * the person, which is a claim that the page at the other end is this person,
+   * so an invented URL is worse than none: it is the one property on the three
+   * pages whose whole job is showing that real people stand behind the lists.
+   */
   links?: LinkRow[];
   markets?: string[];
   isAuthor?: boolean;
@@ -32,10 +38,6 @@ export const PEOPLE: SeedPerson[] = [
     limits:
       "Marcus reviews roofing, siding, gutters, windows and foundation content. He does not review plumbing, electrical or HVAC work, and he does not set ranking positions. Editors do that, and Marcus is not shown a ranking order before he reviews the criteria.",
     specializations: ["Roofing systems", "Storm and hail damage", "Insurance claims", "Exterior envelope", "Metal roofing"],
-    links: [
-      { label: "Professional profile", url: "https://example.com/marcus-reed" },
-      { label: "Trade association listing", url: "https://example.com/nrca/marcus-reed" },
-    ],
     markets: ["Dallas-Fort Worth", "Houston", "Oklahoma City"],
     isAuthor: true,
     isReviewer: true,
@@ -77,7 +79,6 @@ export const PEOPLE: SeedPerson[] = [
     limits:
       "Dana writes and edits. She does not sell advertising, has no contact with sponsors, and does not see which companies have bought placements before a ranking is finalized.",
     specializations: ["Contractor licensing", "Consumer protection", "Plumbing", "Chimney and fireplace", "Research methodology"],
-    links: [{ label: "Professional profile", url: "https://example.com/dana-whitfield" }],
     markets: ["Miami", "Toronto", "Boston", "Chicago"],
     isAuthor: true,
     isReviewer: true,

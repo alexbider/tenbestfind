@@ -79,7 +79,6 @@ export const DALLAS_ROOFERS: SeedBusiness[] = [
     googleReviewCount: 412,
     addressLine: "2118 Commerce St, Dallas, TX 75201",
     phone: "(214) 555-0142",
-    website: "https://example.com/lone-star-roofing",
     description:
       "A full-service residential roofing company working across Dallas County, handling repair, replacement, inspection and storm work.",
     editorialTake:

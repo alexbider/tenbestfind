@@ -224,11 +224,15 @@ export async function RankingPage({
   const related = await relatedForRanking({
     rankingId: ranking.id,
     categoryId: category.id,
-    cityId: city.id,
-    regionId: region.id,
-    countryCode: country.code,
-    cityName: city.name,
+    categorySlug: category.slug,
     categoryName: category.name,
+    cityId: city.id,
+    citySlug: city.slug,
+    cityName: city.name,
+    regionId: region.id,
+    regionSlug: region.slug,
+    regionName: region.name,
+    countryCode: country.code,
   });
 
   const toc = [

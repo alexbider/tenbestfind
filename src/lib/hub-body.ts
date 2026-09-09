@@ -27,6 +27,7 @@ const HUB_KINDS = new Set([
   "checklist",
   "compare",
   "flags",
+  "figure",
   "chart",
 ]);
 

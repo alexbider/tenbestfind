@@ -41,7 +41,7 @@ export const TAXONOMY_TOOLS: Tool[] = [
         description: str("One line: what this service covers. The label, not the page."),
         body: {
           type: "array",
-          description: "Real content for this page, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. Left unset, the page keeps showing its one-line description.",
+          description: "Real content for this page, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, figure, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. Left unset, the page keeps showing its one-line description.",
           items: { type: "object", additionalProperties: true },
         },
         iconKey: str("Icon name from the design system."),
@@ -202,7 +202,7 @@ export const TAXONOMY_TOOLS: Tool[] = [
         body: {
           type: "array",
           description:
-            "Real content for a region or city hub, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. This is what stops twenty-nine state hubs reading as the same page with the name swapped.",
+            "Real content for a region or city hub, as an array of blocks: [{ kind: 'paragraph', text: '...' }]. Kinds: heading, paragraph, list, steps, callout, criteria, checklist, compare, flags, figure, chart. A paragraph may carry links, each a phrase that appears verbatim in it and a path that is really a page on this site; anything else is removed and reported back. Replaces the whole body. This is what stops twenty-nine state hubs reading as the same page with the name swapped.",
           items: { type: "object", additionalProperties: true },
         },
         heroImage: str("Image URL."),

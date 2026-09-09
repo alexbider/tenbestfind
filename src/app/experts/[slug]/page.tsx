@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
+import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import {
   Chevron,
@@ -16,12 +17,14 @@ import {
 } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
-import { graph, pageEntity, personEntity, personFromRow, personId } from "@/lib/schema";
+import { relatedForPerson } from "@/lib/related";
+import { graph, pageEntity, personEntity, personFromRow, personId, realProfileLinks } from "@/lib/schema";
 import { fullDate, monthYear, shortMonthYear } from "@/lib/format";
 import { parseJson, parseList, type LinkRow } from "@/lib/json";
 import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { seoFor } from "@/lib/seo";
+import { expertTitle } from "@/lib/seo-copy";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 
@@ -95,7 +98,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await loadPerson(slug);
   if (!person) return {};
   return seoFor("person", person.id, {
-    title: `${person.name} — ${person.role}`,
+    title: expertTitle(person.name, person.role),
+    titleIsFinal: true,
     description: person.bio,
     path: routes.expert(person.slug),
     image: person.portrait,
@@ -109,6 +113,8 @@ export default async function ExpertProfilePage({ params }: Props) {
     await redirectIfKnown(routes.expert(slug));
     notFound();
   }
+
+  const related = await relatedForPerson(person.id);
 
   const [authoredRankings, reviewedRankings, authoredGuides, reviewedGuides] = await Promise.all([
     db.ranking.findMany({
@@ -135,7 +141,7 @@ export default async function ExpertProfilePage({ params }: Props) {
 
   const specializations = parseList(person.specializations);
   const markets = parseList(person.markets);
-  const links = parseJson<LinkRow[]>(person.links, []);
+  const links = realProfileLinks(parseJson<LinkRow[]>(person.links, []));
 
   // The bio is one field; paragraphs are separated by blank lines.
   const bioParagraphs = (person.bio ?? "").split(/\n\s*\n/).filter(Boolean);
@@ -1010,6 +1016,8 @@ export default async function ExpertProfilePage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      <RelatedContent groups={related} title="More from the desk" />
     </SiteChrome>
   );
 }

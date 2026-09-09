@@ -151,6 +151,14 @@ services:
         echo "==> checking the model schemas"
         npx tsx scripts/check-schemas.ts || echo "schema check skipped"
 
+        # Nothing that says "fill this in later" on a public page. Two reserved
+        # URLs reached production as sameAs on the editor profiles, which is a
+        # false claim about a real person. --prune drops those; anything else it
+        # finds is printed and left for a person, and neither blocks the deploy,
+        # because a stray string is not worth a dark site.
+        echo "==> checking for placeholder content"
+        npx tsx scripts/check-placeholders.ts --prune || echo "placeholders found, see above"
+
         # The connector, once the site is answering. Backgrounded behind the
         # same pause the indexing ping uses, because there is nothing to check
         # until the server below is listening. Read-only apart from one
@@ -165,6 +173,13 @@ services:
         # Files guides written before the four-way split into their hubs.
         echo "==> filing guides into their hubs"
         npx tsx scripts/classify-guides.ts --yes || echo "guide classification skipped"
+
+        # Puts a name on the rankings and guides that have none, from the trades
+        # each editor says they cover. Never overwrites an assignment somebody
+        # made, and declines rather than guessing when nobody covers the trade,
+        # so the log is also the list of verticals with no editor.
+        echo "==> signing rankings and guides"
+        npx tsx scripts/assign-bylines.ts --write || echo "byline assignment skipped"
 
         # Pulls the generated hero images into the media volume the first time
         # and points the records at the local copies. Skips anything already

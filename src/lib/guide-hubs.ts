@@ -22,7 +22,7 @@
 import { cache } from "react";
 import { db } from "./db";
 import { GUIDE_TYPE_LABELS, guideTypeOf, type GuideType } from "./enums";
-import { BRAND } from "./seo-copy";
+import { brandedTitle } from "./seo-copy";
 import { routes } from "./urls";
 
 export type GuideHubKind = "question" | "trade";
@@ -99,7 +99,7 @@ function questionHub(definition: (typeof QUESTION_HUBS)[number]): GuideHub {
     eyebrow: "By question",
     h1,
     lead: definition.lead,
-    title: `${h1} | Guides | ${BRAND}`,
+    title: brandedTitle(`${h1} | Guides`, h1),
     description: definition.description,
     guideType: definition.guideType,
   };
@@ -114,8 +114,12 @@ function tradeHub(category: { id: string; slug: string; serviceName: string }): 
     eyebrow: "By trade",
     h1: `${service} guides`,
     lead: `Everything we have published about hiring for ${service.toLowerCase()} work: what it costs, what to ask, and what to check before anyone starts.`,
-    title: `${service} Guides | Costs, Questions and Checklists | ${BRAND}`,
-    description: `${service} guides from ${BRAND}: what the work costs, the questions worth asking, and the checks to make before you hire.`,
+    title: brandedTitle(
+      `${service} Guides | Costs, Questions and Checklists`,
+      `${service} Guides | Costs and Questions`,
+      `${service} Guides`,
+    ),
+    description: `${service} guides: what the work costs, the questions worth asking, and the checks to make before you hire.`,
     categoryId: category.id,
   };
 }
