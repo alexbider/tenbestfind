@@ -262,6 +262,10 @@ export type ListInput = {
   datePublished?: Date | null;
   dateModified?: Date | null;
   businesses: ListedBusiness[];
+  /** The editor who assembled the list, when one is named. */
+  author?: { "@id": string } | null;
+  /** The editor who checked it, when one is named. */
+  reviewedBy?: { "@id": string } | null;
 };
 
 /** The ranking itself: an ordered list of real entities, not of names and links. */
@@ -285,6 +289,12 @@ export function rankingListEntity(input: ListInput): Record<string, unknown> {
   if (input.description) entity.description = input.description;
   if (input.datePublished) entity.datePublished = input.datePublished.toISOString();
   if (input.dateModified) entity.dateModified = input.dateModified.toISOString();
+  // On the list as well as on the page around it. The judgement being made is
+  // the ordering, so the ItemList is the node the claim actually belongs to,
+  // and a consumer that reads only the mainEntity would otherwise see a
+  // ranking nobody signed. Left off entirely when nobody is named.
+  if (input.author) entity.author = input.author;
+  if (input.reviewedBy) entity.reviewedBy = input.reviewedBy;
   return entity;
 }
 

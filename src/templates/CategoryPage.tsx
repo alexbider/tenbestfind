@@ -872,7 +872,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
 
       {/* ---------------------------------------------------------- related */}
       {relatedCategories.length > 0 ? (
-        <section id="related" aria-labelledby="related-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="sibling-trades" aria-labelledby="related-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={{ ...SHELL, padding: "80px 24px" }}>
             <h2 id="related-h2" style={{ fontSize: "clamp(28px, 3.2vw, 40px)", fontWeight: "700", marginBottom: "32px" }}>
               Related home services

@@ -271,6 +271,8 @@ export async function RankingPage({
             description: copy.description,
             datePublished: ranking.publishedAt,
             dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
+            author: ranking.author ? personRef(ranking.author.slug) : null,
+            reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
             businesses: ranking.entries.map((entry) => ({
               slug: entry.business.slug,
               name: entry.business.name,
@@ -359,13 +361,29 @@ export async function RankingPage({
                   </svg>
                   Last reviewed {monthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
                 </li>
+                {/* The names sit beside the date rather than at the foot of
+                    the page, and they are the same two names the markup
+                    references. A review date with nobody attached to it is the
+                    part a reader cannot check. */}
+                {ranking.author ? (
+                  <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                    </svg>
+                    Written by{" "}
+                    <Link href={routes.expert(ranking.author.slug)} style={{ fontWeight: "600" }}>
+                      {ranking.author.name}
+                    </Link>
+                  </li>
+                ) : null}
                 {ranking.reviewer ? (
                   <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                       <path d="M9 3a4 4 0 1 0 0 8 4 4 0 1 0 0-8" />
                     </svg>
-                    Reviewed by the{" "}
+                    Reviewed by{" "}
                     <Link href={routes.expert(ranking.reviewer.slug)} style={{ fontWeight: "600" }}>
                       {ranking.reviewer.name}
                     </Link>
@@ -1277,7 +1295,7 @@ export async function RankingPage({
 
       {/* ---------------------------------------------------------- related */}
       {relatedRankings.length > 0 || guides.length > 0 ? (
-        <section id="related" aria-labelledby="rel-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="guides" aria-labelledby="rel-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={{ ...SHELL, padding: "72px 24px" }}>
             {relatedRankings.length > 0 ? (
               <>

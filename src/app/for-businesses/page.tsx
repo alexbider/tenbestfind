@@ -22,7 +22,7 @@ import { BILLING_FAQS, BusinessCentreNav, EDITORIAL_FIELDS, OWNER_FIELDS } from 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "For businesses — claim, add or advertise",
+  title: "For businesses: claim, add or advertise",
   description:
     "Claim your listing or add a business for $29 a month per location. Top 10 featured placement is $199 a month per city and trade. None of it buys a ranking position.",
   alternates: { canonical: "/for-businesses/" },

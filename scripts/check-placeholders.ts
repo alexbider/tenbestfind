@@ -1,4 +1,4 @@
-// Nothing that says "fill this in later" goes out on a page.
+// Nothing unfinished, and nothing off house style, goes out on a page.
 //
 // Two reserved URLs shipped to production as `sameAs` on the editor profiles,
 // which is the worst place for them: those three pages exist to show that real
@@ -6,17 +6,21 @@
 // page at the other end is that person. Said about example.com it is simply
 // false, and a false claim reads worse than a missing one.
 //
-// This walks the fields that end up in emitted JSON-LD or in a public href and
-// fails on anything reserved or obviously unfinished.
+// The second rule is the em dash, which is not house style here and kept
+// reappearing in titles nobody remembered writing.
+//
+// This walks the fields that end up in emitted JSON-LD, in a public href or in
+// a title, and fails on anything reserved, unfinished or off style.
 //
 //   npx tsx scripts/check-placeholders.ts           # reports, writes nothing
 //   npx tsx scripts/check-placeholders.ts --prune   # also drops the bad
-//                                                   # profile links it finds
+//                                                   # profile links, and swaps
+//                                                   # em dashes in titles for
+//                                                   # colons
 //
-// Only profile links are pruned. Everything else is reported and left alone,
-// because a business website or an ogImage that looks wrong is a question for
-// whoever set it, and a check that quietly edits data nobody asked it to touch
-// is worse than the placeholder.
+// Nothing else is touched. A business website or an ogImage that looks wrong is
+// a question for whoever set it, and a check that quietly edits data nobody
+// asked it to touch is worse than the placeholder.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -37,6 +41,12 @@ const suspect = (value: string | null | undefined): string | null => {
   if (UNFINISHED.test(value)) return "unfinished placeholder text";
   return null;
 };
+
+/** House style: the em dash is not used on this site. */
+const EM_DASH = /\u2014/;
+
+const offStyle = (value: string | null | undefined): string | null =>
+  value && EM_DASH.test(value) ? "an em dash, which is not house style here" : null;
 
 type Finding = { where: string; value: string; why: string };
 const findings: Finding[] = [];
@@ -74,9 +84,11 @@ async function checkDatabase(): Promise<void> {
       select: { slug: true, website: true, logoUrl: true },
     }),
     db.guide.findMany({ select: { slug: true, sources: { select: { url: true, label: true } } } }),
-    db.seoMeta.findMany({ select: { entityType: true, entityId: true, canonical: true, ogImage: true } }),
+    db.seoMeta.findMany({
+      select: { entityType: true, entityId: true, title: true, canonical: true, ogImage: true },
+    }),
     db.setting.findMany({ where: { key: { startsWith: "seo." } }, select: { key: true, value: true } }),
-    db.page.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, body: true } }),
+    db.page.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, title: true, body: true } }),
   ]);
 
   for (const person of people) {
@@ -101,6 +113,27 @@ async function checkDatabase(): Promise<void> {
   }
 
   for (const setting of settings) check(`setting ${setting.key}`, setting.value);
+
+  // Titles specifically, for the style rule. Prose is left alone: an editor
+  // quoting somebody who used an em dash is not a style violation.
+  for (const setting of settings.filter((row) => /title/i.test(row.key))) {
+    const why = offStyle(setting.value);
+    if (why) findings.push({ where: `setting ${setting.key}`, value: setting.value.slice(0, 90), why });
+  }
+  for (const page of pages) {
+    const why = offStyle(page.title);
+    if (why) findings.push({ where: `page ${page.slug} title`, value: page.title, why });
+  }
+  for (const record of meta) {
+    const why = offStyle(record.title);
+    if (why) {
+      findings.push({
+        where: `seo ${record.entityType}/${record.entityId} title`,
+        value: record.title!,
+        why,
+      });
+    }
+  }
 
   // A page body is prose, so only its links are checked: an article about
   // reading a contractor's example estimate is allowed to say "for example".
@@ -140,11 +173,55 @@ async function prune(): Promise<number> {
   return pruned;
 }
 
+/**
+ * Swaps an em dash in a stored title for a colon.
+ *
+ * Only titles, and only the dash: " A — B" becomes "A: B", which is what
+ * somebody writing to house style would have typed and says the same thing.
+ * Prose is never touched, because a quotation is allowed to contain whatever
+ * the person quoted wrote.
+ */
+async function restyle(): Promise<number> {
+  const tidy = (value: string) => value.replace(/\s*\u2014\s*/g, ": ").replace(/:\s*:/g, ":");
+  let changed = 0;
+
+  for (const page of await db.page.findMany({ select: { id: true, slug: true, title: true } })) {
+    if (!EM_DASH.test(page.title)) continue;
+    await db.page.update({ where: { id: page.id }, data: { title: tidy(page.title) } });
+    console.log(`  fixed  page ${page.slug} title: ${tidy(page.title)}`);
+    changed += 1;
+  }
+
+  for (const record of await db.seoMeta.findMany({
+    select: { entityType: true, entityId: true, title: true },
+  })) {
+    if (!record.title || !EM_DASH.test(record.title)) continue;
+    await db.seoMeta.update({
+      where: { entityType_entityId: { entityType: record.entityType, entityId: record.entityId } },
+      data: { title: tidy(record.title) },
+    });
+    console.log(`  fixed  seo ${record.entityType}/${record.entityId} title`);
+    changed += 1;
+  }
+
+  for (const setting of await db.setting.findMany({ where: { key: { startsWith: "seo." } } })) {
+    if (!/title/i.test(setting.key) || !EM_DASH.test(setting.value)) continue;
+    await db.setting.update({ where: { key: setting.key }, data: { value: tidy(setting.value) } });
+    console.log(`  fixed  setting ${setting.key}`);
+    changed += 1;
+  }
+
+  return changed;
+}
+
 async function main(): Promise<void> {
   checkSeedFiles();
 
   try {
-    if (process.argv.includes("--prune")) await prune();
+    if (process.argv.includes("--prune")) {
+      await prune();
+      await restyle();
+    }
     await checkDatabase();
   } catch (error) {
     // A fresh checkout with no database yet still gets the seed scan, which is
@@ -162,7 +239,7 @@ async function main(): Promise<void> {
     console.log(`         ${finding.value}`);
     console.log(`         ${finding.why}`);
   }
-  console.log(`\n${findings.length} placeholder${findings.length === 1 ? "" : "s"} would reach a public page.`);
+  console.log(`\n${findings.length} problem${findings.length === 1 ? "" : "s"} would reach a public page.`);
   process.exit(1);
 }
 

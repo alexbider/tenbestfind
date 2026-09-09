@@ -20,7 +20,7 @@ import { absoluteUrl, routes } from "@/lib/urls";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "How we rank — the full methodology",
+  title: "How we rank: the full methodology",
   description:
     "The criteria behind every TenBestFind ranking, what we verify and what we cannot, how sponsorship works, and why a high rating does not automatically rank higher.",
   alternates: { canonical: "/how-we-rank/" },

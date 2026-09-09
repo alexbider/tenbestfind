@@ -11,14 +11,15 @@ import type { RelatedGroup } from "@/lib/related";
 // Nothing renders when there is nothing to link to. An empty box under a
 // heading that says Related reads as something that failed to load.
 //
-// The section is "more" rather than "related" because three templates already
-// had a section of their own under that id, and two elements with one id is a
-// page where half the anchors go to whichever came first.
+// This owns #related. Two templates had a section of their own under that id
+// before this component existed, and two elements with one id is a page where
+// half the anchors go to whichever came first; those moved to ids that say
+// what they hold rather than this one moving out of the way of them.
 
 export function RelatedContent({
   groups,
   title = "Keep looking",
-  id = "more",
+  id = "related",
 }: {
   groups: RelatedGroup[];
   title?: string;

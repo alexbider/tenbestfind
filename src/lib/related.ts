@@ -357,13 +357,52 @@ export async function relatedForGuideHub(input: {
  * links that answer that are the rest of the team and how the work is done.
  */
 export async function relatedForPerson(personId?: string): Promise<RelatedGroup[]> {
-  const colleagues = await db.person.findMany({
-    where: { published: true, ...(personId ? { NOT: { id: personId } } : {}) },
-    orderBy: { name: "asc" },
-    take: 8,
-  });
+  const [colleagues, signedRankings, signedGuides] = await Promise.all([
+    db.person.findMany({
+      where: { published: true, ...(personId ? { NOT: { id: personId } } : {}) },
+      orderBy: { name: "asc" },
+      take: 8,
+    }),
+    // What this person put their name to. On their own page it is the evidence
+    // behind the byline; on the team index there is no one person, so it is
+    // skipped rather than filled with everything anybody signed.
+    personId
+      ? db.ranking.findMany({
+          where: {
+            status: "PUBLISHED",
+            OR: [{ authorId: personId }, { reviewerId: personId }],
+          },
+          include: { city: { include: { region: { include: { country: true } } } }, category: true },
+          orderBy: { lastReviewedAt: "desc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+    personId
+      ? db.guide.findMany({
+          where: {
+            status: "PUBLISHED",
+            OR: [{ authorId: personId }, { reviewerId: personId }],
+          },
+          orderBy: { publishedAt: "desc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+  ]);
 
   return tidy([
+    {
+      title: "Shortlists they signed",
+      links: signedRankings
+        .filter((ranking) => ranking.city !== null)
+        .map((ranking) => ({
+          label: `${ranking.category.name} in ${ranking.city!.name}`,
+          href: rankingUrl(ranking),
+        })),
+    },
+    {
+      title: "Guides they signed",
+      links: signedGuides.map((guide) => ({ label: guide.title, href: routes.guide(guide.slug) })),
+    },
     {
       title: "The rest of the team",
       links: colleagues.map((person) => ({
