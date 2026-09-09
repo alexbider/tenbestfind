@@ -6,8 +6,13 @@
 //
 //   A city hub leads to the cities around it and the trades covered in it.
 //   A state hub leads to its cities and to the states next to it with coverage.
-//   A subservice leads to its siblings and up to the trade it belongs to.
 //   A ranking leads to the same trade nearby and to other trades in that city.
+//   A guide leads to its siblings and to the shortlists it is advice for.
+//   An editor's page leads to what they signed and to the rest of the desk.
+//
+// A subservice used to have a rule here too. It lost it when that template was
+// rebuilt: the siblings are now a grid of real cards on the page itself, which
+// says more than a column of link text and does not print the same list twice.
 //
 // Every query filters on what is actually published, so a link is never offered
 // to a page that has nothing on it. A group with no links is dropped rather
@@ -22,7 +27,6 @@
 // the methodology, which exist on every deployment of this site.
 
 import { db } from "./db";
-import { tradesPhrase } from "./seo-copy";
 import { rankingUrl, routes } from "./urls";
 
 export type RelatedLink = { label: string; href: string; meta?: string };
@@ -146,41 +150,6 @@ export async function relatedForRegion(input: {
       })),
     },
     ...(cities.length === 0 ? [await tradesGroup("Trades we cover")] : []),
-  ]);
-}
-
-/* ------------------------------------------------------------- subservices */
-
-export async function relatedForSubservice(input: {
-  categoryId: string;
-  categorySlug: string;
-  categoryName: string;
-  categorySingular: string;
-  subserviceId: string;
-}): Promise<RelatedGroup[]> {
-  const siblings = await db.subservice.findMany({
-    where: { categoryId: input.categoryId, NOT: { id: input.subserviceId } },
-    orderBy: { sortOrder: "asc" },
-    take: 10,
-  });
-
-  return tidy([
-    {
-      title: `Other ${input.categoryName} services`,
-      links: siblings.map((sub) => ({
-        label: sub.name,
-        href: routes.subservice(input.categorySlug, sub.slug),
-      })),
-    },
-    {
-      title: "The trade itself",
-      links: [
-        {
-          label: `All ${tradesPhrase({ singular: input.categorySingular })} research`,
-          href: routes.category(input.categorySlug),
-        },
-      ],
-    },
   ]);
 }
 
