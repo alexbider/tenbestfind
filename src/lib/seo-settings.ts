@@ -265,7 +265,10 @@ export const SEO_FIELDS: SeoField[] = [
     label: "Default social image",
     type: "media",
     group: "social",
-    default: "",
+    // The brand card that ships with the site. Empty meant the homepage went
+    // out with no og:image at all, which is a grey box wherever it is shared.
+    // Replace it with anything uploaded here and the default steps aside.
+    default: "/social-card.png",
     hint: "Used when a page has no image of its own. 1200×630 works everywhere.",
   },
   { key: "seo.social.ogLocale", label: "Open Graph locale", type: "text", group: "social", default: "en_US", half: true },
@@ -302,7 +305,9 @@ export const SEO_FIELDS: SeoField[] = [
   { key: "seo.schema.name", label: "Name", type: "text", group: "schema", default: "TenBestFind", half: true },
   { key: "seo.schema.legalName", label: "Legal name", type: "text", group: "schema", default: "", half: true },
   { key: "seo.schema.foundingDate", label: "Founding date", type: "text", group: "schema", default: "", half: true, placeholder: "2021-04-01" },
-  { key: "seo.schema.logo", label: "Logo", type: "media", group: "schema", default: "" },
+  // The square mark that ships with the site. Google wants a real image on the
+  // Organization, and an empty setting meant the property was dropped entirely.
+  { key: "seo.schema.logo", label: "Logo", type: "media", group: "schema", default: "/logo-512.png" },
   { key: "seo.schema.email", label: "Contact email", type: "text", group: "schema", default: "hello@tenbestfind.com", half: true },
   { key: "seo.schema.phone", label: "Contact phone", type: "text", group: "schema", default: "", half: true },
   { key: "seo.schema.streetAddress", label: "Street address", type: "text", group: "schema", default: "" },

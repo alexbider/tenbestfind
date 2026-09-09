@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JsonLd } from "@/components/ui/primitives";
 import { globalMetadata, publisherSchema } from "@/lib/seo";
 import "@/styles/globals.css";
@@ -9,6 +9,16 @@ import "@/styles/globals.css";
 export async function generateMetadata(): Promise<Metadata> {
   return globalMetadata();
 }
+
+/**
+ * The colour a phone paints around the page.
+ *
+ * The same navy the mark sits on, so the status bar, the splash screen and the
+ * icon are one thing rather than a white bar above a dark header.
+ */
+export const viewport: Viewport = {
+  themeColor: "#101f3d",
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const schema = await publisherSchema();

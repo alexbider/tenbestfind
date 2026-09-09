@@ -134,7 +134,7 @@ export async function seoFor(
       siteName,
       locale: settings.text("seo.social.ogLocale") || undefined,
       type: fallback.type ?? "website",
-      images: image ? [image] : undefined,
+      images: image ? [absoluteUrl(image)] : undefined,
       publishedTime: fallback.publishedAt?.toISOString(),
       modifiedTime: fallback.modifiedAt?.toISOString(),
     },
@@ -145,7 +145,7 @@ export async function seoFor(
       site: twitterSite || undefined,
       title: record?.twitterTitle?.trim() || title,
       description: record?.twitterDescription?.trim() || description,
-      images: twitterImage ? [twitterImage] : undefined,
+      images: twitterImage ? [absoluteUrl(twitterImage)] : undefined,
     },
   };
 }
