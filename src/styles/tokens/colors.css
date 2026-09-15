@@ -85,6 +85,10 @@
      white and #D99A1C is 2.44:1. These are their readable twins. */
   --text-success:    #13704A;
   --text-warning:    #8A5F0B;
+  /* The third of that set, for a comparison row that says no. 5.5:1 on
+     white. There is no red fill it is the twin of, because nothing on the
+     site fills with red: this is only ever a word. */
+  --text-against:    #B4442C;
   --text-on-ink:     #E8EDF5;
   /* On --surface-ink. The footer used to fade this to 0.45 and 0.5,
      which lands at 3.85:1 and 4.45:1; these clear 4.5:1. */

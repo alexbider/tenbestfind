@@ -69,6 +69,20 @@ export const brandedTitle = (...forms: string[]): string => {
 const brand = brandedTitle;
 
 /**
+ * The longest of several phrasings that Google will not cut off.
+ *
+ * The same idea as brandedTitle for the titles that do not end in the brand.
+ * A company profile is the case: "Grand Prairie Roof & Gutter in Dallas, TX |
+ * Reviews & Services" is sixty-two characters, and the part that gets lost is
+ * the end, which is the part saying what the page is.
+ *
+ * Longest first. The last form is used whether it fits or not, so it should be
+ * the shortest thing that is still true of the page.
+ */
+export const fittedTitle = (...forms: string[]): string =>
+  forms.find((form) => form.length <= TITLE_LIMIT) ?? forms[forms.length - 1]!;
+
+/**
  * The plural of a trade, as it reads in the middle of a sentence.
  *
  * `name` on a category is already plural, but only sometimes plural of a
@@ -462,9 +476,24 @@ export function companyCopy(
   const place = city && region ? placeLabel(city, region) : null;
   const at = place ? ` in ${place}` : "";
 
+  // A company name can be any length, so the suffix shortens before the place
+  // does, and the place before the name. The name is the thing somebody
+  // searched for and is the last part to go.
   const title = facts.hasReviews
-    ? `${business.name}${at} | Reviews & Services`
-    : `${business.name}${at} | Services & Information`;
+    ? fittedTitle(
+        `${business.name}${at} | Reviews & Services`,
+        `${business.name}${at} | Reviews`,
+        `${business.name} | Reviews & Services`,
+        `${business.name}${at}`,
+        business.name,
+      )
+    : fittedTitle(
+        `${business.name}${at} | Services & Information`,
+        `${business.name}${at} | Services`,
+        `${business.name} | Services & Information`,
+        `${business.name}${at}`,
+        business.name,
+      );
 
   const description = facts.thin
     ? `View available information for ${business.name}${at}, including services, location, contact details and TenBestFind research status.`

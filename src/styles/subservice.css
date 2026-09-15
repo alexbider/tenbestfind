@@ -1,0 +1,332 @@
+/* ==================================================================
+   A subservice page, from a desktop down to a phone.
+
+   The template draws the desktop shape inline, the way every template
+   here does. This file is the rest of it: the few pieces that cannot
+   be written as an inline style at all, and the five widths at which
+   the page changes shape.
+
+   The shared phone layer in pages.css already does most of the work at
+   760px: shell gutters, section padding, heading sizes, sticky columns
+   going static, two- and three-column grids coming down to one, inputs
+   at 16px so iOS stops zooming. What is here is what that layer cannot
+   know about.
+
+   Two of those are worth naming. The editorial section is three columns
+   and loses them one at a time rather than all at once, so it has its
+   own breakpoints above the shared one. And the fact strip runs the
+   other way: the shared rule would take it straight to a single column
+   at 760, which turns four short facts into four full-width rows, so it
+   is held at two until the screen is genuinely narrow.
+
+   Everything is scoped to .sub-2026. Selectors that match on inline
+   styles are spelled the way React writes them, without a space after
+   the colon.
+   ================================================================== */
+
+/* A section a link can land on, clear of the sticky header. */
+.sub-2026 section[id] {
+  scroll-margin-top: 130px;
+}
+
+/* ------------------------------------------------------------ the pieces */
+
+/* The icon tile on a sibling card. */
+.sub-2026 [data-tile] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--blue-50);
+  color: var(--color-primary);
+  border: 1px solid var(--blue-200);
+  flex-shrink: 0;
+}
+
+/* The first cell of the fact strip sits against the shell edge, so it
+   takes neither the divider nor the padding that separates the others. */
+.sub-2026 [data-strip] > li:first-child {
+  border-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* A comparison card's last row is closed by the card, not by a rule. */
+.sub-2026 [data-cmp] > li:last-child {
+  border-bottom: 0 !important;
+}
+
+/* The axis under the price bars. Each label is centred on its division,
+   and the two at the ends pull inside the box instead of hanging off it. */
+.sub-2026 [data-ticks] > span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.sub-2026 [data-ticks] > span:first-child {
+  transform: none;
+}
+
+.sub-2026 [data-ticks] > span:last-child {
+  transform: translateX(-100%);
+}
+
+/* A gold hairline across the top of a check as the pointer crosses it,
+   which is the only thing separating six dark cells from one dark block. */
+.sub-2026 [data-check] {
+  position: relative;
+}
+
+.sub-2026 [data-check]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--gold-ink);
+  opacity: 0;
+  transition: opacity var(--dur-base, 240ms) var(--ease-out);
+}
+
+.sub-2026 [data-check]:hover::before {
+  opacity: 1;
+}
+
+/* The bars draw from their left edge rather than appearing at width. */
+@media (prefers-reduced-motion: no-preference) {
+  .sub-2026 [data-bar] {
+    transform-origin: left center;
+    animation: subBarGrow 900ms var(--ease-out) 240ms both;
+  }
+}
+
+@keyframes subBarGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ----------------------------------------------------- 1180: the rail
+
+   The editorial section is a 210px rail, the prose, and a 300px aside.
+   The rail is the first thing to go: its heading moves above the prose
+   and spans the full width, which reads as a section heading and buys
+   the prose the space back. */
+@media (max-width: 1180px) {
+  .sub-2026 [data-editorial] {
+    grid-template-columns: minmax(0, 1fr) 280px !important;
+    gap: 40px !important;
+  }
+
+  .sub-2026 [data-editorial] > [data-rail-col] {
+    position: static !important;
+    grid-column: 1 / -1;
+  }
+
+  .sub-2026 [data-editorial] > [data-rail-col] > h2 {
+    max-width: 22ch;
+  }
+}
+
+/* The rail is 210px and the heading in it is 30px, so it stacks a word to a
+   line, which is the look. A trade whose name is one long word would be the
+   exception that breaks out of the column instead, so it is allowed to break
+   mid-word rather than overflow. */
+.sub-2026 [data-rail-col] > h2 {
+  overflow-wrap: break-word;
+}
+
+/* --------------------------------------------- 1080: the second column
+
+   Everything that was two columns becomes one, well before a phone. The
+   hero's search card is the reason: at a tablet width it is too narrow
+   for a location field and a button side by side, and the page reads
+   better with the card full width under the heading than with both
+   halves squeezed. */
+@media (max-width: 1080px) {
+  .sub-2026 [data-hero] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 32px !important;
+  }
+
+  .sub-2026 [data-editorial] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 32px !important;
+  }
+
+  .sub-2026 [data-glance],
+  .sub-2026 [data-faq-head] {
+    position: static !important;
+  }
+
+  .sub-2026 [data-two] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* The cost panel's divider was between two columns; with one above the
+     other it has to run the other way. */
+  .sub-2026 [data-cost-main] {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+
+  .sub-2026 [data-three] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* A pitfall is a numeral, a title and the explanation. Two columns, with
+     the explanation dropping under the title and losing the rule that
+     separated them. */
+  .sub-2026 [data-pit] {
+    grid-template-columns: 74px minmax(0, 1fr) !important;
+    gap: 18px 26px !important;
+  }
+
+  .sub-2026 [data-pit] > span {
+    font-size: 44px !important;
+    justify-content: flex-start !important;
+  }
+
+  .sub-2026 [data-pit] > p {
+    grid-column: 2 !important;
+    padding-left: 0 !important;
+    border-left: 0 !important;
+  }
+
+  .sub-2026 [data-biz-actions] {
+    justify-content: flex-start !important;
+  }
+}
+
+/* -------------------------------------------------- 900: the fact strip
+
+   Four facts across stop fitting before anything else does, because two
+   of them can say "No shortlist yet" rather than a number. Two up, with
+   the dividers redrawn for a grid that now has rows. */
+@media (max-width: 900px) {
+  .sub-2026 [data-strip] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .sub-2026 [data-strip] > li {
+    padding: 18px 22px !important;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .sub-2026 [data-strip] > li:nth-child(odd) {
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .sub-2026 [data-strip] > li:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+}
+
+/* ------------------------------------------------------- 760: the phone
+
+   The shared layer has already done the general work by here. These are
+   the parts of this page it does not know about. */
+@media (max-width: 760px) {
+  /* Desktop padding inside panels that the shared rules do not reach,
+     because the padding is on an inner div rather than on the section. */
+  .sub-2026 [data-cost] > div {
+    padding: 28px 22px !important;
+  }
+
+  .sub-2026 [data-check] {
+    padding: 26px 24px 28px !important;
+  }
+
+  /* The min-height held six titles on a common baseline across three
+     columns. In one column there is nothing to line up with, and it is
+     just a gap under every short title. */
+  .sub-2026 [data-check-h] {
+    min-height: 0 !important;
+  }
+
+  .sub-2026 [data-pit] {
+    padding: 26px 22px !important;
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+    gap: 14px 18px !important;
+  }
+
+  .sub-2026 [data-pit] > span {
+    font-size: 34px !important;
+  }
+
+  .sub-2026 [data-quote] {
+    font-size: 24px !important;
+  }
+
+  .sub-2026 [data-prose] p {
+    font-size: 16.5px !important;
+  }
+
+  .sub-2026 [data-eyebrow] > [data-eyebrow-rule] {
+    width: 20px !important;
+  }
+
+  /* The byline is two lines here, so the separator between them has nothing
+     to separate and hangs off the end of the first one. */
+  .sub-2026 [data-byline] {
+    gap: 2px 10px !important;
+  }
+
+  .sub-2026 [data-byline-dot] {
+    display: none !important;
+  }
+
+  /* The hero card is a panel on a desktop and the page itself on a phone. */
+  .sub-2026 [data-hero-card] {
+    padding: 22px 20px 20px !important;
+  }
+
+  /* A 620px circle bleeding off a 390px screen is most of the hero. */
+  .sub-2026 [data-glow] {
+    width: 320px !important;
+    height: 320px !important;
+    right: -120px !important;
+    top: -140px !important;
+  }
+}
+
+/* --------------------------------------------------- 420: the narrow end
+
+   Two facts across stop fitting once the values are words rather than
+   numbers, and a pitfall's numeral no longer earns a column of its own. */
+@media (max-width: 420px) {
+  .sub-2026 [data-strip] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .sub-2026 [data-strip] > li {
+    border-left: 0 !important;
+    padding: 15px 0 !important;
+  }
+
+  .sub-2026 [data-hero-card] {
+    padding: 20px 18px 18px !important;
+  }
+
+  .sub-2026 [data-cost] > div {
+    padding: 24px 18px !important;
+  }
+
+  .sub-2026 [data-pit] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .sub-2026 [data-pit] > p {
+    grid-column: 1 !important;
+  }
+
+  .sub-2026 [data-ticks] {
+    font-size: 10.5px !important;
+  }
+}

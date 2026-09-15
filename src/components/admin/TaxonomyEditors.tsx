@@ -200,6 +200,11 @@ export function CategoryEditor({ category }: { category: CategoryDraft }) {
             { key: "name", label: "Name", width: "half" },
             { key: "slug", label: "Slug", width: "half" },
             { key: "description", label: "Description", type: "textarea" },
+            {
+              key: "detail",
+              label: "Written detail (JSON): involves, prices, claim, pitfalls",
+              type: "textarea",
+            },
             { key: "iconKey", label: "Icon key", width: "half" },
             {
               key: "trending",

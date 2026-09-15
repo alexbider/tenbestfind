@@ -187,6 +187,13 @@ services:
         echo "==> signing rankings and guides"
         npx tsx scripts/assign-bylines.ts --write || echo "byline assignment skipped"
 
+        # The written half of a subservice page: the comparison, the prices,
+        # the claim and the failure points. Only fills a job nobody has
+        # written yet, so an edit made in the admin or through the connector
+        # survives every deploy after it.
+        echo "==> seeding subservice detail"
+        npx tsx scripts/seed-subservice-detail.ts --write || echo "subservice detail skipped"
+
         # Pulls the generated hero images into the media volume the first time
         # and points the records at the local copies. Skips anything already
         # fetched or already set by an editor, so it is a no-op afterwards.

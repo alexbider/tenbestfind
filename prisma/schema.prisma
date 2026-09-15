@@ -182,6 +182,16 @@ model Subservice {
   /// falls back to the description as it always did, so nothing breaks by
   /// being empty. Written through the connector as often as by hand.
   body        String?
+  /// The four sections of the page that are about this job rather than about
+  /// the trade: the two options a buyer is choosing between, what it costs,
+  /// the claim worth making about it, and the ways it goes wrong.
+  ///
+  /// Separate from `body` because these are page sections with their own
+  /// bands and their own shapes, not prose, and because none of them can be
+  /// generated: a price range or a failure mode is a fact about one job. Any
+  /// part that is missing takes its section off the page rather than filling
+  /// it with something invented. See src/lib/subservice-detail.ts.
+  detail      String?
   iconKey     String?
   trending    Boolean  @default(false)
   sortOrder   Int      @default(0)

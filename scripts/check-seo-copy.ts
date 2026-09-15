@@ -297,6 +297,25 @@ fits(
 );
 fits("expert with a long role", expertTitle("Marcus Reed", "Expert reviewer, exteriors and structure"));
 fits("expert with a short role", expertTitle("Dana Whitfield", "Senior editor, home services"));
+// A company name is whatever the company is called, so this is the title with
+// the least room to work in. These four were all over the limit in production.
+for (const name of [
+  "Grand Prairie Roof & Gutter",
+  "Dallas Flat Roof Specialists",
+  "Everglade Drain & Sewer",
+  "Scarborough Drain Works",
+]) {
+  fits(
+    `company ${name.toLowerCase()}`,
+    companyCopy({ name }, { name: "Dallas" }, { code: "tx", name: "Texas" }, plumbers, {
+      hasReviews: true,
+      thin: false,
+    }).title,
+    // A profile title ends in what the page holds, not in the brand: the
+    // company's own name is already the recognisable part of it.
+    false,
+  );
+}
 
 console.log(failures === 0 ? "\nall good" : `\n${failures} wrong`);
 process.exit(failures === 0 ? 0 : 1);

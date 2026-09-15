@@ -16,6 +16,22 @@ import { routes } from "@/lib/urls";
 
 export const metadata = { title: "Taxonomy" };
 
+/**
+ * Stored JSON as something a person can edit in a textarea.
+ *
+ * Anything unparseable comes back as it was stored rather than as an empty
+ * box, because the one moment somebody needs to see the broken text is the
+ * moment they have opened the screen to fix it.
+ */
+function prettyJson(value: string | null): string {
+  if (!value) return "";
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+}
+
 const KINDS = ["services", "countries", "regions", "cities"] as const;
 type Kind = (typeof KINDS)[number];
 
@@ -92,6 +108,9 @@ export default async function AdminTaxonomyEditor({ params }: Props) {
                     slug: sub.slug,
                     description: sub.description ?? "",
                     iconKey: sub.iconKey ?? "",
+                    // Pretty-printed so it can be read and edited by hand.
+                    // It round-trips untouched when nobody edits it.
+                    detail: prettyJson(sub.detail),
                     trending: sub.trending ? "yes" : "no",
                   })) ?? [],
               }}

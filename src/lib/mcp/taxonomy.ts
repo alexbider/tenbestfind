@@ -2,6 +2,7 @@ import { db } from "../db";
 import { recordMove } from "../redirects";
 import { slugify } from "../format";
 import { parseHubBody, vetHubBody } from "../hub-body";
+import { parseSubserviceDetail } from "../subservice-detail";
 import { stringify } from "../json";
 import { routes } from "../urls";
 import {
@@ -63,6 +64,12 @@ export const TAXONOMY_TOOLS: Tool[] = [
               type: "array",
               description: "The subservice page's own content, same block shape as the service body.",
               items: { type: "object", additionalProperties: true },
+            },
+            detail: {
+              type: "object",
+              additionalProperties: true,
+              description:
+                "The four sections of the page that are about this job rather than the trade, each optional. involves: { heading, paragraphs: [text], options: [{ name, note, rows: [{ label, value, tone }] }], footnote } draws the two things a buyer is choosing between. prices: { eyebrow, heading, lead, unit, currency, items: [{ name, low, high, note, tone }], footnote, aside: { label, heading, body, footnote } } draws the cost chart; low and high are numbers and the bars and the axis are worked out from them, so never send percentages. claim: { eyebrow, heading, lead, notes: [text] } is the one thing worth saying about the job that is not about booking it. pitfalls: [{ title, body, ask }] are the ways it goes wrong, ask being the question that catches it. tone is one of for, against, mixed, plain. Anything missing takes its section off the page, which is the point: do not invent a price or a failure mode to fill one.",
             },
             trending: { type: "boolean" },
           },
@@ -142,11 +149,23 @@ export const TAXONOMY_TOOLS: Tool[] = [
             dropped.push(`${vetted.dropped} removed from ${name}`);
           }
 
+          // Parsed and written back rather than stored as sent, so a stray
+          // key or a price whose high is below its low is dropped here rather
+          // than on the page. Absent leaves what is stored alone: an entry in
+          // this list is usually somebody renaming a subservice, and that
+          // should not silently delete the writing on it.
+          const detail = row.detail !== undefined ? parseSubserviceDetail(stringify(row.detail)) : null;
+          const detailKeys = detail ? Object.entries(detail).filter(([, value]) => Boolean(value)) : [];
+          if (detail && row.detail && Object.keys(row.detail).length > detailKeys.length) {
+            dropped.push(`part of the detail on ${name} was not usable and was left out`);
+          }
+
           const payload = {
             name,
             slug,
             description: row.description ? String(row.description) : null,
             ...(vetted ? { body: vetted.blocks.length > 0 ? stringify(vetted.blocks) : null } : {}),
+            ...(detail ? { detail: detailKeys.length > 0 ? stringify(Object.fromEntries(detailKeys)) : null } : {}),
             trending: row.trending === true,
             sortOrder: index,
             categoryId: category.id,

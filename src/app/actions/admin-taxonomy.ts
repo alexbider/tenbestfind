@@ -6,6 +6,7 @@ import { audit, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { recordMove } from "@/lib/redirects";
 import { parseJson, stringify } from "@/lib/json";
+import { parseSubserviceDetail } from "@/lib/subservice-detail";
 import { routes } from "@/lib/urls";
 import type { ActionState } from "./admin-content";
 
@@ -111,14 +112,40 @@ export async function saveCategory(_prev: ActionState, formData: FormData): Prom
   // Subservices are matched on slug so an existing one keeps its id, and with it
   // every business that offers it.
   const subRows = rows(data.subservices).filter((row) => row.name?.trim() && row.slug?.trim());
+
+  // Checked before anything is written, because half a form saved is worse
+  // than none of it. Broken JSON stops the save and says which subservice it
+  // is in, rather than being quietly stored as nothing: that field can hold
+  // an afternoon of writing and there is no undo behind it.
+  for (const row of subRows) {
+    const raw = row.detail?.trim();
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return fail(`The written detail for ${row.name.trim()} must be a JSON object.`);
+      }
+    } catch {
+      return fail(`The written detail for ${row.name.trim()} is not valid JSON, so nothing was saved.`);
+    }
+  }
+
   const keptSlugs = subRows.map((row) => row.slug.trim());
   await db.subservice.deleteMany({
     where: { categoryId: category.id, slug: { notIn: keptSlugs.length ? keptSlugs : ["__none__"] } },
   });
   for (const [index, row] of subRows.entries()) {
+    // Parsed and written back rather than stored as typed, so what reaches
+    // the page is what the page can actually render.
+    const kept = row.detail?.trim()
+      ? Object.entries(parseSubserviceDetail(row.detail.trim())).filter(([, value]) => Boolean(value))
+      : [];
+    const detail = kept.length > 0 ? stringify(Object.fromEntries(kept)) : null;
+
     const values = {
       name: row.name.trim(),
       description: row.description?.trim() || null,
+      detail,
       iconKey: row.iconKey?.trim() || null,
       trending: row.trending === "yes",
       sortOrder: index,
