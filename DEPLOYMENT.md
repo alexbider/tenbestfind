@@ -103,6 +103,28 @@ Send the file with its comment lines stripped. The endpoint answers a commented
 file with a bare 422 and no explanation, which reads like a broken deploy rather
 than a formatting complaint. Everything else goes verbatim.
 
+### A restart is not a redeploy
+
+Restarting the project in hPanel looks like a deploy and is half of one. The
+boot script begins with `git fetch origin && git reset --hard "@{u}"`, so a
+restart does pull and rebuild the latest commit: **code ships on a restart**.
+
+What does not ship is this file. The compose the containers run is the copy the
+*create project* call wrote to the box, and a restart re-runs the containers
+against that copy. Editing `docker-compose.yml` here changes nothing on the
+server until the project is replaced through the API again.
+
+That has bitten once already, and quietly: two seeding steps were added to the
+boot chain, three restarts went through, the new template shipped and the data
+it reads never arrived, so every page fell back to prose and looked broken in a
+way that had nothing to do with the template.
+
+So when a change adds or edits a boot step, it needs a real redeploy. If one is
+not available, a step that only moves data can go in a Prisma migration instead,
+because `prisma migrate deploy` is already in whatever compose is on the box.
+`prisma/migrations/20260915195500_subservice_icons_and_hardwood_detail` is that,
+and it says so in its own header.
+
 Watch the project logs afterwards. A good run says, in order: the branch and
 SHA, the install, the migrations ("All migrations have been successfully
 applied"), either the seed or "database already holds N countries, leaving it
