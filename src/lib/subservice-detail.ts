@@ -220,8 +220,18 @@ export function parseSubserviceDetail(value: string | null | undefined): Subserv
 
 /* ------------------------------------------------------------- the chart */
 
-export type PriceBar = PriceItem & { left: string; width: string; range: string };
+export type PriceBar = PriceItem & { left: string; width: string; range: string; fill: string };
 export type PriceScale = { bars: PriceBar[]; ticks: string[] };
+
+/**
+ * The blues a set of bars is drawn in, darkening down the list.
+ *
+ * Two bars in the same blue are two bars a reader has to re-read the labels to
+ * tell apart, which is the whole job of a chart undone. Taken from the ramp
+ * rather than picked, so they stay in the family and a fifth option gets its
+ * own shade instead of repeating the first.
+ */
+const SERIES = ["var(--blue-500)", "var(--blue-700)", "var(--blue-800)", "var(--blue-900)"];
 
 /**
  * A step that a person would have chosen: 1, 2, 2.5 or 5 times a power of ten.
@@ -259,9 +269,14 @@ export function priceScale(prices: Prices): PriceScale {
 
   const pct = (value: number) => `${((value / max) * 100).toFixed(2)}%`;
 
+  // The gold bar is the one the aside is about, so it sits outside the blues
+  // and does not take a place in their order.
+  let series = 0;
+
   return {
     bars: prices.items.map((item) => ({
       ...item,
+      fill: item.tone === "mixed" ? "var(--gold-ink)" : SERIES[series++ % SERIES.length]!,
       left: pct(item.low),
       // A single figure rather than a range still needs to be visible, so a
       // zero-width bar is drawn as a hairline instead of nothing.

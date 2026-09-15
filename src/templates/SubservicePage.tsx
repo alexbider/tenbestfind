@@ -503,7 +503,12 @@ export async function SubservicePage({
                         <div style={{ padding: "18px 20px", borderBottom: HAIR, background: "var(--surface-page)" }}>
                           <h4 style={{ fontSize: "17px", fontWeight: "700" }}>{option.name}</h4>
                           {option.note ? (
-                            <p style={{ marginTop: "4px", fontSize: "13.5px", color: "var(--text-secondary)" }}>{option.note}</p>
+                            // Leading set here rather than inherited. This is a
+                            // caption under a title, and the page's prose
+                            // line-height puts most of a blank line under it.
+                            <p style={{ marginTop: "4px", fontSize: "13.5px", lineHeight: "1.3", color: "var(--text-secondary)" }}>
+                              {option.note}
+                            </p>
                           ) : null}
                         </div>
                         <ul data-cmp="" style={{ padding: "6px 22px 16px", listStyle: "none" }}>
@@ -536,12 +541,10 @@ export async function SubservicePage({
                     {detail.involves.footnote}
                   </p>
                 ) : null}
-
-                <p style={{ marginTop: "22px" }}>
-                  <Link href={routes.category(category.slug)} style={{ fontSize: "15px", fontWeight: "600" }}>
-                    All {trade.toLowerCase()} research →
-                  </Link>
-                </p>
+                {/* No link out of this column. The trade is already one tap
+                    away from the eyebrow, the breadcrumb and the heading of
+                    the same-trade section, and a fourth was the one thing
+                    here the design does not have. */}
               </div>
 
               <aside data-glance="" style={{ position: "sticky", top: "130px", border: HAIR, borderRadius: "18px", background: "var(--paper)", padding: "22px 22px 6px" }}>
@@ -622,7 +625,7 @@ export async function SubservicePage({
                                     left: bar.left,
                                     width: bar.width,
                                     borderRadius: "999px",
-                                    background: bar.tone === "mixed" ? "var(--gold-ink)" : "var(--color-primary)",
+                                    background: bar.fill,
                                   }}
                                 />
                               </div>

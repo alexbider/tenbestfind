@@ -194,6 +194,11 @@ services:
         echo "==> seeding subservice detail"
         npx tsx scripts/seed-subservice-detail.ts --write || echo "subservice detail skipped"
 
+        # An icon per job rather than the trade's icon repeated down a row of
+        # sibling cards. Only fills an empty one, so an editor's choice sticks.
+        echo "==> seeding subservice icons"
+        npx tsx scripts/seed-subservice-icons.ts --write || echo "subservice icons skipped"
+
         # Pulls the generated hero images into the media volume the first time
         # and points the records at the local copies. Skips anything already
         # fetched or already set by an editor, so it is a no-op afterwards.
