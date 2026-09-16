@@ -142,6 +142,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "On a timber floor, or anywhere the structure moves, an uncoupling membrane between the substrate and the tile lets the two move independently. It is the single most effective thing standing between a tiled floor and a line of cracked grout.",
       },
+      prices: {
+        eyebrow: "Tile by material",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, including materials and labour on a straightforward rectangular floor.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Ceramic", low: 4, high: 8, tone: "mixed", note: "The cheapest tile that is still a proper tile." },
+          { name: "Porcelain", low: 6, high: 14, note: "Denser and harder than ceramic, which is why it goes on floors." },
+          { name: "Natural stone", low: 10, high: 25, note: "Marble, travertine and slate, plus sealing you have to keep up." },
+        ],
+        footnote:
+          "Waterproofing and substrate preparation add $2 to $6 a square foot in bathrooms and other wet areas. Taking up old ceramic runs $3 to $7 including disposal, and herringbone or a diagonal lay adds fifteen to twenty-five percent to the labour.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Ceramic is half the price and fine in most rooms",
+          body:
+            "Porcelain earns its money in a wet room, an entrance or anywhere heavy gets dropped. In a spare bathroom or a laundry, ceramic at $4 to $8 a square foot does the same job as porcelain at $6 to $14, and nobody can tell them apart once they are grouted.",
+          footnote: "Spend the difference on the substrate instead, because that is what cracks tile.",
+        },
+      },
       claim: {
         eyebrow: "Where it fails",
         heading: "Almost every tile failure is a substrate failure",
@@ -196,6 +217,32 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Twelve mil is a normal residential wear layer and twenty or more is what light commercial specifies. A thin wear layer under a convincing photograph is the most common way a cheap plank floor is made to look like an expensive one.",
+      },
+      prices: {
+        eyebrow: "Vinyl and laminate",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, over a subfloor that is already flat and dry.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Laminate", low: 4, high: 14, note: "Cheaper to buy than vinyl, and unhappy anywhere it can get wet." },
+          {
+            name: "Luxury vinyl plank",
+            low: 5,
+            high: 12,
+            note: "Waterproof through the plank, which is most of why people pick it.",
+          },
+          { name: "Fitting alone", low: 2, high: 6, tone: "mixed", note: "The labour share of either of the numbers above." },
+        ],
+        footnote:
+          "Sheet vinyl runs $4 to $13 a square foot installed and comes in one piece, so there are no seams for water to find. Levelling compound, removing the old floor and trimming door casings are all separate lines.",
+        aside: {
+          label: "Where the money goes",
+          heading: "You are mostly buying plank, not fitting",
+          body:
+            "Labour is $2 to $6 of a $5 to $12 installed price, so moving up a grade of plank costs you far more than the fitting does. If a quote looks high, ask what the material is per square foot before you argue about the labour.",
+          footnote: "The same crew will fit a $2 plank and a $7 plank for roughly the same money.",
+        },
       },
       claim: {
         eyebrow: "Waterproof",
@@ -252,6 +299,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Density matters more than pile height. Bend a sample back on itself: the less backing you can see through the fibres, the denser it is, and dense carpet in a cheap style outlasts sparse carpet in an expensive one.",
       },
+      prices: {
+        eyebrow: "Carpet by fibre",
+        heading: "What it costs per square foot",
+        lead: "Carpet only, 2026. The pad and the fitting are a separate line, shown last.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Polyester or olefin", low: 1, high: 2, note: "Soft and cheap, and it flattens in a hallway." },
+          { name: "Nylon", low: 2, high: 5, tone: "mixed", note: "The default, and the one that survives stairs." },
+          { name: "Wool", low: 5, high: 15, note: "Lasts longest and takes the most looking after." },
+          { name: "Pad and fitting", low: 1.25, high: 3.5, note: "Pad is $0.25 to $1.00, labour $1.00 to $2.50." },
+        ],
+        footnote:
+          "Mid-grade nylon with a standard pad and fitting lands at $4.50 to $7.00 a square foot all in. Builder-grade 6 lb pad is $0.25 to $0.40, a standard 8 lb pad $0.40 to $0.60, and premium memory foam or rubber $0.60 to $1.00.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Nylon is the one worth paying for",
+          body:
+            "Polyester feels identical in the showroom and gives up in two years anywhere people walk. Nylon at $2 to $5 a square foot is the cheapest fibre that holds its pile, and it is what most of the $4.50 to $7.00 installed average is built on.",
+          footnote: "Put the savings into a better pad, which is what decides how the carpet wears.",
+        },
+      },
       claim: {
         eyebrow: "The warranty",
         heading: "The underlay is usually what voids the warranty",
@@ -287,6 +356,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Before anyone arrives, find your main shut-off valve and turn it off. It is the single most valuable thing a homeowner can do, and it changes an emergency into an appointment.",
+      },
+      prices: {
+        eyebrow: "What the clock costs",
+        heading: "What it costs an hour",
+        lead: "Labour rates in 2026. The call-out fee is charged on top and is not included here.",
+        unit: "Dollars per hour",
+        currency: "$",
+        items: [
+          {
+            name: "Normal working hours",
+            low: 80,
+            high: 130,
+            tone: "mixed",
+            note: "The same plumber, the same job, Tuesday morning.",
+          },
+          { name: "Evening or weekend", low: 150, high: 300, note: "Usually one and a half to two times the standard rate." },
+          { name: "Holiday or overnight", low: 300, high: 600, note: "Two to three times standard, and higher in big metros." },
+        ],
+        footnote:
+          "Most companies add a $150 to $250 call-out fee for turning up outside business hours, and the national average for emergency work is about $170 an hour. Expect a one-hour minimum whatever the job turns out to be.",
+        aside: {
+          label: "Before you call",
+          heading: "Waiting until morning is often half the price",
+          body:
+            "If you can shut the water off at the stop tap and the leak stops, you may not be having an emergency, you may be having a Tuesday. The same repair booked in normal hours is $80 to $130 an hour instead of $150 to $300, with no call-out surcharge.",
+          footnote: "Sewage backing up, gas, or water near a consumer unit is not a wait-until-morning job.",
+        },
       },
       claim: {
         eyebrow: "Out of hours",
@@ -343,6 +439,39 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Jetting puts real force against the pipe wall. On a line that is already cracked, or on old clay with displaced joints, that force can turn a blockage into an excavation, which is why a camera survey should come before the jet rather than after it.",
       },
+      prices: {
+        eyebrow: "By method",
+        heading: "What it costs to clear",
+        lead: "Per visit, 2026, for a residential drain that a plumber can reach through an existing access point.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          { name: "Snaking a fixture drain", low: 100, high: 250, note: "A sink, a shower or a toilet, cleared at the trap." },
+          {
+            name: "Snaking the main line",
+            low: 200,
+            high: 500,
+            note: "Depends on how deep the blockage sits and how it is reached.",
+          },
+          {
+            name: "Hydro jetting a drain",
+            low: 350,
+            high: 800,
+            tone: "mixed",
+            note: "Scours the pipe wall instead of punching a hole through.",
+          },
+          { name: "Jetting the main sewer", low: 600, high: 1500, note: "Access, line length and what is in there decide it." },
+        ],
+        footnote:
+          "The national average is about $246 and most jobs land between $147 and $352. A camera inspection is usually quoted separately and is worth having if the same drain has blocked twice.",
+        aside: {
+          label: "Worth the difference",
+          heading: "Jetting costs more once and lasts two to three years",
+          body:
+            "A snake makes a hole through the blockage. Jetting takes the grease and root hair off the pipe wall, which is why it holds for two to three years where snaking is often back within months. On a drain that keeps returning, the second snake has already cost more than the jet.",
+          footnote: "Do not jet a line that has not been looked at first. Old clay and cast iron can be in no state for it.",
+        },
+      },
       claim: {
         eyebrow: "Repeat blockages",
         heading: "A drain that blocks twice does not have a blockage, it has a cause",
@@ -397,6 +526,40 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "The date is stamped in the serial number on the label, usually as the first four digits for year and week. Most tanks last ten to twelve years, and a component failure on a tank past that is worth putting against the price of a new one before you spend anything.",
+      },
+      prices: {
+        eyebrow: "By part",
+        heading: "What it costs to fix",
+        lead: "Parts and labour, 2026, on a standard tank water heater.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Thermocouple", low: 100, high: 325, note: "Under an hour on a gas unit, and a common no-hot-water fault." },
+          { name: "Thermostat", low: 150, high: 200, note: "The part is $20 to $30. You are paying for the visit." },
+          {
+            name: "Anode rod",
+            low: 150,
+            high: 250,
+            note: "Maintenance rather than repair, and it is what stops the tank rusting.",
+          },
+          { name: "Heating element", low: 200, high: 400, note: "Electric tanks, and often both elements at once." },
+          {
+            name: "A new tank instead",
+            low: 900,
+            high: 1800,
+            tone: "mixed",
+            note: "Installed, for a standard 40 or 50 gallon unit.",
+          },
+        ],
+        footnote:
+          "The national average repair is $615, with most between $228 and $1,017. Labour runs $75 to $150 an hour and most repairs take one to three hours.",
+        aside: {
+          label: "When to stop repairing",
+          heading: "A tank past ten years is worth replacing, not fixing",
+          body:
+            "Tanks last eight to twelve years. A $400 element on an eleven-year-old heater buys you an unknown amount of time on a tank that is already rusting from the inside, against $900 to $1,800 for a new one with a warranty.",
+          footnote: "Ask how old it is before you agree to anything. The date is stamped on the rating plate.",
+        },
       },
       claim: {
         eyebrow: "The part nobody replaces",
@@ -453,6 +616,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Check what your local code allows before choosing. PEX is accepted nearly everywhere now, but some jurisdictions still restrict where it can run, and a few insurers ask about it.",
       },
+      prices: {
+        eyebrow: "By pipe material",
+        heading: "What a whole house costs",
+        lead: "Supply pipework replaced throughout, 2026, on a typical single-family house.",
+        unit: "Dollars for the house",
+        currency: "$",
+        items: [
+          { name: "PEX", low: 4000, high: 8000, note: "Flexible, so it snakes through walls with fewer openings cut." },
+          { name: "Copper", low: 8000, high: 15000, note: "Rigid, soldered joint by joint, and roughly twice the labour." },
+          {
+            name: "Wall and ceiling repair",
+            low: 1500,
+            high: 3000,
+            tone: "mixed",
+            note: "Almost never included in the repipe quote.",
+          },
+        ],
+        footnote:
+          "Plumbers often price repipes per fixture instead, at roughly $500 to $800 for each sink, toilet, bath and appliance connection. On a 2,000 square foot house, PEX averages about $6,500 and copper about $12,500.",
+        aside: {
+          label: "The line people miss",
+          heading: "Making good is a separate trade and a separate bill",
+          body:
+            "A repipe quote covers pipe. The holes cut to get at it are drywall and plaster work, $1,500 to $3,000 on a normal house, and the plumber may not be the one doing it. Ask who patches, paints and matches the texture before you compare two quotes.",
+          footnote: "This is most of why PEX comes out cheaper. Fewer openings means less to put back.",
+        },
+      },
       claim: {
         eyebrow: "Galvanised",
         heading: "Galvanised supply pipe closes from the inside",
@@ -508,6 +698,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Lining reduces the internal diameter slightly. On a line that is already at the minimum for its length and fall, that can matter, and it is a question worth putting to the contractor rather than assuming.",
       },
+      prices: {
+        eyebrow: "Dig against trenchless",
+        heading: "What it costs per foot",
+        lead: "Per linear foot of line replaced or lined, 2026, excluding surface restoration.",
+        unit: "Dollars per linear foot",
+        currency: "$",
+        items: [
+          { name: "Open-trench replacement", low: 50, high: 125, note: "Cheapest per foot and the most destructive above ground." },
+          { name: "Pipe bursting", low: 60, high: 200, note: "Pulls a new pipe through the old one from two small pits." },
+          {
+            name: "Cured-in-place lining",
+            low: 80,
+            high: 250,
+            tone: "mixed",
+            note: "A resin liner cured inside the existing pipe.",
+          },
+        ],
+        footnote:
+          "A 50-foot cured-in-place liner comes to roughly $4,800 to $7,200. The same run dug up prices at $6,100 to $12,400 once shoring, backfill and surface restoration are in.",
+        aside: {
+          label: "Compare totals, not rates",
+          heading: "Digging is cheaper per foot and dearer per job",
+          body:
+            "Excavation adds $3,000 to $8,000 in driveway, path and lawn restoration that never appears in the per-foot rate. That is why trenchless, at a higher rate per foot, usually finishes thirty to fifty percent cheaper overall on a line under a finished surface.",
+          footnote: "Under an open lawn with no hard surfaces, digging often is the right answer.",
+        },
+      },
       claim: {
         eyebrow: "Where your responsibility ends",
         heading: "The lateral is usually yours all the way to the main",
@@ -540,6 +757,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "You can do the first test yourself. Turn off every fixture, note the meter reading, and check it again in two hours with nothing running. If it has moved, you have a leak on the supply side, and that is worth knowing before you call anyone.",
+      },
+      prices: {
+        eyebrow: "Finding it",
+        heading: "What it costs to locate",
+        lead: "Detection only, 2026. Fixing what is found is priced separately and is where the money is.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          {
+            name: "Acoustic or thermal survey",
+            low: 150,
+            high: 400,
+            tone: "mixed",
+            note: "Listening and thermal imaging, no floor lifted.",
+          },
+          {
+            name: "Camera down the line",
+            low: 150,
+            high: 500,
+            note: "Sees the inside of a drain or a sewer rather than a supply pipe.",
+          },
+          { name: "Slab leak location", low: 175, high: 600, note: "Up to $800 when flooring has to come up to get at it." },
+        ],
+        footnote:
+          "Once it is found, a slab leak costs $1,500 to $4,500 to put right. Rerouting the pipe through walls and the attic runs $1,500 to $4,000, and tunnelling under the foundation $2,000 to $5,000.",
+        aside: {
+          label: "Why pay to look",
+          heading: "The survey is cheap next to guessing wrong",
+          body:
+            "A few hundred dollars of listening equipment tells a plumber where to open one hole instead of three. On a slab where the repair itself is $1,500 to $4,500, a $175 to $600 survey is the smallest line on the invoice and the one that decides every other line.",
+          footnote: "Ask whether the detection fee comes off the repair if you book the work with them.",
+        },
       },
       claim: {
         eyebrow: "Two jobs",
@@ -574,6 +823,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Never accept gas work from a general handyman, however capable, and never accept a line put into service without a documented pressure test. This is the one trade on the site where the downside of getting it wrong is not financial.",
       },
+      prices: {
+        eyebrow: "By run",
+        heading: "What it costs per foot",
+        lead: "Materials and labour, 2026, for new gas pipework run by a licensed fitter.",
+        unit: "Dollars per linear foot",
+        currency: "$",
+        items: [
+          {
+            name: "Straightforward interior run",
+            low: 15,
+            high: 25,
+            tone: "mixed",
+            note: "Open joists or a basement ceiling to work along.",
+          },
+          { name: "Kitchen range or gas dryer", low: 20, high: 25, note: "Short runs, but into a finished room." },
+          { name: "Underground or awkward access", low: 35, high: 50, note: "Turns, fittings and anything that has to be dug in." },
+        ],
+        footnote:
+          "A kitchen typically needs about thirty feet from the supply, so roughly $600. A ten-foot drop to a new dryer runs $150 to $350, and a line out to a barbecue is $20 to $25 a foot for flexible tubing under a deck or lawn.",
+        aside: {
+          label: "What sets the price",
+          heading: "Distance decides it, not the appliance",
+          body:
+            "The fitting at the end costs much the same whether it feeds a cooker or a pool heater. What moves the number is how far the pipe has to travel, how many turns it takes and whether anyone has to lift a floor or dig a trench to make that happen.",
+          footnote: "Gas work is licensed and inspected. A quote that skips the permit is skipping the pressure test too.",
+        },
+      },
       claim: {
         eyebrow: "Sizing",
         heading: "The new appliance is not the only thing on the pipe",
@@ -606,6 +882,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "A standard toilet rough-in, the distance from the finished wall to the centre of the drain, is twelve inches, but ten and fourteen both exist in older houses. Measure before you buy, because the pan will not move to suit the pipe.",
+      },
+      prices: {
+        eyebrow: "By fixture",
+        heading: "What it costs to fit",
+        lead: "Fitted price in 2026 where the pipework is already in the right place.",
+        unit: "Dollars per fixture",
+        currency: "$",
+        items: [
+          { name: "Faucet", low: 90, high: 600, tone: "mixed", note: "A swap under an accessible sink is at the bottom of that." },
+          { name: "Toilet", low: 224, high: 533, note: "Straight replacement onto an existing flange." },
+          { name: "Garbage disposal", low: 400, high: 580, note: "Needs a switched outlet under the sink if there is not one." },
+          { name: "Bathroom sink", low: 280, high: 1200, note: "Vanity, worktop and waste all move this a long way." },
+        ],
+        footnote:
+          "Plumbers charge $80 to $130 an hour. A kitchen sink, faucet and disposal together come to $850 to $3,350 with the plumbing already in place, and a bathroom sink and toilet together $550 to $1,950.",
+        aside: {
+          label: "Book them together",
+          heading: "Four fixtures in one visit, not four visits",
+          body:
+            "Every call-out carries the trip, the parking and the first hour whether the job takes ten minutes or ninety. A faucet on its own can be $90 to $600 largely because of that. Line up everything that needs doing and have it done in one morning.",
+          footnote: "Buy the fixtures yourself if you care what they look like. Most plumbers are happy to fit supplied goods.",
+        },
       },
       claim: {
         eyebrow: "The old valves",
@@ -642,6 +940,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "If the leak only shows in wind-driven rain rather than in a steady downpour, that points at flashing or a wall detail rather than at the covering, and it is worth telling the roofer which one you have seen.",
+      },
+      prices: {
+        eyebrow: "By size of repair",
+        heading: "What a repair costs",
+        lead: "Per job, 2026, on an accessible asphalt shingle roof.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          {
+            name: "A few shingles or a reseal",
+            low: 150,
+            high: 450,
+            tone: "mixed",
+            note: "Half a morning, one trip, no decking touched.",
+          },
+          { name: "Flashing repair", low: 150, high: 600, note: "Around a chimney, a wall or a vent, which is where leaks start." },
+          { name: "A leak traced and fixed", low: 350, high: 1500, note: "Finding it is most of the work on a low-pitch roof." },
+          { name: "Decking or skylight work", low: 2000, high: 6500, note: "Wet decking means the leak has been running a while." },
+        ],
+        footnote:
+          "The national average repair is $1,150, with most falling between $350 and $1,900. A typical shingle repair runs $360 to $1,750.",
+        aside: {
+          label: "Do it early",
+          heading: "A $300 reseal and a $4,000 decking job are the same leak",
+          body:
+            "Flashing is the cheapest thing on a roof to fix and the most common thing to fail. Left alone it soaks the decking underneath, and that is the difference between a few hundred dollars and a few thousand on the same square metre of roof.",
+          footnote: "If a repair quote is nudging half the price of a replacement, get a replacement quote too.",
+        },
       },
       claim: {
         eyebrow: "Repair or replace",
@@ -698,6 +1024,35 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "An overlay also adds weight and traps heat against the old layer, which shortens the life of the new covering. It is the right answer on a sound roof and a tight budget, and the wrong one nearly everywhere else.",
       },
+      prices: {
+        eyebrow: "By material",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, on a standard-pitch residential roof.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Three-tab asphalt", low: 3.5, high: 5.5, note: "The cheapest full roof, and the shortest-lived." },
+          {
+            name: "Architectural asphalt",
+            low: 6,
+            high: 9,
+            tone: "mixed",
+            note: "Thicker, heavier shingles and what most replacements use.",
+          },
+          { name: "Metal", low: 8, high: 14, note: "Standing seam or ribbed panels, fitted by a different crew." },
+          { name: "Concrete or clay tile", low: 10, high: 18, note: "Heavy enough that the structure has to be checked first." },
+        ],
+        footnote:
+          "Tearing the old roof off, a steep pitch, complicated valleys and any rotten decking all sit on top of these figures, as do permits. Get the tear-off quoted as its own line so you can compare bids properly.",
+        aside: {
+          label: "Where the value sits",
+          heading: "Architectural shingles are the sensible middle",
+          body:
+            "Three-tab saves a few thousand on an average house and is visibly thinner from the street. Architectural at $6 to $9 a square foot is what most roofs get replaced with, and it is the point where the material stops being the thing that fails first.",
+          footnote:
+            "Pitch and complexity move a quote more than the shingle does. Two roofs of the same area are not the same job.",
+        },
+      },
       claim: {
         eyebrow: "The warranty",
         heading: "Two warranties, and the one that matters is the workmanship",
@@ -730,6 +1085,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Book one before buying a house, after any serious storm, and every few years once the roof is past its midpoint. The cost is small against what it can find, and the report is useful evidence in an insurance claim later.",
+      },
+      prices: {
+        eyebrow: "By type of inspection",
+        heading: "What an inspection costs",
+        lead: "Per inspection, 2026, on a residential roof.",
+        unit: "Dollars per inspection",
+        currency: "$",
+        items: [
+          { name: "Drone inspection", low: 150, high: 400, tone: "mixed", note: "Thirty to sixty minutes, nobody on the roof." },
+          {
+            name: "Roof certification added",
+            low: 75,
+            high: 200,
+            note: "A signed statement of remaining life, often wanted at a sale.",
+          },
+          {
+            name: "Thermal imaging added",
+            low: 100,
+            high: 200,
+            note: "Finds moisture trapped under the surface that a camera cannot.",
+          },
+          { name: "The full survey", low: 700, high: 1700, note: "Visual, drone, thermal and moisture probes in one visit." },
+        ],
+        footnote:
+          "Infrared drone work is quoted anywhere from $300 to $600 depending on the market. Commercial roofs start at $500 and go well past $1,500.",
+        aside: {
+          label: "Free is not the same thing",
+          heading: "A roofer bidding for work is not an inspection",
+          body:
+            "Free roof checks are common and they are sales visits, which is fine as long as you know that is what you are reading. An independent paid inspection at $150 to $400 produces a dated report with photographs, which is the thing an insurer or a buyer will actually accept.",
+          footnote: "After a storm, get the report before the repair. Claims are much harder to argue backwards.",
+        },
       },
       claim: {
         eyebrow: "Who is looking",
@@ -786,6 +1173,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Metal expands and contracts a long way across a full-length panel. Standing seam clips are designed to let it move; a panel screwed tight through the face cannot, which is what slowly works the fixings loose and opens the washers up.",
       },
+      prices: {
+        eyebrow: "By panel type",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, including materials and labour on a standard-pitch roof.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          {
+            name: "Exposed-fastener steel",
+            low: 4.5,
+            high: 8,
+            note: "Screws through the panel face, which is what eventually leaks.",
+          },
+          { name: "Corrugated steel", low: 7, high: 12, note: "The agricultural profile, now common on houses too." },
+          {
+            name: "Standing seam",
+            low: 10,
+            high: 22,
+            tone: "mixed",
+            note: "Fasteners hidden under the seam, so nothing pierces the panel.",
+          },
+        ],
+        footnote:
+          "Zinc and copper standing seam start above $25 a square foot. Galvalume steel sits at the bottom of the standing seam range at $10 to $14, and aluminium at $12 to $16. Pitch, roof complexity and coating all move the number.",
+        aside: {
+          label: "What you are paying for",
+          heading: "Standing seam has no holes in it",
+          body:
+            "An exposed-fastener roof is held on by screws through the panel, each with a rubber washer that ages. Standing seam clips underneath and the fasteners never pierce the surface, which is the whole reason it costs two to three times as much a square foot.",
+          footnote: "On a low-pitch or a long-run roof, the difference matters more than on a steep one.",
+        },
+      },
       claim: {
         eyebrow: "Lifespan",
         heading: "The coating decides the life, not the metal",
@@ -819,6 +1238,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "If there are dark rings or silt patches on the existing roof two days after rain, the falls or the drains are not doing their job, and re-covering without fixing that buys you a newer roof with the same problem.",
       },
+      prices: {
+        eyebrow: "By membrane",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, on a residential flat or low-slope roof.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "EPDM rubber", low: 4, high: 7, note: "Black rubber sheet, the oldest and simplest of the three." },
+          {
+            name: "Modified bitumen",
+            low: 4.5,
+            high: 8,
+            tone: "mixed",
+            note: "Torched or self-adhered rolls, and the shortest life.",
+          },
+          { name: "TPO", low: 5, high: 8.5, note: "White, reflective, heat-welded seams." },
+        ],
+        footnote:
+          "Tearing off the old membrane adds $1 to $3 a square foot. A 1,500 square foot residential flat roof comes to roughly $7,500 to $21,000 depending on material, insulation and how much substrate has to be replaced.",
+        aside: {
+          label: "Read the lifespan",
+          heading: "Modified bitumen needs doing again soonest",
+          body:
+            "At fifteen to twenty years it is a shorter life than TPO or EPDM for a price that is barely lower. Over thirty years that is one extra roof. It still makes sense on a small porch or a garage, and much less on the main roof of a house.",
+          footnote:
+            "Ask what insulation is going under it. On a flat roof that is half the performance and it is easy to leave out of a quote.",
+        },
+      },
       claim: {
         eyebrow: "The seams",
         heading: "A flat roof fails at its joints, so count them",
@@ -851,6 +1298,44 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Photograph everything before anybody touches it, including the debris and the inside of any room that took water. A temporary cover fitted before the damage is recorded is a repair you may struggle to claim for.",
+      },
+      prices: {
+        eyebrow: "Damage and deductible",
+        heading: "What storm damage costs",
+        lead: "Repair costs in 2026, next to what a policy usually leaves you paying.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          {
+            name: "Your deductible",
+            low: 1500,
+            high: 2500,
+            tone: "mixed",
+            note: "Standard policy. The only number many people actually pay.",
+          },
+          { name: "Minor to moderate hail", low: 400, high: 1500, note: "Some shingles, a vent, a length of gutter." },
+          {
+            name: "A typical storm repair",
+            low: 2500,
+            high: 8000,
+            note: "The national middle for wind, hail and heavy rain together.",
+          },
+          {
+            name: "Replacement after damage",
+            low: 8000,
+            high: 25000,
+            note: "When the roof is no longer repairable in patches.",
+          },
+        ],
+        footnote:
+          "In hail-prone states the deductible is often one to five percent of the dwelling coverage rather than a flat sum, which on a $400,000 house is $8,000 at two percent. Most policies want the claim filed within six months of the storm.",
+        aside: {
+          label: "Check this first",
+          heading: "Your deductible decides whether to claim at all",
+          body:
+            "A $1,200 repair against a $2,500 deductible is not a claim, it is a bill. Read the wind and hail deductible on your policy before you call anyone, because in storm states it is a percentage of the insured value and much larger than the flat figure people remember.",
+          footnote: "The average hail claim pays out around $14,747, so the sums change completely once the roof is a write-off.",
+        },
       },
       claim: {
         eyebrow: "After a storm",
@@ -888,6 +1373,39 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Before calling anybody, change the filter and check that the outdoor unit is clear of leaves and growth. A surprising number of no-cooling calls are one of those two, and both are free to rule out.",
       },
+      prices: {
+        eyebrow: "By part",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a residential split system.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Capacitor", low: 100, high: 400, note: "The most common failure and the cheapest. Average about $175." },
+          { name: "Condenser fan motor", low: 200, high: 600, note: "Accessible, so it is mostly the part you are paying for." },
+          {
+            name: "Refrigerant leak and recharge",
+            low: 400,
+            high: 1000,
+            note: "Finding the leak matters more than the gas going in.",
+          },
+          {
+            name: "Compressor",
+            low: 1100,
+            high: 4650,
+            tone: "mixed",
+            note: "Out of warranty, a 3-ton system usually lands $1,500 to $3,400.",
+          },
+        ],
+        footnote:
+          "The everyday failures, capacitor, contactor and fan motor, average $250 to $550. The R-410A phase-out has pushed refrigerant prices up forty to sixty percent, which is why a recharge costs what it does now.",
+        aside: {
+          label: "When to stop",
+          heading: "A compressor quote is really a replacement quote",
+          body:
+            "At $1,100 to $4,650 on a system that is already ten years old, a compressor is most of the price of a new outdoor unit with a fresh warranty and better efficiency. Get both numbers before you agree to the repair, not after.",
+          footnote: "If the system still runs R-410A, that alone is an argument for replacing rather than recharging.",
+        },
+      },
       claim: {
         eyebrow: "Refrigerant",
         heading: "A system that needs topping up has a leak",
@@ -921,6 +1439,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "A proper load calculation has a name and a method, and any contractor doing this seriously will be willing to show you theirs. If the sizing conversation begins and ends with the tonnage of the old unit, that is worth noticing.",
       },
+      prices: {
+        eyebrow: "By size and efficiency",
+        heading: "What a new system costs",
+        lead: "Supplied and installed, 2026, into a house with usable ductwork.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          { name: "2 ton, standard efficiency", low: 3500, high: 6500, note: "A smaller house, baseline SEER2 equipment." },
+          {
+            name: "A typical whole-house job",
+            low: 4500,
+            high: 9500,
+            tone: "mixed",
+            note: "Where most replacements land, around $6,500.",
+          },
+          { name: "High efficiency, 16+ SEER2", low: 6000, high: 13500, note: "Variable speed, quieter, and a longer payback." },
+        ],
+        footnote:
+          "Moving from baseline to SEER2 16 or 17 adds $1,000 to $2,500, and a premium variable-speed system $3,000 or more. Equipment is about ten to fifteen percent dearer in 2026 because of the R-454B refrigerant changeover, and rebates of $600 to $2,000 are common.",
+        aside: {
+          label: "Ask about this",
+          heading: "The ducts decide what the new unit can do",
+          body:
+            "A high-efficiency system on undersized or leaking ductwork performs like a cheap one. If nobody has measured the duct static pressure or looked at the return, the SEER2 number on the quote is a sticker, not a promise.",
+          footnote: "Sizing matters as much. An oversized unit short-cycles, and the house ends up cold and damp.",
+        },
+      },
       claim: {
         eyebrow: "Efficiency",
         heading: "The efficiency rating is a laboratory number",
@@ -953,6 +1498,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Fit a carbon monoxide alarm on every floor with a fuel-burning appliance, regardless of the age or condition of the furnace. It is the cheapest safety device in the house.",
+      },
+      prices: {
+        eyebrow: "By part",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a residential gas furnace.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Igniter", low: 150, high: 250, note: "A common no-heat call. $350 to $500 on an emergency visit." },
+          { name: "Control board", low: 300, high: 650, note: "Brand and type move this more than labour does." },
+          { name: "Blower motor", low: 300, high: 800, note: "A variable-speed motor sits at the top of that range." },
+          {
+            name: "Heat exchanger",
+            low: 1000,
+            high: 3000,
+            tone: "mixed",
+            note: "The one repair that is usually a decision about the furnace.",
+          },
+        ],
+        footnote:
+          "Most furnace repairs come in between $150 and $600, with a single-component fix typically $200 to $600. Diagnostic fees are often waived if you go ahead with the work.",
+        aside: {
+          label: "The one to take seriously",
+          heading: "A cracked heat exchanger means a new furnace, usually",
+          body:
+            "It is $1,000 to $3,000 to replace, on a part that only cracks after years of heat cycling, so the rest of the furnace is the same age. It is also the part that puts combustion gases into your air, which is why a technician will red-tag the unit rather than leave it running.",
+          footnote: "Get a second opinion on a cracked exchanger. It is the diagnosis most worth confirming.",
+        },
       },
       claim: {
         eyebrow: "Heat exchanger",
@@ -1009,6 +1582,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Heat pumps deliver warm air rather than hot air, at a lower temperature than a furnace but for longer. It heats the house perfectly well and it does feel different at the vent, which is worth expecting rather than discovering.",
       },
+      prices: {
+        eyebrow: "Ducted against ductless",
+        heading: "What a heat pump costs",
+        lead: "Supplied and installed, 2026, for a residential air-source system.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          { name: "Single-zone mini split", low: 2700, high: 5800, note: "One outdoor unit, one head, one room." },
+          { name: "Ducted system", low: 4500, high: 12500, tone: "mixed", note: "A 3-ton system averages $5,800 to $10,000." },
+          { name: "Four to six ductless zones", low: 14000, high: 20000, note: "Whole-house coverage without using ducts." },
+        ],
+        footnote:
+          "Cold-climate equipment, which is what you want if the house needs real heat below 25F, adds $1,000 to $3,000. A 200-amp panel upgrade or duct repairs are separate lines and neither is unusual.",
+        aside: {
+          label: "If you have ducts",
+          heading: "Ducted beats four-plus zones by thousands",
+          body:
+            "Where the ductwork is sound, a ducted heat pump comes in $2,200 to $5,000 below a four-zone mini split covering the same house. Ductless earns its money in additions, converted attics and houses that never had ducts, not as a default.",
+          footnote: "Get the ducts tested before you decide. Sound is a measurement, not an opinion.",
+        },
+      },
       claim: {
         eyebrow: "Running cost",
         heading: "The saving depends on what you are replacing and what power costs",
@@ -1042,6 +1636,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Ask to see inside the ducts before and after, with a camera or a mirror. A firm that does this properly will be happy to show you; it is the most persuasive thing they have.",
       },
+      prices: {
+        eyebrow: "By how it is priced",
+        heading: "What a clean costs",
+        lead: "Per visit, 2026, for a residential forced-air system.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          { name: "A house with 10 to 15 vents", low: 300, high: 700, note: "The national average is about $475." },
+          { name: "A 2,000 sq ft house by area", low: 300, high: 800, note: "Priced at $0.15 to $0.40 a square foot." },
+          {
+            name: "A full system to NADCA scope",
+            low: 450,
+            high: 1000,
+            tone: "mixed",
+            note: "Air handler, blower, coils and registers included.",
+          },
+        ],
+        footnote:
+          "Charged per vent it is $25 to $50 each, most often around $35. Access openings cut into the trunk and put back properly are part of a real clean and part of why the price varies.",
+        aside: {
+          label: "Read the quote",
+          heading: "A $99 whole-house special is not a whole house",
+          body:
+            "The cheap adverts usually cover the register boxes and stop there, leaving out the air handler, the blower, the coil and the access openings needed to reach any of it. NADCA puts a genuine system clean at $450 to $1,000, and the gap between that and $99 is everything that matters.",
+          footnote: "Ask for before and after photographs from inside the trunk. Reputable firms take them as a matter of course.",
+        },
+      },
       claim: {
         eyebrow: "The offer",
         heading: "The whole-house special is an advertisement, not a price",
@@ -1074,6 +1695,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Some manufacturer warranties require documented annual servicing. If yours does, the record the plan produces has a value beyond the visits, and it is worth checking whether that is the case before deciding.",
+      },
+      prices: {
+        eyebrow: "Plan against paying per visit",
+        heading: "What a year costs",
+        lead: "Annual cost in 2026 for a residential heating and cooling system.",
+        unit: "Dollars per year",
+        currency: "$",
+        items: [
+          { name: "Two tune-ups, paid separately", low: 150, high: 400, note: "At $75 to $200 a visit, spring and autumn." },
+          { name: "A standard annual plan", low: 200, high: 350, tone: "mixed", note: "Most operators anchor around $279." },
+          { name: "Plans across the market", low: 150, high: 500, note: "Wider tiers, some including parts or labour cover." },
+        ],
+        footnote:
+          "A standard plan usually includes two tune-ups, no diagnostic fee on a call-out, around fifteen percent off repairs and priority scheduling in a heatwave or a cold snap. Monthly billing at $20 to $30 works out to $240 to $360 a year.",
+        aside: {
+          label: "What you are actually buying",
+          heading: "The tune-ups are not the point",
+          body:
+            "The plan costs about what two separate visits cost, so the maintenance is roughly free. What you are paying for is the waived diagnostic fee, the repair discount and being at the front of the queue on the first hot weekend, which is exactly when everyone else is calling.",
+          footnote: "Check whether it transfers if you sell, and whether the discount applies to parts as well as labour.",
+        },
       },
       claim: {
         eyebrow: "Worth having",
@@ -1111,6 +1753,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Some panel brands have known safety problems and are effectively uninsurable in parts of North America. If yours is one of them, replacement is not really a discretionary upgrade, and an electrician will tell you which you have on sight.",
       },
+      prices: {
+        eyebrow: "By service size",
+        heading: "What an upgrade costs",
+        lead: "Supplied, fitted and inspected, 2026, on a residential service.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          {
+            name: "100 amp panel replacement",
+            low: 1100,
+            high: 2500,
+            note: "Like for like, where the service itself stays as it is.",
+          },
+          {
+            name: "Upgrade to 200 amp",
+            low: 1800,
+            high: 4500,
+            tone: "mixed",
+            note: "The usual answer, and typically around $2,500.",
+          },
+          { name: "Upgrade to 400 amp", low: 3000, high: 8000, note: "Normally a 320 amp meter feeding two 200 amp panels." },
+        ],
+        footnote:
+          "Where the meter, the mast or the service drop also has to be replaced, or older wiring has to come up to code before an inspector will sign it off, the figure climbs well past these. Permits and inspection are separate.",
+        aside: {
+          label: "What moves the price",
+          heading: "The distance from the meter, and the code catch-up",
+          body:
+            "Two identical panels can differ by thousands depending on how far the new cable has to run and how much of the existing installation the inspector wants corrected on the way. Ask for the code items to be listed separately so you can see what is the panel and what is the house.",
+          footnote: "If you are planning an EV charger or a heat pump, size the panel for both now rather than paying twice.",
+        },
+      },
       claim: {
         eyebrow: "The load calculation",
         heading: "The size of the new service should come from a calculation",
@@ -1143,6 +1817,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Knob and tube and aluminium branch wiring are both insurable problems in many places, not only safety ones. It is worth asking your insurer what they require before you decide how much of the house to do.",
+      },
+      prices: {
+        eyebrow: "The whole job",
+        heading: "What rewiring costs",
+        lead: "A whole house rewired, 2026, broken into the lines a quote is made of.",
+        unit: "Dollars for the house",
+        currency: "$",
+        items: [
+          { name: "Permits", low: 200, high: 900, note: "Required, inspected, and cheap next to everything else." },
+          { name: "A panel upgrade with it", low: 1500, high: 4000, note: "Almost always needed in a knob and tube house." },
+          {
+            name: "Plaster and drywall repair",
+            low: 1000,
+            high: 5000,
+            tone: "mixed",
+            note: "Depends entirely on how many walls had to be opened.",
+          },
+          { name: "The rewiring itself", low: 12000, high: 36600, note: "Roughly $10 to $20 a square foot." },
+        ],
+        footnote:
+          "Aluminium wiring can often be dealt with by pigtailing copper at each connection for $50 to $75 an outlet instead of replacing the lot, which is a different job and a fraction of the price.",
+        aside: {
+          label: "What decides the number",
+          heading: "Access, not square footage",
+          body:
+            "With an unfinished basement below and an attic above, an electrician fishes new cable through and barely touches your walls. With a slab, a finished basement and no attic, every run means opening plaster and putting it back, which is where the $1,000 to $5,000 repair line comes from.",
+          footnote: "Walk the house with the electrician before the quote and ask where they intend to get in.",
+        },
       },
       claim: {
         eyebrow: "Doing it in stages",
@@ -1177,6 +1879,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Most people charge overnight and need far less power than they assume. A slower circuit that adds plenty of range in eight hours can avoid a service upgrade entirely, and is worth pricing alongside the fastest option.",
       },
+      prices: {
+        eyebrow: "What a quote is made of",
+        heading: "What a home charger costs",
+        lead: "A Level 2 charger supplied and fitted by a licensed electrician, 2026.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Permit", low: 50, high: 300, note: "Your electrician normally pulls it and books the inspection." },
+          { name: "The charger itself", low: 200, high: 900, note: "A decent Level 2 unit, wall-mounted." },
+          { name: "Electrician labour", low: 200, high: 700, note: "Circuit, breaker, cable run and making good." },
+          { name: "The complete job", low: 800, high: 2700, tone: "mixed", note: "Everything in, averaging about $1,700." },
+        ],
+        footnote:
+          "If the panel has no spare capacity, an upgrade adds $800 to $4,500 and becomes the largest item by far. Permitting usually adds three to seven working days for the inspection to be scheduled.",
+        aside: {
+          label: "Two questions decide it",
+          heading: "Panel capacity, and how far the garage is",
+          body:
+            "Everything else is roughly fixed. Whether your panel has room for a 50 amp circuit, and how much cable has to travel between it and the car, are what turn an $800 job into a $2,700 one. Both can be answered in a ten-minute site visit before anyone quotes.",
+          footnote: "Utility and state rebates are common and are usually claimed after the inspection passes.",
+        },
+      },
       claim: {
         eyebrow: "Before you upgrade the service",
         heading: "Load management is usually cheaper than more amps",
@@ -1209,6 +1933,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Colour temperature is worth deciding deliberately across a whole room rather than fitting by fitting. Mixing warm and neutral lamps in one space is the most common reason new lighting looks wrong in a way people struggle to name.",
+      },
+      prices: {
+        eyebrow: "By fixture",
+        heading: "What fitting lights costs",
+        lead: "Fitted price in 2026 where there is already power at the ceiling.",
+        unit: "Dollars per fixture",
+        currency: "$",
+        items: [
+          { name: "Swapping a fixture", low: 50, high: 200, tone: "mixed", note: "Labour only, onto an existing junction box." },
+          { name: "Recessed downlight", low: 100, high: 300, note: "Into a finished ceiling, around $180 typical." },
+          { name: "Ceiling fan", low: 100, high: 500, note: "Where a light already hangs and a brace can be fitted." },
+          { name: "Chandelier", low: 150, high: 600, note: "Fitting only. Height and weight decide it." },
+        ],
+        footnote:
+          "Lighting where none exists is a different job. A new circuit, switch and boxes runs $500 to $1,500 or more. A chandelier itself is $120 to $1,400, and an electrical box added for a fan or heavy fixture is $100 to $200.",
+        aside: {
+          label: "Book them together",
+          heading: "The minimum charge makes one fixture expensive",
+          body:
+            "Electricians charge $50 to $150 an hour and most carry a $100 to $200 minimum, so a single swap costs nearly as much as three. If you have a fan, two downlights and a porch light waiting, do them in one visit and the per-fixture price falls sharply.",
+          footnote: "Have the fixtures on site and unboxed before they arrive. You are paying by the hour.",
+        },
       },
       claim: {
         eyebrow: "Recessed lights",
@@ -1265,6 +2011,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Sizing does not have to mean the whole house. A generator feeding a critical loads panel, heating, refrigeration, a few circuits and the well pump, is far cheaper than one carrying air conditioning as well, and covers what an outage actually threatens.",
       },
+      prices: {
+        eyebrow: "What a quote is made of",
+        heading: "What standby power costs",
+        lead: "A permanently installed standby generator, 2026, supplied and fitted.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Transfer switch", low: 500, high: 1500, note: "What makes it automatic, and what keeps linemen safe." },
+          { name: "Electrical, gas and pad work", low: 2300, high: 5100, note: "Wiring, the gas connection and a concrete base." },
+          { name: "The generator itself", low: 3500, high: 8000, note: "Air-cooled units for a typical house." },
+          {
+            name: "A 22 kW standby, all in",
+            low: 10000,
+            high: 15000,
+            tone: "mixed",
+            note: "Whole-house capacity, installed and commissioned.",
+          },
+        ],
+        footnote:
+          "Permits run $200 to $500. Across all sizes the national average installation is about $5,160, and installation labour alone averages $4,520. A portable generator has no installation cost, because nothing is permanently connected.",
+        aside: {
+          label: "Budget for both halves",
+          heading: "Installing it costs about what the machine costs",
+          body:
+            "People price the generator and forget the concrete, the gas run, the transfer switch and the electrical work, which together come to roughly as much again. A $6,000 unit is a $12,000 project, and a quote that looks unusually low is usually missing one of those lines.",
+          footnote: "Size it to what you actually need running. Whole-house capacity is not the only sensible answer.",
+        },
+      },
       claim: {
         eyebrow: "Backfeeding",
         heading: "Never connect a generator through a socket",
@@ -1301,6 +2075,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Before booking, pull the appliance out and vacuum the condenser coils at the back or underneath. A coil packed with dust makes a healthy fridge behave like a failing one, and it is the most common fault there is.",
       },
+      prices: {
+        eyebrow: "By fault",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a domestic refrigerator.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Ice maker", low: 150, high: 300, note: "Up to $400 if it has been leaking into the cabinet." },
+          { name: "Most repairs", low: 200, high: 400, note: "Thermostats, fans, door seals, defrost boards." },
+          {
+            name: "Sealed system",
+            low: 600,
+            high: 1400,
+            tone: "mixed",
+            note: "Leak, recharge and certified refrigerant handling.",
+          },
+          { name: "Compressor", low: 700, high: 1250, note: "The part is one thing, getting at it is another." },
+        ],
+        footnote:
+          "Appliance labour is $50 to $125 an hour, with a minimum service fee of $70 to $130 that covers the first hour only. Sealed-system work on a premium built-in can reach $2,800 because of the refrigerant handling and the labour to reach it.",
+        aside: {
+          label: "The line to watch",
+          heading: "A sealed system is a new fridge conversation",
+          body:
+            "Both repairs land between $600 and $1,400 on an appliance that may have cost $1,200 new. Neither is worth doing on a standard freestanding fridge past about eight years. On a built-in or a professional unit, where replacement is five figures, both are absolutely worth doing.",
+          footnote: "Ask for the diagnosis in writing before you decide. Which of the two it is changes the arithmetic.",
+        },
+      },
       claim: {
         eyebrow: "Repair or replace",
         heading: "Weigh the repair against the age and the running cost",
@@ -1333,6 +2135,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "If a dryer has got slower over a year or two, clean the whole vent run to the outside before calling anybody. Restricted venting is the single most common dryer complaint and it is also a fire risk.",
+      },
+      prices: {
+        eyebrow: "By part",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a domestic washer or dryer.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Belt or drum bearing", low: 100, high: 250, note: "A noisy drum is usually one of the two." },
+          { name: "Drain pump", low: 150, high: 350, note: "The classic will-not-empty fault, and often just a blockage." },
+          { name: "Control board", low: 350, high: 550, tone: "mixed", note: "The most expensive part in either machine." },
+        ],
+        footnote:
+          "Most washing machine repairs total $100 to $400. Labour is $50 to $125 an hour with a $70 to $130 minimum covering the first hour, and a major mechanical job such as a full bearing replacement can pass $450.",
+        aside: {
+          label: "When to stop",
+          heading: "A control board is half a new machine",
+          body:
+            "At $350 to $550 on a mid-range washer, a board replacement is well past the point where a repair is obviously worth it, particularly on a machine over about seven years old. Belts, pumps and bearings at $100 to $350 almost always are.",
+          footnote: "Get the fault named before you agree. Technicians will usually tell you over the phone what a board costs.",
+        },
       },
       claim: {
         eyebrow: "Front loaders",
@@ -1367,6 +2190,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "An oven that cooks unevenly or burns one side is usually a sensor or a fan rather than an element, and it can often be confirmed with an oven thermometer before anybody visits.",
       },
+      prices: {
+        eyebrow: "By part",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a domestic oven, range or cooktop.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Control board", low: 150, high: 300, note: "All in, and cheaper here than on most appliances." },
+          { name: "Oven igniter", low: 150, high: 325, note: "Gas ovens. A slow or failed light is usually this." },
+          { name: "Heating element", low: 150, high: 450, note: "A coil element is $90 to $175, a radiant one $120 to $330." },
+          {
+            name: "Induction cooktop",
+            low: 200,
+            high: 800,
+            tone: "mixed",
+            note: "The electronics are the appliance, and they are not cheap.",
+          },
+        ],
+        footnote:
+          "The average oven or range repair is about $220, with most between $110 and $450. Labour is $50 to $125 an hour, and gas work on a range is a licensed job.",
+        aside: {
+          label: "Know before you buy",
+          heading: "Induction costs two to four times as much to fix",
+          body:
+            "A gas or electric range repair averages $75 to $400. The same fault class on induction is $200 to $800, because the hob is a power board rather than a coil. It is not a reason to avoid induction, but it is worth knowing when you weigh up an extended warranty.",
+          footnote: "Keep the model number to hand. Induction boards are model-specific and availability drives the wait.",
+        },
+      },
       claim: {
         eyebrow: "Gas ranges",
         heading: "A gas smell is not a repair booking",
@@ -1399,6 +2250,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Clean the filter in the base and clear the spray arm holes with a pin before booking a repair for poor cleaning. On a machine that has never had it done, that is the fix more often than not.",
+      },
+      prices: {
+        eyebrow: "By part",
+        heading: "What a repair costs",
+        lead: "Parts and labour, 2026, on a domestic dishwasher.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Door seal", low: 75, high: 150, note: "The cheapest fix in the machine, and a common leak." },
+          { name: "Drain pump", low: 100, high: 400, note: "Standing water at the bottom is nearly always this." },
+          { name: "Control board", low: 200, high: 600, tone: "mixed", note: "OEM or generic makes most of that difference." },
+        ],
+        footnote:
+          "Most dishwasher repairs total $150 to $325 including parts and labour. Appliance labour is $50 to $125 an hour with a $70 to $130 minimum that covers the first hour only.",
+        aside: {
+          label: "The replace line",
+          heading: "A $600 board on a $700 dishwasher is not a repair",
+          body:
+            "Control boards are where dishwasher repairs stop making sense. Seals and pumps at $75 to $400 are worth doing on almost any machine. A board quote at the top of its range, on anything other than a premium integrated unit, is worth comparing against a new machine fitted.",
+          footnote: "Ask whether a generic board is available. It is often half the price of the manufacturer's.",
+        },
       },
       claim: {
         eyebrow: "Integrated machines",
@@ -1436,6 +2308,32 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "The usual guidance is annually for a regularly used fireplace or stove, and a sweep before the season rather than after is better, because a summer of damp on a dirty flue is what produces the smell people complain about.",
       },
+      prices: {
+        eyebrow: "By scope",
+        heading: "What a sweep costs",
+        lead: "Per visit, 2026, on a residential chimney in ordinary condition.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          {
+            name: "Level 1 clean and check",
+            low: 150,
+            high: 250,
+            tone: "mixed",
+            note: "Brush the flue, look at what can be seen.",
+          },
+          { name: "A standard clean and check", low: 200, high: 400, note: "What most companies quote for an annual visit." },
+        ],
+        footnote:
+          "The national average is about $254, with most jobs between $129 and $381. Heavy creosote, a difficult roof, an unusual flue or a chimney that has not been swept in years all push it up.",
+        aside: {
+          label: "What you are getting",
+          heading: "A level 1 sees the flue, not the structure",
+          body:
+            "It is a visual inspection of the readily accessible parts plus a brush clean, which is the right annual service for a chimney in known condition. It is not a survey. If the house has just changed hands, or anything has changed about the appliance, level 2 with a camera is the one to book.",
+          footnote: "Annual sweeping is what stops creosote becoming a chimney fire. It is the cheapest thing on this page.",
+        },
+      },
       claim: {
         eyebrow: "What you burn",
         heading: "Wet wood is what fills a chimney",
@@ -1468,6 +2366,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Water damage inside a chimney is progressive and it works on the liner and the structure together. A stain on a ceiling next to the stack is usually flashing, and it is cheaper to deal with in the year it appears.",
+      },
+      prices: {
+        eyebrow: "By repair",
+        heading: "What repairs cost",
+        lead: "Per job, 2026, on a residential masonry chimney.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          {
+            name: "Crown repair",
+            low: 200,
+            high: 700,
+            tone: "mixed",
+            note: "Minor work. A full crown replacement reaches $3,000.",
+          },
+          { name: "Flashing", low: 300, high: 1800, note: "Where the chimney meets the roof, and where leaks start." },
+          { name: "Tuckpointing", low: 500, high: 2500, note: "Raking out and replacing mortar, $25 to $30 a square foot." },
+          { name: "Rebuilding a section", low: 1000, high: 5000, note: "Once the brickwork itself has gone." },
+        ],
+        footnote:
+          "A stainless cap fitted is $300 to $1,000. A typical mid-scope job, meaning a crown rebuild, about twenty square feet of tuckpointing and a new cap on a single-storey house, comes to roughly $1,530.",
+        aside: {
+          label: "Cheapest good spend",
+          heading: "The crown, cap and flashing stop the rest",
+          body:
+            "Water is what takes a chimney apart. It gets in at the crown and the flashing, freezes in the mortar and pushes the brickwork open, which is how a $200 crown repair becomes a $5,000 rebuild. Those three items are the cheap ones and the ones to do first.",
+          footnote: "A cap also keeps rain, birds and squirrels out of the flue, which is worth $300 on its own.",
+        },
       },
       claim: {
         eyebrow: "Waterproofing",
@@ -1502,6 +2428,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "After a chimney fire, an earthquake or a serious storm, a visual inspection is not enough. Flue liners crack in ways that are invisible from either end and only show on camera.",
       },
+      prices: {
+        eyebrow: "By level",
+        heading: "What an inspection costs",
+        lead: "Per inspection, 2026, to the standard levels a sweep will quote against.",
+        unit: "Dollars per inspection",
+        currency: "$",
+        items: [
+          { name: "Level 1, visual", low: 100, high: 250, note: "Readily accessible parts, no tools, no camera." },
+          {
+            name: "Level 2, with a camera",
+            low: 300,
+            high: 600,
+            tone: "mixed",
+            note: "Video scan of the flue interior, top to bottom.",
+          },
+          { name: "Level 3, opening up", low: 500, high: 5000, note: "Removing masonry to reach concealed areas. Rare." },
+        ],
+        footnote:
+          "Regional pricing varies more here than almost anywhere else in the trade. Level 2 is quoted as low as $129 in some markets and $600 in others for the same scope.",
+        aside: {
+          label: "When level 2 is the one",
+          heading: "Buying, selling, changing the appliance, or after a fire",
+          body:
+            "Those four situations all call for a camera in the flue, because the thing that matters is a crack or a gap you cannot see from either end. A level 1 will not find it. Paying $300 to $600 to know is cheaper than any of the outcomes of not knowing.",
+          footnote: "Ask for the video. A level 2 without footage you can keep is not much of a report.",
+        },
+      },
       claim: {
         eyebrow: "Buying a house",
         heading: "A general home inspection does not inspect the chimney",
@@ -1534,6 +2487,32 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Stainless liners come in different grades, and the right grade depends on what you burn. Wood, multi-fuel and condensing gas appliances all attack the steel differently, and the wrong grade fails early.",
+      },
+      prices: {
+        eyebrow: "By liner type",
+        heading: "What relining costs",
+        lead: "Supplied and fitted, 2026, on a residential chimney.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          {
+            name: "Stainless steel",
+            low: 900,
+            high: 3800,
+            tone: "mixed",
+            note: "A flexible or rigid liner dropped down the flue.",
+          },
+          { name: "Clay or cast-in-place", low: 2000, high: 7000, note: "Poured or built in place, and a far bigger job." },
+        ],
+        footnote:
+          "Stainless liner material runs $15 to $45 a linear foot and cast-in-place $25 to $65. Fitting labour is $600 to $1,800 on top, and chimney specialists charge between $400 and $1,250 for the installation itself.",
+        aside: {
+          label: "The usual answer",
+          heading: "Stainless is roughly half the price and fits in a day",
+          body:
+            "A cast-in-place liner rebuilds the flue from the inside and is the right call on badly deteriorated masonry. For most relines, including fitting a wood stove or converting to gas, a stainless liner at $900 to $3,800 does the same job for less than half the money.",
+          footnote: "Check the warranty. Good stainless liners carry a lifetime one, provided the chimney is swept.",
+        },
       },
       claim: {
         eyebrow: "Sizing",
@@ -1571,6 +2550,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "If the door is hard to lift by hand with the opener disconnected, the problem is almost certainly the spring balance rather than the motor, and running the opener against it will destroy the opener next.",
       },
+      prices: {
+        eyebrow: "By fault",
+        heading: "What a repair costs",
+        lead: "Per visit, 2026, on a residential sectional door.",
+        unit: "Dollars per repair",
+        currency: "$",
+        items: [
+          { name: "Rollers", low: 110, high: 230, note: "A full set of nylon rollers with sealed bearings." },
+          { name: "Cables", low: 100, high: 350, note: "Not a DIY job. They are under spring tension." },
+          { name: "Most repairs", low: 150, high: 600, tone: "mixed", note: "Where the majority of call-outs land, all in." },
+          { name: "Door off its tracks", low: 150, high: 700, note: "Realignment, or more if something is bent." },
+        ],
+        footnote:
+          "The service call itself is $75 to $150 on top of parts and labour. Severe structural damage, meaning bent tracks, a twisted shaft or a damaged opening, can pass $1,000.",
+        aside: {
+          label: "Read the quote",
+          heading: "The call-out fee is separate from the repair",
+          body:
+            "A $150 repair on a $125 call-out is a $275 invoice, and that is normal. It also means a second fault found next month costs you the fee again, so it is worth asking what else is close to failing while the technician is already there.",
+          footnote: "Springs and cables age together. If one has gone, ask about the other.",
+        },
+      },
       claim: {
         eyebrow: "Springs",
         heading: "Torsion spring work is not a home repair",
@@ -1603,6 +2604,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Test the reverse every few months: put a solid object flat on the floor in the door's path and close it. The door should touch it and immediately go back up. If it does not, the opener needs adjusting before it is used again.",
+      },
+      prices: {
+        eyebrow: "By drive type",
+        heading: "What an opener costs",
+        lead: "Supplied and fitted, 2026, replacing an existing opener.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          { name: "Chain drive", low: 250, high: 400, note: "Cheapest and noisiest. Fine on a detached garage." },
+          { name: "Belt drive", low: 270, high: 550, tone: "mixed", note: "A reinforced rubber belt, and much quieter." },
+          { name: "Screw drive", low: 300, high: 500, note: "Low maintenance, and unhappy in big temperature swings." },
+          { name: "Wall-mount jackshaft", low: 400, high: 700, note: "Frees the ceiling, for high-lift or low-clearance doors." },
+        ],
+        footnote:
+          "The national average is about $425, with most jobs between $300 and $550. The opener itself is $150 to $500 depending on drive and smart features, and fitting adds $65 to $200.",
+        aside: {
+          label: "Worth the difference",
+          heading: "Belt drive, if there is a bedroom over the garage",
+          body:
+            "The gap between chain and belt is about $100 to $150 installed, and it is the difference between hearing the door through the floor and not. On a detached garage it is money wasted. On an attached one with a room above, it is the best small upgrade on this list.",
+          footnote: "Anything fitted since 1993 must have photo-eye safety sensors. Check they are there and aligned.",
+        },
       },
       claim: {
         eyebrow: "Balance first",
@@ -1637,6 +2660,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Extension springs should always have a containment cable running through them. Without one, a spring that breaks under tension becomes a projectile inside the garage.",
       },
+      prices: {
+        eyebrow: "By spring type",
+        heading: "What springs cost",
+        lead: "A pair supplied and fitted, 2026, on a residential door.",
+        unit: "Dollars fitted",
+        currency: "$",
+        items: [
+          {
+            name: "Extension springs, a pair",
+            low: 120,
+            high: 200,
+            note: "Along the tracks either side. Cheaper and shorter-lived.",
+          },
+          {
+            name: "Torsion springs, a pair",
+            low: 200,
+            high: 350,
+            tone: "mixed",
+            note: "Above the door on a shaft. The stronger arrangement.",
+          },
+          { name: "Across the market", low: 300, high: 540, note: "Including the call-out and any adjustment needed after." },
+        ],
+        footnote:
+          "Torsion springs last eight to fifteen years, extension springs seven to twelve. Both are under enough tension to kill someone releasing them wrongly, which is why this is not a job to attempt.",
+        aside: {
+          label: "Do both at once",
+          heading: "The second spring is not far behind the first",
+          body:
+            "They are fitted as a pair, cycle the same number of times and fail within months of each other. Replacing one means paying the call-out twice, so the extra spring is the cheapest part of a second visit you are now not making.",
+          footnote: "Ask for high-cycle springs. They cost a little more and roughly double the life.",
+        },
+      },
       claim: {
         eyebrow: "Cycle life",
         heading: "Paying more for the spring is the cheapest upgrade on the door",
@@ -1669,6 +2724,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "An insulated door with a poorly sealed perimeter performs badly regardless of its rating. The seals at the sides, the top and along the floor do a large share of the work, and they are the part that wears.",
+      },
+      prices: {
+        eyebrow: "By door",
+        heading: "What a new door costs",
+        lead: "Supplied and fitted, 2026, replacing an existing door.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          {
+            name: "Single insulated steel",
+            low: 1000,
+            high: 1800,
+            tone: "mixed",
+            note: "The standard choice, with basic hardware.",
+          },
+          { name: "Double insulated steel", low: 1800, high: 3200, note: "Two-car width, same construction." },
+          { name: "Carriage house", low: 1200, high: 8000, note: "Steel lookalikes at the bottom, real wood at the top." },
+        ],
+        footnote:
+          "Insulated doors average about $1,500 with most between $1,100 and $4,200. Double- and triple-layer polyurethane or polystyrene adds $150 to $600 and improves stiffness and noise as much as heat. Labour varies by up to fifty percent across regions.",
+        aside: {
+          label: "When insulation pays",
+          heading: "It matters if the garage is attached or heated",
+          body:
+            "On a detached, unheated garage an insulated door is mostly about how solid it feels and how little it rattles. On an attached garage sharing a wall with the house, or one you work in through the winter, the $150 to $600 upgrade is the part of the door that earns its money.",
+          footnote: "Wood looks best and needs refinishing. Steel with a wood-grain skin does not.",
+        },
       },
       claim: {
         eyebrow: "Attached garages",
@@ -1706,6 +2788,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Order the appliances before the cabinets are made. Appliance dimensions vary more than people expect, and a cabinet run built to assumed sizes is an expensive thing to alter afterwards.",
       },
+      prices: {
+        eyebrow: "By scope",
+        heading: "What a kitchen costs",
+        lead: "Complete projects in 2026, materials, labour and fitting.",
+        unit: "Dollars for the project",
+        currency: "$",
+        items: [
+          {
+            name: "Minor remodel",
+            low: 10000,
+            high: 20000,
+            tone: "mixed",
+            note: "Doors, worktops, appliances, paint. Layout stays.",
+          },
+          { name: "Mid-range", low: 35000, high: 90000, note: "New cabinets, new surfaces, some plumbing moved." },
+          { name: "Upscale", low: 90000, high: 200000, note: "Custom cabinetry, stone, and the walls moving." },
+        ],
+        footnote:
+          "Cost vs Value puts a minor midrange kitchen at $28,458 and a major one at $82,793. The 2026 national average across 13,100 completed projects is $26,943, which tells you how many remodels are minor ones.",
+        aside: {
+          label: "The return",
+          heading: "A minor remodel returns 113 percent, a major one 51",
+          body:
+            "The minor midrange kitchen adds about $32,130 of resale value on $28,458 spent. The major one adds $42,130 on $82,793. If resale is any part of why you are doing this, the smaller project is not the compromise, it is the better investment.",
+          footnote: "Upscale major remodels return about 36 percent. Do those because you want them.",
+        },
+      },
       claim: {
         eyebrow: "The contingency",
         heading: "Hold back a contingency, because the walls will have something in them",
@@ -1738,6 +2847,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Extractor fans are frequently undersized and frequently vented into the loft rather than outside. Both are common and both put the moisture somewhere it will do damage instead of removing it.",
+      },
+      prices: {
+        eyebrow: "By room",
+        heading: "What a bathroom costs",
+        lead: "Complete projects in 2026 at mid-range finish.",
+        unit: "Dollars for the project",
+        currency: "$",
+        items: [
+          { name: "Powder room", low: 4000, high: 14500, note: "A refresh at the bottom, pull and replace at the top." },
+          {
+            name: "Hall or guest bath",
+            low: 13000,
+            high: 25000,
+            tone: "mixed",
+            note: "About 60 square feet, typically near $18,500.",
+          },
+          { name: "Primary bath", low: 29000, high: 50000, note: "Mid-range. It runs to $80,000 at upscale finish." },
+        ],
+        footnote:
+          "The national average is about $16,500 with most homeowners spending $10,000 to $30,000. A midrange remodel averages $25,250 in the Journal of Light Construction's figures.",
+        aside: {
+          label: "Where mid becomes upscale",
+          heading: "The tile and the glass, mostly",
+          body:
+            "Mid-range is porcelain tile, a prefabricated shower system and standard chrome or nickel fittings. Upscale is natural stone, frameless glass and custom cabinetry, and those three choices account for most of the jump from $16,000 to $50,000 in the same room.",
+          footnote: "Moving the toilet or the stack is the other big one, and it rarely shows in photographs.",
+        },
       },
       claim: {
         eyebrow: "The shower",
@@ -1772,6 +2908,32 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Any bedroom in a basement needs a proper means of escape, which usually means a window of a specified size and reach, or a door. It is a safety requirement and also the thing that decides whether the room can be described as a bedroom at all.",
       },
+      prices: {
+        eyebrow: "By finish level",
+        heading: "What it costs per square foot",
+        lead: "Contractor-led basement finishing, 2026, on a dry basement.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          {
+            name: "A standard finish",
+            low: 30,
+            high: 75,
+            tone: "mixed",
+            note: "Framing, insulation, drywall, flooring, lighting.",
+          },
+          { name: "With a bathroom and a bar", low: 100, high: 200, note: "Plumbing below the slab is what does this." },
+        ],
+        footnote:
+          "Waterproofing runs $3 to $10 a square foot. An egress window is $2,700 to $5,900 fitted, window wells $2,000 to $5,000, and cutting a new opening through a poured foundation adds $3,000 to $6,000 before any finishes.",
+        aside: {
+          label: "The three budget-breakers",
+          heading: "Egress, waterproofing and plumbing",
+          body:
+            "Those are the lines most likely to blow the number, and all three are decided before a single stud goes up. Get the water sorted, get the egress priced, and find out where the existing drain stub is, because plumbing routed to anywhere else is a slab job.",
+          footnote: "An egress window also turns the space into a legal bedroom, which is worth $15,000 to $30,000 appraised.",
+        },
+      },
       claim: {
         eyebrow: "Moisture",
         heading: "Finishing over a damp basement builds a mould culture",
@@ -1804,6 +2966,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Where the new roof meets the old, and where the new foundation meets the existing one, are the two junctions that cause most later problems. They deserve detail on the drawings rather than being left to the site.",
+      },
+      prices: {
+        eyebrow: "By type",
+        heading: "What it costs per square foot",
+        lead: "Permitted, built and finished, 2026.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Bump-out", low: 85, high: 200, tone: "mixed", note: "Extending a room rather than adding one." },
+          { name: "Second storey", low: 200, high: 500, note: "Keeps the yard, needs the structure checked underneath." },
+          { name: "A full addition", low: 200, high: 600, note: "The realistic planning range in mid and high-cost metros." },
+        ],
+        footnote:
+          "A primary suite addition runs $100,000 to $250,000, and a 350 to 400 square foot suite with an en-suite $120,000 to $200,000. A typical second-storey project averages about $175,000 nationally.",
+        aside: {
+          label: "What sets the rate",
+          heading: "Plumbing is what separates $200 from $500 a foot",
+          body:
+            "A family room at the back of the house is framing, roof, windows and finishes. A primary suite, a kitchen extension or an in-law unit brings plumbing, extra HVAC capacity and often structural work with it, and that is the whole difference in the per-foot number.",
+          footnote: "A bump-out under 150 square feet often avoids the foundation work entirely, which is why it is cheapest.",
+        },
       },
       claim: {
         eyebrow: "Design and build",
@@ -1841,6 +3024,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Cutting too short is the most common self-inflicted lawn problem. Longer grass shades out weed seedlings and roots deeper, and raising the mower is free.",
       },
+      prices: {
+        eyebrow: "By service",
+        heading: "What lawn care costs",
+        lead: "Per visit or per treatment, 2026, on an average residential lawn.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          { name: "Mowing only", low: 42, high: 90, tone: "mixed", note: "Most quotes cluster in the mid-fifties." },
+          { name: "Full service visit", low: 100, high: 200, note: "Mow, trim, fertilise, weed the beds, clear leaves." },
+          { name: "Aeration, once a year", low: 107, high: 202, note: "Averaging about $154. Autumn on cool-season grass." },
+          { name: "A fertiliser treatment", low: 67, high: 405, note: "Lawn size and whether weed control is included." },
+        ],
+        footnote:
+          "A fully managed lawn commonly runs $1,500 to $3,500 a year once fertilisation, aeration and the autumn clean-up are included. In peak season most households pay $120 to $450 a month.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Mow it yourself, buy the fertiliser programme",
+          body:
+            "Mowing is the expensive half of a full-service visit and the easy half to do. An annual fertilisation programme at $300 to $900 plus one aeration is where the visible difference in a lawn comes from, and it is a fraction of $1,500 to $3,500 for the full package.",
+          footnote: "Ask what the programme actually applies and when. Four applications a year is the usual shape.",
+        },
+      },
       claim: {
         eyebrow: "The soil test",
         heading: "Feeding without a soil test is guessing expensively",
@@ -1873,6 +3078,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Drainage and fall away from the building matter as much as the base. Paving laid level, or falling towards the house, delivers water to the wall for the life of the surface.",
+      },
+      prices: {
+        eyebrow: "By surface",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, including excavation and a standard base.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Gravel path", low: 1, high: 3, note: "Edging and a weed membrane, and it needs topping up." },
+          {
+            name: "Poured concrete patio",
+            low: 6,
+            high: 15,
+            note: "Cheapest hard surface that lasts, and it will crack somewhere.",
+          },
+          { name: "Paver patio", low: 15, high: 40, tone: "mixed", note: "Curves, premium pavers and bad access push it up." },
+          { name: "Retaining wall, per face foot", low: 25, high: 110, note: "Priced on wall face, not on ground area." },
+        ],
+        footnote:
+          "Hardscaping overall runs $5 to $25 a square foot. An engineered structural wall is a different job from a garden wall and is priced accordingly, usually with drainage and geogrid behind it.",
+        aside: {
+          label: "Read the quote",
+          heading: "A retaining wall is priced by wall face, not floor area",
+          body:
+            "Two firms quoting the same wall can look wildly apart because one is pricing the visible face and the other the ground it retains. Ask for the face area in square feet and the base and drainage detail, because that detail is what decides whether the wall is still straight in ten years.",
+          footnote: "Walls over about four feet usually need engineering and a permit in most jurisdictions.",
+        },
       },
       claim: {
         eyebrow: "Retaining walls",
@@ -1907,6 +3139,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "A rain sensor or a soil moisture sensor is inexpensive, required in some jurisdictions, and stops the most visible waste there is, which is sprinklers running in the rain.",
       },
+      prices: {
+        eyebrow: "By zone",
+        heading: "What a system costs",
+        lead: "Supplied and installed, 2026, on a residential lawn.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "The first zone", low: 500, high: 1000, note: "Includes the backflow preventer and the controller." },
+          { name: "Each zone after that", low: 590, high: 1340, tone: "mixed", note: "Averaging about $1,000 a zone." },
+          { name: "A quarter-acre lawn", low: 3000, high: 10000, note: "Complete, typically four to eight zones." },
+        ],
+        footnote:
+          "Priced by area it works out to $0.88 to $1.65 a square foot, and the national average installation is $2,500 to $3,500. Head type, soil and how the lawn is shaped all change the zone count.",
+        aside: {
+          label: "What you are buying",
+          heading: "Zones, not lawn size",
+          body:
+            "A zone is what one valve can water at the available pressure, so an awkward lawn split by a driveway and a border costs more than a larger open one. Ask how many zones a quote assumes before you compare it with another, because that single number is most of the price.",
+          footnote: "A smart controller adds a little and saves water every season. Many utilities rebate them.",
+        },
+      },
       claim: {
         eyebrow: "Backflow",
         heading: "The backflow device protects the drinking water, not the garden",
@@ -1939,6 +3192,32 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Planting plans should name species and sizes and account for mature spread rather than how the bed looks on planting day. Overplanting for instant effect is the most common reason a garden needs thinning out in four years.",
+      },
+      prices: {
+        eyebrow: "By deliverable",
+        heading: "What a design costs",
+        lead: "Design fees in 2026, separate from anything being built.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "On-site consultation", low: 200, high: 500, note: "Or $70 to $200 an hour. Advice, not drawings." },
+          { name: "A 2D plan", low: 1000, high: 3500, tone: "mixed", note: "Scaled layout you can hand to any contractor." },
+          {
+            name: "3D rendering and planting plan",
+            low: 2500,
+            high: 6500,
+            note: "What it will look like, and what goes in the ground.",
+          },
+        ],
+        footnote:
+          "Designers charge $50 to $150 an hour and landscape architects $100 to $250. Architects often work on a percentage of the build instead, typically five to fifteen percent. Plans across the market run $700 to $3,000.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Buy the plan, then take it to three builders",
+          body:
+            "A 2D plan at $1,000 to $3,500 is a document you own, and three contractors bidding the same drawing give you comparable numbers for the first time. A design bundled into one firm's build contract is cheaper up front and leaves you with nothing to compare.",
+          footnote: "Many designers charge flat for the drawing and hourly to oversee construction. Agree which you are buying.",
+        },
       },
       claim: {
         eyebrow: "Design and build",
@@ -1976,6 +3255,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "If you are locked out of a car with a child or an animal inside, call the emergency services rather than a locksmith. That is not a lock problem and it is usually free.",
       },
+      prices: {
+        eyebrow: "By hour and by door",
+        heading: "What a lockout costs",
+        lead: "Per call-out, 2026, to open a door without damaging it.",
+        unit: "Dollars per call",
+        currency: "$",
+        items: [
+          {
+            name: "House, business hours",
+            low: 89,
+            high: 150,
+            tone: "mixed",
+            note: "The base rate everything else is a multiple of.",
+          },
+          { name: "Car, after hours", low: 95, high: 195, note: "Modern keys and immobilisers push the top of that." },
+          { name: "House, after hours", low: 125, high: 295, note: "Evenings, weekends and holidays." },
+        ],
+        footnote:
+          "Most jobs carry a $50 to $100 trip fee on top of labour. After 9pm, at weekends or on a holiday, expect a surcharge of $50 to $150, and a midnight lockout commonly passes $200.",
+        aside: {
+          label: "Before you call",
+          heading: "Ask for the total, not the call-out fee",
+          body:
+            "The advertised number is often the trip charge alone, with labour on top and a surcharge after it. A reputable locksmith will give you a total over the phone once you describe the lock. One that will not, and arrives quoting triple, is the pattern the trade is known for.",
+          footnote: "Ask for the company name, a licence number where your state issues them, and the price, before they set off.",
+        },
+      },
       claim: {
         eyebrow: "The call",
         heading: "The trade has a lead generation problem, and it costs homeowners",
@@ -2008,6 +3314,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "It is also the moment to get every exterior lock onto one key if they are not already. Most cylinders of a similar type can be keyed alike, and it costs almost nothing extra while somebody is already doing the work.",
+      },
+      prices: {
+        eyebrow: "By where it happens",
+        heading: "What rekeying costs",
+        lead: "Per cylinder and per house, 2026.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Per cylinder, in the shop", low: 20, high: 50, note: "Take the cylinders off yourself and carry them in." },
+          { name: "Per cylinder, at your door", low: 50, high: 130, note: "The same work, with the visit priced into it." },
+          { name: "A whole house", low: 100, high: 300, tone: "mixed", note: "Three or four doors keyed alike, one visit." },
+        ],
+        footnote:
+          "The trip fee is $50 to $100 and is charged once per visit, not once per lock. A DIY rekey kit is $10 to $30 and works on common pin-tumbler locks if you are comfortable with it.",
+        aside: {
+          label: "Do the whole house",
+          heading: "One visit, every lock, one trip fee",
+          body:
+            "Rekeying three doors in one visit is $100 to $300. Doing them one at a time means paying $50 to $100 of trip fee each time, which is more than the work costs. Ask for them all keyed alike while you are at it, so one key opens the house.",
+          footnote: "New house, lost key, departed tenant or an ex with a copy are all reasons to do this the same week.",
+        },
       },
       claim: {
         eyebrow: "Moving in",
@@ -2042,6 +3369,38 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Replacing the strike plate with a reinforced one and using three inch screws that reach the framing is the cheapest meaningful security improvement available to a homeowner, and it takes ten minutes.",
       },
+      prices: {
+        eyebrow: "By grade",
+        heading: "What fitting a lock costs",
+        lead: "Supplied and fitted, 2026, per door.",
+        unit: "Dollars per door",
+        currency: "$",
+        items: [
+          {
+            name: "Standard deadbolt",
+            low: 70,
+            high: 300,
+            tone: "mixed",
+            note: "Residential grade, into an existing prepared door.",
+          },
+          { name: "Grade 1 deadbolt", low: 295, high: 495, note: "Commercial rating, hardened bolt, built for a beating." },
+          {
+            name: "High-security cylinder",
+            low: 495,
+            high: 895,
+            note: "Medeco or Mul-T-Lock, with keys that cannot be copied casually.",
+          },
+        ],
+        footnote:
+          "Decorative and mortise locks run $120 to $400 for the lock alone before fitting. A door that has never had a deadbolt needs boring, which adds labour to any of these.",
+        aside: {
+          label: "What the grade buys",
+          heading: "A one-inch bolt with hardened inserts",
+          body:
+            "Grade 1 is not marketing. It means a one-inch throw and inserts that resist sawing and prying, tested to a standard. On a front door in a terrace, or anywhere the door is out of sight from the street, it is the upgrade that actually changes the outcome.",
+          footnote: "The strike plate matters as much as the lock. Three-inch screws into the stud, not the jamb.",
+        },
+      },
       claim: {
         eyebrow: "Where doors fail",
         heading: "The frame gives way before the lock does",
@@ -2074,6 +3433,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Check the door first. Smart locks are less tolerant of a door that needs a shove to latch than a key is, because a motor has less force than a hand, and a misaligned strike is the most common reason one fails to lock.",
+      },
+      prices: {
+        eyebrow: "What a quote is made of",
+        heading: "What a smart lock costs",
+        lead: "Supplied and fitted, 2026, onto a door that already takes a deadbolt.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "The lock itself", low: 75, high: 300, note: "Keypad, Bluetooth, Wi-Fi or fingerprint." },
+          { name: "Fitting", low: 100, high: 400, note: "A locksmith is $50 to $100 an hour, a handyperson $40 to $80." },
+          { name: "Keypad deadbolt, fitted", low: 195, high: 295, tone: "mixed", note: "A basic model supplied and installed." },
+        ],
+        footnote:
+          "The complete job usually lands between $150 and $400. On a door that already has a standard deadbolt in a standard bore, this is a straight swap and closer to the bottom of that.",
+        aside: {
+          label: "Check first",
+          heading: "Most of the price is the lock, not the fitting",
+          body:
+            "Fitting a smart lock into an existing bore takes under an hour. If a quote is high, it is either a difficult door, a lock at the top of the range, or both. Measure the backset and the door thickness before you buy, because a lock that does not fit is the expensive mistake here.",
+          footnote:
+            "Wi-Fi models need a bridge or good signal at the door. Bluetooth-only ones do not, and cannot be opened remotely.",
+        },
       },
       claim: {
         eyebrow: "When it fails",
@@ -2111,6 +3492,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Ask whether travel time is charged, and from where. Some firms bill from their depot to your door and back again, which can add an hour to a short move before anything is lifted.",
       },
+      prices: {
+        eyebrow: "By home size",
+        heading: "What a local move costs",
+        lead: "Under fifty miles, 2026, with a professional crew and a truck.",
+        unit: "Dollars for the move",
+        currency: "$",
+        items: [
+          { name: "A studio", low: 260, high: 400, note: "Two or three hours, usually at the minimum charge." },
+          { name: "One bedroom", low: 324, high: 500, note: "Two movers, three to four hours." },
+          { name: "Two bedrooms", low: 600, high: 1000, tone: "mixed", note: "Three movers, about five hours." },
+          { name: "Three bedrooms", low: 900, high: 1400, note: "Four movers, seven to eight hours." },
+        ],
+        footnote:
+          "A two-mover crew with a truck is $90 to $140 an hour in most metro markets, with a three or four hour minimum. The national average local move is around $1,250, and most run $500 to $2,500.",
+        aside: {
+          label: "How to cut it",
+          heading: "You are buying hours, so the packing is yours to save",
+          body:
+            "At $90 to $140 an hour, every box already sealed and stacked by the door is money back. Crews charge from arrival to unload, and a house that is fully packed and stacked when they walk in routinely finishes two hours sooner than one that is not.",
+          footnote: "Budget ten to fifteen percent over the estimate. Hourly moves rarely come in under.",
+        },
+      },
       claim: {
         eyebrow: "Valuation",
         heading: "The cover included is not insurance, and it is very low",
@@ -2143,6 +3546,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Ask for the delivery spread in writing, and plan for the far end of it. People book a flight to arrive for the early end of the window and then pay for a hotel and an air bed for a week.",
+      },
+      prices: {
+        eyebrow: "By home size",
+        heading: "What an interstate move costs",
+        lead: "Full-service carrier, 2026, priced on weight and mileage.",
+        unit: "Dollars for the move",
+        currency: "$",
+        items: [
+          { name: "One bedroom", low: 1500, high: 4500, note: "About 2,000 lbs. The top is coast to coast." },
+          {
+            name: "Two or three bedrooms",
+            low: 2700,
+            high: 7000,
+            tone: "mixed",
+            note: "About 5,000 lbs. Around $4,500 to $7,800 at 1,000 miles.",
+          },
+          { name: "Across all sizes", low: 2000, high: 15000, note: "The full spread most households fall inside." },
+        ],
+        footnote:
+          "Medians for interstate moves priced in 2026 were $4,175 for a studio or one bedroom, $4,981 for two, $7,520 for three and $12,500 for four or more. Carriers price at roughly $0.50 to $0.80 a pound plus mileage.",
+        aside: {
+          label: "Get this in writing",
+          heading: "Weight and distance, so the inventory is the quote",
+          body:
+            "Distance is fixed the day you sign the lease. Weight is the only part you control, and it is what the price is built from. A binding estimate off a proper survey, in person or by video, is the difference between the number you were told and the number on the day.",
+          footnote: "A non-binding estimate can legally rise. Ask which one you are being given.",
+        },
       },
       claim: {
         eyebrow: "Binding estimates",
@@ -2177,6 +3607,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Climate control is worth paying for with anything wooden, upholstered, electronic or paper, particularly over a summer or a winter. Ordinary units follow the outside temperature and humidity closely.",
       },
+      prices: {
+        eyebrow: "By unit size",
+        heading: "What storage costs a month",
+        lead: "Standard self-storage rates, 2026, excluding insurance.",
+        unit: "Dollars per month",
+        currency: "$",
+        items: [
+          { name: "5x10", low: 75, high: 75, note: "A studio's worth, or a room cleared out." },
+          { name: "10x10", low: 120, high: 137, tone: "mixed", note: "The common size, roughly a one or two bedroom." },
+          { name: "10x20", low: 204, high: 229, note: "A house in transit, or a car." },
+          { name: "Climate controlled", low: 120, high: 250, note: "Any size, at roughly a twenty-five percent premium." },
+        ],
+        footnote:
+          "City, season, which floor the unit is on, security and how long you sign for all move the rate. Summer is the expensive time to start a lease because that is when everyone moves.",
+        aside: {
+          label: "When to pay the premium",
+          heading: "Climate control costs about a quarter more",
+          body:
+            "It is worth it for wood furniture, anything with electronics in it, instruments, photographs and paper, all of which mind humidity more than temperature. For garden tools, plastic bins and a mattress in a bag, it is a quarter more for nothing.",
+          footnote: "Check whether the facility requires its own insurance or accepts your contents cover.",
+        },
+      },
       claim: {
         eyebrow: "Insurance",
         heading: "Your home policy may not cover goods in a storage unit",
@@ -2209,6 +3661,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Label by room at the destination, not by room at the origin, and mark which way is up on anything fragile. It costs nothing and saves the whole crew asking you where things go.",
+      },
+      prices: {
+        eyebrow: "Full against partial",
+        heading: "What packing costs",
+        lead: "Professional packing, 2026, as a service separate from the move itself.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Partial pack", low: 300, high: 1200, tone: "mixed", note: "The kitchen, the fragile things, the loft." },
+          { name: "Full pack", low: 800, high: 2500, note: "Every room, every box, done by the crew." },
+        ],
+        footnote:
+          "Crews charge $25 to $40 an hour per packer, usually with a two to four hour minimum, and boxes, paper and tape are extra. Across the market the whole range is $280 to $2,200.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Pay them for the kitchen and do the rest yourself",
+          body:
+            "Books, clothes and bedding take hours and no skill. Glassware, artwork and a china cabinet take skill and are what actually breaks. A partial pack at $300 to $1,200 buys the second category and leaves you the first, which is most of the benefit at half the price.",
+          footnote:
+            "Professionally packed boxes are also what a carrier will accept liability for. Self-packed ones often are not.",
+        },
       },
       claim: {
         eyebrow: "Liability",
@@ -2246,6 +3719,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "It is normally the first visit with a new cleaner, or a one-off before a party or after building work. After that, regular visits maintain it at a much lower cost.",
       },
+      prices: {
+        eyebrow: "By size and condition",
+        heading: "What a deep clean costs",
+        lead: "One-off, 2026, for a residential deep clean rather than a routine visit.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          { name: "Most deep cleans", low: 180, high: 375, tone: "mixed", note: "The national average sits at about $260." },
+          { name: "A 2,000 sq ft house", low: 250, high: 450, note: "Priced at $0.15 to $0.30 a square foot." },
+          { name: "Large or long-neglected", low: 375, high: 600, note: "Build-up takes time, and time is the whole price." },
+        ],
+        footnote:
+          "Hourly pricing runs $25 to $70 per cleaner. Urban and high cost-of-living markets sit well above the national figures for the same house.",
+        aside: {
+          label: "What you are paying for",
+          heading: "A deep clean is hours, not products",
+          body:
+            "It is skirtings, inside the oven, behind appliances, grout, window tracks and light fittings, none of which a routine visit touches. That is why condition moves the price more than size does, and why a walk-through before quoting produces a number that holds.",
+          footnote: "Book it as the first visit of a recurring service and many companies discount it.",
+        },
+      },
       claim: {
         eyebrow: "The checklist",
         heading: "Ask for the task list, because the words mean different things",
@@ -2279,6 +3773,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Book it for after the furniture has gone and before the final inspection, with a day between. Cleaning around a half-packed flat produces exactly the result the inventory clerk will photograph.",
       },
+      prices: {
+        eyebrow: "By property",
+        heading: "What a move-out clean costs",
+        lead: "An empty property cleaned to handover standard, 2026.",
+        unit: "Dollars per clean",
+        currency: "$",
+        items: [
+          { name: "A one-bedroom apartment", low: 110, high: 110, note: "Averaging about $110 for a small unit." },
+          { name: "Most move-out cleans", low: 150, high: 500, tone: "mixed", note: "The national average is around $360." },
+          { name: "A house", low: 250, high: 600, note: "More rooms, more bathrooms, more surface." },
+        ],
+        footnote:
+          "Priced by area it is $0.15 to $0.25 a square foot, and hourly crews charge $25 to $50 per person. A three-bedroom apartment averages about $180.",
+        aside: {
+          label: "What moves the price",
+          heading: "Condition, not square footage",
+          body:
+            "An empty flat left tidy and one left with a year of grease on the extractor are the same floor area and not the same job. Get the quote after the furniture is out rather than before, because that is the only point at which anyone can see what they are quoting for.",
+          footnote: "Ask whether the company will return if the landlord objects. Many include one callback.",
+        },
+      },
       claim: {
         eyebrow: "The deposit",
         heading: "A guarantee is only worth the window it gives you",
@@ -2311,6 +3826,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Weekly, fortnightly and monthly are genuinely different services rather than the same one at different frequencies. A monthly visit to a busy house is closer to a small deep clean each time, and should be priced and scoped that way.",
+      },
+      prices: {
+        eyebrow: "By frequency",
+        heading: "What regular cleaning costs",
+        lead: "Per visit, 2026, on an ongoing schedule.",
+        unit: "Dollars per visit",
+        currency: "$",
+        items: [
+          { name: "Weekly", low: 75, high: 200, note: "Cheapest per visit, because less builds up between them." },
+          { name: "Biweekly, apartment", low: 85, high: 170, note: "The most common arrangement in the country." },
+          { name: "Biweekly, house", low: 115, high: 275, tone: "mixed", note: "About $310 a month, or $3,700 a year." },
+          { name: "Monthly", low: 120, high: 300, note: "Dearest per visit, because each one is closer to a deep clean." },
+        ],
+        footnote:
+          "Weekly service is typically twenty to twenty-five percent cheaper per visit than a one-off, and biweekly ten to fifteen percent. A standard one-off clean is $120 to $280.",
+        aside: {
+          label: "The usual answer",
+          heading: "Biweekly, which is what about sixty percent choose",
+          body:
+            "It is frequent enough that nothing gets away from you and infrequent enough to be worth the visit, and it carries a ten to fifteen percent discount over a one-off. Monthly costs more per visit and delivers less, because each visit is half a deep clean again.",
+          footnote: "Supplies are usually included. Check, because it is a real difference between quotes.",
+        },
       },
       claim: {
         eyebrow: "Employment",
@@ -2348,6 +3885,29 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "The strongest argument for design and build is buildability and speed. The strongest argument against it is that nobody independent is checking the price or the specification on your behalf.",
       },
+      prices: {
+        eyebrow: "Fees as a percentage",
+        heading: "What the fee costs",
+        lead: "Fees in 2026 as a share of the construction cost, not of the finished value.",
+        unit: "Percent of the construction cost",
+        currency: "",
+        suffix: "%",
+        items: [
+          { name: "Architect's design fee", low: 8, high: 15, note: "Full service. Ranges 5 to 20 by complexity." },
+          { name: "General contractor fee", low: 10, high: 20, tone: "mixed", note: "On larger residential projects." },
+          { name: "Design fees on a remodel", low: 15, high: 20, note: "Higher than new build, because the survey work is." },
+          { name: "Contractor markup, typical", low: 20, high: 30, note: "Markup on cost, which is not the same as margin." },
+        ],
+        footnote:
+          "Cost-plus contracts on residential work usually run fifteen to twenty percent. Design-build agreements often cap the builder's overhead and profit at a stated percentage of the cost of the work, which is worth reading before you sign.",
+        aside: {
+          label: "How to compare",
+          heading: "Design-build folds two fees into one number",
+          body:
+            "Hiring an architect and then a contractor means paying both percentages. A design-build firm charges once, which usually lands lower, and removes the gap where a drawing turns out to be unbuildable at the price. Compare the all-in figure, not the percentages.",
+          footnote: "What you give up is a second professional whose job is to check the first one's work.",
+        },
+      },
       claim: {
         eyebrow: "Getting the benefit",
         heading: "Without competing bids, the contract has to do the work",
@@ -2381,6 +3941,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Ask for the programme with the trade sequence on it and the dependencies visible. It is the single most useful document in a project of this size, and a contractor who does not have one is managing it in their head.",
       },
+      prices: {
+        eyebrow: "By depth",
+        heading: "What it costs per square foot",
+        lead: "Whole-house work in 2026, on an existing house of ordinary construction.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Cosmetic refresh", low: 5, high: 20, note: "Paint, flooring, fittings, no walls moving." },
+          { name: "Mid-range renovation", low: 20, high: 60, tone: "mixed", note: "Kitchens, bathrooms, some services replaced." },
+          { name: "Full gut to the studs", low: 60, high: 150, note: "Everything out, everything new behind the walls." },
+        ],
+        footnote:
+          "On an 1,800 square foot house a full gut is $180,000 to $360,000. Most whole-house projects come in between $19,500 and $88,400, with the average around $52,275 on homes of 1,250 to 1,600 square feet.",
+        aside: {
+          label: "Where the surprises live",
+          heading: "Everything you find is found in the gut",
+          body:
+            "Once the walls are open, the wiring, the plumbing, the framing and any water damage are all visible and all now yours. That is why the gut range is so wide, and why a contingency of ten to twenty percent on a full renovation is not pessimism, it is the budget.",
+          footnote: "Older houses carry more of it. Ask what the contract says happens when something is uncovered.",
+        },
+      },
       claim: {
         eyebrow: "Payments",
         heading: "Payments should follow completed work, not the calendar",
@@ -2413,6 +3994,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Zoning approval and building permits are different things and are often granted by different departments on different timescales. A project can satisfy one and be refused by the other.",
+      },
+      prices: {
+        eyebrow: "By project",
+        heading: "What permits cost",
+        lead: "Residential permit fees in 2026, before any plan revision.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Small projects and repairs", low: 0, high: 400, note: "Some work needs none at all. Check rather than assume." },
+          { name: "A kitchen remodel", low: 150, high: 900, tone: "mixed", note: "Usually scaled to the declared project value." },
+          { name: "Structural work and remodels", low: 600, high: 3600, note: "New construction sits at the top of this." },
+          {
+            name: "A 200 to 400 sq ft addition",
+            low: 2500,
+            high: 6000,
+            note: "Building, electrical, plumbing and mechanical together.",
+          },
+        ],
+        footnote:
+          "Fees often work out to $0.15 to $0.85 a square foot, though value-based jurisdictions produce very different totals for the same sized project. Plan review and certificate of occupancy fees are separate line items.",
+        aside: {
+          label: "The real cost",
+          heading: "Re-review cycles, at $200 to $500 each",
+          body:
+            "The fee is rarely what hurts. A submittal that bounces back costs another $200 to $500 and another few weeks, and it happens when drawings are thin. Paying a designer to produce a complete set is cheaper than paying the city three times to look at an incomplete one.",
+          footnote: "Unpermitted work surfaces at sale, and it surfaces as a discount.",
+        },
       },
       claim: {
         eyebrow: "Unpermitted work",
@@ -2450,6 +4058,26 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Twice a year is the usual advice, and if there are trees close by, the visit that matters is the one after the leaves have finished falling rather than partway through.",
       },
+      prices: {
+        eyebrow: "By height",
+        heading: "What cleaning costs per foot",
+        lead: "Per linear foot of gutter, 2026, on a house without guards fitted.",
+        unit: "Dollars per linear foot",
+        currency: "$",
+        items: [
+          { name: "Single storey", low: 0.95, high: 1.75, note: "About 150 linear feet on a typical house, so roughly $190." },
+          { name: "Two storey", low: 1.75, high: 2.5, tone: "mixed", note: "Averaging about $280 for the same length of gutter." },
+        ],
+        footnote:
+          "Most homes come to $215 to $470 for a full clean. The height premium is roughly twenty-five percent, and that is the ladder time and the risk, not the gutter.",
+        aside: {
+          label: "What you are paying for",
+          heading: "The ladder, not the leaves",
+          body:
+            "Clearing a gutter is easy work. Doing it from a ladder at the second storey, repeatedly, around a roofline, is the part worth paying someone for, and it is exactly why the two-storey rate is higher for identical gutters.",
+          footnote: "Twice a year is the usual advice, and once in late autumn is the one that matters.",
+        },
+      },
       claim: {
         eyebrow: "Why it matters",
         heading: "Gutters are a foundation problem more than a roof one",
@@ -2482,6 +4110,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Fitting guards to gutters that sag, leak at the joints or fall the wrong way makes those problems harder to see and harder to reach. The guttering should be right before anything covers it.",
+      },
+      prices: {
+        eyebrow: "By system",
+        heading: "What guards cost per foot",
+        lead: "Supplied and fitted, 2026, per linear foot of gutter.",
+        unit: "Dollars per linear foot",
+        currency: "$",
+        items: [
+          { name: "Screen or reverse curve", low: 5, high: 12, note: "Fitted by a roofer or gutter contractor." },
+          {
+            name: "Micro-mesh",
+            low: 8,
+            high: 12,
+            tone: "mixed",
+            note: "The finest mesh, and what stops pine needles and shingle grit.",
+          },
+          { name: "A branded system", low: 39, high: 62, note: "Sold door to door, installed by the brand's own crews." },
+        ],
+        footnote:
+          "In This Old House's 2026 survey, LeafFilter averaged $41.72 a linear foot installed and professionally installed brands averaged $39.59 to $61.61. Micro-mesh aluminium from a reputable manufacturer is $2 to $4 a foot before labour.",
+        aside: {
+          label: "Same product, different price",
+          heading: "A branded system is four to five times a fitted one",
+          body:
+            "A local gutter contractor fitting quality micro-mesh charges $8 to $12 a foot. The branded systems fit comparable mesh for $39 to $62. On 150 feet of gutter that is about $1,500 against about $7,000, and the warranty is the main thing the difference buys.",
+          footnote: "Get a quote from a roofer as well as from whoever knocked on the door.",
+        },
       },
       claim: {
         eyebrow: "The claim to check",
@@ -2519,6 +4174,26 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Number of coats is worth agreeing explicitly. Two coats over a matched primer is normal; one coat over a colour change will look thin in the corners and against the light, whatever the tin claims.",
       },
+      prices: {
+        eyebrow: "By scope",
+        heading: "What it costs per square foot",
+        lead: "Per square foot of floor area, 2026, which is how quotes are usually written.",
+        unit: "Dollars per square foot of floor area",
+        currency: "$",
+        items: [
+          { name: "Walls only", low: 1, high: 3, note: "One or two coats, minor filling, no trim." },
+          { name: "Walls, ceilings and trim", low: 2, high: 6, tone: "mixed", note: "Roughly $4.70 a foot on a typical job." },
+        ],
+        footnote:
+          "By the room that is $300 to $1,000, averaging about $624 in 2026. Trim alone runs $1 to $4 a linear foot, and a ceiling $1 to $2 a square foot.",
+        aside: {
+          label: "How it is measured",
+          heading: "Painters price wall, everyone quotes floor",
+          body:
+            "An eight-foot ceiling gives you about 2.8 times more wall surface than floor area, which is why two quotes using different denominators can look nothing alike. Ask which one a figure refers to before you compare it with anything.",
+          footnote: "High ceilings, stairwells and cut-in around cabinetry cost more than the floor area suggests.",
+        },
+      },
       claim: {
         eyebrow: "Comparing quotes",
         heading: "Ask what the preparation includes, in words",
@@ -2552,6 +4227,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Check what the paint's own data sheet says about temperature and humidity, including overnight. The overnight minimum is the one that catches people out in spring and autumn.",
       },
+      prices: {
+        eyebrow: "By surface",
+        heading: "What it costs per square foot",
+        lead: "Installed, 2026, including washing and ordinary preparation.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          {
+            name: "A typical exterior",
+            low: 1.5,
+            high: 4.3,
+            tone: "mixed",
+            note: "The national middle, averaging about $3,178 a house.",
+          },
+          { name: "Stucco", low: 1.8, high: 3.6, note: "Takes about fifty percent more paint than a smooth surface." },
+          { name: "Brick", low: 2.5, high: 5, note: "Porous, thirsty, and effectively permanent once done." },
+        ],
+        footnote:
+          "Pressure washing is $200 to $420. Stucco crack repairs need one to six weeks to cure before paint goes on, which is a scheduling problem as much as a cost one.",
+        aside: {
+          label: "Read the quote",
+          heading: "Preparation separates a $2 job from a $5 one",
+          body:
+            "Scraping, sanding, caulking, filling and priming is most of the labour on an exterior and most of what decides whether the paint is still on in eight years. A cheap quote is almost always a quote with less preparation in it, so compare that section line by line.",
+          footnote: "Ask how many coats, on what primer, and what the warranty covers.",
+        },
+      },
       claim: {
         eyebrow: "Lead",
         heading: "On a house painted before the late 1970s, assume lead",
@@ -2584,6 +4286,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Doors and drawer fronts are usually taken away to be sprayed and the frames done in place. That means a kitchen without doors for several days, which is worth knowing when you plan the week.",
+      },
+      prices: {
+        eyebrow: "Refinish, reface, replace",
+        heading: "What cabinets cost",
+        lead: "A standard kitchen in 2026, with the layout staying as it is.",
+        unit: "Dollars for the kitchen",
+        currency: "$",
+        items: [
+          { name: "Refinishing", low: 1500, high: 4500, tone: "mixed", note: "Strip, sand, spray. Your doors, new finish." },
+          { name: "New doors and fronts", low: 2200, high: 6600, note: "Boxes stay, everything you see is replaced." },
+          { name: "Refacing", low: 4000, high: 13000, note: "New doors plus veneer over the box faces." },
+        ],
+        footnote:
+          "Per door, refinishing is $70 to $125 and refacing about $200 to $300 an opening. Replacing doors and drawer fronts alone is $20 to $40 per piece for the fitting.",
+        aside: {
+          label: "Cheapest good option",
+          heading: "Refinishing is a third of refacing and keeps your doors",
+          body:
+            "If the boxes are sound and the doors are solid timber or a decent veneer, refinishing at $1,500 to $4,500 gives you a new-looking kitchen for a quarter of what refacing costs. It only works if the doors are worth keeping, which a cabinet painter will tell you in one visit.",
+          footnote: "Thermofoil and flaking laminate doors cannot be refinished. Those are the ones that need refacing.",
+        },
       },
       claim: {
         eyebrow: "Against replacing",
@@ -2621,6 +4344,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Damage and treatment are separate jobs. A treatment stops the colony; it does not repair weakened timber, and structural repairs are a builder's work priced separately.",
       },
+      prices: {
+        eyebrow: "By treatment",
+        heading: "What treatment costs",
+        lead: "Per treatment, 2026, on a house of about 2,000 square feet.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Most treatments", low: 275, high: 1600, note: "The national average is about $750." },
+          {
+            name: "Liquid barrier",
+            low: 900,
+            high: 2500,
+            tone: "mixed",
+            note: "A treated zone in the soil around the foundation.",
+          },
+          { name: "Bait system", low: 1800, high: 3800, note: "Stations around the property, with a yearly contract." },
+          { name: "Tent fumigation", low: 2000, high: 8000, note: "$1 to $4 a square foot, and you move out for it." },
+        ],
+        footnote:
+          "A liquid barrier is priced per linear foot of foundation perimeter at $3 to $20, most often $6 to $10. Bait stations add $300 to $500 a year in monitoring, which continues for as long as you keep the system.",
+        aside: {
+          label: "The line people miss",
+          heading: "Bait systems are a subscription, not a treatment",
+          body:
+            "The install is $1,500 to $3,500 and the monitoring is $300 to $500 every year after, without which the stations do nothing. Over ten years that is another $3,000 to $5,000. It can still be the right answer, but compare it against a barrier as a ten-year number, not a first-year one.",
+          footnote: "Ask what the warranty covers if termites return, and whether it includes repairing the damage.",
+        },
+      },
       claim: {
         eyebrow: "The warranty",
         heading: "A termite warranty is either repair or retreatment, and they differ enormously",
@@ -2654,6 +4405,34 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Removing the food source matters as much as the traps: pet food, bird feeders, compost and bins are the usual reasons a property keeps attracting them.",
       },
+      prices: {
+        eyebrow: "By scope",
+        heading: "What rodent control costs",
+        lead: "Per job, 2026, for a residential property.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "An inspection", low: 75, high: 150, note: "Finding the entry points, which is the whole problem." },
+          { name: "One-time treatment", low: 150, high: 500, note: "Trapping and baiting. The national average is about $395." },
+          { name: "Rats, most homes", low: 200, high: 1200, note: "Bigger animals, bigger holes, longer job." },
+          {
+            name: "Sealing the house up",
+            low: 300,
+            high: 1500,
+            tone: "mixed",
+            note: "Exclusion. A full-home seal runs to $3,000 or more.",
+          },
+        ],
+        footnote:
+          "Rodent-proof doors are $200 to $400 each fitted. Fumigation, which is rare for rodents, is $2,000 to $6,500. Mice extermination alone runs $150 to $550.",
+        aside: {
+          label: "The part that works",
+          heading: "Trapping clears them, exclusion keeps them out",
+          body:
+            "A house that mice can get into will have mice again, which is why a trapping-only service becomes a monthly bill. Sealing the entry points at $300 to $1,500 is what ends it, and it is the line to ask about specifically because it is often quoted separately or not at all.",
+          footnote: "Ask for the entry points photographed and listed. That list is what you are buying.",
+        },
+      },
       claim: {
         eyebrow: "Poison",
         heading: "Bait outside is one thing, bait in the roof is another",
@@ -2686,6 +4465,28 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Barrier treatments last a few weeks and are washed off by heavy rain, which is why they are sold as a season-long programme of repeat visits rather than as a single application.",
+      },
+      prices: {
+        eyebrow: "By programme",
+        heading: "What mosquito control costs",
+        lead: "2026 pricing for a typical suburban lot.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "A single barrier spray", low: 70, high: 150, note: "Treats the foliage where they rest during the day." },
+          { name: "A season of treatments", low: 350, high: 600, tone: "mixed", note: "Monthly, spring through autumn." },
+          { name: "A large property, per season", low: 500, high: 1900, note: "More ground, more edge, more standing water." },
+          { name: "An automated misting system", low: 1500, high: 5000, note: "Installed. Nozzle count decides it." },
+        ],
+        footnote:
+          "A barrier spray holds for twenty-one to thirty days before it falls away, which is why monthly is the standard interval. Misting system refills are $100 to $200.",
+        aside: {
+          label: "Compare the interval",
+          heading: "A cheaper plan with fewer visits is a different service",
+          body:
+            "Treatment lasts three to four weeks. A season quoted at six visits and one quoted at four are not the same product, and the gap shows up in August. Ask how many applications are included and at what spacing before comparing two seasonal prices.",
+          footnote: "Standing water is where they breed. No spray programme beats emptying the things holding it.",
+        },
       },
       claim: {
         eyebrow: "What spraying costs",
@@ -2723,6 +4524,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Water is categorised by how contaminated it is, from clean supply water through to sewage, and the category decides what can be dried and kept and what has to be removed. It escalates with time, so clean water left for days stops being clean water.",
       },
+      prices: {
+        eyebrow: "By water category",
+        heading: "What it costs per square foot",
+        lead: "Mitigation, 2026, meaning extraction and drying. Rebuilding is separate.",
+        unit: "Dollars per square foot",
+        currency: "$",
+        items: [
+          { name: "Category 1, clean water", low: 3.5, high: 4.5, tone: "mixed", note: "A supply pipe or an overflowing bath." },
+          { name: "Category 2, grey water", low: 4.5, high: 6.5, note: "A dishwasher or a washing machine discharge." },
+          { name: "Category 3, black water", low: 7, high: 7.5, note: "Sewage or flood water, handled as a biohazard." },
+        ],
+        footnote:
+          "Putting the room back adds roughly $20 to $37 a square foot on top. The national average job is $3,867 with most between $1,384 and $6,387.",
+        aside: {
+          label: "What drives the bill",
+          heading: "The category, not the area",
+          body:
+            "Clean water dried within a day or two is the cheap outcome. The same volume left for a week is category 2 by then and category 3 if it reached sewage, and the rate doubles. Speed is the only variable you control and it is the one that matters most.",
+          footnote: "Photograph everything before anything is moved. Insurers ask, and the answer is easier the same day.",
+        },
+      },
       claim: {
         eyebrow: "Insurance",
         heading: "Document before anybody starts, because the claim is built on it",
@@ -2756,6 +4578,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Different fuels leave different residues. A protein fire from a kitchen leaves an almost invisible film with a powerful smell; a plastics fire leaves acidic smoke that attacks wiring and fittings. They need different cleaning methods.",
       },
+      prices: {
+        eyebrow: "By soot type",
+        heading: "What cleanup costs",
+        lead: "Smoke and soot work in 2026, before any rebuilding.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "Dry soot", low: 400, high: 700, note: "Fast, hot fires. Powdery, and it brushes and vacuums off." },
+          {
+            name: "Oily soot",
+            low: 1000,
+            high: 1700,
+            tone: "mixed",
+            note: "Smouldering fires. It smears, and it has to be dissolved.",
+          },
+          { name: "Larger areas", low: 325, high: 4500, note: "The full spread once more than one room is involved." },
+        ],
+        footnote:
+          "Per square foot, smoke remediation runs $3.50 to $7.00 and full restoration $4 to $7, averaging about $5.50. A complete fire restoration averages $27,477, with projects running $3,083 to $52,031.",
+        aside: {
+          label: "The difference that matters",
+          heading: "Dry soot is a clean, oily soot is a refinish",
+          body:
+            "Dry soot comes off surfaces. Oily soot from a slow, smouldering fire bonds to paint and finishes, cannot be wiped without spreading, and often means sealing and repainting whatever it touched. That single distinction is most of the gap between $400 and several thousand.",
+          footnote: "The smell lives in soft furnishings and insulation. Cleaning the hard surfaces alone does not get rid of it.",
+        },
+      },
       claim: {
         eyebrow: "Odour",
         heading: "Sealing and masking are not the same as removing",
@@ -2788,6 +4637,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Small areas of surface mould on hard, non-porous surfaces from an obvious cause, a bathroom without ventilation, are often a homeowner job. Large areas, anything inside a wall, and anything where the cause is unclear are not.",
+      },
+      prices: {
+        eyebrow: "By location",
+        heading: "What remediation costs",
+        lead: "Containment, removal and treatment, 2026. Rebuilding is quoted separately.",
+        unit: "Dollars",
+        currency: "$",
+        items: [
+          { name: "A crawl space", low: 500, high: 2000, tone: "mixed", note: "Higher again where access is genuinely tight." },
+          { name: "A basement", low: 500, high: 3000, note: "More if it is behind panelling or finished walls." },
+          { name: "An attic", low: 1000, high: 4000, note: "Up to $7,000 where a roof leak has run undetected." },
+        ],
+        footnote:
+          "Per square foot that is $10 to $25, rising to $15 to $30 in wall cavities, ductwork and confined spaces, which carry a twenty to thirty-five percent labour premium.",
+        aside: {
+          label: "Read the quote",
+          heading: "Remediation stops at removal, it does not rebuild",
+          body:
+            "The standard scope is inspection, containment, removal, cleaning and treatment. Replacing the drywall, insulation and flooring that came out is a separate job and a separate number, and it is the one most often missing when two quotes look far apart.",
+          footnote: "Nothing stays fixed until the water source is fixed. Ask what they found, not just what they removed.",
+        },
       },
       claim: {
         eyebrow: "Testing",
@@ -2847,6 +4717,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         footnote:
           "Inserts lose a little glass area on every window, because the new frame sits inside the old one. On small windows, and across a whole house, that is more noticeable than people expect.",
       },
+      prices: {
+        eyebrow: "By frame material",
+        heading: "What a window costs",
+        lead: "Supplied and fitted, 2026, per window into an existing opening.",
+        unit: "Dollars per window",
+        currency: "$",
+        items: [
+          { name: "Vinyl", low: 400, high: 1000, tone: "mixed", note: "A double-hung typically lands at $650 to $1,300." },
+          { name: "Wood", low: 800, high: 1800, note: "Best looking, and it needs maintaining outside." },
+          { name: "Fiberglass", low: 900, high: 1700, note: "Stable, paintable, and the dearest of the three." },
+        ],
+        footnote:
+          "Homeowners paid an average of $517 a window and $7,183 a project in 2026. Double-hung windows average $551. Rotten frames, a changed opening size or lead paint all add to any of these.",
+        aside: {
+          label: "Where the money goes",
+          heading: "The frame material is the lever, not the glass",
+          body:
+            "Double glazing with a low-emissivity coating is standard now and the difference between glass packages is modest. The frame is what doubles a quote, and vinyl at $400 to $1,000 performs close enough to fiberglass that the gap is mostly about looks and longevity.",
+          footnote: "A whole-house project averages $7,183, so the per-window figure is the one to multiply carefully.",
+        },
+      },
       claim: {
         eyebrow: "Performance",
         heading: "Installation decides more than the rating does",
@@ -2879,6 +4770,33 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Fibreglass and steel doors are more stable than timber in a position that takes weather and sun, and they hold their finish longer. Timber looks better and needs maintaining, particularly on a south or west elevation with no porch.",
+      },
+      prices: {
+        eyebrow: "By material",
+        heading: "What a front door costs",
+        lead: "Supplied and fitted, 2026, replacing an existing door.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          { name: "Steel", low: 400, high: 1000, note: "Cheapest, strongest, and it dents rather than splits." },
+          {
+            name: "Fiberglass",
+            low: 600,
+            high: 1700,
+            tone: "mixed",
+            note: "Looks like wood, behaves like plastic, which is the point.",
+          },
+          { name: "Wood", low: 800, high: 3000, note: "The real thing, and it needs refinishing every few years." },
+        ],
+        footnote:
+          "Double doors and wooden doors with glass panels run $1,200 to $4,100. Steel and fiberglass fit faster than solid wood, which shows up in the labour line.",
+        aside: {
+          label: "What inflates a quote",
+          heading: "Sidelights, transoms and hardware, not the door",
+          body:
+            "Glass either side, a panel above, custom sizing, decent furniture and repairing the opening are what take a $900 door to $3,000 fitted. Price the door slab and the extras as separate lines, because that is the only way two quotes become comparable.",
+          footnote: "A prehung door in a new frame is a different job from hanging a slab in the existing one.",
+        },
       },
       claim: {
         eyebrow: "Security",
@@ -2934,6 +4852,27 @@ export const SUBSERVICE_DETAIL: Record<string, Record<string, SubserviceDetail>>
         ],
         footnote:
           "Sliding doors need their tracks kept clean and their rollers adjusted, and a door that has become hard to slide is usually rollers rather than the door. It is a cheap service that people leave until something breaks.",
+      },
+      prices: {
+        eyebrow: "By door type",
+        heading: "What patio doors cost",
+        lead: "Supplied and fitted, 2026, into an opening of the size you already have.",
+        unit: "Dollars installed",
+        currency: "$",
+        items: [
+          { name: "French", low: 1700, high: 2600, note: "Two hinged leaves. Usually the cheapest of the three." },
+          { name: "Sliding", low: 1200, high: 4000, tone: "mixed", note: "Panel count, glass and frame material set the spread." },
+          { name: "Bifold", low: 5000, high: 20000, note: "Folds right back, and opens up the whole wall." },
+        ],
+        footnote:
+          "Fitting into an existing jamb is cheaper than setting a unit into a new rough opening. A wide bifold usually needs a steel lintel over it, which is structural work and a separate trade.",
+        aside: {
+          label: "Know what you are buying",
+          heading: "A wide bifold is a structural job with a door in it",
+          body:
+            "Taking out a section of wall means a beam, a calculation, building control and making good, none of which are in the door price. That is most of why bifolds run to five figures while a sliding door into the same opening is $1,200 to $4,000.",
+          footnote: "If the opening already exists, sliding and French doors are both straightforward swaps.",
+        },
       },
       claim: {
         eyebrow: "Glass",

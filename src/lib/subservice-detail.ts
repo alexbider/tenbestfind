@@ -70,7 +70,10 @@ export type Prices = {
   heading?: string;
   lead?: string;
   unit?: string;
+  /** Prefix on every figure. Absent means dollars, empty means no prefix. */
   currency?: string;
+  /** Suffix on every figure, for an axis that is not money at all. */
+  suffix?: string;
   items: PriceItem[];
   footnote?: string;
   aside?: { label?: string; heading: string; body: string; footnote?: string };
@@ -173,7 +176,10 @@ function readPrices(value: unknown): Prices | undefined {
     heading: text(row.heading),
     lead: text(row.lead),
     unit: text(row.unit),
-    currency: text(row.currency) ?? "$",
+    // An explicit empty string is a decision, not an omission: a percentage
+    // axis has no prefix, and is not the same as a price nobody filled in.
+    currency: typeof row.currency === "string" ? row.currency.trim() : "$",
+    suffix: text(row.suffix),
     items,
     footnote: text(row.footnote),
     aside:
@@ -240,6 +246,12 @@ const SERIES = ["var(--blue-500)", "var(--blue-700)", "var(--blue-800)", "var(--
  * than 0, 4.5, 9, 13.5, 18. Without this the axis under the bars is a set of
  * numbers nobody would write down.
  */
+/** Decimal places an author actually wrote, capped so float noise cannot leak. */
+function places(value: number): number {
+  const dot = String(value).indexOf(".");
+  return dot === -1 ? 0 : Math.min(String(value).length - dot - 1, 2);
+}
+
 function niceStep(rough: number): number {
   if (!(rough > 0)) return 1;
   const power = 10 ** Math.floor(Math.log10(rough));
@@ -249,8 +261,12 @@ function niceStep(rough: number): number {
 }
 
 /** Money as a reader writes it: no decimals unless the step needs them. */
-function money(value: number, currency: string, decimals: number): string {
-  return `${currency}${value.toFixed(decimals)}`;
+function money(value: number, currency: string, suffix: string, decimals: number): string {
+  // Grouped, because a trade whose unit is a whole job prints figures in the
+  // tens of thousands and $36600 is not a number anybody reads at a glance.
+  const [whole, fraction] = value.toFixed(decimals).split(".");
+  const grouped = whole!.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${currency}${grouped}${fraction ? `.${fraction}` : ""}${suffix}`;
 }
 
 /**
@@ -262,10 +278,18 @@ function money(value: number, currency: string, decimals: number): string {
  */
 export function priceScale(prices: Prices): PriceScale {
   const currency = prices.currency ?? "$";
+  const suffix = prices.suffix ?? "";
   const highest = Math.max(...prices.items.map((item) => item.high));
   const step = niceStep(highest / 4);
   const max = step * 4;
-  const decimals = Number.isInteger(step) ? 0 : 1;
+  // Two precisions, because they answer different questions. The axis prints
+  // its own step, so a $4 axis stays $0 $1 $2 $3 $4. A figure prints what was
+  // written, so $0.95 a linear foot is not rounded away to $1.
+  const tickDecimals = Number.isInteger(step) ? 0 : 1;
+  const valueDecimals = Math.max(
+    0,
+    ...prices.items.flatMap((item) => [places(item.low), places(item.high)]),
+  );
 
   const pct = (value: number) => `${((value / max) * 100).toFixed(2)}%`;
 
@@ -283,9 +307,9 @@ export function priceScale(prices: Prices): PriceScale {
       width: item.high > item.low ? pct(item.high - item.low) : "3px",
       range:
         item.high > item.low
-          ? `${money(item.low, currency, decimals)} to ${money(item.high, currency, decimals)}`
-          : money(item.low, currency, decimals),
+          ? `${money(item.low, currency, suffix, valueDecimals)} to ${money(item.high, currency, suffix, valueDecimals)}`
+          : money(item.low, currency, suffix, valueDecimals),
     })),
-    ticks: [0, 1, 2, 3, 4].map((index) => money(step * index, currency, decimals)),
+    ticks: [0, 1, 2, 3, 4].map((index) => money(step * index, currency, suffix, tickDecimals)),
   };
 }
