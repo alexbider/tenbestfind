@@ -6,6 +6,7 @@ import type { SeoEntityType } from "./enums";
 import { loadSeoSettings, renderTemplate, type SeoSettings } from "./seo-settings";
 import { absoluteUrl, routes } from "./urls";
 import {
+  TITLE_LIMIT,
   cityCopy,
   countryCopy,
   rankingCopy,
@@ -16,6 +17,24 @@ import {
 } from "./seo-copy";
 
 const FALLBACK_SITE_NAME = "TenBestFind";
+
+/**
+ * The brand on the end of a title somebody typed.
+ *
+ * The template puts it on generated titles, and a typed title skipped the
+ * template entirely, so eleven hand-written Toronto titles went out without
+ * the publisher while the generated Chicago one beside them carried it.
+ * Writing a title is a decision about the words, not an opt-out of the brand.
+ *
+ * Never twice, and never past the point a result gets cut off. A title with no
+ * room left keeps the words that say what the page is, which is the same trade
+ * brandedTitle makes for the generated ones.
+ */
+function withBrand(typed: string, siteName: string, sep: string): string {
+  if (typed.toLowerCase().includes(siteName.toLowerCase())) return typed;
+  const suffix = ` ${sep} ${siteName}`;
+  return typed.length + suffix.length <= TITLE_LIMIT ? typed + suffix : typed;
+}
 
 type Tokens = Record<string, string | null | undefined>;
 
@@ -96,10 +115,12 @@ export async function seoFor(
 
   const description = record?.description?.trim() || fallback.description || undefined;
 
-  // A title written on the page is used exactly as typed; otherwise the global
-  // template for this entity type builds it.
+  // A title written on the page keeps its words, and still gets the brand the
+  // template would have given it; otherwise the global template for this
+  // entity type builds the whole thing.
+  const typed = record?.title?.trim();
   const title =
-    record?.title?.trim() ||
+    (typed ? withBrand(typed, siteName, sep) : "") ||
     (fallback.titleIsFinal ? fallback.title : "") ||
     renderTemplate(template, {
       title: fallback.title,
