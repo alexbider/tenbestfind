@@ -6,10 +6,10 @@
 // tile, vinyl and carpet under three identical floor glyphs, which tells a
 // reader nothing and reads as something broken.
 //
-// So each one gets an icon that says what the work is. Chosen from the set the
-// site already draws, and only where the name maps onto one honestly. An icon
-// that has nothing to do with the job is worse than a repeated one, so the
-// handful with no good match keep the fallback.
+// So each one gets an icon that says what the work is, from the tables in
+// prisma/data/subservice-icons.ts. An icon that has nothing to do with the job
+// is worse than a repeated one, so anything with no honest match is reported
+// here and keeps the trade's icon rather than being given a wrong one.
 //
 //   npx tsx scripts/seed-subservice-icons.ts          # reports, writes nothing
 //   npx tsx scripts/seed-subservice-icons.ts --write
@@ -20,99 +20,7 @@
 
 import { db } from "../src/lib/db";
 import { hasIcon } from "../src/lib/icon-paths";
-
-/** category slug -> subservice slug -> icon. */
-const ICONS: Record<string, Record<string, string>> = {
-  "appliance-repair": {
-    "refrigerator-repair": "snow",
-    "washer-dryer-repair": "washer",
-    "oven-range-repair": "flame",
-    "dishwasher-repair": "droplet",
-  },
-  "chimney-services": {
-    "chimney-sweeping": "broom",
-    "chimney-repair": "masonry",
-    "chimney-inspection": "eye",
-    "liner-installation": "pipe",
-  },
-  cleaning: { "deep-cleaning": "spray", "move-out": "box", recurring: "refresh" },
-  electricians: {
-    "panel-upgrades": "sliders",
-    rewiring: "link",
-    "ev-charger-installation": "plug",
-    "lighting-installation": "bulb",
-    "generator-installation": "spark",
-  },
-  flooring: { hardwood: "floor", tile: "grid", "vinyl-plank": "layers", carpet: "layout" },
-  "garage-doors": {
-    repair: "tools",
-    "opener-installation": "plug",
-    "spring-replacement": "gear",
-    "door-installation": "garage",
-  },
-  "general-contractors": { "design-build": "ruler", "whole-home-renovation": "house", permitting: "clipboard" },
-  gutters: { cleaning: "broom", guards: "shield" },
-  "home-remodeling": {
-    "kitchen-remodeling": "flame",
-    "bathroom-remodeling": "bath",
-    "basement-remodeling": "foundation",
-    additions: "plus",
-  },
-  hvac: {
-    "ac-repair": "snow",
-    "ac-installation": "wind",
-    "furnace-repair": "flame",
-    "heat-pump-installation": "pump",
-    "duct-cleaning": "filter",
-    "maintenance-plans": "calendar",
-  },
-  landscaping: { "lawn-care": "leaf", hardscaping: "masonry", irrigation: "droplet", design: "pencil" },
-  locksmiths: {
-    "emergency-lockout": "lock",
-    rekeying: "key",
-    "lock-installation": "shield",
-    "smart-lock-installation": "phone",
-  },
-  "moving-companies": { local: "truck", "long-distance": "map", storage: "box", packing: "tag" },
-  painting: { interior: "roller", exterior: "house", "cabinet-refinishing": "spray" },
-  "pest-control": { termites: "bug", rodents: "alert", mosquitoes: "spray" },
-  plumbers: {
-    "emergency-plumbing": "alert",
-    "drain-cleaning": "drain",
-    "water-heater-repair": "heater",
-    repiping: "pipe",
-    "sewer-line-repair": "sewer",
-    "leak-detection": "leak",
-    "gas-line-work": "flame",
-    "fixture-installation": "bath",
-  },
-  restoration: { "water-damage": "waves", "fire-smoke": "smoke", mold: "mold" },
-  roofing: {
-    "roof-repair": "tools",
-    "roof-replacement": "house",
-    "roof-inspection": "eye",
-    "metal-roofing": "layers",
-    "flat-roofing": "layout",
-    "storm-damage-repair": "rain",
-  },
-  "windows-doors": { "window-replacement": "window", "entry-doors": "access", "patio-doors": "sun" },
-};
-
-/**
- * The one line under a name on a sibling card.
- *
- * Only the four the design wrote. The rest of the site's subservices have no
- * description and are left without one rather than given a sentence somebody
- * would have to check.
- */
-const DESCRIPTIONS: Record<string, Record<string, string>> = {
-  flooring: {
-    hardwood: "Solid and engineered wood, plus refinishing existing floors.",
-    tile: "Ceramic, porcelain and stone, plus the substrate work underneath.",
-    "vinyl-plank": "Waterproof plank flooring, wear layers and subfloor preparation.",
-    carpet: "Carpet and underlay, fibre choice, and what warranties require.",
-  },
-};
+import { ICONS, DESCRIPTIONS } from "../prisma/data/subservice-icons";
 
 async function main(): Promise<void> {
   const write = process.argv.includes("--write");
@@ -131,9 +39,8 @@ async function main(): Promise<void> {
       const icon = ICONS[category.slug]?.[subservice.slug];
       const blurb = DESCRIPTIONS[category.slug]?.[subservice.slug];
 
-      // A name this script has never been told about. Reported rather than
-      // guessed at, so the list above is visibly incomplete instead of
-      // quietly wrong.
+      // A name the table has never been told about. Reported rather than
+      // guessed at, so the gap is visible instead of quietly wrong.
       if (!icon) unknown.push(where);
       if (icon && !hasIcon(icon)) {
         console.log(`  BAD    ${where}: there is no icon called ${icon}`);
