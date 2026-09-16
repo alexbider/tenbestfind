@@ -265,7 +265,9 @@ async function loadBusiness(slug: string) {
       videos: { orderBy: { sortOrder: "asc" } },
       reviews: { orderBy: { postedAt: "desc" }, take: 10 },
       services: { include: { subservice: true } },
-      areas: { include: { city: { include: { region: true } } } },
+      // The country comes along because a service area is linked only when its
+      // page really exists, and that answer needs the country code.
+      areas: { include: { city: { include: { region: { include: { country: true } } } } } },
       entries: {
         orderBy: { position: "asc" },
         include: {
@@ -557,14 +559,50 @@ export default async function BusinessProfilePage({ params }: Props) {
   // Areas served, as chips and as pins. A city without coordinates still gets
   // a chip so the coverage list stays complete.
   const areaCities = business.areas.map((area) => area.city);
-  const mapAreas: MapArea[] = business.areas.map((area) => ({
-    id: area.cityId,
-    name: `${area.city.name}, ${area.city.region.code.toUpperCase()}`,
-    href: routes.city(country?.code ?? area.city.region.countryId, area.city.region.slug, area.city.slug),
-    latitude: area.city.latitude ?? Number.NaN,
-    longitude: area.city.longitude ?? Number.NaN,
-    primary: area.primary || area.cityId === business.cityId,
-  }));
+
+  // A company names every place it will travel to, and most of those places
+  // have no page here: an import created the city row so the coverage could be
+  // recorded, and nobody has published a hub for it. Linking them anyway sent
+  // readers and crawlers to 404s, nineteen of them on a single Toronto
+  // profile. So a chip is a link only when the thing it points at answers 200,
+  // which is the same rule the sitemap already applies.
+  //
+  // Where a ranking exists for the area and this trade, that is the better
+  // destination than the city hub: the anchor matches what the page is about,
+  // and it is a page somebody chooses a company from.
+  const rankedAreaCityIds = new Set(
+    (
+      await db.ranking.findMany({
+        where: {
+          status: "PUBLISHED",
+          categoryId: business.categoryId,
+          cityId: { in: business.areas.map((area) => area.cityId) },
+        },
+        select: { cityId: true },
+      })
+    ).map((ranking) => ranking.cityId),
+  );
+
+  const mapAreas: MapArea[] = business.areas.map((area) => {
+    const countryCode = area.city.region.country?.code;
+    const parts = [area.city.region.slug, area.city.slug] as const;
+    const href = !countryCode
+      ? undefined
+      : rankedAreaCityIds.has(area.cityId)
+        ? routes.ranking(countryCode, ...parts, business.category.slug)
+        : area.city.published
+          ? routes.city(countryCode, ...parts)
+          : undefined;
+
+    return {
+      id: area.cityId,
+      name: `${area.city.name}, ${area.city.region.code.toUpperCase()}`,
+      href,
+      latitude: area.city.latitude ?? Number.NaN,
+      longitude: area.city.longitude ?? Number.NaN,
+      primary: area.primary || area.cityId === business.cityId,
+    };
+  });
 
   const similar = city
     ? await db.business.findMany({

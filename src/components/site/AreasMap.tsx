@@ -6,7 +6,8 @@ import type { Circle, LatLngBoundsExpression, Map as LeafletMap, Marker } from "
 export type MapArea = {
   id: string;
   name: string;
-  href: string;
+  /** Absent when this place has no page of its own yet. The chip is then text. */
+  href?: string;
   latitude: number;
   longitude: number;
   primary: boolean;
@@ -199,47 +200,53 @@ export function AreasMap({
       </div>
 
       <ul data-arealist="" style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "14px" }}>
-        {areas.map((area) => (
-          <li key={area.id}>
-            <a
-              data-areachip=""
-              data-on={active === area.id ? "1" : "0"}
-              href={area.href}
-              onMouseEnter={() => setActive(area.id)}
-              onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(area.id)}
-              onBlur={() => setActive(null)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                minHeight: "40px",
-                padding: "0 14px 0 10px",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "999px",
-                background: "var(--surface-card)",
-                fontSize: "14px",
-                fontWeight: "600",
-                color: "var(--blue-900)",
-                textDecoration: "none",
-              }}
-            >
-              <span
-                data-areadot=""
-                aria-hidden="true"
+        {areas.map((area) => {
+          // A place we have no page for is still a place the company covers,
+          // so it keeps its chip and loses its link. Same chip either way, so
+          // the row reads as one list rather than two kinds of thing.
+          const Chip = area.href ? "a" : "span";
+          return (
+            <li key={area.id}>
+              <Chip
+                data-areachip=""
+                data-on={active === area.id ? "1" : "0"}
+                {...(area.href ? { href: area.href } : null)}
+                onMouseEnter={() => setActive(area.id)}
+                onMouseLeave={() => setActive(null)}
+                onFocus={() => setActive(area.id)}
+                onBlur={() => setActive(null)}
                 style={{
-                  width: "9px",
-                  height: "9px",
-                  borderRadius: "50%",
-                  background: area.primary ? "var(--blue-900)" : "var(--color-primary)",
-                  boxShadow: `0 0 0 3px ${area.primary ? "rgba(16,31,61,0.15)" : "rgba(45,116,215,0.18)"}`,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  minHeight: "40px",
+                  padding: "0 14px 0 10px",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "999px",
+                  background: "var(--surface-card)",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "var(--blue-900)",
+                  textDecoration: "none",
                 }}
-              />
-              {area.name}
-              {area.primary ? " · HQ" : ""}
-            </a>
-          </li>
-        ))}
+              >
+                <span
+                  data-areadot=""
+                  aria-hidden="true"
+                  style={{
+                    width: "9px",
+                    height: "9px",
+                    borderRadius: "50%",
+                    background: area.primary ? "var(--blue-900)" : "var(--color-primary)",
+                    boxShadow: `0 0 0 3px ${area.primary ? "rgba(16,31,61,0.15)" : "rgba(45,116,215,0.18)"}`,
+                  }}
+                />
+                {area.name}
+                {area.primary ? " · HQ" : ""}
+              </Chip>
+            </li>
+          );
+        })}
       </ul>
     </>
   );
