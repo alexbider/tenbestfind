@@ -8,6 +8,7 @@ import { QuoteDialog } from "@/components/site/QuoteDialog";
 import { AboutBody } from "@/components/site/AboutBody";
 import { AreasMap, type MapArea } from "@/components/site/AreasMap";
 import { ProjectVideos } from "@/components/site/ProjectVideos";
+import { Pop, PopLink, PopText } from "@/components/site/PopNote";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
 import { fullDate, monthYear, priceRange } from "@/lib/format";
@@ -37,37 +38,6 @@ const CARD = {
   borderRadius: "18px",
   padding: "22px 24px",
   boxShadow: "var(--shadow-sm)",
-} as const;
-const POP_NOTE = {
-  position: "absolute",
-  top: "calc(100% + 10px)",
-  left: "0",
-  zIndex: "180",
-  background: "var(--blue-900)",
-  color: "var(--text-on-ink)",
-  borderRadius: "16px",
-  boxShadow: "var(--shadow-xl)",
-  padding: "20px 22px",
-} as const;
-const POP_SUMMARY = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "7px",
-  fontSize: "13px",
-  fontWeight: "600",
-  color: "var(--text-secondary)",
-} as const;
-const POP_MARK = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "18px",
-  height: "18px",
-  borderRadius: "50%",
-  border: "1.5px solid var(--border-strong)",
-  fontSize: "11px",
-  fontWeight: "700",
-  color: "var(--color-primary)",
 } as const;
 
 /** The gold star the rating lines are built from. */
@@ -141,68 +111,6 @@ function RowChevron({ size = 15 }: { size?: number }) {
     >
       <path d="m9 18 6-6-6-6" />
     </svg>
-  );
-}
-
-/**
- * The "i" popovers. Every claim on this page that is not self-evident carries
- * one saying where it came from, which is the point of the design.
- */
-function Pop({
-  label,
-  children,
-  width = "min(420px, 78vw)",
-  align = "left",
-  above = false,
-  small = false,
-  style,
-}: {
-  label: string;
-  children: React.ReactNode;
-  width?: string;
-  align?: "left" | "right";
-  above?: boolean;
-  /** The trigger that sits beside a panel heading, a size down from the rest. */
-  small?: boolean;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <details data-pop="" style={{ position: "relative", ...style }}>
-      <summary
-        aria-label={label}
-        style={small ? { ...POP_SUMMARY, gap: "6px", fontSize: "12px" } : POP_SUMMARY}
-      >
-        <span style={small ? { ...POP_MARK, width: "17px", height: "17px", fontSize: "10px" } : POP_MARK}>i</span>
-        {label}
-      </summary>
-      <div
-        role="note"
-        style={{
-          ...POP_NOTE,
-          width,
-          ...(align === "right" ? { left: "auto", right: "0" } : null),
-          ...(above ? { top: "auto", bottom: "calc(100% + 10px)" } : null),
-        }}
-      >
-        {children}
-      </div>
-    </details>
-  );
-}
-
-function PopText({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: "13px", lineHeight: "1.65", color: "rgba(232,237,245,0.88)" }}>{children}</p>
-  );
-}
-
-function PopLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <p style={{ marginTop: "14px" }}>
-      <Link href={href} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
-        {children}
-      </Link>
-    </p>
   );
 }
 
@@ -1479,7 +1387,17 @@ export default async function BusinessProfilePage({ params }: Props) {
                 data-facts=""
                 style={{
                   display: "grid",
-                  gridTemplateColumns: factGroups.length > 0 ? "340px minmax(0, 1fr)" : "minmax(0, 1fr)",
+                  // Tracks for what actually renders, not for what might. A
+                  // company with no Google rating, no review count and no
+                  // founding year draws no dark card, and keying the template
+                  // off the facts instead left the panel in a 340px track with
+                  // two thirds of the row empty beside it.
+                  gridTemplateColumns:
+                    factStats.length > 0 && factGroups.length > 0
+                      ? "340px minmax(0, 1fr)"
+                      : factStats.length > 0
+                        ? "minmax(0, 380px)"
+                        : "minmax(0, 1fr)",
                   gap: "20px",
                   alignItems: "stretch",
                 }}
@@ -1607,16 +1525,15 @@ export default async function BusinessProfilePage({ params }: Props) {
                       gap: "0 40px",
                     }}
                   >
-                    {factGroups.map((group, index) => (
-                      <div
-                        key={group.title}
-                        // A group left alone on the last row takes both columns,
-                        // which is what keeps the panel from ending ragged.
-                        style={{
-                          gridColumn:
-                            index === factGroups.length - 1 && factGroups.length % 2 === 1 ? "span 2" : "span 1",
-                        }}
-                      >
+                    {factGroups.map((group, index) => {
+                      // A group left alone on the last row takes both columns,
+                      // which is what keeps the panel from ending ragged. Its
+                      // rows then split into two themselves, so a leader in the
+                      // last group is the same length as one in the first
+                      // rather than running the whole panel.
+                      const spans = index === factGroups.length - 1 && factGroups.length % 2 === 1;
+                      return (
+                      <div key={group.title} style={{ gridColumn: spans ? "span 2" : "span 1" }}>
                         <p
                           style={{
                             display: "flex",
@@ -1637,47 +1554,82 @@ export default async function BusinessProfilePage({ params }: Props) {
                           ) : null}
                           {group.title}
                         </p>
-                        <dl style={{ margin: "0 0 18px" }}>
-                          {group.items.map((item) => (
-                            <div
-                              key={`${group.title}-${item.label}`}
-                              data-frow=""
-                              style={{
-                                display: "flex",
-                                alignItems: "baseline",
-                                gap: "10px",
-                                padding: "11px 0",
-                                borderBottom: "1px solid var(--border-subtle)",
-                              }}
-                            >
-                              <dt style={{ fontSize: "14.5px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                                {item.label}
-                              </dt>
-                              <span
-                                aria-hidden="true"
+                        <dl
+                          data-fspan={spans ? "" : undefined}
+                          style={
+                            spans
+                              ? {
+                                  margin: "0 0 18px",
+                                  display: "grid",
+                                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                  columnGap: "40px",
+                                }
+                              : { margin: "0 0 18px" }
+                          }
+                        >
+                          {group.items.map((item) => {
+                            // A dotted leader works for an answer, not for a
+                            // sentence. "Yes, 24/7" sits on one, and "condo
+                            // owners with fan coil or in-suite HVAC problems"
+                            // shrank to one word a line against it, so anything
+                            // that long takes its own line under the label.
+                            const stacked = item.value.length > 30 || item.label.length > 24;
+                            return (
+                              <div
+                                key={`${group.title}-${item.label}`}
+                                data-frow=""
                                 style={{
-                                  flex: "1",
-                                  minWidth: "16px",
-                                  borderBottom: "1px dotted var(--border-strong)",
-                                  transform: "translateY(-4px)",
-                                }}
-                              />
-                              <dd
-                                style={{
-                                  margin: "0",
-                                  fontSize: "15px",
-                                  fontWeight: "600",
-                                  color: "var(--blue-900)",
-                                  textAlign: "right",
+                                  display: "flex",
+                                  flexDirection: stacked ? "column" : "row",
+                                  alignItems: stacked ? "stretch" : "baseline",
+                                  gap: stacked ? "5px" : "10px",
+                                  padding: "11px 0",
+                                  borderBottom: "1px solid var(--border-subtle)",
                                 }}
                               >
-                                {item.value}
-                              </dd>
-                            </div>
-                          ))}
+                                <dt
+                                  style={{
+                                    fontSize: "14.5px",
+                                    color: "var(--text-secondary)",
+                                    whiteSpace: stacked ? "normal" : "nowrap",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {item.label}
+                                </dt>
+                                {stacked ? null : (
+                                  <span
+                                    aria-hidden="true"
+                                    style={{
+                                      flex: "1 1 16px",
+                                      minWidth: "16px",
+                                      borderBottom: "1px dotted var(--border-strong)",
+                                      transform: "translateY(-4px)",
+                                    }}
+                                  />
+                                )}
+                                <dd
+                                  style={{
+                                    margin: "0",
+                                    fontSize: "15px",
+                                    lineHeight: stacked ? "1.5" : undefined,
+                                    fontWeight: "600",
+                                    color: "var(--blue-900)",
+                                    textAlign: stacked ? "left" : "right",
+                                    // Without this a flex item refuses to go
+                                    // narrower than its longest word.
+                                    minWidth: "0",
+                                  }}
+                                >
+                                  {item.value}
+                                </dd>
+                              </div>
+                            );
+                          })}
                         </dl>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>

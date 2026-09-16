@@ -880,6 +880,10 @@
     padding: 20px 18px !important;
   }
 
+  /* The last group splits its own rows in two on a wide panel. On one column
+     there is nothing left to split them against. */
+  .biz-2026 [data-fspan] { grid-template-columns: 1fr !important; }
+
   .biz-2026 [data-crit] { grid-template-columns: 1fr !important; }
   .biz-2026 [data-rk-one] { font-size: 150px !important; }
   .biz-2026 [data-rk-hash] { font-size: 64px !important; margin-top: 12px !important; }
