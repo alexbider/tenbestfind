@@ -53,23 +53,27 @@ a question or an import item, fails the test and is left alone.
 
 ## 4. Addresses that were never addresses
 
+Nothing to run: the worker now does this daily, clearing anything that fails the
+checks and leaving the agency domains for a person, because a real plumber can
+be called seoplumbing.com.
+
+The script is still there for a machine with a shell, and it can also do the DNS
+pass, which the worker does not:
+
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/cleanup-emails.ts
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/cleanup-emails.ts --apply --dns
 
-Without `--dns` it applies only the checks that need no network. With it, each
-surviving address's domain is looked up as well, which is what catches a domain
-that parses but does not exist. Agency domains are reported rather than cleared,
-because a real plumber can be called seoplumbing.com; those are a decision for a
-person.
-
 ## 5. Rescore the SEO records
+
+Nothing to run. The worker rescores every record once a day, starting two
+minutes after it comes up, and sweeps any email that cannot be published at the
+same time. Both are idempotent and cheap when there is nothing to do.
+
+The script is still there for running it now rather than waiting, on a machine
+that has a shell:
 
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/rescore-seo.ts
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/rescore-seo.ts --write
-
-The keyword-in-URL check and the word count both changed, so every stored score
-is out of date. The report prints how many moved and by how much, per entity
-type, before anything is written.
 
 ## 6. Check what the pages will publish
 
@@ -93,16 +97,20 @@ of that ranking rather than the date the city row was written.
 
 ## 8. Tell the engines, once
 
-    npx tsx -r ./scripts/_server-only-stub.cjs scripts/indexnow.ts
+Nothing to run. The worker makes the one full submission itself the first time
+it comes up with an empty IndexNow queue: everything the sitemap offers, read
+from the sitemap so it can only ever submit a URL the site is already willing to
+have indexed. It happens once, because the first submission leaves rows behind
+and the count is what stops it happening again. Every page published after that
+is announced as it is written.
+
+It only does anything while `seo.searchEngineVisible` and `seo.indexnow` are
+both on in Admin, SEO.
+
+The script is still there for a machine with a shell, and can resubmit
+everything on demand:
+
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/indexnow.ts --yes --all
-
-`--all` ignores the watermark and submits everything the sitemap offers, which
-is what a first full submission wants. Leave `--all` off afterwards: later runs
-then send only what changed since the last successful submission.
-
-This only does anything while `seo.searchEngineVisible` and `seo.indexnow` are
-both on in Admin, SEO. They are off on production today, so turn them on first
-or expect the script to tell you it skipped.
 
 The Google Indexing API is separate and is not run by hand: the import worker
 flushes its queue on every pass, inside a 200 URL daily quota. If the queue has
