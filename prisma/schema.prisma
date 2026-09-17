@@ -162,6 +162,7 @@ model Category {
   placements    SponsoredPlacement[]
   guideJobs     GuideJob[]
   topicIdeas    TopicIdea[]
+  alsoOffered   BusinessCategory[]
 
   @@index([published, sortOrder])
 }
@@ -325,6 +326,7 @@ model Business {
   owner         User?                @relation("BusinessOwner", fields: [ownerId], references: [id])
   ownerId       String?
   services      BusinessService[]
+  extraServices BusinessCategory[]
   areas         BusinessArea[]
   credentials   Credential[]
   photos        BusinessPhoto[]
@@ -345,6 +347,24 @@ model Business {
   @@index([categoryId, status])
   @@index([cityId, status])
   @@index([status])
+}
+
+/// A second trade the same company works in.
+///
+/// categoryId on Business stays the primary: it owns the URL, the breadcrumb
+/// and the ranking a company can be placed in. This table is the rest, so a
+/// plumber who also does HVAC turns up in an HVAC search without its address
+/// changing. The primary is deliberately not repeated here, which is why
+/// existing rows needed no backfill: every company already has its one trade.
+model BusinessCategory {
+  businessId String
+  categoryId String
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, categoryId])
+  @@index([categoryId])
 }
 
 model BusinessService {

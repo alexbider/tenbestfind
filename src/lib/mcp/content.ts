@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { touchFaqOwner } from "../lastmod";
 import { FAQ_SCOPE_FIELDS, FAQ_SCOPES, GUIDE_TYPES } from "../enums";
 import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
@@ -646,11 +647,13 @@ export const CONTENT_TOOLS: Tool[] = [
             sortOrder: optInt(args, "sortOrder") ?? 0,
           },
         });
+        await touchFaqOwner(faq.id);
         await recordWrite(ctx, { action: "create", entityType: "faq", entityId: faq.id, summary: faq.question });
         return { id: faq.id, scope: faq.scope };
       }
 
       const faq = await db.faq.update({ where: { id }, data });
+      await touchFaqOwner(faq.id);
       await recordWrite(ctx, { action: "update", entityType: "faq", entityId: faq.id, summary: faq.question });
       return { id: faq.id, scope: faq.scope };
     },
@@ -667,6 +670,9 @@ export const CONTENT_TOOLS: Tool[] = [
       const id = reqStr(args, "id");
       const faq = await db.faq.findUnique({ where: { id } });
       if (!faq) throw new ToolError("No question matches that id.");
+      // Touched before the row goes, because afterwards there is nothing left
+      // to say which page it belonged to.
+      await touchFaqOwner(id);
       await db.faq.delete({ where: { id } });
       await recordWrite(ctx, { action: "delete", entityType: "faq", entityId: id, summary: faq.question });
       return { deleted: id };

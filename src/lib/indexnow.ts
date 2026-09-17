@@ -113,12 +113,129 @@ export async function submitToIndexNow(paths: string[]): Promise<IndexNowResult>
   }
 }
 
+/* --------------------------------------------------------------- the queue */
+
+/** After this many tries a URL is left alone; something about it is wrong. */
+const MAX_ATTEMPTS = 5;
+
+export type IndexNowFlush = {
+  sent: number;
+  failed: number;
+  remaining: number;
+  note: string;
+};
+
 /**
- * Fire and forget, for use beside a revalidatePath in a server action.
+ * Puts paths on the queue rather than sending them.
+ *
+ * A send that happens inside a server action is lost the moment anything goes
+ * wrong: the engine is down, the container restarts, a batch writes a thousand
+ * profiles at once and the request is refused for being too large. The queue is
+ * the same table the Google submissions use, so "was this page ever submitted"
+ * has one answer for both.
+ */
+export async function queueForIndexNow(
+  paths: string[],
+  action: "URL_UPDATED" | "URL_DELETED" = "URL_UPDATED",
+): Promise<number> {
+  const settings = await loadSeoSettings();
+  if (!settings.bool("seo.searchEngineVisible")) return 0;
+  if (!settings.bool("seo.indexnow")) return 0;
+
+  const urls = [...new Set(paths.filter(Boolean).map((path) => absoluteUrl(path)))];
+  if (urls.length === 0) return 0;
+
+  const waiting = await db.indexRequest.findMany({
+    where: { url: { in: urls }, target: "INDEXNOW", status: "QUEUED" },
+    select: { url: true },
+  });
+  const already = new Set(waiting.map((row) => row.url));
+  const fresh = urls.filter((url) => !already.has(url));
+  if (fresh.length === 0) return 0;
+
+  await db.indexRequest.createMany({
+    data: fresh.map((url) => ({ url, target: "INDEXNOW", action })),
+  });
+  return fresh.length;
+}
+
+/**
+ * Sends what is queued, in one request.
+ *
+ * The protocol takes up to 10,000 URLs at a time and an engine would rather
+ * have one list than ten thousand pings, so this is the opposite shape to the
+ * Google flush. A failure leaves every row queued with its attempt count up by
+ * one, and a row that has failed five times is marked FAILED and left out of
+ * later runs rather than retried forever.
+ */
+export async function flushIndexNowQueue(limit = MAX_URLS): Promise<IndexNowFlush> {
+  const queued = await db.indexRequest.findMany({
+    where: { target: "INDEXNOW", status: "QUEUED", attempts: { lt: MAX_ATTEMPTS } },
+    orderBy: { createdAt: "asc" },
+    take: Math.min(limit, MAX_URLS),
+  });
+  if (queued.length === 0) return { sent: 0, failed: 0, remaining: 0, note: "nothing queued" };
+
+  const result = await submitToIndexNow(queued.map((row) => row.url));
+  const ids = queued.map((row) => row.id);
+
+  if (result.status === "skipped") {
+    // Switched off or not a public host: these are not failures to retry, and
+    // leaving them queued would pile up forever.
+    await db.indexRequest.updateMany({
+      where: { id: { in: ids } },
+      data: { status: "SKIPPED", error: result.reason },
+    });
+    return { sent: 0, failed: 0, remaining: 0, note: result.reason };
+  }
+
+  const ok = result.httpStatus >= 200 && result.httpStatus < 300;
+  if (ok) {
+    await db.indexRequest.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+        attempts: { increment: 1 },
+        response: String(result.httpStatus),
+        error: null,
+      },
+    });
+  } else {
+    await db.indexRequest.updateMany({
+      where: { id: { in: ids } },
+      data: { attempts: { increment: 1 }, error: `HTTP ${result.httpStatus}` },
+    });
+    // Anything that has now used up its attempts stops being retried.
+    await db.indexRequest.updateMany({
+      where: { id: { in: ids }, attempts: { gte: MAX_ATTEMPTS } },
+      data: { status: "FAILED" },
+    });
+  }
+
+  const remaining = await db.indexRequest.count({
+    where: { target: "INDEXNOW", status: "QUEUED", attempts: { lt: MAX_ATTEMPTS } },
+  });
+
+  return {
+    sent: ok ? queued.length : 0,
+    failed: ok ? 0 : queued.length,
+    remaining,
+    note: ok ? `${queued.length} submitted` : `engine returned ${result.httpStatus}`,
+  };
+}
+
+/**
+ * Queue and then try to send, for use beside a revalidatePath in a server
+ * action.
  *
  * Publishing must not wait on, or be broken by, an engine that is slow or
  * down, so this is deliberately not awaited by its callers and cannot reject.
+ * Anything the send does not manage stays on the queue for the next flush.
  */
 export function pingIndexNow(paths: string[]): void {
-  void submitToIndexNow(paths).catch(() => {});
+  void (async () => {
+    await queueForIndexNow(paths);
+    await flushIndexNowQueue();
+  })().catch(() => {});
 }

@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { categoriesOf, setExtraCategories } from "../categories";
 import { BUSINESS_STATUSES } from "../enums";
 import { LEAD_STATUSES } from "../leads";
 import { recordMove } from "../redirects";
@@ -11,9 +12,12 @@ import {
   bool,
   int,
   limitOf,
+  num,
   object,
   oneOf,
   optBool,
+  optInt,
+  optNum,
   optRows,
   optStr,
   patch,
@@ -28,6 +32,120 @@ import {
 // from owners and corrections from readers.
 
 
+
+/**
+ * The fields a listing carries beyond its name, service and city.
+ *
+ * create_business and update_business accepted different sets, so a listing
+ * built by hand came out missing whatever the create schema had not been told
+ * about: the overview it was sent, the year it was founded, whether it does
+ * emergency call-outs. Both now read from here, so neither can quietly drop
+ * what the other keeps.
+ */
+const PROFILE_FIELDS = {
+  tagline: str("One line."),
+  overview: str("The Quick overview at the top of the profile, about 150 words."),
+  description: str("The main profile copy, shown behind Read more."),
+  editorialTake: str("The site's own assessment."),
+  bestFor: str("Short phrase."),
+  website: str("Their site."),
+  phone: str("Contact number."),
+  email: str("Main contact address."),
+  addressLine: str("Street address."),
+  postalCode: str("Postal or ZIP code."),
+  logoUrl: str("Logo image URL."),
+  yearFounded: int("Year the company started."),
+  employeeCount: str("For example 20 to 50."),
+  licenseNumber: str("As published by the issuing authority."),
+  warrantyTerms: str("What they warranty and for how long."),
+  emergency: bool("Offers emergency call-outs."),
+  financing: bool("Offers financing."),
+  freeEstimates: bool("Gives free estimates."),
+};
+
+/** The same fields as a patch spec, in the shape the Prisma data object wants. */
+const PROFILE_PATCH = {
+  tagline: "string",
+  overview: "string",
+  description: "string",
+  editorialTake: "string",
+  bestFor: "string",
+  website: "string",
+  phone: "string",
+  email: "string",
+  addressLine: "string",
+  postalCode: "string",
+  logoUrl: "string",
+  yearFounded: "int",
+  employeeCount: "string",
+  licenseNumber: "string",
+  warrantyTerms: "string",
+  emergency: "bool",
+  financing: "bool",
+  freeEstimates: "bool",
+} as const;
+
+/**
+ * Rating, review count and the Google identity behind them.
+ *
+ * Stored as placeId, googleRating, googleReviewCount, googleDataUpdated and
+ * gmbRank, which is what the importer writes and what every template reads.
+ * The argument names are the ones an agent is most likely to reach for, and
+ * both spellings are accepted so neither has to be looked up.
+ */
+const GOOGLE_FIELDS = {
+  googlePlaceId: str("The Google place id. Stored as placeId, and what refresh_reviews needs."),
+  rating: num("Star rating out of 5. Stored as googleRating."),
+  reviewCount: int("How many reviews that rating is from. Stored as googleReviewCount."),
+  ratingReadOn: str("The date the rating was read, as YYYY-MM-DD. Stored as googleDataUpdated."),
+  googleMapsPosition: int("Position in the Google Maps result. Stored as gmbRank."),
+};
+
+/**
+ * The extra services, with an argument that is not a list of ids reported the
+ * way every other bad argument is.
+ */
+async function setExtra(businessId: string, primaryId: string, value: unknown): Promise<string[]> {
+  if (!Array.isArray(value)) {
+    throw new ToolError("additionalCategoryIds must be an array of service ids.");
+  }
+  try {
+    return await setExtraCategories(businessId, primaryId, value.map(String));
+  } catch (error) {
+    throw new ToolError(error instanceof Error ? error.message : "Those service ids were refused.");
+  }
+}
+
+function googleData(args: Record<string, unknown>): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+
+  const placeId = optStr(args, "googlePlaceId") ?? optStr(args, "placeId");
+  if (placeId !== undefined) data.placeId = placeId.trim() || null;
+
+  const rating = optNum(args, "rating") ?? optNum(args, "googleRating");
+  if (rating !== undefined) {
+    if (rating < 0 || rating > 5) throw new ToolError("rating must be between 0 and 5.");
+    data.googleRating = rating;
+  }
+
+  const reviews = optInt(args, "reviewCount") ?? optInt(args, "googleReviewCount");
+  if (reviews !== undefined) {
+    if (reviews < 0) throw new ToolError("reviewCount cannot be negative.");
+    data.googleReviewCount = reviews;
+  }
+
+  const readOn = optStr(args, "ratingReadOn");
+  if (readOn !== undefined) {
+    const when = new Date(readOn);
+    if (Number.isNaN(when.getTime())) throw new ToolError("ratingReadOn must be a date, for example 2026-09-17.");
+    data.googleDataUpdated = when;
+  }
+
+  const position = optInt(args, "googleMapsPosition") ?? optInt(args, "gmbRank");
+  if (position !== undefined) data.gmbRank = position;
+
+  return data;
+}
 
 async function findBusiness(key: string) {
   const business = await db.business.findFirst({ where: { OR: [{ id: key }, { slug: key }] } });
@@ -47,18 +165,13 @@ export const DIRECTORY_TOOLS: Tool[] = [
         name: str("The company name."),
         categoryId: str("Service id."),
         cityId: str("City id."),
-        slug: str("URL slug. Derived from the name when omitted."),
-        website: str("Their site."),
-        phone: str("Contact number."),
-        email: str("Main contact address."),
-        addressLine: str("Street address."),
-        postalCode: str("Postal or ZIP code."),
-        tagline: str("One line."),
-        overview: str("The Quick overview at the top of the profile, about 150 words."),
-        description: str("The main profile copy, shown behind Read more."),
-        editorialTake: str("The site's own assessment."),
-        bestFor: str("Short phrase."),
+        slug: str("URL slug. Derived from the name when omitted, and never rebuilt afterwards."),
         status: str("Defaults to DRAFT."),
+        additionalCategoryIds: arr(
+          "Other services this company offers, as ids. The primary stays categoryId and keeps the URL.",
+        ),
+        ...PROFILE_FIELDS,
+        ...GOOGLE_FIELDS,
       },
       ["name", "categoryId"],
     ),
@@ -87,19 +200,14 @@ export const DIRECTORY_TOOLS: Tool[] = [
           cityId: cityId ?? null,
           status,
           publishedAt: status === "PUBLISHED" ? new Date() : null,
-          ...patch(args, {
-            website: "string",
-            phone: "string",
-            email: "string",
-            addressLine: "string",
-            postalCode: "string",
-            tagline: "string",
-            description: "string",
-            editorialTake: "string",
-            bestFor: "string",
-          }),
+          ...patch(args, PROFILE_PATCH),
+          ...googleData(args),
         },
       });
+
+      if (args.additionalCategoryIds !== undefined) {
+        await setExtra(business.id, categoryId, args.additionalCategoryIds);
+      }
 
       await recordWrite(ctx, {
         action: "create",
@@ -121,72 +229,53 @@ export const DIRECTORY_TOOLS: Tool[] = [
     schema: object(
       {
         idOrSlug: str("The business id or slug."),
-        name: str("The company name."),
-        slug: str("URL slug."),
-        categoryId: str("Move it to a different service."),
+        name: str("The company name. Changing it does not move the URL."),
+        slug: str("URL slug. Passing one moves the profile and leaves a 301 behind."),
+        categoryId: str("Move it to a different service. The URL does not move with it."),
+        additionalCategoryIds: arr(
+          "Replaces the other services this company offers. An empty array clears them.",
+        ),
         cityId: str("Move it to a different city."),
-        tagline: str("One line."),
-        description: str("The main profile copy."),
-        editorialTake: str("The site's own assessment."),
-        bestFor: str("Short phrase."),
         strengths: arr("Replaces the list."),
         considerations: arr("Replaces the list."),
-        website: str("Their site."),
-        phone: str("Contact number."),
-        email: str("Main contact address."),
-        addressLine: str("Street address."),
-        postalCode: str("Postal or ZIP code."),
-        logoUrl: str("Logo image URL."),
-        yearFounded: int("Year the company started."),
-        employeeCount: str("For example 20 to 50."),
-        licenseNumber: str("As published by the issuing authority."),
-        warrantyTerms: str("What they warranty and for how long."),
-        emergency: bool("Offers emergency call-outs."),
-        financing: bool("Offers financing."),
-        freeEstimates: bool("Gives free estimates."),
         verified: bool("Credentials checked by an editor."),
+        ...PROFILE_FIELDS,
+        ...GOOGLE_FIELDS,
       },
       ["idOrSlug"],
     ),
     handler: async (args, ctx) => {
       const existing = await findBusiness(reqStr(args, "idOrSlug"));
 
-      const data = patch(args, {
-        name: "string",
-        categoryId: "string",
-        cityId: "string",
-        tagline: "string",
-        overview: "string",
-        description: "string",
-        editorialTake: "string",
-        bestFor: "string",
-        website: "string",
-        phone: "string",
-        email: "string",
-        addressLine: "string",
-        postalCode: "string",
-        logoUrl: "string",
-        yearFounded: "int",
-        employeeCount: "string",
-        licenseNumber: "string",
-        warrantyTerms: "string",
-        emergency: "bool",
-        financing: "bool",
-        freeEstimates: "bool",
-        verified: "bool",
-        strengths: "json",
-        considerations: "json",
-      });
+      const data = {
+        ...patch(args, {
+          ...PROFILE_PATCH,
+          name: "string",
+          categoryId: "string",
+          cityId: "string",
+          verified: "bool",
+          strengths: "json",
+          considerations: "json",
+        }),
+        ...googleData(args),
+      };
 
       const slug = args.slug !== undefined ? slugify(String(args.slug)) : existing.slug;
       if (slug !== existing.slug && (await db.business.findUnique({ where: { slug } }))) {
         throw new ToolError(`A business already uses the slug ${slug}.`);
       }
-      if (Object.keys(data).length === 0 && slug === existing.slug) {
+      if (
+        Object.keys(data).length === 0 &&
+        slug === existing.slug &&
+        args.additionalCategoryIds === undefined
+      ) {
         throw new ToolError("Pass at least one field to change.");
       }
 
       const business = await db.business.update({ where: { id: existing.id }, data: { ...data, slug } });
+      if (args.additionalCategoryIds !== undefined) {
+        await setExtra(business.id, business.categoryId, args.additionalCategoryIds);
+      }
       if (slug !== existing.slug) {
         await recordMove(routes.business(existing.slug), routes.business(business.slug));
       }
@@ -448,6 +537,12 @@ export const DIRECTORY_TOOLS: Tool[] = [
     }),
     handler: async (args, ctx) => {
       const { queueRefresh } = await import("../reviews");
+      const { credentialAdvice, missingSecrets, SECRET_KEYS } = await import("../secrets");
+
+      // The refresh runs through Apify. Queueing it without a token buys a row
+      // in the worker log and nothing else.
+      const missing = await missingSecrets([SECRET_KEYS.apify]);
+      if (missing.length > 0) throw new ToolError(credentialAdvice(missing));
 
       let ids: string[];
       let what: string;

@@ -133,11 +133,11 @@ const BADGE_HINT = new RegExp(
   "i",
 );
 
-// Chrome that is an image but not a picture of anything.
-const NOT_A_PHOTO = /(icon|logo|badge|payment|visa|mastercard|amex|paypal|financing|google-?play|app-?store|stars?-|rating)/i;
+// Promotions, marks and furniture, all of which are images and none of which is
+// a picture of the company's work. The rules are in photo-quality so the same
+// ones apply wherever a photo is saved.
+import { checkPhoto, MIN_WIDTH } from "./photo-quality";
 
-/** How wide a picture has to look before it is worth publishing. */
-const MIN_WIDTH = 400;
 const MIN_AREA = 90_000; // roughly 400x225
 
 type Candidate = {
@@ -504,10 +504,9 @@ export async function crawlSite(website: string | null): Promise<SiteData> {
         if (!badges.some((badge) => badge.url === src)) badges.push({ url: src, label });
         continue;
       }
-      if (NOT_A_PHOTO.test(haystack)) continue;
-
       const width = set?.width || dimensionOf(attr(tag, "width")) || widthFromName(src);
       const height = dimensionOf(attr(tag, "height"));
+      if (!checkPhoto({ url: src, alt, width, height }).ok) continue;
 
       // Where it was found matters: a picture on the gallery page is the work,
       // a picture on the contact page is usually a map or a stock handshake.

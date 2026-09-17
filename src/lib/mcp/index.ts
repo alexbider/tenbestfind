@@ -135,6 +135,7 @@ const ORIENTATION: Tool[] = [
         include: {
           city: { include: { region: { include: { country: true } } } },
           category: true,
+          extraServices: { include: { category: true } },
           services: { include: { subservice: true } },
           areas: { include: { city: true } },
           credentials: { orderBy: { sortOrder: "asc" } },
@@ -157,6 +158,15 @@ const ORIENTATION: Tool[] = [
         status: business.status,
         service: business.category.name,
         categoryId: business.categoryId,
+        // Every trade the company works in, the primary first. The primary is
+        // the one that owns the URL, which is why it is named separately too.
+        allServices: [
+          { id: business.categoryId, name: business.category.name, primary: true },
+          ...business.extraServices
+            .map((row) => ({ id: row.categoryId, name: row.category.name, primary: false }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        ],
+        additionalCategoryIds: business.extraServices.map((row) => row.categoryId).sort(),
         city: business.city
           ? `${business.city.name}, ${business.city.region.code.toUpperCase()}`
           : null,
@@ -422,9 +432,34 @@ export function describe(tool: Tool) {
   };
 }
 
+/**
+ * Rejects an argument the tool was never told about.
+ *
+ * Every schema here already says additionalProperties: false, but that is a
+ * description of the tool, not a gate in front of it: nothing on the wire has
+ * to honour it, and nothing did. An agent sending employeeCount to a tool
+ * whose schema lacked it watched the call succeed and the value vanish, which
+ * is the worst of both, because a silent success is not something you go
+ * looking for. So the server checks, and says which names it did not know.
+ */
+function rejectUnknown(tool: Tool, args: Record<string, unknown>): void {
+  const declared = (tool.schema as { properties?: Record<string, unknown> }).properties;
+  if (!declared) return;
+
+  const unknown = Object.keys(args).filter((key) => !(key in declared));
+  if (unknown.length === 0) return;
+
+  const known = Object.keys(declared).sort().join(", ");
+  throw new ToolError(
+    `${tool.name} does not take ${unknown.join(", ")}. It takes: ${known}.`,
+  );
+}
+
 export async function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext) {
   const tool = BY_NAME.get(name);
   if (!tool) throw new ToolError(`There is no tool named ${name}.`);
+
+  rejectUnknown(tool, args);
 
   if (!canRun(tool, ctx.scope, ctx.user.role)) {
     throw new ToolError(

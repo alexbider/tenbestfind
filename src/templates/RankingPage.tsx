@@ -35,6 +35,7 @@ import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { rankingCopy } from "@/lib/seo-copy";
 import { breadcrumbSchema, rankingCrumbs } from "@/lib/breadcrumbs";
 import { graph, listId, pageEntity, personEntity, personFromRow, personRef, rankingListEntity } from "@/lib/schema";
+import { businessSchemaInput } from "@/lib/schema-entities";
 import { relatedForRanking } from "@/lib/related";
 import { RelatedContent } from "@/components/site/RelatedContent";
 
@@ -253,6 +254,7 @@ export async function RankingPage({
           signed it. A "best of" claim with nobody's name on it is the one thing
           an engine has no way to weigh, and the names are already on the page. */}
       <JsonLd
+        label={path4}
         data={graph(
           pageEntity({
             path: path4,
@@ -273,20 +275,17 @@ export async function RankingPage({
             dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
             author: ranking.author ? personRef(ranking.author.slug) : null,
             reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
-            businesses: ranking.entries.map((entry) => ({
-              slug: entry.business.slug,
-              name: entry.business.name,
-              website: entry.business.website,
-              phone: entry.business.phone,
-              image: entry.business.logoUrl,
-              addressLine: entry.business.addressLine,
-              postalCode: entry.business.postalCode,
-              cityName: city.name,
-              regionCode: region.code,
-              countryCode: country.code,
-              rating: entry.business.googleRating,
-              reviewCount: entry.business.googleReviewCount,
-            })),
+            businesses: ranking.entries.map((entry) =>
+              businessSchemaInput(entry.business, {
+                cityName: city.name,
+                regionCode: region.code,
+                countryCode: country.code,
+                categorySlug: category.slug,
+                areaServed: entry.business.areas
+                  .map((area) => area.city?.name)
+                  .filter((name): name is string => Boolean(name)),
+              }),
+            ),
           }),
           ranking.author ? personEntity(personFromRow(ranking.author)) : null,
           // Only once when the same person did both.

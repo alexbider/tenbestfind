@@ -48,7 +48,45 @@ function encryptionKey(): Buffer {
   return Buffer.from(hkdfSync("sha256", Buffer.from(source), Buffer.alloc(0), Buffer.from("tbf-secrets"), 32));
 }
 
+/**
+ * What is wrong with a credential before it is stored, or null when it looks
+ * right. Only the Google key has a shape worth checking: it is a JSON file
+ * people paste the wrong half of, and the failure without this is an API call
+ * refused hours later for a reason nobody connects to the paste.
+ */
+export function secretProblem(key: SecretKey, value: string): string | null {
+  const plain = value.trim();
+  if (!plain) return null;
+
+  if (key !== SECRET_KEYS.googleServiceAccount) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(plain);
+  } catch {
+    return "That is not JSON. Paste the whole key file Google Cloud downloaded, including the outer braces.";
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return "That JSON is not an object. Paste the whole key file.";
+  }
+
+  const row = parsed as Record<string, unknown>;
+  if (row.type !== "service_account") {
+    return 'That file is not a service account key: its "type" is not "service_account". In Google Cloud, open the service account, Keys, Add key, JSON.';
+  }
+  if (typeof row.client_email !== "string" || !row.client_email.includes("@")) {
+    return "That key has no client_email, which is the address Search Console has to be given Owner access for.";
+  }
+  if (typeof row.private_key !== "string" || !row.private_key.includes("BEGIN PRIVATE KEY")) {
+    return "That key has no private_key. A key downloaded as P12 rather than JSON looks like this; download the JSON one.";
+  }
+  return null;
+}
+
 export async function putSecret(key: SecretKey, value: string): Promise<void> {
+  const problem = secretProblem(key, value);
+  if (problem) throw new Error(problem);
+
   const plain = value.trim();
   if (!plain) {
     await db.integrationSecret.deleteMany({ where: { key } });
@@ -234,4 +272,26 @@ export async function secretStatus(): Promise<SecretReport[]> {
       };
     }),
   );
+}
+
+/**
+ * The credentials out of a list that are not on file.
+ *
+ * A tool that needs one should say which one and where to put it, rather than
+ * queueing work that fails in a worker log an hour later.
+ */
+export async function missingSecrets(keys: SecretKey[]): Promise<SecretKey[]> {
+  const found = await Promise.all(keys.map(async (key) => [key, await getSecret(key)] as const));
+  return found.filter(([, value]) => !value).map(([key]) => key);
+}
+
+/** One sentence naming what is missing and where it goes. */
+export function credentialAdvice(keys: SecretKey[]): string {
+  const labels = keys.map((key) => SECRET_LABEL[key]);
+  const names =
+    labels.length === 1
+      ? labels[0]
+      : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  const verb = labels.length === 1 ? "is" : "are";
+  return `${names} ${verb} not set, so this would fail as soon as it started. Set ${labels.length === 1 ? "it" : "them"} with set_credential, or in Admin, Integrations. The environment variables ${keys.map((key) => ENV_NAME[key]).join(" and ")} work too and win over anything stored.`;
 }

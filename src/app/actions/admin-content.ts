@@ -213,7 +213,10 @@ export async function savePage(_prev: ActionState, formData: FormData): Promise<
   revalidatePath(`/${data.slug}/`);
   if (previous && previous.slug !== data.slug) revalidatePath(`/${previous.slug}/`);
   revalidatePath("/admin/pages");
-  if (data.status === "PUBLISHED") announce([`/${data.slug}/`]);
+  // Announced whatever the status is: unpublishing changes what is at that
+  // URL as much as publishing does, and the old address needs a crawl too when
+  // the page has moved.
+  announce([`/${data.slug}/`, ...(previous && previous.slug !== data.slug ? [`/${previous.slug}/`] : [])]);
   return ok("Page saved.");
 }
 
@@ -421,7 +424,11 @@ export async function saveGuide(_prev: ActionState, formData: FormData): Promise
   if (previous && previous.slug !== data.slug) revalidatePath(`/guides/${previous.slug}/`);
   revalidatePath("/guides/");
   revalidatePath("/admin/guides");
-  if (data.status === "PUBLISHED") announce([`/guides/${data.slug}/`, "/guides/"]);
+  announce([
+    `/guides/${data.slug}/`,
+    "/guides/",
+    ...(previous && previous.slug !== data.slug ? [`/guides/${previous.slug}/`] : []),
+  ]);
   return ok("Guide saved.");
 }
 
@@ -659,7 +666,7 @@ export async function saveRanking(_prev: ActionState, formData: FormData): Promi
   if (path) revalidatePath(path);
   revalidatePath("/rankings/");
   revalidatePath("/admin/rankings");
-  if (path && data.status === "PUBLISHED") announce([path, "/rankings/"]);
+  if (path) announce([path, "/rankings/"]);
   return ok("Ranking saved.");
 }
 
@@ -1105,7 +1112,7 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
 
   revalidatePath(routes.business(data.slug));
   revalidatePath("/admin/businesses");
-  if (data.status === "PUBLISHED") announce([routes.business(data.slug)]);
+  announce([routes.business(data.slug)]);
   return ok("Business saved.");
 }
 

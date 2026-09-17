@@ -12,7 +12,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "db:studio": "prisma studio",
-    "analytics:rollup": "tsx scripts/rollup.ts"
+    "analytics:rollup": "tsx scripts/rollup.ts",
+    "check:jsonld": "tsx -r ./scripts/_server-only-stub.cjs scripts/check-jsonld.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -39,6 +42,7 @@
     "@types/react-dom": "^19.0.2",
     "prisma": "^6.1.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
   }
 }

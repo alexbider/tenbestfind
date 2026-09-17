@@ -4,6 +4,7 @@ import { advanceRefresh } from "../src/lib/reviews";
 import { advanceEnrichment } from "../src/lib/enrich-run";
 import { ACTIVE_JOB_STATUSES, advanceGuideJob, publishDueGuides } from "../src/lib/guide-jobs";
 import { flushIndexQueue, refreshIndexingCheck } from "../src/lib/google-indexing";
+import { flushIndexNowQueue } from "../src/lib/indexnow";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
 // The batch runner. It lives in its own container rather than inside a request
@@ -194,6 +195,20 @@ async function tickIndexQueue(): Promise<void> {
     }
   } catch (error) {
     console.error("[index] unhandled:", error instanceof Error ? error.message : error);
+  }
+
+  // IndexNow takes the whole list in one request, so this is where a batch
+  // import's thousand profiles get announced, and where anything a server
+  // action could not send gets another try.
+  try {
+    const result = await flushIndexNowQueue();
+    if (result.sent > 0 || result.failed > 0) {
+      console.log(
+        `[indexnow] sent ${result.sent}, failed ${result.failed}, ${result.remaining} queued (${result.note})`,
+      );
+    }
+  } catch (error) {
+    console.error("[indexnow] unhandled:", error instanceof Error ? error.message : error);
   }
 }
 

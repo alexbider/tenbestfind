@@ -175,78 +175,87 @@ function citySlug(name: string): string {
 const NOT_A_TOWN = /\b(county|metro|metroplex|greater|area|region|district|township of)\b/i;
 
 /**
- * Matches the town names a website claims against the directory, creating the
- * ones that are not in it yet, and records them all as service areas.
+ * Names that are a county, a regional municipality or a province rather than a
+ * town. Enrichment kept turning "York", "Halton", "Peel" and "Ontario" into
+ * city records, each of which then looked like a place a company covers.
+ * Regions are matched against the directory's own region names as well, so a
+ * province or state can never arrive this way whatever it is called.
+ */
+const NOT_A_CITY = new Set([
+  "york", "halton", "peel", "durham", "niagara", "waterloo", "muskoka",
+  "simcoe", "dufferin", "wellington", "hastings", "lanark", "renfrew",
+  "greater toronto area", "gta", "golden horseshoe", "tri-cities", "tri cities",
+]);
+
+/**
+ * Matches the town names a website claims against towns the directory already
+ * has, and records the matches as service areas.
  *
- * A company that lists seven suburbs on its own site should show seven, not
- * whatever happens to fall inside a circle drawn round its city. Names it
- * invents for itself ("Greater Metro Area", "Dallas County") are not towns and
- * are dropped by the same guards `discoverCity` uses.
- *
- * A town created here has no coordinates, because nothing in the crawl gives
- * any. It shows on the profile as a coverage chip and is left off the map until
- * an editor positions it, which is the honest picture rather than a pin in the
- * wrong field.
+ * This used to create whatever it could not find, which is how "York",
+ * "Halton", "Peel" and a run of neighbourhood names became city records with no
+ * coordinates, no content and a hub page nobody could write. A name we do not
+ * recognise is now reported and dropped: a company covering a town we have
+ * never heard of is a reason for an editor to add that town, not for a crawler
+ * to invent it.
  */
 export async function recordNamedAreas(
   businessId: string,
   regionId: string,
   names: string[],
   limit = 14,
-): Promise<{ added: number; created: number }> {
+): Promise<{ added: number; skipped: string[] }> {
   const seen = new Set<string>();
   const wanted: string[] = [];
+  const skipped: string[] = [];
   for (const raw of names) {
     const name = raw.trim();
-    if (!PLACE_NAME.test(name) || NOT_A_TOWN.test(name)) continue;
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
+    if (!PLACE_NAME.test(name) || NOT_A_TOWN.test(name) || NOT_A_CITY.has(key)) {
+      skipped.push(name);
+      continue;
+    }
     wanted.push(name);
     if (wanted.length >= limit) break;
   }
-  if (wanted.length === 0) return { added: 0, created: 0 };
+  if (wanted.length === 0) return { added: 0, skipped };
 
+  // Only towns the directory already knows about, in this company's own
+  // region, and matched on the name or the slug it would be filed under.
+  const slugs = wanted.map((name) => citySlug(name)).filter(Boolean);
   const known = await db.city.findMany({
-    where: { regionId, name: { in: wanted } },
-    select: { id: true, name: true },
+    where: { regionId, OR: [{ name: { in: wanted } }, { slug: { in: slugs } }] },
+    select: { id: true, name: true, slug: true },
   });
+  const bySlug = new Map(known.map((city) => [city.slug, city.id]));
   const byName = new Map(known.map((city) => [city.name.toLowerCase(), city.id]));
 
-  let created = 0;
+  // Nothing is created here, so a province or a regional municipality simply
+  // fails to match and is reported. The one it could match is a city of the
+  // same name, such as New York in New York, which is the right answer.
+  const matched = new Set<string>();
   for (const name of wanted) {
-    if (byName.has(name.toLowerCase())) continue;
-    const slug = citySlug(name);
-    if (!slug) continue;
-    const existing = await db.city.findUnique({
-      where: { regionId_slug: { regionId, slug } },
-      select: { id: true },
-    });
-    if (existing) {
-      byName.set(name.toLowerCase(), existing.id);
-      continue;
-    }
-    const row = await db.city.create({
-      data: { name, slug, regionId, published: false, sortOrder: 900 },
-      select: { id: true },
-    });
-    byName.set(name.toLowerCase(), row.id);
-    created += 1;
+    const key = name.toLowerCase();
+    const id = byName.get(key) ?? bySlug.get(citySlug(name));
+    if (id) matched.add(id);
+    else skipped.push(name);
   }
+  if (matched.size === 0) return { added: 0, skipped };
 
   const have = new Set(
     (await db.businessArea.findMany({ where: { businessId }, select: { cityId: true } })).map(
       (row) => row.cityId,
     ),
   );
-  const missing = [...new Set(byName.values())].filter((cityId) => !have.has(cityId));
+  const missing = [...matched].filter((cityId) => !have.has(cityId));
   if (missing.length > 0) {
     await db.businessArea.createMany({
       data: missing.map((cityId) => ({ businessId, cityId })),
     });
   }
 
-  return { added: missing.length, created };
+  return { added: missing.length, skipped };
 }
 
 /**
@@ -268,6 +277,7 @@ export async function discoverCity(input: {
 }): Promise<{ id: string; created: boolean } | null> {
   const name = input.name.trim();
   if (!PLACE_NAME.test(name) || NOT_A_TOWN.test(name)) return null;
+  if (NOT_A_CITY.has(name.toLowerCase())) return null;
 
   const distance = distanceKm(input.near, { latitude: input.latitude, longitude: input.longitude });
   if (distance === null || distance > (input.km ?? DEFAULT_RADIUS_KM)) return null;

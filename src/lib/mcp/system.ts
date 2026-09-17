@@ -1,7 +1,8 @@
 import { db } from "../db";
+import { touchOwner } from "../lastmod";
 import { analyzeSeo } from "../seo";
 import { SEO_FIELDS, AI_BOTS } from "../seo-settings";
-import { putSecret, SECRET_KEYS, secretStatus, type SecretKey } from "../secrets";
+import { putSecret, secretProblem, SECRET_KEYS, secretStatus, type SecretKey } from "../secrets";
 import { recordMove } from "../redirects";
 import { fullDate } from "../format";
 import { parseJson } from "../json";
@@ -186,6 +187,8 @@ export const SYSTEM_TOOLS: Tool[] = [
         throw new ToolError(`key must be one of ${Object.values(SECRET_KEYS).join(", ")}.`);
       }
       const value = String(args.value ?? "");
+      const problem = secretProblem(key, value);
+      if (problem) throw new ToolError(problem);
       await putSecret(key, value);
       await recordWrite(ctx, {
         action: "update",
@@ -232,12 +235,18 @@ export const SYSTEM_TOOLS: Tool[] = [
       const focusKeyword = optStr(args, "focusKeyword") ?? existing?.focusKeyword ?? undefined;
       const ogImage = optStr(args, "ogImage") ?? existing?.ogImage ?? undefined;
 
+      // Without a sample the checks used to score the meta description, so
+      // "at least 600 words" failed on every page including the long ones.
+      // The saved copy is what the page publishes, so that is what is counted.
+      const { savedContent, slugForScoring } = await import("../seo-content");
+      const content = optStr(args, "contentSample") ?? (await savedContent(entityType, entityId));
+
       const analysis = analyzeSeo({
         title,
         description,
         focusKeyword,
-        slug: entityId,
-        content: optStr(args, "contentSample") ?? description,
+        slug: await slugForScoring(entityType, entityId),
+        content: content || description,
         hasImage: Boolean(ogImage),
         internalLinks: 3,
       });
@@ -262,6 +271,9 @@ export const SYSTEM_TOOLS: Tool[] = [
         create: { entityType, entityId, ...payload },
         update: payload,
       });
+
+      // The SEO record is part of the page, so the page changed.
+      await touchOwner(entityType, entityId);
 
       await recordWrite(ctx, {
         action: existing ? "update" : "create",

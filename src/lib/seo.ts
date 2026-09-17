@@ -26,11 +26,14 @@ const FALLBACK_SITE_NAME = "TenBestFind";
  * the publisher while the generated Chicago one beside them carried it.
  * Writing a title is a decision about the words, not an opt-out of the brand.
  *
- * Never twice, and never past the point a result gets cut off. A title with no
- * room left keeps the words that say what the page is, which is the same trade
- * brandedTitle makes for the generated ones.
+ * The rule, in full: append " | TenBestFind" to a title somebody typed only
+ * when the title does not already name the site, and only when the whole thing
+ * still fits inside TITLE_LIMIT, which is 60 characters. A title with no room
+ * left keeps the words that say what the page is, which is the same trade
+ * brandedTitle makes for the generated ones. The separator and the site name
+ * both come from the global SEO settings rather than being written in here.
  */
-function withBrand(typed: string, siteName: string, sep: string): string {
+export function withBrand(typed: string, siteName: string, sep: string): string {
   if (typed.toLowerCase().includes(siteName.toLowerCase())) return typed;
   const suffix = ` ${sep} ${siteName}`;
   return typed.length + suffix.length <= TITLE_LIMIT ? typed + suffix : typed;
@@ -508,6 +511,41 @@ export type SeoCheck = {
   hint: string;
 };
 
+/**
+ * A keyword and a slug reduced to the same alphabet, so they can be compared.
+ *
+ * "Superior HVAC Service Inc." against superior-hvac-service-toronto-on used
+ * to fail, because the check lowercased the phrase, swapped spaces for hyphens
+ * and asked whether the slug contained the result. The full stop and the Inc
+ * were enough to miss, and the report said the keyword was absent from a URL
+ * built out of it.
+ *
+ * So both sides lose their punctuation and the words that never survive into a
+ * slug anyway. What is left is compared as a run of words, not as a substring,
+ * so "hvac service" does not match "hvac-services-of-america" by accident.
+ */
+const SLUG_NOISE = new Set(["and", "the", "of", "for", "a", "an", "inc", "llc", "ltd", "co", "corp"]);
+
+export function slugWords(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((word) => word && !SLUG_NOISE.has(word));
+}
+
+/** Whether every word of the keyword appears in the slug, in order. */
+export function keywordInSlug(keyword: string, slug: string): boolean {
+  const wanted = slugWords(keyword);
+  if (wanted.length === 0) return false;
+
+  const have = slugWords(slug);
+  for (let start = 0; start + wanted.length <= have.length; start += 1) {
+    if (wanted.every((word, offset) => have[start + offset] === word)) return true;
+  }
+  return false;
+}
+
 export function analyzeSeo(input: {
   title?: string | null;
   description?: string | null;
@@ -554,7 +592,7 @@ export function analyzeSeo(input: {
     push(
       "slug-keyword",
       "Focus keyword appears in the URL",
-      (input.slug ?? "").toLowerCase().includes(keyword.replace(/\s+/g, "-")),
+      keywordInSlug(keyword, input.slug ?? ""),
       true,
       "A slug carrying the phrase reads better in results and in links.",
     );

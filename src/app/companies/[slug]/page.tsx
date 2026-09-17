@@ -11,6 +11,8 @@ import { ProjectVideos } from "@/components/site/ProjectVideos";
 import { Pop, PopLink, PopText } from "@/components/site/PopNote";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
+import { businessEntity } from "@/lib/schema";
+import { businessSchemaInput } from "@/lib/schema-entities";
 import { fullDate, monthYear, priceRange } from "@/lib/format";
 import { parseJson, parseList, parseRows, type HoursRow } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -264,7 +266,11 @@ async function loadBusiness(slug: string) {
       photos: { orderBy: { sortOrder: "asc" } },
       videos: { orderBy: { sortOrder: "asc" } },
       reviews: { orderBy: { postedAt: "desc" }, take: 10 },
-      services: { include: { subservice: true } },
+      // The subservice carries its own category, because a company that works
+      // in two trades has jobs filed under both and the link has to go to the
+      // right one.
+      services: { include: { subservice: { include: { category: true } } } },
+      extraServices: { include: { category: true } },
       // The country comes along because a service area is linked only when its
       // page really exists, and that answer needs the country code.
       areas: { include: { city: { include: { region: { include: { country: true } } } } } },
@@ -707,6 +713,7 @@ export default async function BusinessProfilePage({ params }: Props) {
           about. Saying it this way keeps the two apart: a profile we wrote is
           not the company's own site, and nothing here should imply we run it. */}
       <JsonLd
+        label={routes.business(business.slug)}
         data={{
           "@context": "https://schema.org",
           "@type": "WebPage",
@@ -717,46 +724,15 @@ export default async function BusinessProfilePage({ params }: Props) {
           isPartOf: { "@id": absoluteUrl("/#website") },
           publisher: { "@id": absoluteUrl("/#publisher") },
           dateModified: business.updatedAt.toISOString(),
-          mainEntity: {
-            "@type": "LocalBusiness",
-            name: business.name,
-            url: business.website ?? absoluteUrl(routes.business(business.slug)),
-            image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
-            logo: business.logoUrl ?? undefined,
-            telephone: business.phone ?? undefined,
-            email: business.email ?? undefined,
-            address: city
-              ? {
-                  "@type": "PostalAddress",
-                  streetAddress: business.addressLine ?? undefined,
-                  addressLocality: city.name,
-                  addressRegion: region!.code.toUpperCase(),
-                  postalCode: business.postalCode ?? undefined,
-                  addressCountry: country!.code.toUpperCase(),
-                }
-              : undefined,
-            geo:
-              business.latitude !== null && business.longitude !== null
-                ? {
-                    "@type": "GeoCoordinates",
-                    latitude: business.latitude,
-                    longitude: business.longitude,
-                  }
-                : undefined,
-            // Where it works, which is not where it is. The canonical profile
-            // is the physical location; these are the places it serves from it.
-            areaServed:
-              areaCities.length > 0
-                ? areaCities.map((entry) => ({ "@type": "City", name: entry.name }))
-                : undefined,
-            aggregateRating: business.googleRating
-              ? {
-                  "@type": "AggregateRating",
-                  ratingValue: business.googleRating,
-                  reviewCount: business.googleReviewCount ?? undefined,
-                }
-              : undefined,
-          },
+          mainEntity: businessEntity(
+            businessSchemaInput(business, {
+              cityName: city?.name,
+              regionCode: region?.code,
+              countryCode: country?.code,
+              image: business.photos[0]?.url ?? business.logoUrl,
+              areaServed: areaCities.map((entry) => entry.name),
+            }),
+          ),
         }}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
@@ -2583,6 +2559,25 @@ export default async function BusinessProfilePage({ params }: Props) {
                   <h2 id="svc-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
                     Services Offered
                   </h2>
+
+                  {/* The trades this company works in, when it works in more
+                      than one. The first is the one that owns this address. */}
+                  {business.extraServices.length > 0 ? (
+                    <p style={{ margin: "-8px 0 18px", fontSize: "15px", color: "var(--ink-600)" }}>
+                      Works in{" "}
+                      {[business.category, ...business.extraServices.map((row) => row.category)].map(
+                        (trade, index, all) => (
+                          <span key={trade.id}>
+                            <Link href={routes.category(trade.slug)} style={{ color: "var(--blue-900)", fontWeight: 600 }}>
+                              {trade.serviceName}
+                            </Link>
+                            {index < all.length - 2 ? ", " : index === all.length - 2 ? " and " : ""}
+                          </span>
+                        ),
+                      )}
+                      .
+                    </p>
+                  ) : null}
                   <ul
                     style={{
                       display: "grid",
@@ -2594,7 +2589,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <li key={row.subserviceId}>
                         <Link
                           data-row=""
-                          href={routes.subservice(business.category.slug, row.subservice.slug)}
+                          href={routes.subservice(row.subservice.category.slug, row.subservice.slug)}
                           style={{
                             display: "flex",
                             alignItems: "center",
