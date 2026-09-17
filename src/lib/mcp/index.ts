@@ -422,9 +422,34 @@ export function describe(tool: Tool) {
   };
 }
 
+/**
+ * Rejects an argument the tool was never told about.
+ *
+ * Every schema here already says additionalProperties: false, but that is a
+ * description of the tool, not a gate in front of it: nothing on the wire has
+ * to honour it, and nothing did. An agent sending employeeCount to a tool
+ * whose schema lacked it watched the call succeed and the value vanish, which
+ * is the worst of both, because a silent success is not something you go
+ * looking for. So the server checks, and says which names it did not know.
+ */
+function rejectUnknown(tool: Tool, args: Record<string, unknown>): void {
+  const declared = (tool.schema as { properties?: Record<string, unknown> }).properties;
+  if (!declared) return;
+
+  const unknown = Object.keys(args).filter((key) => !(key in declared));
+  if (unknown.length === 0) return;
+
+  const known = Object.keys(declared).sort().join(", ");
+  throw new ToolError(
+    `${tool.name} does not take ${unknown.join(", ")}. It takes: ${known}.`,
+  );
+}
+
 export async function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext) {
   const tool = BY_NAME.get(name);
   if (!tool) throw new ToolError(`There is no tool named ${name}.`);
+
+  rejectUnknown(tool, args);
 
   if (!canRun(tool, ctx.scope, ctx.user.role)) {
     throw new ToolError(
