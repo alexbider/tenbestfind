@@ -12,6 +12,8 @@
 // a page usually carries several: the one that matters is the company's own,
 // not the theme author's or the privacy contact for a cookie banner.
 
+import { checkEmail } from "./email-quality";
+
 export type EmailFind = { email: string; score: number };
 
 /** Local parts nobody wants a quote request going to. */
@@ -95,8 +97,14 @@ function rebuild(local: string, domain: string): string {
   return `${local.trim()}@${cleanDomain}`.toLowerCase();
 }
 
-/** True when the address is a real one somebody reads. */
-export function plausibleEmail(email: string): boolean {
+/**
+ * True when the address is a real one somebody reads.
+ *
+ * `siteDomain` is the company's own host when the caller knows it, which is
+ * what lets find@findpros.com through while still refusing the find@times.
+ * fortunately that came from a sentence with a full stop in it.
+ */
+export function plausibleEmail(email: string, siteDomain?: string | null): boolean {
   const [local, domain] = email.split("@");
   if (!local || !domain) return false;
   if (email.length > 120) return false;
@@ -104,7 +112,8 @@ export function plausibleEmail(email: string): boolean {
   if (JUNK_LOCAL.test(local)) return false;
   if (JUNK_DOMAIN.test(domain)) return false;
   // A real domain ends in a two letter or longer alphabetic suffix.
-  return /^[a-z0-9.-]+\.[a-z]{2,24}$/.test(domain);
+  if (!/^[a-z0-9.-]+\.[a-z]{2,24}$/.test(domain)) return false;
+  return checkEmail(email, siteDomain).ok;
 }
 
 /**
@@ -143,7 +152,7 @@ export function collectEmails(html: string, host: string | null, path: string): 
   const found = new Map<string, number>();
   const offer = (raw: string) => {
     const email = raw.trim().toLowerCase().replace(/^mailto:/, "").split("?")[0]!;
-    if (!plausibleEmail(email)) return;
+    if (!plausibleEmail(email, host)) return;
     const score = scoreOf(email, host, path);
     if ((found.get(email) ?? -1) < score) found.set(email, score);
   };

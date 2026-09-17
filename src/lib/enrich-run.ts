@@ -2,6 +2,8 @@ import { db } from "./db";
 import { crawlSite, type SiteData } from "./site-crawl";
 import { extractAsk, extractFromSite, extractionSchema, type Extraction } from "./site-extract";
 import { fillServiceAreas, recordNamedAreas } from "./geo";
+import { isPublishablePhoto } from "./photo-quality";
+import { verifyEmail } from "./email-quality";
 import { channelIdFor, latestChannelVideos, videoMeta } from "./youtube";
 import { normalizeName } from "./enrich";
 import {
@@ -385,7 +387,7 @@ export async function enrichBusiness(
       videos: { select: { videoId: true } },
       photos: { select: { url: true } },
       staff: { select: { name: true } },
-      credentials: { select: { identifier: true, label: true } },
+      credentials: { select: { identifier: true, label: true, authority: true } },
       services: { select: { subserviceId: true } },
     },
   });
@@ -436,7 +438,22 @@ export async function enrichBusiness(
   // The crawler's best address first: it is scored against the site's own
   // domain and includes anything the structured data declares outright. The
   // model is the fallback for one written in a way no pattern catches.
-  const foundEmail = site.emails[0] ?? extraction?.email ?? null;
+  // Nothing is saved until the domain answers. The crawler will happily read
+  // "...fixtures once. This..." as fixtures@once.this, and a domain that does
+  // not resolve is the one check that settles it.
+  const emailCandidates = [...site.emails, extraction?.email ?? null].filter(
+    (value): value is string => Boolean(value),
+  );
+  let foundEmail: string | null = null;
+  if (!business.email) {
+    for (const candidate of emailCandidates) {
+      const verdict = await verifyEmail(candidate, site.host).catch(() => null);
+      if (verdict?.ok) {
+        foundEmail = verdict.email;
+        break;
+      }
+    }
+  }
   fill("email", foundEmail, business.email);
   if (foundEmail && !business.email && !business.emailSource) data.emailSource = "website";
   fill("addressLine", extraction?.addressLine ?? null, business.addressLine);
@@ -488,9 +505,14 @@ export async function enrichBusiness(
   }
 
   // ----------------------------------------------------------------- photos
+  // Photos are only ever added, never swapped for something newer: a picture an
+  // editor chose outranks anything a crawler finds. The quality rules run again
+  // here so a promotion or a review badge cannot arrive by another route.
   const have = new Set(business.photos.map((photo) => photo.url));
   const room = Math.max(0, 10 - business.photos.length);
-  const newPhotos = site.images.filter((image) => !have.has(image.url)).slice(0, room);
+  const newPhotos = site.images
+    .filter((image) => !have.has(image.url) && isPublishablePhoto(image))
+    .slice(0, room);
   if (newPhotos.length > 0) {
     await db.businessPhoto.createMany({
       data: newPhotos.map((image, index) => ({
@@ -530,8 +552,16 @@ export async function enrichBusiness(
   // ------------------------------------------------------------ credentials
   // Licence numbers and named certifications, both recorded as reported rather
   // than verified: the site printing it is a claim, not a register check.
+  // Two credentials are the same credential when the same authority issued the
+  // same number, whatever either of them is called. A licence with no authority
+  // recorded still dedupes on the number alone, which is the case enrichment
+  // produces, and a certification with no number dedupes on its name.
+  const credentialKey = (authority: string | null, identifier: string | null) =>
+    `${normalizeName(authority ?? "")}|${(identifier ?? "").toUpperCase()}`;
   const heldIds = new Set(
-    business.credentials.map((row) => (row.identifier ?? "").toUpperCase()).filter(Boolean),
+    business.credentials
+      .filter((row) => row.identifier)
+      .map((row) => credentialKey(row.authority, row.identifier)),
   );
   const heldLabels = new Set(business.credentials.map((row) => normalizeName(row.label)));
 
@@ -552,8 +582,9 @@ export async function enrichBusiness(
   ];
 
   for (const identifier of licenceNumbers) {
-    if (heldIds.has(identifier.toUpperCase())) continue;
-    heldIds.add(identifier.toUpperCase());
+    const key = credentialKey(null, identifier);
+    if (heldIds.has(key)) continue;
+    heldIds.add(key);
     newCredentials.push({
       businessId,
       label: `${business.category.serviceName} licence`,
