@@ -24,6 +24,35 @@
 // a page that says noindex is worse than not being offered it. The reverse
 // holds too: a page that is indexable is offered, which is why the experts
 // index is listed whether or not anybody is published under it.
+//
+// Spelled out, child by child, because "why is my city not in the sitemap" is
+// the question this file gets asked:
+//
+//   companies    status PUBLISHED. Draft, pending, suspended, rejected and
+//                archived profiles are out, and so is anything an editor has
+//                marked noindex or given a canonical pointing elsewhere.
+//   rankings     status PUBLISHED, with at least one published company on the
+//                list. A published list of nothing is an empty page.
+//   cities       published, in a published region and country, and carrying at
+//                least one published ranking. This is the rule behind "15 of
+//                41 cities": the other 26 have no ranking yet. The moment one
+//                is published the city appears, and its lastmod is that
+//                ranking's date rather than whenever the city row was written.
+//   services     published, and carrying at least one published ranking, on
+//                the same reasoning.
+//   subservices  the parent trade published and carrying a ranking, and enough
+//                companies actually offering the job, which is the same bar
+//                the page itself applies before it agrees to be indexed.
+//   countries,
+//   regions      published, and carrying a published ranking somewhere beneath.
+//   guides,
+//   people       published.
+//   pages        the fixed pages, which are always worth offering.
+//
+// Every one of those can be overridden per record: seo.noindexEmptyArchives
+// turns the "carrying a ranking" rules off, an entity marked noindex is never
+// offered, and a canonical pointing somewhere else takes the page out, because
+// offering a URL that names another URL as the real one wastes the crawl.
 
 import { db } from "./db";
 import { getGuideHubs, guidesForHub } from "./guide-hubs";
@@ -100,12 +129,21 @@ async function gate() {
     );
 
   // A page an editor has set to noindex is not offered, whatever else is true
-  // of it. Loaded once rather than joined per row: there are never many.
-  const noindex = await db.seoMeta.findMany({
-    where: { robotsIndex: false },
-    select: { entityType: true, entityId: true },
+  // of it, and neither is one whose canonical names a different URL: offering a
+  // page that says the real one is elsewhere spends a crawl to be told so.
+  // Loaded once rather than joined per row: there are never many.
+  const overridden = await db.seoMeta.findMany({
+    where: { OR: [{ robotsIndex: false }, { canonical: { not: null } }] },
+    select: { entityType: true, entityId: true, robotsIndex: true, canonical: true },
   });
-  const blocked = new Set(noindex.map((row) => `${row.entityType}:${row.entityId}`));
+  const blocked = new Set(
+    overridden.filter((row) => !row.robotsIndex).map((row) => `${row.entityType}:${row.entityId}`),
+  );
+  const canonicals = new Map(
+    overridden
+      .filter((row) => row.canonical?.trim())
+      .map((row) => [`${row.entityType}:${row.entityId}`, row.canonical!.trim()]),
+  );
 
   return {
     on,
@@ -113,7 +151,13 @@ async function gate() {
     // An operator who has turned this off wants the empty hubs indexed, and
     // the sitemap should agree with the pages rather than argue with them.
     hideEmpty: settings.bool("seo.noindexEmptyArchives"),
-    keep: (path: string, key?: string) => !isExcluded(path) && !(key && blocked.has(key)),
+    keep: (path: string, key?: string) => {
+      if (isExcluded(path)) return false;
+      if (!key) return true;
+      if (blocked.has(key)) return false;
+      const canonical = canonicals.get(key);
+      return !canonical || canonical === absoluteUrl(path);
+    },
   };
 }
 
@@ -124,6 +168,9 @@ async function rankingCounts() {
     select: {
       categoryId: true,
       cityId: true,
+      updatedAt: true,
+      publishedAt: true,
+      lastReviewedAt: true,
       city: { select: { regionId: true, region: { select: { countryId: true } } } },
     },
   });
@@ -136,13 +183,42 @@ async function rankingCounts() {
     if (key) map.set(key, (map.get(key) ?? 0) + 1);
   };
 
+  // A hub changes when something is published under it, not when somebody last
+  // edited its own blurb. Without this, a city that got its first ranking this
+  // morning still offered a lastmod from whenever the row was created, which is
+  // the one field in the file a crawler acts on.
+  const freshCity = new Map<string, Date>();
+  const freshRegion = new Map<string, Date>();
+  const freshCountry = new Map<string, Date>();
+  const freshCategory = new Map<string, Date>();
+  const mark = (map: Map<string, Date>, key: string | null | undefined, at: Date | undefined) => {
+    if (!key || !at) return;
+    const held = map.get(key);
+    if (!held || at.getTime() > held.getTime()) map.set(key, at);
+  };
+
   for (const ranking of rankings) {
     bump(byCategory, ranking.categoryId);
     bump(byCity, ranking.cityId);
     bump(byRegion, ranking.city?.regionId);
     bump(byCountry, ranking.city?.region.countryId);
+
+    const at = newest(ranking.updatedAt, ranking.publishedAt, ranking.lastReviewedAt);
+    mark(freshCategory, ranking.categoryId, at);
+    mark(freshCity, ranking.cityId, at);
+    mark(freshRegion, ranking.city?.regionId, at);
+    mark(freshCountry, ranking.city?.region.countryId, at);
   }
-  return { byCity, byRegion, byCountry, byCategory };
+  return {
+    byCity,
+    byRegion,
+    byCountry,
+    byCategory,
+    freshCity,
+    freshRegion,
+    freshCountry,
+    freshCategory,
+  };
 }
 
 /**
@@ -219,14 +295,23 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
     const rows = await db.business.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { createdAt: "asc" },
-      select: { id: true, slug: true, updatedAt: true, logoUrl: true },
+      select: {
+        id: true,
+        slug: true,
+        updatedAt: true,
+        logoUrl: true,
+        // The pictures of the company's work, which are the only images on the
+        // page worth offering. Capped so one company with a large gallery
+        // cannot dominate the file.
+        photos: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 6 },
+      },
     });
     return rows
       .filter((row) => g.keep(routes.business(row.slug), `business:${row.id}`))
       .map((row) => ({
         path: routes.business(row.slug),
         lastModified: row.updatedAt,
-        images: [row.logoUrl],
+        images: [row.logoUrl, ...row.photos.map((photo) => photo.url)],
       }));
   }
 
@@ -248,7 +333,7 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
         )
         .map((category) => ({
           path: routes.category(category.slug),
-          lastModified: category.updatedAt,
+          lastModified: newest(category.updatedAt, counts.freshCategory.get(category.id)),
         }));
     }
 
@@ -290,7 +375,7 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
         )
         .map((country) => ({
           path: routes.country(country.code),
-          lastModified: country.updatedAt,
+          lastModified: newest(country.updatedAt, counts.freshCountry.get(country.id)),
           images: [country.heroImage],
         }));
     }
@@ -309,7 +394,7 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
         )
         .map((region) => ({
           path: routes.region(region.country.code, region.slug),
-          lastModified: region.updatedAt,
+          lastModified: newest(region.updatedAt, counts.freshRegion.get(region.id)),
           images: [region.heroImage],
         }));
     }
@@ -330,7 +415,7 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
         )
         .map((city) => ({
           path: routes.city(city.region.country.code, city.region.slug, city.slug),
-          lastModified: city.updatedAt,
+          lastModified: newest(city.updatedAt, counts.freshCity.get(city.id)),
           images: [city.heroImage],
         }));
     }
