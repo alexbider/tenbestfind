@@ -5,6 +5,8 @@ import { advanceEnrichment } from "../src/lib/enrich-run";
 import { ACTIVE_JOB_STATUSES, advanceGuideJob, publishDueGuides } from "../src/lib/guide-jobs";
 import { flushIndexQueue, refreshIndexingCheck } from "../src/lib/google-indexing";
 import { flushIndexNowQueue } from "../src/lib/indexnow";
+import { rescoreSeo } from "../src/lib/seo-rescore";
+import { checkEmail } from "../src/lib/email-quality";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
 // The batch runner. It lives in its own container rather than inside a request
@@ -212,6 +214,68 @@ async function tickIndexQueue(): Promise<void> {
   }
 }
 
+/**
+ * The housekeeping that used to need somebody with a terminal.
+ *
+ * There is no shell on the box this runs on: it is deployed through an API, so
+ * a maintenance script that has to be typed at a prompt is a script that never
+ * runs. Both of these are safe to repeat, cheap when there is nothing to do,
+ * and wrong to leave until somebody remembers.
+ */
+let nextHousekeeping = Date.now() + 120_000;
+
+async function tickHousekeeping(): Promise<void> {
+  if (Date.now() < nextHousekeeping) return;
+  nextHousekeeping = Date.now() + 86_400_000;
+
+  // Stored SEO scores answer whatever the scorer asked on the day they were
+  // written, and seo_report reads the stored number rather than recomputing.
+  try {
+    const result = await rescoreSeo({ write: true });
+    if (result.moved > 0) {
+      console.log(`[seo] rescored ${result.scored}, ${result.moved} moved (${result.up} up, ${result.down} down)`);
+    }
+  } catch (error) {
+    console.error("[seo] rescore:", error instanceof Error ? error.message : error);
+  }
+
+  // Addresses the old enrichment kept that were never addresses. New ones
+  // cannot get in any more, so this is here for what is already on file.
+  try {
+    const cleared = await clearBadEmails();
+    if (cleared > 0) console.log(`[emails] cleared ${cleared} that were never addresses`);
+  } catch (error) {
+    console.error("[emails] sweep:", error instanceof Error ? error.message : error);
+  }
+}
+
+/** Clears an email that cannot be published, leaving the agency ones for a person. */
+async function clearBadEmails(): Promise<number> {
+  const rows = await db.business.findMany({
+    where: { email: { not: null } },
+    select: { id: true, email: true, website: true },
+  });
+
+  let cleared = 0;
+  for (const row of rows) {
+    if (!row.email?.trim()) continue;
+    let host: string | null = null;
+    try {
+      host = new URL(row.website?.startsWith("http") ? row.website : `https://${row.website}`).hostname;
+    } catch {
+      host = null;
+    }
+
+    const verdict = checkEmail(row.email, host);
+    // An agency domain is a judgement call rather than a fact, so it stays.
+    if (verdict.ok || ("review" in verdict && verdict.review)) continue;
+
+    await db.business.update({ where: { id: row.id }, data: { email: null, emailSource: null } });
+    cleared += 1;
+  }
+  return cleared;
+}
+
 async function tick(): Promise<boolean> {
   const batch = await db.importBatch.findFirst({
     where: { status: { in: ACTIVE } },
@@ -240,6 +304,7 @@ async function main(): Promise<void> {
   console.log("==> import worker ready");
   while (!stopping) {
     await tickIndexQueue();
+    await tickHousekeeping();
     await tickWeeklyPlan();
     await tickScheduledPublishes();
     const busy =

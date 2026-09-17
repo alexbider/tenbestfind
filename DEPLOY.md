@@ -53,23 +53,27 @@ a question or an import item, fails the test and is left alone.
 
 ## 4. Addresses that were never addresses
 
+Nothing to run: the worker now does this daily, clearing anything that fails the
+checks and leaving the agency domains for a person, because a real plumber can
+be called seoplumbing.com.
+
+The script is still there for a machine with a shell, and it can also do the DNS
+pass, which the worker does not:
+
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/cleanup-emails.ts
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/cleanup-emails.ts --apply --dns
 
-Without `--dns` it applies only the checks that need no network. With it, each
-surviving address's domain is looked up as well, which is what catches a domain
-that parses but does not exist. Agency domains are reported rather than cleared,
-because a real plumber can be called seoplumbing.com; those are a decision for a
-person.
-
 ## 5. Rescore the SEO records
+
+Nothing to run. The worker rescores every record once a day, starting two
+minutes after it comes up, and sweeps any email that cannot be published at the
+same time. Both are idempotent and cheap when there is nothing to do.
+
+The script is still there for running it now rather than waiting, on a machine
+that has a shell:
 
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/rescore-seo.ts
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/rescore-seo.ts --write
-
-The keyword-in-URL check and the word count both changed, so every stored score
-is out of date. The report prints how many moved and by how much, per entity
-type, before anything is written.
 
 ## 6. Check what the pages will publish
 
