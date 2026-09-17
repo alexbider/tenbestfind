@@ -4,7 +4,8 @@ import { advanceRefresh } from "../src/lib/reviews";
 import { advanceEnrichment } from "../src/lib/enrich-run";
 import { ACTIVE_JOB_STATUSES, advanceGuideJob, publishDueGuides } from "../src/lib/guide-jobs";
 import { flushIndexQueue, refreshIndexingCheck } from "../src/lib/google-indexing";
-import { flushIndexNowQueue } from "../src/lib/indexnow";
+import { flushIndexNowQueue, queueForIndexNow } from "../src/lib/indexnow";
+import { sitemapChild, sitemapIndex } from "../src/lib/sitemap";
 import { rescoreSeo } from "../src/lib/seo-rescore";
 import { checkEmail } from "../src/lib/email-quality";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
@@ -247,6 +248,39 @@ async function tickHousekeeping(): Promise<void> {
   } catch (error) {
     console.error("[emails] sweep:", error instanceof Error ? error.message : error);
   }
+
+  try {
+    const queued = await firstIndexNowSubmission();
+    if (queued > 0) console.log(`[indexnow] first submission: ${queued} urls queued`);
+  } catch (error) {
+    console.error("[indexnow] first submission:", error instanceof Error ? error.message : error);
+  }
+}
+
+/**
+ * The one full submission a site gets when it starts telling engines anything.
+ *
+ * Every page published from here on is announced as it is written, but the ones
+ * that were already there predate that and would otherwise wait to be found.
+ * Reading from the sitemap rather than from the tables means this can only
+ * offer a URL the site is already willing to have indexed. It runs once: the
+ * first submission leaves rows behind, and the count is the flag.
+ */
+async function firstIndexNowSubmission(): Promise<number> {
+  const already = await db.indexRequest.count({ where: { target: "INDEXNOW" } });
+  if (already > 0) return 0;
+
+  const index = await sitemapIndex();
+  if (index.length === 0) return 0;
+
+  const paths: string[] = [];
+  for (const child of index) {
+    const name = child.path.replace("/sitemaps/", "").replace(".xml", "");
+    const entries = (await sitemapChild(name)) ?? [];
+    for (const entry of entries) paths.push(entry.path);
+  }
+
+  return queueForIndexNow(paths);
 }
 
 /** Clears an email that cannot be published, leaving the agency ones for a person. */

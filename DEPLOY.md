@@ -97,16 +97,20 @@ of that ranking rather than the date the city row was written.
 
 ## 8. Tell the engines, once
 
-    npx tsx -r ./scripts/_server-only-stub.cjs scripts/indexnow.ts
+Nothing to run. The worker makes the one full submission itself the first time
+it comes up with an empty IndexNow queue: everything the sitemap offers, read
+from the sitemap so it can only ever submit a URL the site is already willing to
+have indexed. It happens once, because the first submission leaves rows behind
+and the count is what stops it happening again. Every page published after that
+is announced as it is written.
+
+It only does anything while `seo.searchEngineVisible` and `seo.indexnow` are
+both on in Admin, SEO.
+
+The script is still there for a machine with a shell, and can resubmit
+everything on demand:
+
     npx tsx -r ./scripts/_server-only-stub.cjs scripts/indexnow.ts --yes --all
-
-`--all` ignores the watermark and submits everything the sitemap offers, which
-is what a first full submission wants. Leave `--all` off afterwards: later runs
-then send only what changed since the last successful submission.
-
-This only does anything while `seo.searchEngineVisible` and `seo.indexnow` are
-both on in Admin, SEO. They are off on production today, so turn them on first
-or expect the script to tell you it skipped.
 
 The Google Indexing API is separate and is not run by hand: the import worker
 flushes its queue on every pass, inside a 200 URL daily quota. If the queue has
