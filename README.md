@@ -66,3 +66,17 @@ Google key does not stop any of them.
 **IndexNow** needs no credential at all. A key is generated on first use, hosted
 at `/indexnow/<key>.txt`, and submissions go to `api.indexnow.org` only while
 `seo.searchEngineVisible` is on.
+
+# Connector rate limits
+
+The MCP endpoint counts calls per access token, in memory, in two windows: 3,000
+an hour and 300 a minute. A call over either limit is refused with HTTP 429, a
+`Retry-After` header in seconds, and a JSON-RPC error saying which limit was hit
+and that nothing was lost. The refusal is a protocol error rather than a tool
+result, because the call did not run and a model reading it as a result would
+take it as an answer about the data.
+
+A batch body counts as many calls as it carries. An agent working through one
+city makes roughly 150 calls, so the hourly ceiling is about twenty cities an
+hour, and the per-minute window is what catches a loop in seconds rather than
+after an hour of writes. Both are in `src/lib/mcp/limits.ts`.

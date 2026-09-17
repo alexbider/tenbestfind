@@ -1,5 +1,6 @@
 import { challengeHeader, verifyBearer, type Bearer } from "@/lib/oauth";
 import { describe, runTool, TOOL_SURFACE_VERSION, ToolError, visibleTools } from "@/lib/mcp";
+import { countCall } from "@/lib/mcp/limits";
 
 // The MCP endpoint, spoken over streamable HTTP.
 //
@@ -107,6 +108,19 @@ async function dispatch(message: Rpc, ctx: Bearer): Promise<unknown | null> {
     case "tools/call": {
       const name = String(params.name ?? "");
       const args = (params.arguments ?? {}) as Record<string, unknown>;
+
+      // Counted per call rather than per request, so ten calls in one batch
+      // body are ten calls. A refusal is a protocol error rather than a tool
+      // result: the call did not run, and a model reading it as a tool result
+      // would take it as an answer about the data.
+      const allowance = countCall(ctx.tokenId);
+      if (!allowance.ok) {
+        return {
+          ...failure(id, -32029, allowance.message, { retryAfter: allowance.retryAfter }),
+          retryAfter: allowance.retryAfter,
+        };
+      }
+
       try {
         const value = await runTool(name, args, ctx);
         return result(id, {
@@ -162,20 +176,37 @@ export async function POST(request: Request) {
   }
 
   const responses = [];
+  // The longest wait any refused call asked for, which is what the header has
+  // to carry when a batch is partly refused.
+  let retryAfter = 0;
+
   for (const message of messages) {
     if (!message || message.jsonrpc !== "2.0") {
       responses.push(failure(message?.id ?? null, -32600, "Each message must be JSON-RPC 2.0."));
       continue;
     }
     const answer = await dispatch(message, ctx);
-    if (answer !== null) responses.push(answer);
+    if (answer === null) continue;
+
+    const wait = (answer as { retryAfter?: number }).retryAfter;
+    if (typeof wait === "number") {
+      retryAfter = Math.max(retryAfter, wait);
+      delete (answer as { retryAfter?: number }).retryAfter;
+    }
+    responses.push(answer);
   }
 
   // Everything in was a notification, so there is nothing to send back.
   if (responses.length === 0) return new Response(null, { status: 202, headers: CORS });
 
   return Response.json(batch ? responses : responses[0], {
-    headers: { ...CORS, "mcp-protocol-version": LATEST, "cache-control": "no-store" },
+    status: retryAfter > 0 ? 429 : 200,
+    headers: {
+      ...CORS,
+      "mcp-protocol-version": LATEST,
+      "cache-control": "no-store",
+      ...(retryAfter > 0 ? { "retry-after": String(retryAfter) } : {}),
+    },
   });
 }
 
