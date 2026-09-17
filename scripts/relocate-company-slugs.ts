@@ -5,16 +5,20 @@
 // Run once. It is idempotent: a profile already at its canonical slug is left
 // alone, and re-running it changes nothing.
 //
-// No redirects are written. The site is early enough that these URLs are not
-// meaningfully indexed, and a redirect table full of rows nothing ever requests
-// is worse than none: it hides the ones that matter. Any rename after this one
-// records a redirect automatically, which is what that machinery is for.
+// Every move records a 301. The first version of this script wrote none, on
+// the reasoning that the URLs were too new to be indexed and a redirect table
+// full of rows nothing requests hides the ones that matter. That held once and
+// then stopped holding: re-running it after a company was renamed moved five
+// live profiles and left five 404s behind, because the slug is built from the
+// name and the name had changed. A move is a move, so it leaves a redirect.
 //
 //   npx tsx scripts/relocate-company-slugs.ts          # says what it would do
 //   npx tsx scripts/relocate-company-slugs.ts --write   # does it
 
 import { db } from "../src/lib/db";
 import { uniqueCompanySlug } from "../src/lib/company-slug";
+import { recordMove } from "../src/lib/redirects";
+import { routes } from "../src/lib/urls";
 
 async function main(): Promise<void> {
   const write = process.argv.includes("--write");
@@ -60,7 +64,11 @@ async function main(): Promise<void> {
     }
 
     console.log(`  ${business.slug}  ->  ${slug}`);
-    if (write) await db.business.update({ where: { id: business.id }, data: { slug } });
+    if (write) {
+      const from = routes.business(business.slug);
+      await db.business.update({ where: { id: business.id }, data: { slug } });
+      await recordMove(from, routes.business(slug));
+    }
     moved += 1;
   }
 

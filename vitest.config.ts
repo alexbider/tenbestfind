@@ -10,6 +10,12 @@ export default defineConfig({
     fileParallelism: false,
   },
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // The server modules guard themselves with `server-only`, which throws
+      // outside a server component. Under test there is no client to protect,
+      // so it resolves to nothing. Same trick as scripts/_server-only-stub.cjs.
+      "server-only": fileURLToPath(new URL("./tests/server-only-stub.ts", import.meta.url)),
+    },
   },
 });
