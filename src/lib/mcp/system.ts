@@ -232,12 +232,18 @@ export const SYSTEM_TOOLS: Tool[] = [
       const focusKeyword = optStr(args, "focusKeyword") ?? existing?.focusKeyword ?? undefined;
       const ogImage = optStr(args, "ogImage") ?? existing?.ogImage ?? undefined;
 
+      // Without a sample the checks used to score the meta description, so
+      // "at least 600 words" failed on every page including the long ones.
+      // The saved copy is what the page publishes, so that is what is counted.
+      const { savedContent, slugForScoring } = await import("../seo-content");
+      const content = optStr(args, "contentSample") ?? (await savedContent(entityType, entityId));
+
       const analysis = analyzeSeo({
         title,
         description,
         focusKeyword,
-        slug: entityId,
-        content: optStr(args, "contentSample") ?? description,
+        slug: await slugForScoring(entityType, entityId),
+        content: content || description,
         hasImage: Boolean(ogImage),
         internalLinks: 3,
       });

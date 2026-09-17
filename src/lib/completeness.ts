@@ -24,7 +24,7 @@ export type Gap = {
 export const GAPS: Gap[] = [
   { key: "description", label: "Description", points: 12, fromWebsite: true },
   { key: "overview", label: "Quick overview", points: 8, fromWebsite: false },
-  { key: "photos", label: "Photos", points: 12, fromWebsite: true },
+  { key: "photos", label: "Photos", points: 10, fromWebsite: true },
   { key: "logo", label: "Logo", points: 8, fromWebsite: true },
   { key: "services", label: "Services offered", points: 8, fromWebsite: true },
   { key: "credentials", label: "Credentials", points: 8, fromWebsite: true },
@@ -37,6 +37,7 @@ export const GAPS: Gap[] = [
   { key: "reviews", label: "Google reviews", points: 4, fromWebsite: false },
   { key: "staff", label: "The team", points: 4, fromWebsite: true },
   { key: "faqs", label: "Questions", points: 4, fromWebsite: false },
+  { key: "morePhotos", label: "Fewer than three photos", points: 2, fromWebsite: true },
   { key: "videos", label: "Videos", points: 2, fromWebsite: true },
   { key: "social", label: "Social profiles", points: 2, fromWebsite: true },
   { key: "yearFounded", label: "Year founded", points: 2, fromWebsite: true },
@@ -106,9 +107,11 @@ export function gapsFor(business: Scorable): string[] {
     // characters reads as a stub on the page, so it counts as missing.
     description: (business.description ?? "").trim().length >= 200,
     overview: filled(business.overview),
-    // One photo is not a gallery, and a profile with a single stock image looks
-    // worse than one with none.
-    photos: business._count.photos >= 3,
+    // Having photos and having enough of them are different questions, and
+    // running them together reported a profile with two good pictures as
+    // having none, which sent enrichment back for images it already had.
+    photos: business._count.photos >= 1,
+    morePhotos: business._count.photos >= 3,
     logo: filled(business.logoUrl),
     services: business._count.services > 0,
     credentials: business._count.credentials > 0,
@@ -171,6 +174,11 @@ export function whereMissing(key: string): Record<string, unknown> | null {
     case "overview":
       return { OR: [{ overview: null }, { overview: "" }] };
     case "photos":
+      return { photos: { none: {} } };
+    case "morePhotos":
+      // Prisma cannot count a relation in a where clause, so this is the
+      // nearest honest filter: anything with no photos at all certainly has
+      // fewer than three. The gap list itself is exact.
       return { photos: { none: {} } };
     case "logo":
       return { OR: [{ logoUrl: null }, { logoUrl: "" }] };

@@ -508,6 +508,41 @@ export type SeoCheck = {
   hint: string;
 };
 
+/**
+ * A keyword and a slug reduced to the same alphabet, so they can be compared.
+ *
+ * "Superior HVAC Service Inc." against superior-hvac-service-toronto-on used
+ * to fail, because the check lowercased the phrase, swapped spaces for hyphens
+ * and asked whether the slug contained the result. The full stop and the Inc
+ * were enough to miss, and the report said the keyword was absent from a URL
+ * built out of it.
+ *
+ * So both sides lose their punctuation and the words that never survive into a
+ * slug anyway. What is left is compared as a run of words, not as a substring,
+ * so "hvac service" does not match "hvac-services-of-america" by accident.
+ */
+const SLUG_NOISE = new Set(["and", "the", "of", "for", "a", "an", "inc", "llc", "ltd", "co", "corp"]);
+
+export function slugWords(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((word) => word && !SLUG_NOISE.has(word));
+}
+
+/** Whether every word of the keyword appears in the slug, in order. */
+export function keywordInSlug(keyword: string, slug: string): boolean {
+  const wanted = slugWords(keyword);
+  if (wanted.length === 0) return false;
+
+  const have = slugWords(slug);
+  for (let start = 0; start + wanted.length <= have.length; start += 1) {
+    if (wanted.every((word, offset) => have[start + offset] === word)) return true;
+  }
+  return false;
+}
+
 export function analyzeSeo(input: {
   title?: string | null;
   description?: string | null;
@@ -554,7 +589,7 @@ export function analyzeSeo(input: {
     push(
       "slug-keyword",
       "Focus keyword appears in the URL",
-      (input.slug ?? "").toLowerCase().includes(keyword.replace(/\s+/g, "-")),
+      keywordInSlug(keyword, input.slug ?? ""),
       true,
       "A slug carrying the phrase reads better in results and in links.",
     );
