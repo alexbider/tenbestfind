@@ -504,6 +504,12 @@ export const DIRECTORY_TOOLS: Tool[] = [
     }),
     handler: async (args, ctx) => {
       const { queueRefresh } = await import("../reviews");
+      const { credentialAdvice, missingSecrets, SECRET_KEYS } = await import("../secrets");
+
+      // The refresh runs through Apify. Queueing it without a token buys a row
+      // in the worker log and nothing else.
+      const missing = await missingSecrets([SECRET_KEYS.apify]);
+      if (missing.length > 0) throw new ToolError(credentialAdvice(missing));
 
       let ids: string[];
       let what: string;

@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { analyzeSeo } from "../seo";
 import { SEO_FIELDS, AI_BOTS } from "../seo-settings";
-import { putSecret, SECRET_KEYS, secretStatus, type SecretKey } from "../secrets";
+import { putSecret, secretProblem, SECRET_KEYS, secretStatus, type SecretKey } from "../secrets";
 import { recordMove } from "../redirects";
 import { fullDate } from "../format";
 import { parseJson } from "../json";
@@ -186,6 +186,8 @@ export const SYSTEM_TOOLS: Tool[] = [
         throw new ToolError(`key must be one of ${Object.values(SECRET_KEYS).join(", ")}.`);
       }
       const value = String(args.value ?? "");
+      const problem = secretProblem(key, value);
+      if (problem) throw new ToolError(problem);
       await putSecret(key, value);
       await recordWrite(ctx, {
         action: "update",

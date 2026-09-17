@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { checkEmail, isPublishableEmail } from "@/lib/email-quality";
 import { checkPhoto } from "@/lib/photo-quality";
 import { plausibleEmail } from "@/lib/emails";
+import { credentialAdvice, secretProblem, SECRET_KEYS } from "@/lib/secrets";
 
 /**
  * The addresses and the images enrichment used to keep. Every value in the
@@ -89,5 +90,44 @@ describe("an image on a contractor's website", () => {
   it("keeps a photograph, including one whose size the page never gave", () => {
     expect(checkPhoto({ url: "/uploads/new-roof-toronto.jpg" }).ok).toBe(true);
     expect(checkPhoto({ url: "/uploads/kitchen.jpg", width: 1200, height: 800 }).ok).toBe(true);
+  });
+});
+
+describe("a credential somebody pastes", () => {
+  it("refuses anything that is not a service account key, and says why", () => {
+    expect(secretProblem(SECRET_KEYS.googleServiceAccount, "not json at all")).toMatch(/not JSON/);
+    expect(
+      secretProblem(SECRET_KEYS.googleServiceAccount, JSON.stringify({ type: "authorized_user" })),
+    ).toMatch(/service_account/);
+    expect(
+      secretProblem(
+        SECRET_KEYS.googleServiceAccount,
+        JSON.stringify({ type: "service_account", private_key: "-----BEGIN PRIVATE KEY-----" }),
+      ),
+    ).toMatch(/client_email/);
+    expect(
+      secretProblem(
+        SECRET_KEYS.googleServiceAccount,
+        JSON.stringify({ type: "service_account", client_email: "a@b.iam.gserviceaccount.com" }),
+      ),
+    ).toMatch(/private_key/);
+  });
+
+  it("accepts the real thing, and an empty value that clears it", () => {
+    const key = JSON.stringify({
+      type: "service_account",
+      client_email: "indexing@tenbestfind.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----\nxx\n-----END PRIVATE KEY-----\n",
+    });
+    expect(secretProblem(SECRET_KEYS.googleServiceAccount, key)).toBeNull();
+    expect(secretProblem(SECRET_KEYS.googleServiceAccount, "")).toBeNull();
+    expect(secretProblem(SECRET_KEYS.apify, "anything at all")).toBeNull();
+  });
+
+  it("names what is missing and where it goes", () => {
+    const advice = credentialAdvice([SECRET_KEYS.apify]);
+    expect(advice).toMatch(/Apify API token is not set/);
+    expect(advice).toMatch(/set_credential/);
+    expect(advice).toMatch(/APIFY_TOKEN/);
   });
 });

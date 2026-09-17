@@ -23,3 +23,46 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 - `README.md` — this file
 - `chats/` — conversation transcripts (read these!)
 - `project/` — the `Tenbestfind Homepage Design` project files (HTML prototypes, assets, components)
+
+---
+
+# The Google service account
+
+Everything above describes the design handoff this repository started from. What
+follows is the running site.
+
+One Google credential is used, stored under `google.serviceAccount` in Admin,
+Integrations, or as the environment variable `GOOGLE_SERVICE_ACCOUNT_JSON`. It
+is the whole JSON key file, pasted as it downloads, and the paste is checked for
+being a service account key with a `client_email` and a `private_key` before it
+is stored.
+
+**The API.** Google Indexing API, `indexing.googleapis.com`. Enable it on the
+Cloud project the service account belongs to, under APIs and Services, Library.
+
+**The scope.** `https://www.googleapis.com/auth/indexing`, and only that one.
+The site signs its own JWT and exchanges it at `oauth2.googleapis.com/token`,
+so no consent screen and no refresh token are involved.
+
+**The permission that is easy to miss.** Enabling the API is not authorisation.
+The service account's `client_email` has to be added in Google Search Console,
+under Settings, Users and permissions, as an **Owner** of the property. Anything
+below Owner and every call comes back refused, with a message that does not say
+why. The address is printed next to the credential in Admin, Integrations once a
+key is on file.
+
+**What it is used for.** Submitting URLs when a page is published, unpublished
+or meaningfully changed, and reading back the status of a submission. Google
+applies this API to job posting and broadcast markup officially; the submissions
+are still useful as a crawl signal and cost nothing.
+
+**Quota.** 200 URLs a day per project by default. The daily budget is enforced
+in the app so a batch cannot spend it in one run.
+
+**What does not use it.** Imports and review refreshes run through Apify, and
+the guide writer and topic radar through Anthropic and DataForSEO. A missing
+Google key does not stop any of them.
+
+**IndexNow** needs no credential at all. A key is generated on first use, hosted
+at `/indexnow/<key>.txt`, and submissions go to `api.indexnow.org` only while
+`seo.searchEngineVisible` is on.

@@ -203,7 +203,11 @@ export async function saveSecret(_prev: ActionState, formData: FormData): Promis
     return { status: "error", message: "Unknown credential." };
   }
 
-  await putSecret(key, value);
+  try {
+    await putSecret(key, value);
+  } catch (error) {
+    return { status: "error", message: error instanceof Error ? error.message : "That credential was refused." };
+  }
   await audit({
     userId: user.id,
     action: "update",

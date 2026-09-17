@@ -3,7 +3,7 @@ import { abortRun } from "../apify";
 import { resumeStage } from "../import-pipeline";
 import { fullDate } from "../format";
 import { parseList } from "../json";
-import { secretStatus } from "../secrets";
+import { credentialAdvice, missingSecrets, SECRET_KEYS } from "../secrets";
 import {
   arr,
   bool,
@@ -139,13 +139,12 @@ export const IMPORT_TOOLS: Tool[] = [
       ["name", "categoryId", "cityIds"],
     ),
     handler: async (args, ctx) => {
-      const secrets = await secretStatus();
-      const missing = secrets.filter((row) => !row.set);
-      if (missing.length > 0) {
-        throw new ToolError(
-          `${missing.map((row) => row.label).join(" and ")} not set, so a batch would fail immediately. Set them with set_credential or in Admin, Integrations.`,
-        );
-      }
+      // Only the two a batch actually spends: Apify does the scrape and
+      // Anthropic writes the listings. A missing Resend or Google key does not
+      // stop an import and used to be reported as though it did.
+      const needed = [SECRET_KEYS.apify, SECRET_KEYS.anthropic];
+      const missing = await missingSecrets(needed);
+      if (missing.length > 0) throw new ToolError(credentialAdvice(missing));
 
       const cityIds = Array.isArray(args.cityIds) ? (args.cityIds as unknown[]).map(String).filter(Boolean) : [];
       if (cityIds.length === 0) throw new ToolError("Pass at least one city id.");
