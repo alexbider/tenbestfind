@@ -651,7 +651,7 @@ export async function enrichBusiness(
       businessId,
       business.city.regionId,
       extraction.areasServed,
-    ).catch(() => ({ added: 0, created: 0 }));
+    ).catch(() => ({ added: 0, skipped: [] as string[] }));
     areasAdded += named.added;
   }
   const areas = await fillServiceAreas(businessId).catch(() => ({ added: 0, total: 0 }));
