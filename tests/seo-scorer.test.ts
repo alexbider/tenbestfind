@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { analyzeSeo, keywordInSlug, slugWords } from "@/lib/seo";
+import { analyzeSeo, keywordInSlug, slugWords, withBrand } from "@/lib/seo";
+import { TITLE_LIMIT } from "@/lib/seo-copy";
 import { wordCount } from "@/lib/seo-content";
 
 const checkOf = (result: ReturnType<typeof analyzeSeo>, id: string) =>
@@ -56,5 +57,25 @@ describe("the content length check", () => {
 
     const page = analyzeSeo({ content: "word ".repeat(700), focusKeyword: "x", slug: "x" });
     expect(checkOf(page, "content-length")?.status).toBe("good");
+  });
+});
+
+describe("the brand on a title somebody typed", () => {
+  it("appends it when there is room", () => {
+    expect(withBrand("10 Best HVAC Companies in Toronto (2026)", "TenBestFind", "|")).toBe(
+      "10 Best HVAC Companies in Toronto (2026) | TenBestFind",
+    );
+  });
+
+  it("leaves a title alone once it would go past sixty characters", () => {
+    const long = "10 Best Heating and Air Conditioning Companies in Toronto";
+    expect(long.length + " | TenBestFind".length).toBeGreaterThan(TITLE_LIMIT);
+    expect(withBrand(long, "TenBestFind", "|")).toBe(long);
+  });
+
+  it("never puts it on twice", () => {
+    expect(withBrand("HVAC in Toronto | TenBestFind", "TenBestFind", "|")).toBe(
+      "HVAC in Toronto | TenBestFind",
+    );
   });
 });

@@ -26,11 +26,14 @@ const FALLBACK_SITE_NAME = "TenBestFind";
  * the publisher while the generated Chicago one beside them carried it.
  * Writing a title is a decision about the words, not an opt-out of the brand.
  *
- * Never twice, and never past the point a result gets cut off. A title with no
- * room left keeps the words that say what the page is, which is the same trade
- * brandedTitle makes for the generated ones.
+ * The rule, in full: append " | TenBestFind" to a title somebody typed only
+ * when the title does not already name the site, and only when the whole thing
+ * still fits inside TITLE_LIMIT, which is 60 characters. A title with no room
+ * left keeps the words that say what the page is, which is the same trade
+ * brandedTitle makes for the generated ones. The separator and the site name
+ * both come from the global SEO settings rather than being written in here.
  */
-function withBrand(typed: string, siteName: string, sep: string): string {
+export function withBrand(typed: string, siteName: string, sep: string): string {
   if (typed.toLowerCase().includes(siteName.toLowerCase())) return typed;
   const suffix = ` ${sep} ${siteName}`;
   return typed.length + suffix.length <= TITLE_LIMIT ? typed + suffix : typed;

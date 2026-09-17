@@ -80,3 +80,18 @@ A batch body counts as many calls as it carries. An agent working through one
 city makes roughly 150 calls, so the hourly ceiling is about twenty cities an
 hour, and the per-minute window is what catches a loop in seconds rather than
 after an hour of writes. Both are in `src/lib/mcp/limits.ts`.
+
+# The rule for titles
+
+A title the SEO template generates carries the brand already. A title somebody
+typed by hand skipped the template entirely, which is why eleven hand-written
+Toronto titles went out with no publisher on them while the generated Chicago
+one beside them carried it.
+
+The rule now, for both kinds: append ` | TenBestFind` only when the title does
+not already name the site, and only when the whole thing still fits inside 60
+characters. Past that the suffix is dropped rather than the words, because a
+result that gets cut off should be cut off after the part that says what the
+page is. The separator and the site name come from Admin, SEO, so changing
+either changes every title at once. `withBrand` in `src/lib/seo.ts` is the one
+implementation.
