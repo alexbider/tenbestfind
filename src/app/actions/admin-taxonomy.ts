@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { announce } from "@/lib/announce";
 import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -174,6 +175,7 @@ export async function saveCategory(_prev: ActionState, formData: FormData): Prom
   revalidatePath("/services/");
   revalidatePath("/admin/taxonomy");
   revalidatePath("/", "layout");
+  announce([routes.category(data.slug)]);
   return ok("Service saved.");
 }
 
@@ -491,5 +493,9 @@ export async function saveCity(_prev: ActionState, formData: FormData): Promise<
   revalidatePath(routes.region(region.country.code, region.slug));
   revalidatePath("/admin/taxonomy");
   revalidatePath("/", "layout");
+  announce([
+    routes.city(region.country.code, region.slug, data.slug),
+    routes.region(region.country.code, region.slug),
+  ]);
   return ok("City saved.");
 }

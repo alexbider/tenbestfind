@@ -76,20 +76,23 @@ suite under `tests/`.
    The block list holds the named domains plus a set of agency markers, and
    anything matched by a marker is reported rather than deleted silently.
 
-5. **D1 IndexNow batching.** Submissions go through a durable queue table
-   rather than an in-process array, so a restart does not lose them.
+5. **D1 IndexNow batching.** Submissions go through a durable queue rather
+   than an in-process array, so a restart does not lose them. The queue is the
+   existing `IndexRequest` table under the target `INDEXNOW`, which it was
+   already designed for, rather than a second table beside it: "was this page
+   ever submitted, and to whom" then has one answer.
 
-7. **A6 README.** The repository's README is the design handoff bundle's own
+6. **A6 README.** The repository's README is the design handoff bundle's own
    README. Rather than rewrite somebody else's document, the credential
    documentation is a clearly separated section appended to it.
 
-8. **B1 Concord, ON.** No default city exists anywhere in the code. Concord is
+7. **B1 Concord, ON.** No default city exists anywhere in the code. Concord is
    a community inside Vaughan, and it became a city record the same way York,
    Halton and Peel did: `recordNamedAreas` created whatever name it read off a
    website and could not find. Removing city creation from enrichment is the
    fix; the cleanup script clears what the old behaviour left.
 
-6. **Scale of the brief.** This is more work than one pass can finish to a
+8. **Scale of the brief.** This is more work than one pass can finish to a
    standard worth shipping. Work is ordered by risk: the live 404s and the bad
    data first, then the connector, then structured data, then the sitemap and
    indexing infrastructure. Anything not reached is listed in the final report

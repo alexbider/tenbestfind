@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { touchOwner } from "../lastmod";
 import { analyzeSeo } from "../seo";
 import { SEO_FIELDS, AI_BOTS } from "../seo-settings";
 import { putSecret, secretProblem, SECRET_KEYS, secretStatus, type SecretKey } from "../secrets";
@@ -270,6 +271,9 @@ export const SYSTEM_TOOLS: Tool[] = [
         create: { entityType, entityId, ...payload },
         update: payload,
       });
+
+      // The SEO record is part of the page, so the page changed.
+      await touchOwner(entityType, entityId);
 
       await recordWrite(ctx, {
         action: existing ? "update" : "create",

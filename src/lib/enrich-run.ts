@@ -3,6 +3,7 @@ import { crawlSite, type SiteData } from "./site-crawl";
 import { extractAsk, extractFromSite, extractionSchema, type Extraction } from "./site-extract";
 import { fillServiceAreas, recordNamedAreas } from "./geo";
 import { isPublishablePhoto } from "./photo-quality";
+import { touchBusiness } from "./lastmod";
 import { verifyEmail } from "./email-quality";
 import { channelIdFor, latestChannelVideos, videoMeta } from "./youtube";
 import { normalizeName } from "./enrich";
@@ -698,6 +699,11 @@ export async function enrichBusiness(
   // The stored score is what the selection filters read, so it has to move the
   // moment the listing does.
   await recomputeCompleteness(businessId);
+
+  // Photos, staff, credentials and areas all live in their own tables, so a run
+  // that only added those would otherwise leave the profile claiming it had not
+  // changed since whenever the row was last written.
+  await touchBusiness(businessId);
 
   return {
     business: business.name,

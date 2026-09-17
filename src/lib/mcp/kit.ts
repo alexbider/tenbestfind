@@ -1,4 +1,6 @@
 import { revalidatePath } from "next/cache";
+import { announce } from "../announce";
+import { touchOwner } from "../lastmod";
 import { audit } from "../auth";
 import type { UserRole } from "../enums";
 import type { Bearer } from "../oauth";
@@ -178,7 +180,13 @@ export async function recordWrite(
     summary: `${input.summary} (via ${ctx.clientName})`,
   });
 
-  for (const path of input.paths ?? ["/"]) {
+  // A page is its copy plus its photos, its questions, its credentials and the
+  // entries on it. Every one of those is edited through a tool that names the
+  // page it belongs to, so this is where lastmod is kept honest.
+  if (input.action !== "delete") await touchOwner(input.entityType, input.entityId);
+
+  const paths = input.paths ?? ["/"];
+  for (const path of paths) {
     try {
       revalidatePath(path, path === "/" ? "layout" : "page");
     } catch {
@@ -186,6 +194,15 @@ export async function recordWrite(
       // not a reason to fail a write that already succeeded.
     }
   }
+
+  // Most of this site is written through the connector rather than through the
+  // admin, so this is where the engines have to be told. A page that was
+  // unpublished is announced along with one that was published: either way what
+  // is at that URL has changed, and a crawl that finds a 404 is the point.
+  // The homepage is left out unless a tool named it, since nearly every write
+  // passes it for cache purposes alone.
+  const worth = paths.filter((path) => path !== "/" && !path.startsWith("/admin"));
+  if (worth.length > 0) announce(worth);
 }
 
 export function canRun(tool: Tool, scope: string, role: UserRole): boolean {
