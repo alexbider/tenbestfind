@@ -11,6 +11,8 @@ import { ProjectVideos } from "@/components/site/ProjectVideos";
 import { Pop, PopLink, PopText } from "@/components/site/PopNote";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
+import { businessEntity } from "@/lib/schema";
+import { businessSchemaInput } from "@/lib/schema-entities";
 import { fullDate, monthYear, priceRange } from "@/lib/format";
 import { parseJson, parseList, parseRows, type HoursRow } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -707,6 +709,7 @@ export default async function BusinessProfilePage({ params }: Props) {
           about. Saying it this way keeps the two apart: a profile we wrote is
           not the company's own site, and nothing here should imply we run it. */}
       <JsonLd
+        label={routes.business(business.slug)}
         data={{
           "@context": "https://schema.org",
           "@type": "WebPage",
@@ -717,46 +720,15 @@ export default async function BusinessProfilePage({ params }: Props) {
           isPartOf: { "@id": absoluteUrl("/#website") },
           publisher: { "@id": absoluteUrl("/#publisher") },
           dateModified: business.updatedAt.toISOString(),
-          mainEntity: {
-            "@type": "LocalBusiness",
-            name: business.name,
-            url: business.website ?? absoluteUrl(routes.business(business.slug)),
-            image: business.photos[0]?.url ?? business.logoUrl ?? undefined,
-            logo: business.logoUrl ?? undefined,
-            telephone: business.phone ?? undefined,
-            email: business.email ?? undefined,
-            address: city
-              ? {
-                  "@type": "PostalAddress",
-                  streetAddress: business.addressLine ?? undefined,
-                  addressLocality: city.name,
-                  addressRegion: region!.code.toUpperCase(),
-                  postalCode: business.postalCode ?? undefined,
-                  addressCountry: country!.code.toUpperCase(),
-                }
-              : undefined,
-            geo:
-              business.latitude !== null && business.longitude !== null
-                ? {
-                    "@type": "GeoCoordinates",
-                    latitude: business.latitude,
-                    longitude: business.longitude,
-                  }
-                : undefined,
-            // Where it works, which is not where it is. The canonical profile
-            // is the physical location; these are the places it serves from it.
-            areaServed:
-              areaCities.length > 0
-                ? areaCities.map((entry) => ({ "@type": "City", name: entry.name }))
-                : undefined,
-            aggregateRating: business.googleRating
-              ? {
-                  "@type": "AggregateRating",
-                  ratingValue: business.googleRating,
-                  reviewCount: business.googleReviewCount ?? undefined,
-                }
-              : undefined,
-          },
+          mainEntity: businessEntity(
+            businessSchemaInput(business, {
+              cityName: city?.name,
+              regionCode: region?.code,
+              countryCode: country?.code,
+              image: business.photos[0]?.url ?? business.logoUrl,
+              areaServed: areaCities.map((entry) => entry.name),
+            }),
+          ),
         }}
       />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />

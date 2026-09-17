@@ -13,6 +13,7 @@
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "db:studio": "prisma studio",
     "analytics:rollup": "tsx scripts/rollup.ts",
+    "check:jsonld": "tsx -r ./scripts/_server-only-stub.cjs scripts/check-jsonld.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

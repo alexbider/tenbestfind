@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight, Check, ChevronRight, Icon, type IconName } from "./Icon";
 import { STATUS_TONES } from "@/lib/enums";
 import { describeImage, srcSetFor } from "@/lib/image-srcset";
+import { auditSchema } from "@/lib/schema-audit";
 import { humanizeStatus } from "@/lib/format";
 import type { Crumb } from "@/lib/urls";
 
@@ -398,7 +399,24 @@ export function Monogram({
 
 /* --------------------------------------------------------------- structure */
 
-export function JsonLd({ data }: { data: Record<string, unknown> | Record<string, unknown>[] }) {
+export function JsonLd({
+  data,
+  label = "a page",
+}: {
+  data: Record<string, unknown> | Record<string, unknown>[];
+  label?: string;
+}) {
+  // Every graph goes past the audit on its way out, because this is the one
+  // place all of them pass through. A problem is logged rather than thrown: a
+  // reserved domain in a sameAs is bad markup, and taking the page down over it
+  // would be worse. The build check is where the same rules stop a release.
+  const problems = auditSchema(data, label);
+  if (problems.length > 0) {
+    console.error(
+      `[json-ld] ${label}: ${problems.map((row) => `${row.path}: ${row.problem}`).join("; ")}`,
+    );
+  }
+
   return (
     <script
       type="application/ld+json"

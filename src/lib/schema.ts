@@ -14,6 +14,7 @@
 // the answer is nothing.
 
 import { parseJson, parseList } from "./json";
+import { businessTypeFor } from "./schema-types";
 import { absoluteUrl, routes } from "./urls";
 
 /* --------------------------------------------------------------------- ids */
@@ -192,20 +193,162 @@ export function pageEntity(input: PageInput): Record<string, unknown> {
 
 /* ---------------------------------------------------------------- listings */
 
-export type ListedBusiness = {
+
+/* ---------------------------------------------------------------- business */
+
+export type BusinessEntityInput = {
   slug: string;
   name: string;
+  categorySlug?: string | null;
   website?: string | null;
   phone?: string | null;
+  /** Only passed when it has been validated. An invalid one is left out. */
+  email?: string | null;
   image?: string | null;
+  logo?: string | null;
   addressLine?: string | null;
   postalCode?: string | null;
   cityName?: string | null;
   regionCode?: string | null;
   countryCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  /** [{ day, opens, closes, closed }], as the record stores them. */
+  hours?: string | null;
+  areaServed?: string[];
+  /** Social profiles found on the company's own site. */
+  socialLinks?: string | null;
+  yearFounded?: number | null;
+  credentials?: { label: string; authority?: string | null; identifier?: string | null }[];
+  priceRange?: string | null;
   rating?: number | null;
   reviewCount?: number | null;
 };
+
+const DAY_URI: Record<string, string> = {
+  monday: "https://schema.org/Monday",
+  tuesday: "https://schema.org/Tuesday",
+  wednesday: "https://schema.org/Wednesday",
+  thursday: "https://schema.org/Thursday",
+  friday: "https://schema.org/Friday",
+  saturday: "https://schema.org/Saturday",
+  sunday: "https://schema.org/Sunday",
+};
+
+/** Opening hours as schema.org wants them, skipping days nobody filled in. */
+function openingHours(hours: string | null | undefined): Record<string, unknown>[] | undefined {
+  const rows = parseJson<{ day?: string; opens?: string; closes?: string; closed?: boolean }[]>(hours, []);
+  const spec = rows
+    .filter((row) => row.day && !row.closed && row.opens && row.closes)
+    .map((row) => ({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: DAY_URI[String(row.day).trim().toLowerCase()] ?? String(row.day).trim(),
+      opens: row.opens,
+      closes: row.closes,
+    }));
+  return spec.length > 0 ? spec : undefined;
+}
+
+/**
+ * One company, as the same entity wherever it appears.
+ *
+ * A profile page and a ranking entry were describing the same business two
+ * different ways, with two different sets of properties and no @id tying them
+ * together, so nothing downstream could tell they were one company. This is
+ * the single description, minted against the profile URL, so the ranking entry
+ * and the profile resolve to each other.
+ *
+ * Every property is dropped when there is nothing behind it. An absent one
+ * means nobody has said; an empty one is a claim that the answer is nothing.
+ */
+export function businessEntity(input: BusinessEntityInput): Record<string, unknown> {
+  const profile = absoluteUrl(routes.business(input.slug));
+
+  const entity: Record<string, unknown> = {
+    "@type": businessTypeFor(input.categorySlug),
+    "@id": businessId(input.slug),
+    name: input.name,
+    url: profile,
+  };
+
+  if (input.phone) entity.telephone = input.phone;
+  if (input.email) entity.email = input.email;
+  if (input.image) entity.image = absoluteUrl(input.image);
+  if (input.logo) entity.logo = absoluteUrl(input.logo);
+
+  if (input.cityName) {
+    const address: Record<string, string> = {
+      "@type": "PostalAddress",
+      addressLocality: input.cityName,
+    };
+    if (input.addressLine) address.streetAddress = input.addressLine;
+    if (input.regionCode) address.addressRegion = input.regionCode.toUpperCase();
+    if (input.postalCode) address.postalCode = input.postalCode;
+    if (input.countryCode) address.addressCountry = input.countryCode.toUpperCase();
+    entity.address = address;
+  }
+
+  if (typeof input.latitude === "number" && typeof input.longitude === "number") {
+    entity.geo = { "@type": "GeoCoordinates", latitude: input.latitude, longitude: input.longitude };
+  }
+
+  const hours = openingHours(input.hours);
+  if (hours) entity.openingHoursSpecification = hours;
+
+  if (input.areaServed && input.areaServed.length > 0) {
+    entity.areaServed = input.areaServed.map((name) => ({ "@type": "City", name }));
+  }
+
+  // The company's own site first, then whatever profiles were found on it.
+  // sameAs says the thing at the other end is this company, so a placeholder
+  // URL is a false statement rather than a harmless one.
+  const social = parseJson<Record<string, string>>(input.socialLinks, {});
+  const sameAs = [input.website, ...Object.values(social ?? {})]
+    .filter((url): url is string => typeof url === "string" && isRealProfile(url))
+    .filter((url, index, all) => all.indexOf(url) === index);
+  if (sameAs.length > 0) entity.sameAs = sameAs;
+
+  if (input.yearFounded) entity.foundingDate = String(input.yearFounded);
+
+  const credentials = (input.credentials ?? []).filter((row) => row.label?.trim());
+  if (credentials.length > 0) {
+    entity.hasCredential = credentials.map((row) => {
+      const credential: Record<string, unknown> = {
+        "@type": "EducationalOccupationalCredential",
+        name: row.label.trim(),
+      };
+      if (row.authority?.trim()) {
+        credential.recognizedBy = { "@type": "Organization", name: row.authority.trim() };
+      }
+      if (row.identifier?.trim()) credential.identifier = row.identifier.trim();
+      return credential;
+    });
+  }
+
+  if (input.priceRange?.trim()) entity.priceRange = input.priceRange.trim();
+
+  // A rating with nothing behind it is the one piece of markup that gets a
+  // site penalised, so both halves have to be real before either is published.
+  if (typeof input.rating === "number" && input.rating > 0 && (input.reviewCount ?? 0) > 0) {
+    entity.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: input.rating,
+      reviewCount: input.reviewCount,
+      ratingCount: input.reviewCount,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+
+  return entity;
+}
+
+/**
+ * One company inside a ranking, which is the same shape as one on its own
+ * profile. Keeping a second narrower type here meant a ranked company silently
+ * published less than the profile did, so there is only the one type now.
+ */
+export type ListedBusiness = BusinessEntityInput;
 
 /**
  * One company inside a ranking.
@@ -218,41 +361,7 @@ export type ListedBusiness = {
  * the case the property exists for, so it stays.
  */
 export function listedBusinessEntity(business: ListedBusiness): Record<string, unknown> {
-  const profile = absoluteUrl(routes.business(business.slug));
-
-  const entity: Record<string, unknown> = {
-    "@type": "LocalBusiness",
-    "@id": businessId(business.slug),
-    name: business.name,
-    url: profile,
-  };
-
-  if (business.website) entity.sameAs = [business.website];
-  if (business.phone) entity.telephone = business.phone;
-  if (business.image) entity.image = absoluteUrl(business.image);
-
-  if (business.cityName) {
-    const address: Record<string, string> = { "@type": "PostalAddress", addressLocality: business.cityName };
-    if (business.addressLine) address.streetAddress = business.addressLine;
-    if (business.regionCode) address.addressRegion = business.regionCode.toUpperCase();
-    if (business.postalCode) address.postalCode = business.postalCode;
-    if (business.countryCode) address.addressCountry = business.countryCode.toUpperCase();
-    entity.address = address;
-  }
-
-  if (business.rating) {
-    const rating: Record<string, unknown> = { "@type": "AggregateRating", ratingValue: business.rating };
-    if (business.reviewCount) {
-      // Both, on purpose. reviewCount is how many people wrote something;
-      // ratingCount is how many left a score. Google reads them differently and
-      // the source counts them together, so saying both is the honest reading.
-      rating.reviewCount = business.reviewCount;
-      rating.ratingCount = business.reviewCount;
-    }
-    entity.aggregateRating = rating;
-  }
-
-  return entity;
+  return businessEntity(business);
 }
 
 export type ListInput = {
@@ -278,10 +387,13 @@ export function rankingListEntity(input: ListInput): Record<string, unknown> {
     numberOfItems: input.businesses.length,
     isPartOf: { "@id": websiteId() },
     publisher: { "@id": publisherId() },
-    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    // Ascending: position 1 is the top of the list and the numbers count up.
+    // Descending said the opposite of what the page shows.
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
     itemListElement: input.businesses.map((business, index) => ({
       "@type": "ListItem",
       position: index + 1,
+      url: absoluteUrl(routes.business(business.slug)),
       item: listedBusinessEntity(business),
     })),
   };
