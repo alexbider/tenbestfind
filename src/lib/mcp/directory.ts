@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { categoriesOf, setExtraCategories } from "../categories";
 import { BUSINESS_STATUSES } from "../enums";
 import { LEAD_STATUSES } from "../leads";
 import { recordMove } from "../redirects";
@@ -100,6 +101,21 @@ const GOOGLE_FIELDS = {
   googleMapsPosition: int("Position in the Google Maps result. Stored as gmbRank."),
 };
 
+/**
+ * The extra services, with an argument that is not a list of ids reported the
+ * way every other bad argument is.
+ */
+async function setExtra(businessId: string, primaryId: string, value: unknown): Promise<string[]> {
+  if (!Array.isArray(value)) {
+    throw new ToolError("additionalCategoryIds must be an array of service ids.");
+  }
+  try {
+    return await setExtraCategories(businessId, primaryId, value.map(String));
+  } catch (error) {
+    throw new ToolError(error instanceof Error ? error.message : "Those service ids were refused.");
+  }
+}
+
 function googleData(args: Record<string, unknown>): Record<string, unknown> {
   const data: Record<string, unknown> = {};
 
@@ -151,6 +167,9 @@ export const DIRECTORY_TOOLS: Tool[] = [
         cityId: str("City id."),
         slug: str("URL slug. Derived from the name when omitted, and never rebuilt afterwards."),
         status: str("Defaults to DRAFT."),
+        additionalCategoryIds: arr(
+          "Other services this company offers, as ids. The primary stays categoryId and keeps the URL.",
+        ),
         ...PROFILE_FIELDS,
         ...GOOGLE_FIELDS,
       },
@@ -186,6 +205,10 @@ export const DIRECTORY_TOOLS: Tool[] = [
         },
       });
 
+      if (args.additionalCategoryIds !== undefined) {
+        await setExtra(business.id, categoryId, args.additionalCategoryIds);
+      }
+
       await recordWrite(ctx, {
         action: "create",
         entityType: "business",
@@ -208,7 +231,10 @@ export const DIRECTORY_TOOLS: Tool[] = [
         idOrSlug: str("The business id or slug."),
         name: str("The company name. Changing it does not move the URL."),
         slug: str("URL slug. Passing one moves the profile and leaves a 301 behind."),
-        categoryId: str("Move it to a different service."),
+        categoryId: str("Move it to a different service. The URL does not move with it."),
+        additionalCategoryIds: arr(
+          "Replaces the other services this company offers. An empty array clears them.",
+        ),
         cityId: str("Move it to a different city."),
         strengths: arr("Replaces the list."),
         considerations: arr("Replaces the list."),
@@ -238,11 +264,18 @@ export const DIRECTORY_TOOLS: Tool[] = [
       if (slug !== existing.slug && (await db.business.findUnique({ where: { slug } }))) {
         throw new ToolError(`A business already uses the slug ${slug}.`);
       }
-      if (Object.keys(data).length === 0 && slug === existing.slug) {
+      if (
+        Object.keys(data).length === 0 &&
+        slug === existing.slug &&
+        args.additionalCategoryIds === undefined
+      ) {
         throw new ToolError("Pass at least one field to change.");
       }
 
       const business = await db.business.update({ where: { id: existing.id }, data: { ...data, slug } });
+      if (args.additionalCategoryIds !== undefined) {
+        await setExtra(business.id, business.categoryId, args.additionalCategoryIds);
+      }
       if (slug !== existing.slug) {
         await recordMove(routes.business(existing.slug), routes.business(business.slug));
       }

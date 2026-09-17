@@ -266,7 +266,11 @@ async function loadBusiness(slug: string) {
       photos: { orderBy: { sortOrder: "asc" } },
       videos: { orderBy: { sortOrder: "asc" } },
       reviews: { orderBy: { postedAt: "desc" }, take: 10 },
-      services: { include: { subservice: true } },
+      // The subservice carries its own category, because a company that works
+      // in two trades has jobs filed under both and the link has to go to the
+      // right one.
+      services: { include: { subservice: { include: { category: true } } } },
+      extraServices: { include: { category: true } },
       // The country comes along because a service area is linked only when its
       // page really exists, and that answer needs the country code.
       areas: { include: { city: { include: { region: { include: { country: true } } } } } },
@@ -2555,6 +2559,25 @@ export default async function BusinessProfilePage({ params }: Props) {
                   <h2 id="svc-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
                     Services Offered
                   </h2>
+
+                  {/* The trades this company works in, when it works in more
+                      than one. The first is the one that owns this address. */}
+                  {business.extraServices.length > 0 ? (
+                    <p style={{ margin: "-8px 0 18px", fontSize: "15px", color: "var(--ink-600)" }}>
+                      Works in{" "}
+                      {[business.category, ...business.extraServices.map((row) => row.category)].map(
+                        (trade, index, all) => (
+                          <span key={trade.id}>
+                            <Link href={routes.category(trade.slug)} style={{ color: "var(--blue-900)", fontWeight: 600 }}>
+                              {trade.serviceName}
+                            </Link>
+                            {index < all.length - 2 ? ", " : index === all.length - 2 ? " and " : ""}
+                          </span>
+                        ),
+                      )}
+                      .
+                    </p>
+                  ) : null}
                   <ul
                     style={{
                       display: "grid",
@@ -2566,7 +2589,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <li key={row.subserviceId}>
                         <Link
                           data-row=""
-                          href={routes.subservice(business.category.slug, row.subservice.slug)}
+                          href={routes.subservice(row.subservice.category.slug, row.subservice.slug)}
                           style={{
                             display: "flex",
                             alignItems: "center",

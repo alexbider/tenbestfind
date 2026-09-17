@@ -9,6 +9,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { monthYear, shortMonthYear } from "@/lib/format";
 import { parseList } from "@/lib/json";
 import { db } from "@/lib/db";
+import { inCategory } from "@/lib/categories";
 import { rankingCardSelect } from "@/lib/queries";
 import { loadSeoSettings } from "@/lib/seo-settings";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
@@ -137,7 +138,9 @@ export default async function SearchPage({ searchParams }: Props) {
     db.business.findMany({
       where: {
         status: "PUBLISHED",
-        ...(matchedCategory ? { categoryId: matchedCategory.id } : {}),
+        // A company whose second trade is the one being searched for belongs
+        // in these results as much as one whose first trade it is.
+        ...(matchedCategory ? inCategory(matchedCategory.id) : {}),
         ...(matchedCity ? { cityId: matchedCity.id } : {}),
         ...(minRating > 0 ? { googleRating: { gte: minRating } } : {}),
         ...(verifiedOnly ? { verified: true } : {}),

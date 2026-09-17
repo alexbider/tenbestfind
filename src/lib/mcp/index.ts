@@ -135,6 +135,7 @@ const ORIENTATION: Tool[] = [
         include: {
           city: { include: { region: { include: { country: true } } } },
           category: true,
+          extraServices: { include: { category: true } },
           services: { include: { subservice: true } },
           areas: { include: { city: true } },
           credentials: { orderBy: { sortOrder: "asc" } },
@@ -157,6 +158,15 @@ const ORIENTATION: Tool[] = [
         status: business.status,
         service: business.category.name,
         categoryId: business.categoryId,
+        // Every trade the company works in, the primary first. The primary is
+        // the one that owns the URL, which is why it is named separately too.
+        allServices: [
+          { id: business.categoryId, name: business.category.name, primary: true },
+          ...business.extraServices
+            .map((row) => ({ id: row.categoryId, name: row.category.name, primary: false }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        ],
+        additionalCategoryIds: business.extraServices.map((row) => row.categoryId).sort(),
         city: business.city
           ? `${business.city.name}, ${business.city.region.code.toUpperCase()}`
           : null,

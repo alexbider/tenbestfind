@@ -57,7 +57,12 @@ suite under `tests/`.
 2. **A4 many-to-many.** `BusinessService` already links a business to
    subservices. Categories need their own join table rather than a reuse, so
    `BusinessCategory` is added with the existing `categoryId` staying as the
-   primary service that owns the URL and the breadcrumb.
+   primary service that owns the URL and the breadcrumb. The join table holds
+   only the extra trades, not the primary repeated: that keeps one answer to
+   "what is this company's trade" rather than two that can drift, and it means
+   the migration needed no backfill at all, since every existing company
+   already carries its primary in `categoryId`. "Every service the company
+   offers" is the primary followed by the join rows.
 
 3. **A5 root cause.** `update_business` already leaves the slug alone unless
    `slug` is passed, and the admin form posts the slug explicitly. The silent
@@ -73,6 +78,16 @@ suite under `tests/`.
 
 5. **D1 IndexNow batching.** Submissions go through a durable queue table
    rather than an in-process array, so a restart does not lose them.
+
+7. **A6 README.** The repository's README is the design handoff bundle's own
+   README. Rather than rewrite somebody else's document, the credential
+   documentation is a clearly separated section appended to it.
+
+8. **B1 Concord, ON.** No default city exists anywhere in the code. Concord is
+   a community inside Vaughan, and it became a city record the same way York,
+   Halton and Peel did: `recordNamedAreas` created whatever name it read off a
+   website and could not find. Removing city creation from enrichment is the
+   fix; the cleanup script clears what the old behaviour left.
 
 6. **Scale of the brief.** This is more work than one pass can finish to a
    standard worth shipping. Work is ordered by risk: the live 404s and the bad
