@@ -16,7 +16,7 @@
   html body main[data-mskin] [style*="padding:48px 24px"] { padding: 32px 18px !important; }
   html body main[data-mskin] section > div[style*="max-width"], html body main[data-mskin] section > div[style*="padding:0 24px"] { padding-left: 18px !important; padding-right: 18px !important; }
   html body main[data-mskin] h1 { font-size: clamp(32px, 9vw, 42px) !important; line-height: 1.04 !important; letter-spacing: -0.04em !important; }
-  html body main[data-mskin] h2 { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.08 !important; }
+  html body main[data-mskin] h2:not([data-minih]):not([data-eyebrow]) { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.08 !important; }
   html body main[data-mskin] p { text-wrap: pretty; }
 
   /* fixed multi-column grids collapse */

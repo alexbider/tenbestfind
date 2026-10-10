@@ -341,9 +341,9 @@ export async function RankingPage({
           </h3>
           <div style={{ marginTop: "6px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px", fontSize: "13px", color: "var(--text-secondary)" }}>
             {business.googleRating ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: "2px 7px" }}>
                 <Stars rating={business.googleRating} index={index} />
-                <strong style={{ fontSize: "14px", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{business.googleRating.toFixed(1)}</strong>
+                <strong style={{ fontSize: "14px", color: "var(--ink)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{business.googleRating.toFixed(1)}</strong>
                 <span>({business.googleReviewCount} Google reviews)</span>
               </span>
             ) : null}
@@ -704,7 +704,7 @@ export async function RankingPage({
                       />
                       <div style={{ position: "relative", padding: "20px 22px 18px" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                          <h2 id="podium-h2" data-minih="" style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold-ink)" }}>
+                          <h2 id="podium-h2" data-minih="" data-eyebrow="" style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold-ink)" }}>
                             Top 3 at a glance
                           </h2>
                           <span style={{ fontSize: "12px", color: "rgba(232,237,245,0.62)" }}>Editorial rank</span>
@@ -760,7 +760,7 @@ export async function RankingPage({
                           borderRadius: "18px 18px 0 0",
                         }}
                       >
-                        <h2 id="partner-h2" data-minih="" style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)" }}>
+                        <h2 id="partner-h2" data-minih="" data-eyebrow="" style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)" }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M12 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" />
                             <path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1" />
@@ -1299,11 +1299,11 @@ export async function RankingPage({
 
               <div style={{ display: "grid", gap: "14px", position: "sticky", top: "150px" }}>
                 <div data-reveal="" style={{ border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px", background: "var(--paper)" }}>
-                  <h2 data-minih="" style={{ fontSize: "19px", fontWeight: "700", marginBottom: "6px" }}>Questions to ask before hiring</h2>
+                  <h2 data-minih="" data-sm="" style={{ fontSize: "19px", fontWeight: "700", marginBottom: "6px" }}>Questions to ask before hiring</h2>
                   <Checklist questions={QUESTIONS} />
                 </div>
                 <div data-reveal="" style={{ border: "1px solid rgba(195,38,32,0.22)", borderRadius: "22px", padding: "22px", background: "rgba(195,38,32,0.03)" }}>
-                  <h2 data-minih="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "19px", fontWeight: "700", marginBottom: "12px" }}>
+                  <h2 data-minih="" data-sm="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "19px", fontWeight: "700", marginBottom: "12px" }}>
                     <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "10px", background: "rgba(195,38,32,0.1)", color: "#C32620" }}>
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 9v4" />

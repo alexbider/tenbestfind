@@ -667,6 +667,7 @@ export default async function GuidePage({ params }: Props) {
             {isCost ? (
               <section
                 id="summary"
+                data-cost-summary=""
                 aria-labelledby="sum-h2"
                 style={{ ...GRID_BACKDROP, borderRadius: "24px", border: "1px solid var(--border-subtle)", padding: "36px 32px 32px" }}
               >

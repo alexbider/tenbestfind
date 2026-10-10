@@ -1,1 +1,18 @@
 /* October 2026 design: cost template. */
+
+/* Phone: the at-a-glance cards become a swipeable row, as in the design,
+   instead of squeezing four cards into a 260px column. */
+@media (max-width: 760px) {
+  main[data-skin] section[data-cost-summary] { padding: 24px 18px 22px !important; border-radius: 18px !important; }
+  main[data-skin] ul[data-cost-cards][data-cost-cards] {
+    display: flex !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px !important;
+    margin: 0 -18px;
+    padding: 0 18px 10px;
+    scrollbar-width: none;
+  }
+  main[data-skin] ul[data-cost-cards][data-cost-cards]::-webkit-scrollbar { display: none; }
+  main[data-skin] ul[data-cost-cards][data-cost-cards] > li { flex: 0 0 232px; scroll-snap-align: start; }
+}

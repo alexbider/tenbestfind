@@ -112,9 +112,14 @@ body .rk2.rk2 h2[data-minih] { --ls: -0.02em; }
   html body main .rk2 [data-rklogo] { display: none !important; }
   html body main .rk2 [data-rkact] { display: none !important; }
   html body main .rk2 [data-rkmob] { display: grid !important; }
-  html body main .rk2 [data-spec] { grid-template-columns: 1fr 1fr !important; }
-  html body main .rk2 [data-spec] > div:nth-child(2n) { border-right: 0 !important; }
-  html body main .rk2 [data-spec] > div:nth-child(-n+2) { border-bottom: 1px solid var(--border-subtle); }
+  html body main .rk2 [data-spec] { grid-template-columns: minmax(0, 1fr) !important; }
+  html body main .rk2 [data-spec] > div { border-right: 0 !important; }
+  html body main .rk2 [data-spec] > div:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+  html body main .rk2 [data-rnum] { font-size: 34px !important; }
+  html body main .rk2 h2[data-eyebrow] { font-size: 11px !important; line-height: 1.4 !important; }
+  html body main .rk2 h2[data-sm] { font-size: 19px !important; line-height: 1.25 !important; }
+  .rk2 [data-costs] tr { grid-template-columns: minmax(0, 1fr); padding: 14px 18px; }
+  .rk2 [data-costs] td { text-align: left !important; }
   html body main .rk2 [data-accin] { padding: 0 16px 18px !important; }
   html body main .rk2 [data-ten-outline] { width: 170px !important; height: 120px !important; right: -60px !important; top: -10px !important; }
   html body main .rk2 table[data-ctable] { min-width: 960px !important; }

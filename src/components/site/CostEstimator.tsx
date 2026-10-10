@@ -59,11 +59,7 @@ export function CostEstimator({
           borderBottom: "1px solid var(--blue-100)",
         }}
       >
-        <h2
-          id="calc-h2"
-          data-reveal=""
-          style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", letterSpacing: "-0.02em" }}
-        >
+        <h2 id="calc-h2" data-reveal="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700" }}>
           <Icon name="calc" size={19} color="#2D74D7" strokeWidth={1.9} />
           <span>{tail(`Estimate your ${title.toLowerCase()}`)}</span>
         </h2>

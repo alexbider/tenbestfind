@@ -59,6 +59,10 @@ body .ct2.ct2 h2[data-minih] { --ls: -0.035em; }
 .ct2 [data-covmap] .leaflet-tile-pane { filter: saturate(0.45) brightness(1.04) contrast(0.95); }
 .ct2 [data-covmap] { z-index: 0; }
 
+/* Five steps in one row while the connecting rail is visible; auto-fit would strand the fifth step alone. */
+@media (min-width: 901px) {
+  .ct2 ol[data-steps] { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
 @media (max-width: 1080px) {
   .ct2 [data-hero-side] { max-width: 560px; }
 }

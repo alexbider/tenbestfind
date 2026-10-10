@@ -1142,7 +1142,7 @@ export async function CityHub({
                 aria-hidden="true"
                 style={{ position: "absolute", left: "10%", right: "10%", top: "23px", height: "2px", background: "linear-gradient(90deg, var(--gold-ink), var(--color-primary))" }}
               />
-              <ol data-stagger="" style={{ position: "relative", ...gridOf(200) }}>
+              <ol data-stagger="" data-steps="" style={{ position: "relative", ...gridOf(200) }}>
                 {RESEARCH_STEPS.map((step, index) => (
                   <li key={step.title} data-hov="" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "12px" }}>
                     <span

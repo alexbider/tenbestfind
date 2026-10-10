@@ -152,11 +152,7 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
           marginBottom: "18px",
         }}
       >
-        <h2
-          id="sum-h2"
-          data-reveal=""
-          style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "800", lineHeight: "1.08", letterSpacing: "-0.035em" }}
-        >
+        <h2 id="sum-h2" data-reveal="" style={{ fontSize: "26px", fontWeight: "800", lineHeight: "1.08", letterSpacing: "-0.035em" }}>
           {tail(`${title} at a glance`)}
         </h2>
         {priceModal()}
@@ -166,7 +162,11 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
           {intro}
         </p>
       ) : null}
-      <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "16px" }}>
+      <ul
+        data-stagger=""
+        data-cost-cards=""
+        style={{ display: "grid", gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`, gap: "16px" }}
+      >
         {cards.map((card) => {
           const tone = skin(card.tone);
           return (
@@ -388,7 +388,7 @@ export function CostTables({ rows, anchorPrefix }: { rows: Row[]; anchorPrefix: 
               id={`${id}-h2`}
               data-reveal=""
               style={{
-                fontSize: "clamp(26px, 3vw, 36px)",
+                fontSize: "26px",
                 fontWeight: "800",
                 lineHeight: "1.08",
                 letterSpacing: "-0.035em",
