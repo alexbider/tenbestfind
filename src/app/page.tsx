@@ -675,6 +675,7 @@ export default async function HomePage() {
                               gap: "14px",
                               padding: "11px 0",
                               borderTop: "1px solid rgba(255,255,255,0.1)",
+                              minWidth: "0",
                             }}
                           >
                             <span
@@ -688,22 +689,44 @@ export default async function HomePage() {
                             >
                               {String(entry.position).padStart(2, "0")}
                             </span>
-                            <span style={{ flex: "1", minWidth: "0" }}>
-                              <span style={{ display: "block", fontSize: "15px", fontWeight: "600", color: "#fff" }}>
+                            <span style={{ flex: "1 1 auto", minWidth: "0" }}>
+                              <span
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  fontSize: "15px",
+                                  fontWeight: "600",
+                                  lineHeight: "1.3",
+                                  color: "#fff",
+                                }}
+                              >
                                 {entry.business.name}
                               </span>
                               <span
-                                style={{ display: "block", fontSize: "12.5px", color: "rgba(232,237,245,0.62)" }}
+                                style={{
+                                  display: "block",
+                                  fontSize: "12.5px",
+                                  color: "rgba(232,237,245,0.62)",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
                               >
                                 {meta || entry.designation}
                               </span>
                             </span>
                             {badge ? (
                               <span
+                                title={badge}
                                 style={{
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "5px",
+                                  flex: "0 1 auto",
+                                  minWidth: "0",
+                                  maxWidth: "48%",
                                   fontSize: "11.5px",
                                   fontWeight: "700",
                                   color: "#7BDCB0",
@@ -719,10 +742,20 @@ export default async function HomePage() {
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   aria-hidden="true"
+                                  style={{ flexShrink: 0 }}
                                 >
                                   <path d="M20 6 9 17l-5-5" />
                                 </svg>
-                                {badge}
+                                <span
+                                  style={{
+                                    minWidth: "0",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {badge}
+                                </span>
                               </span>
                             ) : null}
                           </li>
