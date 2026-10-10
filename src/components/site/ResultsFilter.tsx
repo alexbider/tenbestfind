@@ -59,6 +59,19 @@ const PILL = {
   fontSize: "13px",
   fontWeight: "600",
 };
+// The phone sheet's pills are a size up, as the design draws them.
+const PILL_SHEET = { ...PILL, padding: "8px 14px", fontSize: "14px" };
+
+/** The design's three-bar filter mark. */
+function FilterIcon({ size, stroke, strokeWidth }: { size: number; stroke: string; strokeWidth: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" aria-hidden="true">
+      <path d="M4 6h16" />
+      <path d="M7 12h10" />
+      <path d="M10 18h4" />
+    </svg>
+  );
+}
 
 function pillSkin(active: boolean) {
   return active
@@ -77,7 +90,9 @@ export function ResultsFilter({
   rankingHref,
   rankingLabel,
   evaluated,
+  variant = "panel",
 }: {
+  variant?: "panel" | "sheet";
   rating: string;
   values: Record<string, string>;
   activeCount: number;
@@ -107,6 +122,106 @@ export function ResultsFilter({
     router.push(`/search/?${next.toString()}`, { scroll: false });
   }, [params, router]);
 
+  if (variant === "sheet") {
+    const section = { paddingBottom: "14px", marginBottom: "14px", borderBottom: "1px solid var(--border-subtle)" } as const;
+    return (
+      <details data-filter-toggle="" style={{ gridColumn: "1 / -1" }}>
+        <summary
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "10px",
+            height: "46px",
+            padding: "0 18px",
+            borderRadius: "14px",
+            border: "1.5px solid var(--border-strong)",
+            background: "var(--surface-card)",
+            fontSize: "15px",
+            fontWeight: "600",
+            color: "var(--blue-900)",
+          }}
+        >
+          <FilterIcon size={18} stroke="currentColor" strokeWidth={1.9} />
+          Filters
+          {activeCount > 0 ? (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: "20px",
+                height: "20px",
+                padding: "0 6px",
+                borderRadius: "999px",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: "700",
+              }}
+            >
+              {activeCount}
+            </span>
+          ) : null}
+        </summary>
+        <div style={{ marginTop: "12px", background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "18px", padding: "20px" }}>
+          <div style={{ ...section, paddingBottom: "16px", marginBottom: "16px" }}>
+            <h3 style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "10px" }}>
+              <Icon name="star" size={15} color="#D99A1C" strokeWidth={2} />
+              Google rating
+            </h3>
+            <ul style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+              {RATINGS.map((option) => {
+                const active = (rating || "any") === option.value;
+                return (
+                  <li key={option.value}>
+                    <button type="button" aria-pressed={active} onClick={() => setParam("rating", option.value)} style={{ ...PILL_SHEET, ...pillSkin(active) }}>
+                      {option.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          {GROUPS.map((group) => (
+            <div key={group.key} style={section}>
+              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "10px" }}>{group.title}</h3>
+              <ul style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                {group.options.map((option) => {
+                  const active = (values[group.key] ?? "") === option.value;
+                  return (
+                    <li key={option.label}>
+                      <button type="button" aria-pressed={active} onClick={() => setParam(group.key, option.value)} style={{ ...PILL_SHEET, ...pillSkin(active) }}>
+                        {option.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={clearAll}
+            style={{
+              minHeight: "44px",
+              padding: "0 16px",
+              borderRadius: "12px",
+              border: "1.5px solid var(--border-strong)",
+              background: "var(--surface-card)",
+              cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "var(--blue-900)",
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      </details>
+    );
+  }
+
   return (
     <>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
@@ -122,7 +237,7 @@ export function ResultsFilter({
           }}
         >
           <h2 style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--blue-900)" }}>
-            <Icon name="filter" size={15} strokeWidth={2} />
+            <FilterIcon size={16} stroke="#2D74D7" strokeWidth={2} />
             Filters
             {activeCount > 0 ? (
               <span
@@ -154,7 +269,7 @@ export function ResultsFilter({
         </div>
 
         <div style={{ padding: "20px" }}>
-          <div style={{ paddingBottom: "14px", marginBottom: "14px", borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={{ paddingBottom: "16px", marginBottom: "16px", borderBottom: "1px solid var(--border-subtle)" }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "10px" }}>
               <Icon name="star" size={15} color="#D99A1C" strokeWidth={2} />
               Google rating
@@ -179,7 +294,7 @@ export function ResultsFilter({
           </div>
 
           {GROUPS.map((group) => (
-            <div key={group.key} style={{ paddingBottom: "14px", marginBottom: "14px", borderBottom: "1px solid var(--border-subtle)" }}>
+            <div key={group.key} style={{ paddingBottom: "16px", marginBottom: "16px", borderBottom: "1px solid var(--border-subtle)" }}>
               <h3 style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "10px" }}>
                 <Icon name={group.icon} size={15} color="var(--color-primary)" strokeWidth={2} />
                 {group.title}
@@ -211,24 +326,30 @@ export function ResultsFilter({
       </div>
 
       {rankingHref ? (
-        <div style={{ background: "var(--blue-900)", borderRadius: "18px", padding: "20px" }}>
-          <p style={{ fontSize: "15px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>Want our researched shortlist?</p>
-          <p style={{ fontSize: "14px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)", marginBottom: "14px" }}>
+        <div style={{ position: "relative", overflow: "hidden", background: "var(--ink)", borderRadius: "20px", padding: "22px", boxShadow: "var(--shadow-md)" }}>
+          <span
+            aria-hidden="true"
+            style={{ position: "absolute", right: "-40px", top: "-40px", width: "140px", height: "140px", borderRadius: "50%", background: "radial-gradient(closest-side, rgba(45,116,215,0.45), transparent)" }}
+          />
+          <span aria-hidden="true" style={{ position: "relative", display: "block", width: "28px", height: "2px", background: "var(--gold-ink)", marginBottom: "12px" }} />
+          <p style={{ position: "relative", fontSize: "16px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>Want our researched shortlist?</p>
+          <p style={{ position: "relative", fontSize: "14px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)", marginBottom: "14px" }}>
             {evaluated ? `Ten companies, selected from ${evaluated} evaluated in this market.` : "Ten companies an editor actually researched."}
           </p>
           <a
             href={rankingHref}
             style={{
+              position: "relative",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               width: "100%",
-              height: "44px",
+              height: "46px",
               borderRadius: "12px",
-              background: "#fff",
-              color: "var(--blue-900)",
+              background: "var(--gold-ink)",
+              color: "var(--ink)",
               fontSize: "14px",
-              fontWeight: "600",
+              fontWeight: "700",
             }}
           >
             {rankingLabel ?? "See the ten best"}

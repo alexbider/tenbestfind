@@ -1,1 +1,50 @@
-/* October 2026 design: country template. */
+/* October 2026 design: country template.
+
+   The page rules of 04 Country Hub, scoped to .cn2. The grids carry their own
+   attributes (data-cn-*) rather than the older data-cat-grid, data-region-grid
+   and data-metro-grid, because pages.css turns those into a four-across icon
+   strip and two-column name lists on a phone, and the design keeps them as
+   cards. */
+
+.cn2 { background: var(--surface-card); overflow-x: clip; }
+.cn2 h1, .cn2 h2, .cn2 h3 { margin: 0; color: var(--ink); }
+.cn2 h3 { letter-spacing: -0.02em; }
+.cn2 p { margin: 0; }
+.cn2 ul, .cn2 ol { margin: 0; padding: 0; list-style: none; }
+.cn2 a { text-decoration: none; }
+.cn2 section[id] { scroll-margin-top: 140px; }
+.cn2 [data-hero] { --mx: 75%; --my: 20%; }
+
+/* pages.css pins every h1 and h2 to one tracking and the skin raises the
+   weight; the design's own values are the same, stated here so nothing else
+   in the cascade wins. */
+body .cn2.cn2 h1 { letter-spacing: -0.032em !important; }
+body .cn2.cn2 h2 { letter-spacing: -0.035em !important; }
+.cn2 .serif-accent { letter-spacing: -0.01em; }
+
+.cn2 [data-ten-outline] { animation: none !important; }
+.cn2 [data-btn] { transition: transform 220ms var(--spring), background 200ms ease, box-shadow 260ms var(--spring), border-color 200ms ease, color 200ms ease; }
+.cn2 [data-btn]:active { transform: scale(0.97); }
+
+/* faq: the plus turns an eighth of a circle and stays a bare plus */
+.cn2 [data-faq][open] [data-fq-ico] { transform: rotate(45deg); background: none !important; color: var(--color-primary) !important; }
+.cn2 [data-faq] > summary:hover { color: var(--color-primary); }
+
+@media (max-width: 1080px) {
+  .cn2 [data-cn-cats] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .cn2 [data-cn-regions], .cn2 [data-cn-metros] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 960px) {
+  .cn2 [data-cn-cats] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 700px) {
+  .cn2 [data-cn-cats], .cn2 [data-cn-regions], .cn2 [data-cn-metros] { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* Phones. The older shared sheet centres the one link inside a list item and
+   turns narrow auto-fit grids into two columns; the design keeps the trade
+   cards left-aligned and the trust strip as a stack. */
+@media (max-width: 760px) {
+  .site-page .cn2 [data-cn-cats] li > a { align-items: stretch; text-align: left; }
+}
+

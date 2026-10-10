@@ -1,1 +1,65 @@
-/* October 2026 design: utility template. */
+/* ==================================================================
+   Utility pages (the CMS template, the contact form, 404, rankings and
+   locations indexes).
+
+   Form fields as the design draws them. The design styles [data-field] and
+   [data-label] in its page stylesheet, so they are written here.
+   ================================================================== */
+.ut2 [data-field] {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--text-primary);
+  background: var(--surface-card);
+}
+.ut2 textarea[data-field] {
+  height: auto;
+  padding: 12px 14px;
+  resize: vertical;
+}
+.ut2 [data-label] {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue-900);
+  margin-bottom: 6px;
+}
+.ut2 [data-field]:hover { border-color: var(--blue-300, var(--border-strong)); }
+.ut2 [data-field]:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+@media (max-width: 760px) {
+  .ut2 [data-form-grid] { grid-template-columns: 1fr !important; }
+}
+
+/* "Jump to section" opens with the plus turning into a cross, as the FAQ rows do. */
+.ut2 [data-jump][open] [data-fq-ico] { transform: rotate(45deg); }
+
+/* The document body is the shared GuideBody, which draws its blocks one under
+   another. The design sets a heading 40px under the block before it and 14px
+   above what it introduces, and lets a paragraph run slightly looser. */
+.ut2 [data-doc-body] > h2 {
+  margin-top: 26px;
+  font-size: 26px;
+  line-height: 1.25;
+}
+.ut2 [data-doc-body] > h2:first-child { margin-top: 0; }
+.ut2 [data-doc-body] > p { line-height: 1.8 !important; }
+
+/* Phone: the design shows a link row at its own height, and the older shared
+   rules rewrite any link row to 48px and 10px 12px of padding. */
+@media (max-width: 760px) {
+  .site-page .ut2 [data-row] { min-height: 0; }
+  .site-page .ut2 [data-doc-body] > h2 { font-size: clamp(22px, 6vw, 26px) !important; }
+}
+
+/* Region cards: two to a row on a phone instead of one long column. */
+@media (max-width: 760px) {
+  .ut2 [data-regions] { --ag-min: 150px !important; --ag-gap: 12px !important; }
+}

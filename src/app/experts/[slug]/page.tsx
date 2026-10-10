@@ -5,16 +5,18 @@ import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Chevron, Crumbs, SHELL, initials } from "@/components/site/page-parts";
 import {
-  Chevron,
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  TenOutline,
-  initials,
-} from "@/components/site/page-parts";
+  ArrowLink,
+  DarkBackdrop,
+  FaqRow,
+  HeroBackdrop,
+  Kicker,
+  SectionToc,
+  Tile,
+  autoGrid,
+} from "@/components/site/trust/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { relatedForPerson } from "@/lib/related";
@@ -33,8 +35,8 @@ export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 
 const SECTION = { ...SHELL, padding: "64px 24px" };
-const SECTION_H2 = { fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700" };
-const SPLIT_H2 = { fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700" };
+const SECTION_H2 = { fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.08", fontWeight: "800", letterSpacing: "-0.035em" };
+const SPLIT_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
 const PANEL = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
@@ -44,7 +46,7 @@ const PANEL = {
 const CARD = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
-  borderRadius: "18px",
+  borderRadius: "22px",
   boxShadow: "var(--shadow-sm)",
   padding: "22px 24px",
 };
@@ -262,8 +264,22 @@ export default async function ExpertProfilePage({ params }: Props) {
     { label: "Editorial team", value: "TenBestFind home services desk", icon: "users" },
   ];
 
+  // Only the sections this person has get a pill.
+  const toc = [
+    bioParagraphs.length > 0 || person.limits ? { href: "#about", label: "About" } : null,
+    specializations.length > 0 ? { href: "#expertise", label: "Expertise" } : null,
+    person.experience.length > 0 || person.credentials.length > 0 ? { href: "#experience", label: "Experience" } : null,
+    { href: "#role", label: "Role" },
+    authoredGuides.length > 0 ? { href: "#written", label: "Guides" } : null,
+    reviewedItems.length > 0 ? { href: "#reviewed", label: "Reviewed" } : null,
+    recent.length > 0 ? { href: "#contributions", label: "Recent" } : null,
+    { href: "#independence", label: "Independence" },
+    { href: "#faqs", label: "FAQs" },
+  ].filter((item): item is { href: string; label: string } => item !== null);
+
   return (
     <SiteChrome active="trust" skin>
+      <div className="tr2 ex2">
       {/* The Person here is the definition; every ranking and guide this
           person signed points back at this @id rather than repeating a name. */}
       <JsonLd
@@ -283,9 +299,9 @@ export default async function ExpertProfilePage({ params }: Props) {
       <FaqJsonLd faqs={faqs.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }))} />
 
       {/* ------------------------------------------------------------- hero */}
-      <section style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 48px" }}>
+      <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <HeroBackdrop />
+        <div style={{ ...SHELL, position: "relative", padding: "20px 24px 48px" }}>
           <Crumbs
             items={[
               { label: "Home", href: "/" },
@@ -368,7 +384,7 @@ export default async function ExpertProfilePage({ params }: Props) {
               {links.length > 0 ? (
                 <div style={{ paddingTop: "18px", borderTop: "1px solid var(--border-subtle)" }}>
                   <h2 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                    Professional profiles
+                    {accentTail("Professional profiles", 1)}
                   </h2>
                   <ul style={{ display: "grid", gap: "8px" }}>
                     {links.map((link) => (
@@ -405,13 +421,13 @@ export default async function ExpertProfilePage({ params }: Props) {
             </div>
 
             <div>
-              <Eyebrow heroIn="1" gap="14px">
+              <Kicker hero="1" gap="14px">
                 TenBestFind expert
-              </Eyebrow>
-              <h1 data-hero-in="2" style={{ fontSize: "clamp(34px, 4.4vw, 50px)", lineHeight: "1.06", letterSpacing: "-0.04em", fontWeight: "800" }}>
+              </Kicker>
+              <h1 data-in="2" style={{ fontSize: "clamp(36px, 5vw, 60px)", lineHeight: "1.06", letterSpacing: "-0.04em", fontWeight: "800" }}>
                 {person.name}
               </h1>
-              <p data-hero-in="3" style={{ marginTop: "12px", fontSize: "19px", fontWeight: "600", color: "var(--color-primary)" }}>
+              <p data-in="3" style={{ marginTop: "12px", fontSize: "19px", fontWeight: "600", color: "var(--color-primary)" }}>
                 {person.role}
               </p>
               {bioParagraphs[0] ? (
@@ -430,7 +446,7 @@ export default async function ExpertProfilePage({ params }: Props) {
                 </div>
               ) : null}
 
-              <dl style={{ marginTop: "28px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+              <dl data-ag="auto" style={autoGrid(200, "14px", { marginTop: "28px" })}>
                 {glance.map((item) => (
                   <div
                     key={item.label}
@@ -461,14 +477,16 @@ export default async function ExpertProfilePage({ params }: Props) {
         </div>
       </section>
 
+      <SectionToc items={toc} />
+
       {/* ------------------------------------------------------------ about */}
       {bioParagraphs.length > 0 || person.limits ? (
         <section id="about" aria-labelledby="about-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "48px", alignItems: "start" }}>
-            <h2 id="about-h2" style={SPLIT_H2}>
-              About {person.name}
+            <h2 data-reveal="" id="about-h2" style={SPLIT_H2}>
+              {accentTail(`About ${person.name}`, 1)}
             </h2>
-            <div style={{ display: "grid", gap: "16px" }}>
+            <div data-stagger="" style={{ display: "grid", gap: "16px" }}>
               {bioParagraphs.map((paragraph) => (
                 <p key={paragraph.slice(0, 40)} style={{ fontSize: "17px", lineHeight: "1.8", color: "var(--text-primary)" }}>
                   {paragraph}
@@ -486,16 +504,14 @@ export default async function ExpertProfilePage({ params }: Props) {
       {specializations.length > 0 ? (
         <section id="expertise" aria-labelledby="exp-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
-            <h2 id="exp-h2" style={{ ...SPLIT_H2, marginBottom: "26px" }}>
-              Areas of expertise
+            <h2 data-reveal="" id="exp-h2" style={{ ...SPLIT_H2, marginBottom: "26px" }}>
+              {accentTail("Areas of expertise", 1)}
             </h2>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" data-ag="auto" style={autoGrid(260, "16px")}>
               {specializations.map((item) => (
-                <li key={item} data-card="" style={{ ...CARD, borderRadius: "18px", padding: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <span aria-hidden="true" style={{ ...TILE, width: "42px", height: "42px", borderRadius: "12px" }}>
-                    <Icon name="tools" size={20} strokeWidth={1.8} />
-                  </span>
-                  <h3 style={{ fontSize: "17px", fontWeight: "700" }}>{item}</h3>
+                <li key={item} data-card="" style={{ ...CARD, padding: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <Tile icon="tools" size={44} iconSize={21} />
+                  <h3 style={{ fontSize: "18px", fontWeight: "700" }}>{item}</h3>
                 </li>
               ))}
             </ul>
@@ -508,8 +524,8 @@ export default async function ExpertProfilePage({ params }: Props) {
         <section id="experience" aria-labelledby="xp-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" }}>
             <div>
-              <h2 id="xp-h2" style={{ ...SECTION_H2, marginBottom: "24px" }}>
-                Professional experience
+              <h2 data-reveal="" id="xp-h2" style={{ ...SECTION_H2, marginBottom: "24px" }}>
+                {accentTail("Professional experience", 1)}
               </h2>
               <ol style={{ display: "grid", gap: "0" }}>
                 {person.experience.map((entry) => (
@@ -539,10 +555,12 @@ export default async function ExpertProfilePage({ params }: Props) {
             </div>
 
             {person.credentials.length > 0 ? (
-              <div style={{ display: "grid", gap: "16px" }}>
+              <div data-stagger="" style={{ display: "grid", gap: "16px" }}>
                 <div style={PANEL}>
                   <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "14px", flexWrap: "wrap", marginBottom: "6px" }}>
-                    <h2 style={{ fontSize: "20px", fontWeight: "700" }}>Credentials and qualifications</h2>
+                    <h2 data-reveal="" style={{ fontSize: "20px", fontWeight: "700" }}>
+                      {accentTail("Credentials and qualifications", 1)}
+                    </h2>
                     <InfoModal
                       label="Credential verification"
                       title="Credential verification"
@@ -557,7 +575,7 @@ export default async function ExpertProfilePage({ params }: Props) {
                       Labels here say how far a claim was checked.
                     </InfoModal>
                   </div>
-                  <ul style={{ display: "grid", gap: "14px" }}>
+                  <ul data-stagger="" style={{ display: "grid", gap: "14px" }}>
                     {person.credentials.map((credential) => {
                       const skin = STATUS_SKIN[credential.status] ?? STATUS_SKIN.SELF_REPORTED;
                       return (
@@ -612,14 +630,15 @@ export default async function ExpertProfilePage({ params }: Props) {
       ) : null}
 
       {/* ------------------------------------------------------------- role */}
-      <section id="role" aria-labelledby="role-h2" style={{ background: "var(--blue-900)", color: "var(--text-on-ink)" }}>
-        <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: "48px", alignItems: "start" }}>
+      <section id="role" aria-labelledby="role-h2" style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}>
+        <DarkBackdrop />
+        <div data-split="" style={{ ...SECTION, position: "relative", display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: "48px", alignItems: "start" }}>
           <div>
             <p style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "var(--ls-wider)", textTransform: "uppercase", color: "#E8B551", marginBottom: "14px" }}>
               Editorial role
             </p>
-            <h2 id="role-h2" style={{ ...SPLIT_H2, color: "#fff", marginBottom: "16px" }}>
-              Role at TenBestFind
+            <h2 data-reveal="" id="role-h2" style={{ ...SPLIT_H2, color: "#fff", marginBottom: "16px" }}>
+              {accentTail("Role at TenBestFind", 1)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.75", color: "rgba(232,237,245,0.82)", marginBottom: "20px" }}>
               {person.name} is responsible for {specializations.length > 0 ? specializations.join(", ").toLowerCase() : "their category"} coverage:
@@ -658,11 +677,14 @@ export default async function ExpertProfilePage({ params }: Props) {
               </InfoModal>
             </div>
           </div>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
+          <ul data-stagger="" data-ag="one" style={autoGrid(240, "14px")}>
             {DUTIES.map((duty) => (
               <li
                 key={duty}
+                data-hov=""
+                data-dark-card=""
                 style={{
+                  transition: "background 200ms ease, border-color 200ms ease",
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.14)",
                   borderRadius: "16px",
@@ -671,7 +693,7 @@ export default async function ExpertProfilePage({ params }: Props) {
                   gap: "12px",
                 }}
               >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E8B551" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8B551" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "2px" }}>
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
                 <span style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>{duty}</span>
@@ -686,19 +708,17 @@ export default async function ExpertProfilePage({ params }: Props) {
         <section id="written" aria-labelledby="wr-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "24px" }}>
-              <h2 id="wr-h2" style={SECTION_H2}>
-                Guides written by {person.name}
+              <h2 data-reveal="" id="wr-h2" style={SECTION_H2}>
+                {accentTail(`Guides written by ${person.name}`, 2)}
               </h2>
-              <Link href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All guides →
-              </Link>
+              <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All guides
+              </ArrowLink>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" data-ag="auto" style={autoGrid(290, "16px")}>
               {authoredGuides.map((guide) => (
                 <li key={guide.id} data-card="" style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <span aria-hidden="true" style={{ ...TILE, width: "40px", height: "40px" }}>
-                    <Icon name="book" size={19} strokeWidth={1.8} />
-                  </span>
+                  <Tile icon="book" size={40} iconSize={19} />
                   <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)" }}>
                     {guide.category?.serviceName ?? "Guides"}
                   </span>
@@ -725,14 +745,14 @@ export default async function ExpertProfilePage({ params }: Props) {
         <section id="reviewed" aria-labelledby="rv-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "24px" }}>
-              <h2 id="rv-h2" style={SECTION_H2}>
-                Content reviewed by {person.name}
+              <h2 data-reveal="" id="rv-h2" style={SECTION_H2}>
+                {accentTail(`Content reviewed by ${person.name}`, 2)}
               </h2>
-              <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All rankings →
-              </Link>
+              <ArrowLink href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All rankings
+              </ArrowLink>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" data-ag="auto" style={autoGrid(320, "16px")}>
               {reviewedItems.map((item) => (
                 <li key={item.id} data-card="" style={{ ...CARD, display: "flex", gap: "16px" }}>
                   <span
@@ -762,9 +782,9 @@ export default async function ExpertProfilePage({ params }: Props) {
                       </Link>
                     </h3>
                     <span style={{ display: "block", fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>{item.meta}</span>
-                    <Link href={item.href} style={{ fontSize: "14px", fontWeight: "600" }}>
-                      {item.cta} →
-                    </Link>
+                    <ArrowLink href={item.href} style={{ fontSize: "14px", fontWeight: "600" }}>
+                      {item.cta}
+                    </ArrowLink>
                   </span>
                 </li>
               ))}
@@ -778,8 +798,8 @@ export default async function ExpertProfilePage({ params }: Props) {
         <section id="contributions" aria-labelledby="con-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "48px", alignItems: "start" }}>
             <div>
-              <h2 id="con-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
-                Recent contributions
+              <h2 data-reveal="" id="con-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
+                {accentTail("Recent contributions", 1)}
               </h2>
               <ul style={{ borderTop: "1px solid var(--border-subtle)" }}>
                 {recent.map((item) => (
@@ -826,7 +846,7 @@ export default async function ExpertProfilePage({ params }: Props) {
               </ul>
             </div>
             {markets.length > 0 ? (
-              <div style={{ display: "grid", gap: "16px", alignContent: "start" }}>
+              <div data-stagger="" style={{ display: "grid", gap: "16px", alignContent: "start" }}>
                 <div style={{ ...CARD, borderRadius: "18px" }}>
                   <h3 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px" }}>
                     Markets covered
@@ -875,11 +895,11 @@ export default async function ExpertProfilePage({ params }: Props) {
             }}
           >
             <div>
-              <h2 id="ind-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "22px", fontWeight: "700", marginBottom: "12px" }}>
+              <h2 data-reveal="" id="ind-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "22px", fontWeight: "700", marginBottom: "12px" }}>
                 <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "11px", background: "var(--green-50)", color: "#178054", flexShrink: 0 }}>
                   <Icon name="shield" size={20} strokeWidth={1.9} />
                 </span>
-                Editorial independence
+                <span>{accentTail("Editorial independence", 1)}</span>
               </h2>
               <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-secondary)" }}>
                 TenBestFind experts and reviewers contribute under our published editorial standards.
@@ -889,6 +909,7 @@ export default async function ExpertProfilePage({ params }: Props) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
               <Link
+                data-btn=""
                 href={routes.editorialTeam()}
                 style={{
                   display: "inline-flex",
@@ -926,12 +947,12 @@ export default async function ExpertProfilePage({ params }: Props) {
       {/* ------------------------------------------------------------- faqs */}
       <section id="faqs" aria-labelledby="faq-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "48px", alignItems: "start" }}>
-          <h2 id="faq-h2" style={SPLIT_H2}>
-            About {person.name}
+          <h2 data-reveal="" id="faq-h2" style={SPLIT_H2}>
+            {accentTail(`About ${person.name}`, 1)}
           </h2>
-          <ul style={{ display: "grid", gap: "12px" }}>
+          <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
             {faqs.map((faq) => (
-              <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
+              <FaqRow key={faq.id} question={faq.question} answer={faq.answer} />
             ))}
           </ul>
         </div>
@@ -942,8 +963,8 @@ export default async function ExpertProfilePage({ params }: Props) {
         <div style={{ ...SHELL, padding: "56px 24px 72px" }}>
           <div style={{ background: "var(--surface-page)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "30px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "22px" }}>
-              <h2 id="trans-h2" style={{ fontSize: "21px", fontWeight: "700" }}>
-                About this expert profile
+              <h2 data-reveal="" id="trans-h2" style={{ fontSize: "21px", fontWeight: "700" }}>
+                {accentTail("About this expert profile", 2)}
               </h2>
               <InfoModal
                 label="Professional disclosure"
@@ -959,7 +980,7 @@ export default async function ExpertProfilePage({ params }: Props) {
                 What is on this page, and how far each part of it was checked.
               </InfoModal>
             </div>
-            <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
+            <dl data-stagger="" data-ag="one" style={{ ...autoGrid(200, "18px 32px"), margin: "0" }}>
               {meta.map((item) => (
                 <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                   <span
@@ -1018,6 +1039,7 @@ export default async function ExpertProfilePage({ params }: Props) {
       </section>
 
       <RelatedContent groups={related} title="More from the desk" />
+      </div>
     </SiteChrome>
   );
 }

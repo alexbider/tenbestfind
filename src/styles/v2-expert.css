@@ -1,1 +1,12 @@
-/* October 2026 design: expert template. */
+/* The experts index on a phone: the monogram sits above the person's text
+   instead of taking a quarter of the card's width beside it. */
+@media (max-width: 560px) {
+  .tr2 .ex2 [data-person],
+  .ex2 [data-person] {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+  .ex2 [data-person] > div {
+    width: 100%;
+  }
+}

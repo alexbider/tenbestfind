@@ -5,17 +5,18 @@ import { RelatedContent } from "@/components/site/RelatedContent";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Chevron, Crumbs, FaqItem, SHELL, SR_ONLY } from "@/components/site/page-parts";
 import {
-  Chevron,
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  FinalSearchBand,
-  GRID_BACKDROP,
-  SHELL,
-  SR_ONLY,
-  TenOutline,
-} from "@/components/site/page-parts";
+  DarkBackdrop,
+  FinalBand,
+  HeroBackdrop,
+  HeroTitle,
+  LinkArrow,
+  SectionToc,
+  Tile,
+  accentPhrase,
+} from "@/components/site/hubs/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
 import { regionCopy } from "@/lib/seo-copy";
@@ -32,7 +33,20 @@ import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 
 const SECTION = { ...SHELL, padding: "64px 24px" };
-const SECTION_H2 = { fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "700" };
+const SECTION_H2 = {
+  fontSize: "clamp(28px, 3.4vw, 42px)",
+  lineHeight: "1.06",
+  fontWeight: "800",
+  letterSpacing: "-0.04em",
+};
+// A heading of the dark or two-column sections, a step smaller than the rest.
+const SECTION_H2_SM = { ...SECTION_H2, fontSize: "clamp(28px, 3.2vw, 40px)" };
+// An auto-fit track whose minimum is read through a variable, so the older
+// phone sheet (which rewrites grids from the minimum written in the style)
+// leaves it alone and the design's single column applies.
+const fit = (min: number) => `repeat(auto-fit, minmax(var(--fit, ${min}px), 1fr))`;
+const toc = (entries: [boolean, string, string][]) =>
+  entries.filter(([show]) => show).map(([, href, label]) => ({ href, label }));
 const SECTION_HEAD = {
   display: "flex",
   alignItems: "flex-end",
@@ -43,16 +57,8 @@ const SECTION_HEAD = {
 const CARD = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
-  borderRadius: "18px",
+  borderRadius: "22px",
   boxShadow: "var(--shadow-sm)",
-};
-const ICON_TILE = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "12px",
-  background: "var(--blue-50)",
-  color: "var(--color-primary)",
 };
 const DARK_CELL = {
   padding: "14px 20px",
@@ -234,6 +240,7 @@ export async function RegionHub({
 
   return (
     <SiteChrome active="locations" skin>
+      <div className="rg2">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -247,32 +254,41 @@ export async function RegionHub({
       <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
-      <section style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
+      <section
+        data-hero=""
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          background: "var(--paper)",
+          borderBottom: "1px solid var(--border-subtle)",
+        }}
+      >
+        <HeroBackdrop />
+        <div style={{ ...SHELL, position: "relative", padding: "20px 24px 44px" }}>
           <Crumbs items={crumbs} />
           <div
             data-split=""
             style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: "40px", alignItems: "start" }}
           >
             <div>
-              <Eyebrow heroIn="1" gap="16px">
+              <p data-eyebrow="" data-in="1" style={{ marginBottom: "16px" }}>
+                <span data-eyebrow-rule="" aria-hidden="true" />
                 {unitLabel === "province" ? "Province hub" : "State hub"}
-              </Eyebrow>
+              </p>
               <h1
-                data-hero-in="2"
+                data-in="2"
                 style={{
-                  fontSize: "clamp(32px, 4.2vw, 50px)",
+                  fontSize: "clamp(36px, 5vw, 60px)",
                   lineHeight: "1.07",
                   letterSpacing: "-0.04em",
                   fontWeight: "800",
                   textWrap: "balance",
                 }}
               >
-                {copy.h1}
+                <HeroTitle text={copy.h1} phrase={`in ${region.name}`} />
               </h1>
               <p
-                data-hero-in="3"
+                data-in="3"
                 style={{
                   marginTop: "20px",
                   fontSize: "18px",
@@ -386,7 +402,7 @@ export async function RegionHub({
             </div>
 
             <div style={{ ...CARD, borderRadius: "20px", overflow: "hidden" }}>
-              <div style={{ height: "260px", background: "var(--surface-sunken)" }}>
+              <div data-thumb="" style={{ height: "260px", background: "var(--surface-sunken)" }}>
                 <Media src={region.heroImage} alt={`${region.name}, ${country.name}`} />
               </div>
               <dl style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", margin: "0" }}>
@@ -422,7 +438,7 @@ export async function RegionHub({
         </div>
 
         <div style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
-          <ul style={{ ...SHELL, padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))" }}>
+          <ul style={{ ...SHELL, padding: "0 24px", display: "grid", gridTemplateColumns: fit(230) }}>
             {[
               { icon: "search" as IconName, label: "Independent research", color: "var(--color-primary)", modal: false },
               { icon: "shield" as IconName, label: "Editorially reviewed", color: "#178054", modal: false },
@@ -441,6 +457,23 @@ export async function RegionHub({
         </div>
       </section>
 
+      <SectionToc
+        items={toc([
+          [body.length > 0, "#about", "Overview"],
+          [true, "#cities", "Cities"],
+          [services.length > 0, "#services", "Services"],
+          [conditions.length > 0, "#conditions", "Local"],
+          [licensing.length > 0, "#licensing", "Trades"],
+          [rankings.length > 0, "#rankings", "Rankings"],
+          [costRows.length > 0, "#costs", "Costs"],
+          [guides.length > 0, "#guides", "Guides"],
+          [siblingRegions.length > 0, "#nearby", "Nearby"],
+          [true, "#faqs", "FAQs"],
+          [true, "#tr", "About"],
+          [true, "#fs", "Search"],
+        ])}
+      />
+
       {/* ------------------------------------------------------------ about */}
       {/* Twenty-nine of these hubs ran three-quarters identical to each other,
           which is what happens when a page has one line and a list. A written
@@ -448,8 +481,8 @@ export async function RegionHub({
       {body.length > 0 ? (
         <section id="about" aria-labelledby="about-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
-            <h2 id="about-h2" style={{ ...SECTION_H2, marginBottom: "22px", textWrap: "balance" }}>
-              Hiring in {region.name}
+            <h2 data-reveal="" id="about-h2" style={{ ...SECTION_H2, marginBottom: "22px", textWrap: "balance" }}>
+              {accentPhrase(`Hiring in ${region.name}`, `in ${region.name}`)}
             </h2>
             <div className="prose" style={{ maxWidth: "760px" }}>
               <GuideBody blocks={body} />
@@ -461,12 +494,13 @@ export async function RegionHub({
       {/* ----------------------------------------------------------- cities */}
       <section id="cities" aria-labelledby="ci-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <Eyebrow heroIn="1" gap="12px">
+          <p data-reveal="" data-eyebrow="" style={{ marginBottom: "12px" }}>
+            <span data-eyebrow-rule="" aria-hidden="true" />
             Where we publish
-          </Eyebrow>
+          </p>
           <div style={{ ...SECTION_HEAD, marginBottom: "12px" }}>
-            <h2 id="ci-h2" style={SECTION_H2}>
-              {region.name} cities we cover
+            <h2 data-reveal="" id="ci-h2" style={SECTION_H2}>
+              {accentTail(`${region.name} cities we cover`, 2)}
             </h2>
             <InfoModal
               label="How we choose markets"
@@ -497,7 +531,7 @@ export async function RegionHub({
           </p>
 
           {metros.length > 0 ? (
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: fit(280), gap: "16px" }}>
               {metros.map((city) => {
                 const count = rankingsByCity.get(city.id) ?? 0;
                 return (
@@ -507,9 +541,7 @@ export async function RegionHub({
                     style={{ ...CARD, padding: "22px 24px", display: "flex", flexDirection: "column", gap: "10px" }}
                   >
                     <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                      <span aria-hidden="true" style={{ ...ICON_TILE, width: "44px", height: "44px" }}>
-                        <Icon name="pin" size={21} strokeWidth={1.8} />
-                      </span>
+                      <Tile icon="pin" size={44} iconSize={21} />
                       <span
                         style={{
                           padding: "4px 10px",
@@ -538,10 +570,12 @@ export async function RegionHub({
                       <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{city.blurb}</p>
                     ) : null}
                     <Link
+                      data-link=""
                       href={routes.city(country.code, region.slug, city.slug)}
                       style={{ marginTop: "auto", paddingTop: "8px", fontSize: "15px", fontWeight: "600" }}
                     >
-                      Explore {city.name} →
+                      Explore {city.name}
+                      <LinkArrow />
                     </Link>
                   </li>
                 );
@@ -562,7 +596,7 @@ export async function RegionHub({
               <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px" }}>
                 Other {region.name} markets with published rankings
               </h3>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "8px" }}>
+              <ul data-stagger="" data-rg-one="" data-band-grid="" style={{ display: "grid", gridTemplateColumns: fit(160), gap: "8px" }}>
                 {otherCities.map((city) => (
                   <li key={city.id}>
                     <Link
@@ -603,14 +637,15 @@ export async function RegionHub({
         >
           <div style={SECTION}>
             <div style={{ ...SECTION_HEAD, marginBottom: "28px" }}>
-              <h2 id="sv-h2" style={SECTION_H2}>
-                Popular home services in {region.name}
+              <h2 data-reveal="" id="sv-h2" style={SECTION_H2}>
+                {accentPhrase(`Popular home services in ${region.name}`, `in ${region.name}`)}
               </h2>
-              <Link href={routes.servicesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All service categories →
+              <Link data-link="" href={routes.servicesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All service categories
+                <LinkArrow />
               </Link>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "14px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: fit(250), gap: "14px" }}>
               {services.map((service) => (
                 <li key={service.slug}>
                   <Link
@@ -628,9 +663,7 @@ export async function RegionHub({
                       textDecoration: "none",
                     }}
                   >
-                    <span aria-hidden="true" style={{ ...ICON_TILE, flexShrink: 0, width: "42px", height: "42px" }}>
-                      <Icon name={icon(service.iconKey)} size={20} strokeWidth={1.8} />
-                    </span>
+                    <Tile icon={icon(service.iconKey)} size={42} iconSize={20} />
                     <span style={{ display: "block", minWidth: "0" }}>
                       <span style={{ display: "block", fontSize: "16px", fontWeight: "700", color: "var(--blue-900)" }}>
                         {service.name}
@@ -654,11 +687,12 @@ export async function RegionHub({
       {conditions.length > 0 ? (
         <section id="conditions" aria-labelledby="co-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
-            <Eyebrow heroIn="1" gap="12px">
+            <p data-reveal="" data-eyebrow="" style={{ marginBottom: "12px" }}>
+              <span data-eyebrow-rule="" aria-hidden="true" />
               {unitLabel === "province" ? "Provincewide conditions" : "Statewide conditions"}
-            </Eyebrow>
-            <h2 id="co-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
-              What {region.name} homeowners should know
+            </p>
+            <h2 data-reveal="" id="co-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
+              {accentTail(`What ${region.name} homeowners should know`, 2)}
             </h2>
             <p
               style={{
@@ -672,12 +706,10 @@ export async function RegionHub({
               These are the factors that shape service demand and pricing across the whole {unitLabel},
               before you get to anything a single city adds.
             </p>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: fit(300), gap: "16px" }}>
               {conditions.map((item) => (
                 <li key={item.title} data-card="" style={{ ...CARD, padding: "24px", display: "flex", gap: "16px" }}>
-                  <span aria-hidden="true" style={{ ...ICON_TILE, flex: "0 0 44px", width: "44px", height: "44px" }}>
-                    <Icon name={icon(item.iconKey)} size={21} strokeWidth={1.8} />
-                  </span>
+                  <Tile icon={icon(item.iconKey)} size={44} iconSize={21} flex />
                   <span style={{ display: "block" }}>
                     <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "5px" }}>{item.title}</h3>
                     <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{item.body}</p>
@@ -691,10 +723,22 @@ export async function RegionHub({
 
       {/* -------------------------------------------------------- licensing */}
       {licensing.length > 0 ? (
-        <section id="licensing" aria-labelledby="li-h2" style={{ background: "var(--blue-900)", color: "var(--text-on-ink)" }}>
+        <section
+          id="licensing"
+          aria-labelledby="li-h2"
+          style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}
+        >
+          <DarkBackdrop />
           <div
             data-split=""
-            style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: "44px", alignItems: "start" }}
+            style={{
+              ...SECTION,
+              position: "relative",
+              display: "grid",
+              gridTemplateColumns: "0.9fr 1.1fr",
+              gap: "44px",
+              alignItems: "start",
+            }}
           >
             <div>
               <p
@@ -710,20 +754,13 @@ export async function RegionHub({
                   marginBottom: "14px",
                 }}
               >
-                <Icon name="shield" size={16} strokeWidth={2} />
+                <span aria-hidden="true" style={{ display: "inline-flex" }}>
+                  <Icon name="shield" size={16} strokeWidth={2} />
+                </span>
                 Licensing in {region.name}
               </p>
-              <h2
-                id="li-h2"
-                style={{
-                  fontSize: "clamp(24px, 2.8vw, 34px)",
-                  lineHeight: "1.2",
-                  fontWeight: "700",
-                  color: "#fff",
-                  marginBottom: "16px",
-                }}
-              >
-                Which trades {region.name} licenses, and which it does not
+              <h2 data-reveal="" id="li-h2" style={{ ...SECTION_H2_SM, color: "#fff", marginBottom: "16px" }}>
+                {accentTail(`Which trades ${region.name} licenses, and which it does not`, 3)}
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.75", color: "rgba(232,237,245,0.82)", marginBottom: "18px" }}>
                 {region.name} licenses some trades at {unitLabel} level and leaves others to
@@ -833,11 +870,12 @@ export async function RegionHub({
         <section id="rankings" aria-labelledby="ra-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ ...SECTION_HEAD, marginBottom: "26px" }}>
-              <h2 id="ra-h2" style={SECTION_H2}>
-                Recently reviewed in {region.name}
+              <h2 data-reveal="" id="ra-h2" style={SECTION_H2}>
+                {accentPhrase(`Recently reviewed in ${region.name}`, `in ${region.name}`)}
               </h2>
-              <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All {region.name} rankings →
+              <Link data-link="" href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All {region.name} rankings
+                <LinkArrow />
               </Link>
             </div>
             <ul style={{ borderTop: "1px solid var(--border-subtle)" }}>
@@ -904,11 +942,8 @@ export async function RegionHub({
             style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "44px", alignItems: "start" }}
           >
             <div>
-              <h2
-                id="cs-h2"
-                style={{ fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700", marginBottom: "16px" }}
-              >
-                What services cost across {region.name}
+              <h2 data-reveal="" id="cs-h2" style={{ ...SECTION_H2_SM, marginBottom: "16px" }}>
+                {accentTail(`What services cost across ${region.name}`, 2)}
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)", marginBottom: "16px" }}>
                 Pricing varies between metros, so these are the ranges recorded for the {region.name}{" "}
@@ -931,12 +966,13 @@ export async function RegionHub({
                 </InfoModal>
               </div>
               <p style={{ marginTop: "8px" }}>
-                <Link href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
-                  Explore all cost guides →
+                <Link data-link="" href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
+                  Explore all cost guides
+                  <LinkArrow />
                 </Link>
               </p>
             </div>
-            <div style={{ ...CARD, overflow: "hidden", overflowX: "auto" }}>
+            <div style={{ ...CARD, borderRadius: "18px", overflow: "hidden", overflowX: "auto" }}>
               <table style={{ minWidth: "480px" }}>
                 <thead>
                   <tr style={{ background: "var(--surface-page)" }}>
@@ -1001,23 +1037,22 @@ export async function RegionHub({
         <section id="guides" aria-labelledby="gu-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ ...SECTION_HEAD, marginBottom: "26px" }}>
-              <h2 id="gu-h2" style={SECTION_H2}>
-                Guides for {region.name} homeowners
+              <h2 data-reveal="" id="gu-h2" style={SECTION_H2}>
+                {accentPhrase(`Guides for ${region.name} homeowners`, `${region.name} homeowners`)}
               </h2>
-              <Link href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All guides →
+              <Link data-link="" href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All guides
+                <LinkArrow />
               </Link>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: fit(290), gap: "16px" }}>
               {guides.map((guide) => (
                 <li
                   key={guide.id}
                   data-card=""
                   style={{ ...CARD, padding: "22px 24px", display: "flex", flexDirection: "column", gap: "10px" }}
                 >
-                  <span aria-hidden="true" style={{ ...ICON_TILE, width: "40px", height: "40px", borderRadius: "11px" }}>
-                    <Icon name="book" size={19} strokeWidth={1.8} />
-                  </span>
+                  <Tile icon="book" size={40} iconSize={19} />
                   <span
                     style={{
                       fontSize: "11px",
@@ -1058,10 +1093,20 @@ export async function RegionHub({
           style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
         >
           <div style={{ ...SHELL, padding: "56px 24px" }}>
-            <h2 id="nb-h2" style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", marginBottom: "20px" }}>
-              Explore other {country.regionLabel}
+            <h2
+              data-reveal=""
+              id="nb-h2"
+              style={{
+                fontSize: "clamp(26px, 3vw, 36px)",
+                lineHeight: "1.08",
+                fontWeight: "800",
+                letterSpacing: "-0.035em",
+                marginBottom: "20px",
+              }}
+            >
+              {accentTail(`Explore other ${country.regionLabel}`, 1)}
             </h2>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "12px" }}>
+            <ul data-stagger="" data-rg-one="" data-band-grid="" style={{ display: "grid", gridTemplateColumns: fit(190), gap: "12px" }}>
               {siblingRegions.map((sibling) => (
                 <li key={sibling.id}>
                   <Link
@@ -1103,10 +1148,10 @@ export async function RegionHub({
           data-split=""
           style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "48px", alignItems: "start" }}
         >
-          <h2 id="fq-h2" style={{ fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700" }}>
-            Finding local businesses in {region.name} FAQs
+          <h2 data-reveal="" id="fq-h2" style={SECTION_H2_SM}>
+            {accentPhrase(`Finding local businesses in ${region.name} FAQs`, `${region.name} FAQs`)}
           </h2>
-          <ul style={{ display: "grid", gap: "12px" }}>
+          <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
             {faqs.map((faq) => (
               <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
             ))}
@@ -1115,7 +1160,7 @@ export async function RegionHub({
       </section>
 
       {/* -------------------------------------------------------- about box */}
-      <section aria-labelledby="tr-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <section id="tr" aria-labelledby="tr-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={{ ...SHELL, padding: "56px 24px" }}>
           <div
             style={{
@@ -1135,12 +1180,12 @@ export async function RegionHub({
                 marginBottom: "22px",
               }}
             >
-              <h2 id="tr-h2" style={{ fontSize: "21px", fontWeight: "700" }}>
-                About this {region.name} hub
+              <h2 data-reveal="" id="tr-h2" style={{ fontSize: "21px", fontWeight: "700" }}>
+                {accentPhrase(`About this ${region.name} hub`, `${region.name} hub`)}
               </h2>
               {sourcesModal}
             </div>
-            <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
+            <dl data-facts="" data-stagger="" style={{ display: "grid", gridTemplateColumns: fit(200), gap: "18px 32px", margin: "0" }}>
               {[
                 {
                   icon: "shield" as IconName,
@@ -1230,14 +1275,15 @@ export async function RegionHub({
 
       <RelatedContent groups={related} title={`More in ${region.name}`} />
 
-      <FinalSearchBand
-        heading={`Find the right local pro in ${region.name}`}
+      <FinalBand
+        heading={accentPhrase(`Find the right local pro in ${region.name}`, `in ${region.name}`)}
         after={
           <Link href={routes.locationsIndex()} style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
             Browse all {country.regionLabel} and cities
           </Link>
         }
       />
+      </div>
     </SiteChrome>
   );
 }

@@ -3,14 +3,18 @@ import Link from "next/link";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Crumbs, SHELL } from "@/components/site/page-parts";
 import {
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  TenOutline,
-} from "@/components/site/page-parts";
+  ArrowLink,
+  FaqRow,
+  HeroBackdrop,
+  Kicker,
+  SectionToc,
+  Tile,
+  autoGrid,
+  heroAccentTail,
+} from "@/components/site/trust/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { money } from "@/lib/format";
@@ -29,11 +33,11 @@ export const metadata: Metadata = {
 };
 
 const SECTION = { ...SHELL, padding: "60px 24px" };
-const SECTION_H2 = { fontSize: "clamp(24px, 2.8vw, 34px)", fontWeight: "700" };
+const SECTION_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
 const CARD = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
-  borderRadius: "18px",
+  borderRadius: "22px",
   boxShadow: "var(--shadow-xs)",
   padding: "24px 22px",
 };
@@ -112,6 +116,14 @@ const PRODUCTS_SHORT: { title: string; text: string; icon: IconName }[] = [
 export default async function ForBusinessesPage() {
   const plans = await db.plan.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
 
+  const toc = [
+    { href: "#hc", label: "Claiming" },
+    ...(plans.length > 0 ? [{ href: "#pl", label: "Pricing" }] : []),
+    { href: "#own", label: "Your control" },
+    { href: "#ad", label: "Advertising" },
+    { href: "#faq", label: "FAQs" },
+  ];
+
   return (
     <SiteChrome active="business" skin>
       <JsonLd
@@ -124,332 +136,332 @@ export default async function ForBusinessesPage() {
       />
       <FaqJsonLd faqs={BILLING_FAQS} />
 
-      {/* ------------------------------------------------------------- hero */}
-      <section style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
-          <Crumbs items={[{ label: "Home", href: "/" }, { label: "For businesses" }]} />
-          <div style={{ maxWidth: "760px" }}>
-            <Eyebrow heroIn="1" gap="14px">
-              For business owners
-            </Eyebrow>
-            <h1
-              data-hero-in="2"
-              style={{ fontSize: "clamp(32px, 4.2vw, 48px)", lineHeight: "1.08", letterSpacing: "-0.04em", fontWeight: "800", textWrap: "balance" }}
-            >
-              Homeowners are already comparing you. Get the facts right.
-            </h1>
-            <p data-hero-in="3" style={{ marginTop: "18px", fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
-              Claim and update your business profile, submit a company that is missing, or explore
-              clearly labelled advertising. Editorial rankings stay independent of every commercial
-              option here.
-            </p>
-          </div>
+      <div className="tr2 fb2">
+        <BusinessCentreNav active="landing" />
 
-          <ul style={{ marginTop: "32px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
-            {PATHS.map((path) => (
-              <li
-                key={path.title}
-                data-card=""
-                style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", boxShadow: "var(--shadow-sm)", padding: "26px", display: "flex", flexDirection: "column", gap: "12px" }}
+        {/* ------------------------------------------------------------- hero */}
+        <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)", borderBottom: "1px solid var(--border-subtle)" }}>
+          <HeroBackdrop />
+          <div style={{ ...SHELL, position: "relative", padding: "20px 24px 44px" }}>
+            <Crumbs items={[{ label: "Home", href: "/" }, { label: "For businesses" }]} />
+            <div style={{ maxWidth: "760px" }}>
+              <Kicker hero="1" gap="14px">
+                For business owners
+              </Kicker>
+              <h1
+                data-in="2"
+                style={{ fontSize: "clamp(36px, 5vw, 60px)", lineHeight: "1.08", letterSpacing: "-0.04em", fontWeight: "800", textWrap: "balance" }}
               >
-                <span aria-hidden="true" style={{ ...TILE, width: "46px", height: "46px", borderRadius: "13px" }}>
-                  <Icon name={path.icon} size={22} strokeWidth={1.8} />
-                </span>
-                <h2 style={{ fontSize: "20px", fontWeight: "700" }}>{path.title}</h2>
-                <p style={{ display: "flex", alignItems: "baseline", gap: "7px" }}>
-                  <span style={{ fontSize: "26px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tight)" }}>{path.price}</span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-secondary)" }}>{path.priceNote}</span>
-                </p>
-                <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{path.text}</p>
-                <Link
-                  href={path.href}
-                  style={{
-                    ...BTN,
-                    marginTop: "auto",
-                    border: `1.5px solid ${path.primary ? "var(--color-primary)" : "var(--border-strong)"}`,
-                    background: path.primary ? "var(--color-primary)" : "var(--surface-card)",
-                    color: path.primary ? "#fff" : "var(--blue-900)",
-                  }}
-                >
-                  {path.cta}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                {heroAccentTail("Homeowners are already comparing you. Get the facts right.", 2)}
+              </h1>
+              <p data-in="3" style={{ marginTop: "18px", fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
+                Claim and update your business profile, submit a company that is missing, or explore
+                clearly labelled advertising. Editorial rankings stay independent of every commercial
+                option here.
+              </p>
+            </div>
 
-        <div style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
-          <div style={{ ...SHELL, padding: "0 24px" }}>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0" }}>
-              {TRUST.map((item) => (
-                <li key={item.label} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "18px 22px 18px 0" }}>
-                  <span aria-hidden="true" style={{ flexShrink: 0, display: "inline-flex", color: item.color }}>
-                    <Icon name={item.icon} size={20} strokeWidth={1.8} />
+            <ul data-ag="auto" style={autoGrid(290, "16px", { marginTop: "32px" })}>
+              {PATHS.map((path) => (
+                <li
+                  key={path.title}
+                  data-card=""
+                  style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", boxShadow: "var(--shadow-sm)", padding: "26px", display: "flex", flexDirection: "column", gap: "12px" }}
+                >
+                  <span aria-hidden="true" style={{ ...TILE, width: "46px", height: "46px", borderRadius: "13px" }}>
+                    <Icon name={path.icon} size={22} strokeWidth={1.8} />
                   </span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--blue-900)" }}>{item.label}</span>
+                  <h2 style={{ fontSize: "20px", fontWeight: "700" }}>{path.title}</h2>
+                  <p style={{ display: "flex", alignItems: "baseline", gap: "7px" }}>
+                    <span style={{ fontSize: "26px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tight)" }}>{path.price}</span>
+                    <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-secondary)" }}>{path.priceNote}</span>
+                  </p>
+                  <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{path.text}</p>
+                  <Link
+                    href={path.href}
+                    style={{
+                      ...BTN,
+                      marginTop: "auto",
+                      border: `1.5px solid ${path.primary ? "var(--color-primary)" : "var(--border-strong)"}`,
+                      background: path.primary ? "var(--color-primary)" : "var(--surface-card)",
+                      color: path.primary ? "#fff" : "var(--blue-900)",
+                    }}
+                  >
+                    {path.cta}
+                  </Link>
                 </li>
               ))}
             </ul>
-            <div style={{ paddingBottom: "12px" }}>
-              <InfoModal
-                label="How editorial independence works"
-                title="How editorial independence works"
-                points={[
-                  "Editorial positions are never sold, and payment cannot change one",
-                  "Sponsorship is sold separately and always labelled",
-                  "Claiming a profile does not affect a ranking position",
-                  "Ending a subscription never changes an editorial decision",
-                ]}
-                link={{ href: routes.howWeRank(), label: "How we rank" }}
-              >
-                Everything commercial on this page is separate from what an editor decides.
-              </InfoModal>
-            </div>
           </div>
-        </div>
-      </section>
 
-      <BusinessCentreNav active="landing" />
-
-      {/* ------------------------------------------------------- claim flow */}
-      <section aria-labelledby="hc-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={SECTION}>
-          <h2 id="hc-h2" style={{ ...SECTION_H2, marginBottom: "24px" }}>
-            How claiming works
-          </h2>
-          <ol style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" }}>
-            {CLAIM_STEPS.map((step) => (
-              <li key={step.n} style={CARD}>
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
-                  <span aria-hidden="true" style={{ ...TILE, width: "42px", height: "42px" }}>
-                    <Icon name={step.icon} size={20} strokeWidth={1.8} />
-                  </span>
-                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#8A5F0B" }}>{step.n}</span>
-                </span>
-                <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{step.title}</h3>
-                <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{step.text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ plans */}
-      {plans.length > 0 ? (
-        <section aria-labelledby="pl-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div style={SECTION}>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "8px" }}>
-              <h2 id="pl-h2" style={SECTION_H2}>
-                Plans and pricing
-              </h2>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "7px 14px",
-                  borderRadius: "999px",
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <Icon name="refresh" size={15} color="var(--color-primary)" strokeWidth={2} />
-                Billed monthly · Cancel any time
-              </span>
-            </div>
-            <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-secondary)", maxWidth: "720px", marginBottom: "26px" }}>
-              Claiming a profile and adding a new business cost the same per location. A featured
-              placement adds labelled visibility on the top ten page for your city and trade; the ten
-              ranked positions themselves stay editorial.
-            </p>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
-              {plans.map((plan) => {
-                const features = parseList(plan.features);
-                const featured = !plan.editorial;
-                return (
-                  <li
-                    key={plan.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      background: "var(--surface-card)",
-                      border: `1px solid ${featured ? "#EBCE95" : "var(--border-subtle)"}`,
-                      borderRadius: "20px",
-                      boxShadow: "var(--shadow-sm)",
-                      padding: "26px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "12px" }}>
-                      <h3 style={{ fontSize: "18px", fontWeight: "700" }}>{plan.name}</h3>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          padding: "5px 11px",
-                          borderRadius: "999px",
-                          background: featured ? "var(--amber-50)" : "var(--blue-50)",
-                          border: `1px solid ${featured ? "#EBCE95" : "var(--blue-100)"}`,
-                          fontSize: "12px",
-                          fontWeight: "700",
-                          color: featured ? "#8A5F0B" : "var(--blue-800)",
-                        }}
-                      >
-                        {featured ? "Advertising" : "Standard"}
-                      </span>
-                    </div>
-                    <p style={{ display: "flex", alignItems: "baseline", gap: "7px", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
-                        {money(plan.priceCents, plan.currency)}
-                      </span>
-                      <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
-                    </p>
-                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>
-                    {features.length > 0 ? (
-                      <ul style={{ display: "grid", gap: "10px", marginBottom: "22px" }}>
-                        {features.map((feature) => (
-                          <li key={feature} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "var(--text-primary)" }}>
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1F9D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
-                              <path d="M20 6 9 17l-5-5" />
-                            </svg>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    <Link
-                      href={featured ? routes.advertise() : routes.claim()}
-                      style={{
-                        ...BTN,
-                        marginTop: "auto",
-                        border: `1.5px solid ${featured ? "var(--border-strong)" : "var(--color-primary)"}`,
-                        background: featured ? "var(--surface-card)" : "var(--color-primary)",
-                        color: featured ? "var(--blue-900)" : "#fff",
-                      }}
-                    >
-                      {featured ? "Talk to us" : "Get started"}
-                    </Link>
+          <div style={{ position: "relative", borderTop: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
+            <div style={{ ...SHELL, padding: "0 24px" }}>
+              <ul data-ag="auto" style={autoGrid(240, "0")}>
+                {TRUST.map((item) => (
+                  <li key={item.label} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "18px 22px 18px 0" }}>
+                    <span aria-hidden="true" style={{ flexShrink: 0, display: "inline-flex", color: item.color }}>
+                      <Icon name={item.icon} size={20} strokeWidth={1.8} />
+                    </span>
+                    <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--blue-900)" }}>{item.label}</span>
                   </li>
-                );
-              })}
-            </ul>
-            <div
-              style={{
-                marginTop: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "14px",
-                flexWrap: "wrap",
-                padding: "14px 18px",
-                background: "var(--surface-card)",
-                border: "1px solid var(--blue-100)",
-                borderRadius: "14px",
-              }}
-            >
-              <Icon name="shield" size={20} color="var(--color-primary)" strokeWidth={1.9} />
-              <p style={{ flex: "1", minWidth: "260px", fontSize: "15px", lineHeight: "1.6", color: "var(--blue-900)", fontWeight: "600" }}>
-                No subscription creates, improves or protects one of the ten editorial positions.
-                Featured placements are always labelled as paid.
-              </p>
-              <InfoModal
-                label="How billing works"
-                title="How billing works"
-                points={[
-                  "Charged monthly per location, cancel any time",
-                  "A claim is charged at submission and refunded if ownership cannot be verified",
-                  "Cancelling removes the subscription, never an editorial decision",
-                  "Receipts and invoices are in your dashboard",
-                ]}
-                link={{ href: routes.contact(), label: "Ask a billing question" }}
-              >
-                What you are paying for, and what money cannot buy here.
-              </InfoModal>
+                ))}
+              </ul>
+              <div style={{ paddingBottom: "12px" }}>
+                <InfoModal
+                  label="How editorial independence works"
+                  title="How editorial independence works"
+                  points={[
+                    "Editorial positions are never sold, and payment cannot change one",
+                    "Sponsorship is sold separately and always labelled",
+                    "Claiming a profile does not affect a ranking position",
+                    "Ending a subscription never changes an editorial decision",
+                  ]}
+                  link={{ href: routes.howWeRank(), label: "How we rank" }}
+                >
+                  Everything commercial on this page is separate from what an editor decides.
+                </InfoModal>
+              </div>
             </div>
           </div>
         </section>
-      ) : null}
 
-      {/* ----------------------------------------------------- who controls */}
-      <section aria-labelledby="own-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
-          <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "26px" }}>
-            <h2 id="own-h2" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
-              <Icon name="pencil" size={20} color="var(--color-primary)" strokeWidth={1.9} />
-              You control this information
+        <SectionToc items={toc} top="136px" />
+
+        {/* ------------------------------------------------------- claim flow */}
+        <section id="hc" aria-labelledby="hc-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={SECTION}>
+            <h2 data-reveal="" id="hc-h2" style={{ ...SECTION_H2, marginBottom: "24px" }}>
+              {accentTail("How claiming works", 1)}
             </h2>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "9px 20px" }}>
-              {OWNER_FIELDS.map((field) => (
-                <li key={field} style={{ display: "flex", gap: "9px", fontSize: "15px", color: "var(--text-primary)" }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F9D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  {field}
+            <ol data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" }}>
+              {CLAIM_STEPS.map((step) => (
+                <li key={step.n} data-card="" style={CARD}>
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
+                    <Tile icon={step.icon} size={42} iconSize={20} />
+                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#8A5F0B" }}>{step.n}</span>
+                  </span>
+                  <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{step.title}</h3>
+                  <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{step.text}</p>
                 </li>
               ))}
-            </ul>
+            </ol>
           </div>
-          <div style={{ background: "var(--blue-900)", borderRadius: "20px", padding: "26px" }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", color: "#fff", marginBottom: "16px" }}>
-              <Icon name="shield" size={20} color="#E8B551" strokeWidth={1.9} />
-              Managed by TenBestFind editorial
-            </h2>
-            <ul style={{ display: "grid", gap: "10px" }}>
-              {EDITORIAL_FIELDS.map((field) => (
-                <li key={field} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8B551" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  {field}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* -------------------------------------------------------- advertise */}
-      <section aria-labelledby="ad-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={SECTION}>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "22px" }}>
-            <h2 id="ad-h2" style={SECTION_H2}>
-              Advertising opportunities
-            </h2>
-            <Link href={routes.advertise()} style={{ fontSize: "15px", fontWeight: "600" }}>
-              View advertising options →
-            </Link>
-          </div>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
-            {PRODUCTS_SHORT.map((product) => (
-              <li key={product.title} style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "18px", padding: "22px" }}>
+        {/* ------------------------------------------------------------ plans */}
+        {plans.length > 0 ? (
+          <section id="pl" aria-labelledby="pl-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <div style={SECTION}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "8px" }}>
+                <h2 data-reveal="" id="pl-h2" style={SECTION_H2}>
+                  {accentTail("Plans and pricing", 1)}
+                </h2>
                 <span
-                  aria-hidden="true"
-                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "42px", height: "42px", borderRadius: "12px", background: "var(--amber-50)", color: "#8A5F0B", marginBottom: "12px" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "7px 14px",
+                    borderRadius: "999px",
+                    background: "var(--surface-card)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "var(--text-secondary)",
+                  }}
                 >
-                  <Icon name={product.icon} size={20} strokeWidth={1.8} />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#178054" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  Billed monthly · Cancel any time
                 </span>
-                <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{product.title}</h3>
-                <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{product.text}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+              </div>
+              <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-secondary)", maxWidth: "720px", marginBottom: "26px" }}>
+                Claiming a profile and adding a new business cost the same per location. A featured
+                placement adds labelled visibility on the top ten page for your city and trade; the ten
+                ranked positions themselves stay editorial.
+              </p>
+              <ul data-stagger="" data-ag="auto" style={autoGrid(280, "16px")}>
+                {plans.map((plan) => {
+                  const features = parseList(plan.features);
+                  const featured = !plan.editorial;
+                  return (
+                    <li
+                      key={plan.id}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        background: "var(--surface-card)",
+                        border: `1px solid ${featured ? "#EBCE95" : "var(--border-subtle)"}`,
+                        borderRadius: "20px",
+                        boxShadow: "var(--shadow-sm)",
+                        padding: "26px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "18px", fontWeight: "700" }}>{plan.name}</h3>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            padding: "5px 11px",
+                            borderRadius: "999px",
+                            background: featured ? "var(--amber-50)" : "var(--blue-50)",
+                            border: `1px solid ${featured ? "#EBCE95" : "var(--blue-100)"}`,
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            color: featured ? "#8A5F0B" : "var(--blue-800)",
+                          }}
+                        >
+                          {featured ? "Advertising" : "Standard"}
+                        </span>
+                      </div>
+                      <p style={{ display: "flex", alignItems: "baseline", gap: "7px", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
+                          {money(plan.priceCents, plan.currency)}
+                        </span>
+                        <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
+                      </p>
+                      <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>
+                      {features.length > 0 ? (
+                        <ul style={{ display: "grid", gap: "10px", marginBottom: "22px" }}>
+                          {features.map((feature) => (
+                            <li key={feature} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "var(--text-primary)" }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#178054" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "4px" }}>
+                                <path d="M20 6 9 17l-5-5" />
+                              </svg>
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <Link
+                        href={featured ? routes.advertise() : routes.claim()}
+                        style={{
+                          ...BTN,
+                          marginTop: "auto",
+                          border: `1.5px solid ${featured ? "var(--border-strong)" : "var(--color-primary)"}`,
+                          background: featured ? "var(--surface-card)" : "var(--color-primary)",
+                          color: featured ? "var(--blue-900)" : "#fff",
+                        }}
+                      >
+                        {featured ? "Talk to us" : "Get started"}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div
+                style={{
+                  marginTop: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  flexWrap: "wrap",
+                  padding: "14px 18px",
+                  background: "var(--surface-card)",
+                  border: "1px solid var(--blue-100)",
+                  borderRadius: "14px",
+                }}
+              >
+                <Icon name="shield" size={20} color="var(--color-primary)" strokeWidth={1.9} />
+                <p style={{ flex: "1", minWidth: "260px", fontSize: "15px", lineHeight: "1.6", color: "var(--blue-900)", fontWeight: "600" }}>
+                  No subscription creates, improves or protects one of the ten editorial positions.
+                  Featured placements are always labelled as paid.
+                </p>
+                <InfoModal
+                  label="How billing works"
+                  title="How billing works"
+                  points={[
+                    "Charged monthly per location, cancel any time",
+                    "A claim is charged at submission and refunded if ownership cannot be verified",
+                    "Cancelling removes the subscription, never an editorial decision",
+                    "Receipts and invoices are in your dashboard",
+                  ]}
+                  link={{ href: routes.contact(), label: "Ask a billing question" }}
+                >
+                  What you are paying for, and what money cannot buy here.
+                </InfoModal>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
-      {/* ------------------------------------------------------------- faqs */}
-      <section aria-labelledby="faq-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div data-split="" style={{ ...SHELL, padding: "64px 24px", display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "48px", alignItems: "start" }}>
-          <h2 id="faq-h2" style={{ fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700" }}>
-            Questions from business owners
-          </h2>
-          <ul style={{ display: "grid", gap: "12px" }}>
-            {BILLING_FAQS.map((faq) => (
-              <FaqItem key={faq.question} question={faq.question} answer={faq.answer} />
-            ))}
-          </ul>
-        </div>
-      </section>
+        {/* ----------------------------------------------------- who controls */}
+        <section id="own" aria-labelledby="own-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
+          <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
+            <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "26px" }}>
+              <h2 data-reveal="" id="own-h2" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+                <Icon name="pencil" size={20} color="var(--color-primary)" strokeWidth={1.9} />
+                <span>{accentTail("You control this information", 2)}</span>
+              </h2>
+              <ul data-stagger="" data-ag="auto" style={autoGrid(150, "9px 20px")}>
+                {OWNER_FIELDS.map((field) => (
+                  <li key={field} style={{ display: "flex", gap: "9px", fontSize: "15px", color: "var(--text-primary)" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#178054" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                    {field}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ background: "var(--blue-900)", borderRadius: "20px", padding: "26px" }}>
+              <h2 data-reveal="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", color: "#fff", marginBottom: "16px" }}>
+                <Icon name="shield" size={20} color="#E8B551" strokeWidth={1.9} />
+                <span>{accentTail("Managed by TenBestFind editorial", 2)}</span>
+              </h2>
+              <ul data-stagger="" style={{ display: "grid", gap: "9px" }}>
+                {EDITORIAL_FIELDS.map((field) => (
+                  <li key={field} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8B551" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "4px" }}>
+                      <path d="M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                    {field}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* -------------------------------------------------------- advertise */}
+        <section id="ad" aria-labelledby="ad-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={SECTION}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "22px" }}>
+              <h2 data-reveal="" id="ad-h2" style={SECTION_H2}>
+                {accentTail("Advertising opportunities", 1)}
+              </h2>
+              <ArrowLink href={routes.advertise()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                View advertising options
+              </ArrowLink>
+            </div>
+            <ul data-stagger="" data-ag="auto" style={autoGrid(250, "16px")}>
+              {PRODUCTS_SHORT.map((product) => (
+                <li key={product.title} data-card="" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px" }}>
+                  <Tile icon={product.icon} size={42} iconSize={20} tone="amber" style={{ marginBottom: "12px" }} />
+                  <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{product.title}</h3>
+                  <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{product.text}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------- faqs */}
+        <section id="faq" aria-labelledby="faq-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
+          <div data-split="" style={{ ...SHELL, padding: "56px 24px", display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "44px", alignItems: "start" }}>
+            <h2 data-reveal="" id="faq-h2" style={SECTION_H2}>
+              {accentTail("Questions from business owners", 2)}
+            </h2>
+            <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
+              {BILLING_FAQS.map((faq) => (
+                <FaqRow key={faq.question} question={faq.question} answer={faq.answer} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
     </SiteChrome>
   );
 }
