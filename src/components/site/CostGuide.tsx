@@ -329,7 +329,7 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {dollars(guide.typicalLow)} – {dollars(guide.typicalHigh)}
+                {dollars(guide.typicalLow)} to {dollars(guide.typicalHigh)}
               </span>
             </span>
             <span style={{ display: "block", textAlign: "right" }}>

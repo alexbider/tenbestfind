@@ -837,7 +837,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                       <td style={{ ...TD, padding: "18px 26px", fontWeight: "600", color: "var(--blue-900)", verticalAlign: "top" }}>{row.label}</td>
                       <td style={{ ...TD, whiteSpace: "nowrap", verticalAlign: "top" }}>
                         {row.lowPrice && row.highPrice
-                          ? `${money(row.lowPrice, row.currency)} – ${money(row.highPrice, row.currency)}`
+                          ? `${money(row.lowPrice, row.currency)} to ${money(row.highPrice, row.currency)}`
                           : row.typical
                             ? money(row.typical, row.currency)
                             : "On request"}

@@ -34,7 +34,7 @@ function byline(guide: HubGuide): string {
 
 function priceRange(guide: HubGuide): string | null {
   if (guide.type !== "COST" || !guide.typicalLow || !guide.typicalHigh) return null;
-  return `$${guide.typicalLow.toLocaleString()}–$${guide.typicalHigh.toLocaleString()}`;
+  return `$${guide.typicalLow.toLocaleString()} to $${guide.typicalHigh.toLocaleString()}`;
 }
 
 function toCard(guide: HubGuide): HubCard {

@@ -95,7 +95,7 @@ export default async function GuidesIndexPage() {
           eyebrow: guide.category?.serviceName ?? "General",
           range:
             type === "COST" && guide.typicalLow && guide.typicalHigh
-              ? `$${guide.typicalLow.toLocaleString()}–$${guide.typicalHigh.toLocaleString()}`
+              ? `$${guide.typicalLow.toLocaleString()} to $${guide.typicalHigh.toLocaleString()}`
               : null,
           meta: `By ${guide.author?.name} · ${monthYear(guide.publishedAt)} · ${guide.readingMinutes} min`,
           image: guide.heroImage,

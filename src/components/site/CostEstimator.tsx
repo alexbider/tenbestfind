@@ -103,7 +103,7 @@ export function CostEstimator({
             aria-live="polite"
             style={{ fontSize: "20px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}
           >
-            {valid ? `${money(amount * unitLow)} – ${money(amount * unitHigh)}` : "—"}
+            {valid ? `${money(amount * unitLow)} to ${money(amount * unitHigh)}` : "Not available"}
           </span>
           <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>
             {valid
