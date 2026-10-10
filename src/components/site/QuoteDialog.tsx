@@ -89,7 +89,7 @@ export function QuoteDialog({
 
   return (
     <>
-      <button type="button" className={className} onClick={open}>
+      <button type="button" data-btn="" className={className} onClick={open}>
         {label}
       </button>
 

@@ -3,6 +3,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { dollars, monthYear, priceRange } from "@/lib/format";
 import { routes } from "@/lib/urls";
 import { CostEstimator } from "./CostEstimator";
+import { tail } from "./guides/parts";
 
 type Row = {
   id: string;
@@ -74,7 +75,8 @@ export function priceModal() {
 
 /** The at-a-glance band that opens a cost guide. */
 export function CostSummary({ guide, title, intro }: { guide: Guide; title: string; intro?: string | null }) {
-  const cards: { label: string; value: string; note: string; icon: IconName; tone: "blue" | "gold" | "plain" }[] = [];
+  type Tone = "navy" | "blue" | "green" | "amber";
+  const cards: { label: string; value: string; note: string; icon: IconName; tone: Tone; size: string }[] = [];
 
   if (guide.typicalLow || guide.typicalHigh) {
     cards.push({
@@ -82,7 +84,8 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
       value: priceRange(guide.typicalLow, guide.typicalHigh),
       note: "What most homeowners end up paying once the job is scoped.",
       icon: "dollar",
-      tone: "blue",
+      tone: "navy",
+      size: "27px",
     });
   }
   if (guide.unitLow || guide.unitHigh) {
@@ -91,7 +94,8 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
       value: priceRange(guide.unitLow, guide.unitHigh),
       note: "Useful for sanity-checking a quote against the size of the job.",
       icon: "calc",
-      tone: "gold",
+      tone: "blue",
+      size: "23px",
     });
   }
   cards.push({
@@ -99,37 +103,70 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
     value: String(guide.sources.length),
     note: "Every figure on this page traces back to one of them.",
     icon: "doc",
-    tone: "plain",
+    tone: "green",
+    size: "23px",
   });
   cards.push({
     label: "Last reviewed",
     value: monthYear(guide.reviewedAt ?? guide.updatedAt),
     note: "Prices move. This is when an editor last checked them.",
     icon: "refresh",
-    tone: "plain",
+    tone: "amber",
+    size: "23px",
   });
 
-  const skin = (tone: "blue" | "gold" | "plain") =>
-    tone === "blue"
-      ? { background: "var(--blue-50)", border: "1px solid var(--blue-100)", label: "var(--color-primary)" }
-      : tone === "gold"
-        ? { background: "var(--amber-50)", border: "1px solid #EBCE95", label: "#8A5F0B" }
-        : { background: "var(--surface-card)", border: "1px solid var(--border-subtle)", label: "var(--text-secondary)" };
+  const skin = (tone: Tone) =>
+    tone === "navy"
+      ? {
+          background: "var(--blue-900)",
+          border: "1px solid var(--blue-900)",
+          label: "#E8B551",
+          value: "#fff",
+          note: "rgba(232,237,245,0.75)",
+          iconBg: "rgba(255,255,255,0.12)",
+          iconBorder: "1px solid rgba(255,255,255,0.18)",
+          iconColor: "#E8B551",
+        }
+      : {
+          background: "var(--surface-card)",
+          border: "1px solid var(--border-subtle)",
+          label: "var(--text-secondary)",
+          value: "var(--blue-900)",
+          note: "var(--text-secondary)",
+          ...(tone === "blue"
+            ? { iconBg: "var(--blue-50)", iconBorder: "1px solid var(--blue-100)", iconColor: "var(--color-primary)" }
+            : tone === "green"
+              ? { iconBg: "var(--green-50)", iconBorder: "1px solid var(--green-100)", iconColor: "#178054" }
+              : { iconBg: "var(--amber-50)", iconBorder: "1px solid #EBCE95", iconColor: "#8A5F0B" }),
+        };
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
-        <h2 id="sum-h2" style={{ fontSize: "26px", fontWeight: "700" }}>
-          {title} at a glance
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: "16px",
+          flexWrap: "wrap",
+          marginBottom: "18px",
+        }}
+      >
+        <h2
+          id="sum-h2"
+          data-reveal=""
+          style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "800", lineHeight: "1.08", letterSpacing: "-0.035em" }}
+        >
+          {tail(`${title} at a glance`)}
         </h2>
         {priceModal()}
       </div>
       {intro ? (
-        <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)", marginBottom: "18px", maxWidth: "70ch" }}>
+        <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)", marginBottom: "22px", maxWidth: "70ch" }}>
           {intro}
         </p>
       ) : null}
-      <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "14px" }}>
+      <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "16px" }}>
         {cards.map((card) => {
           const tone = skin(card.tone);
           return (
@@ -171,9 +208,9 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
                     width: "36px",
                     height: "36px",
                     borderRadius: "11px",
-                    background: "var(--surface-card)",
-                    border: "1px solid var(--border-subtle)",
-                    color: tone.label,
+                    background: tone.iconBg,
+                    border: tone.iconBorder,
+                    color: tone.iconColor,
                   }}
                 >
                   <Icon name={card.icon} size={18} strokeWidth={1.8} />
@@ -183,19 +220,17 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
                 style={{
                   marginTop: "auto",
                   display: "block",
-                  fontSize: "24px",
+                  fontSize: card.size,
                   fontWeight: "700",
                   lineHeight: "1.15",
                   letterSpacing: "var(--ls-tighter)",
-                  color: "var(--blue-900)",
+                  color: tone.value,
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {card.value}
               </span>
-              <span style={{ display: "block", fontSize: "13px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
-                {card.note}
-              </span>
+              <span style={{ display: "block", fontSize: "13px", lineHeight: "1.55", color: tone.note }}>{card.note}</span>
             </li>
           );
         })}
@@ -207,14 +242,33 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
             marginTop: "20px",
             background: "var(--surface-card)",
             border: "1px solid var(--border-subtle)",
-            borderRadius: "18px",
-            padding: "24px",
+            borderRadius: "20px",
+            padding: "24px 28px",
+            boxShadow: "var(--shadow-sm)",
           }}
         >
-          <h3 style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "18px" }}>
+          <h3
+            style={{
+              fontSize: "13px",
+              fontWeight: "700",
+              letterSpacing: "var(--ls-wide)",
+              textTransform: "uppercase",
+              color: "var(--text-secondary)",
+              marginBottom: "18px",
+            }}
+          >
             Typical range
           </h3>
-          <div aria-hidden="true" style={{ position: "relative", height: "12px", borderRadius: "999px", background: "var(--surface-sunken)", marginBottom: "12px" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              height: "12px",
+              borderRadius: "999px",
+              background: "var(--surface-sunken)",
+              marginBottom: "12px",
+            }}
+          >
             <span
               style={{
                 position: "absolute",
@@ -229,26 +283,77 @@ export function CostSummary({ guide, title, intro }: { guide: Guide; title: stri
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
             <span style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  letterSpacing: "var(--ls-wide)",
+                  textTransform: "uppercase",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 Low end
               </span>
-              <span style={{ display: "block", fontSize: "17px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "17px",
+                  fontWeight: "700",
+                  color: "var(--blue-900)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {dollars(guide.typicalLow)}
               </span>
             </span>
             <span style={{ display: "block", textAlign: "center" }}>
-              <span style={{ display: "block", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--color-primary)" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  letterSpacing: "var(--ls-wide)",
+                  textTransform: "uppercase",
+                  color: "var(--color-primary)",
+                }}
+              >
                 Most homeowners
               </span>
-              <span style={{ display: "block", fontSize: "17px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "17px",
+                  fontWeight: "700",
+                  color: "var(--blue-900)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {dollars(guide.typicalLow)} – {dollars(guide.typicalHigh)}
               </span>
             </span>
             <span style={{ display: "block", textAlign: "right" }}>
-              <span style={{ display: "block", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  letterSpacing: "var(--ls-wide)",
+                  textTransform: "uppercase",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 High end
               </span>
-              <span style={{ display: "block", fontSize: "17px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "17px",
+                  fontWeight: "700",
+                  color: "var(--blue-900)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {dollars(guide.typicalHigh)}+
               </span>
             </span>
@@ -279,8 +384,18 @@ export function CostTables({ rows, anchorPrefix }: { rows: Row[]; anchorPrefix: 
         const id = group ? `${anchorPrefix}-${index}` : anchorPrefix;
         return (
           <section key={id} id={id} aria-labelledby={`${id}-h2`}>
-            <h2 id={`${id}-h2`} style={{ fontSize: "26px", fontWeight: "700", marginBottom: "18px" }}>
-              {group || "What the work costs"}
+            <h2
+              id={`${id}-h2`}
+              data-reveal=""
+              style={{
+                fontSize: "clamp(26px, 3vw, 36px)",
+                fontWeight: "800",
+                lineHeight: "1.08",
+                letterSpacing: "-0.035em",
+                marginBottom: "20px",
+              }}
+            >
+              {tail(group || "What the work costs")}
             </h2>
             <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "18px", overflow: "hidden", overflowX: "auto" }}>
               <table style={{ minWidth: hasNotes ? "680px" : "520px" }} data-rtable="">

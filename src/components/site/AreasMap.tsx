@@ -109,7 +109,7 @@ export function AreasMap({
         spread.extend(L.latLng(base.latitude, base.longitude).toBounds(radiusKm * 2000));
       }
       frame.current = spread.pad(0.28);
-      instance.fitBounds(frame.current);
+      instance.fitBounds(frame.current, { maxZoom: 11 });
 
       map.current = instance;
       setReady(true);
@@ -156,7 +156,7 @@ export function AreasMap({
           <button
             type="button"
             onClick={() => {
-              if (map.current && frame.current) map.current.flyToBounds(frame.current, { duration: 0.9 });
+              if (map.current && frame.current) map.current.flyToBounds(frame.current, { duration: 0.9, maxZoom: 11 });
             }}
             aria-label="Reset map view"
             style={{
@@ -175,7 +175,7 @@ export function AreasMap({
               fontFamily: "var(--font-sans)",
               fontSize: "12.5px",
               fontWeight: "600",
-              color: "var(--blue-900)",
+              color: "var(--ink)",
               cursor: "pointer",
               boxShadow: "var(--shadow-xs)",
             }}
@@ -226,7 +226,7 @@ export function AreasMap({
                   background: "var(--surface-card)",
                   fontSize: "14px",
                   fontWeight: "600",
-                  color: "var(--blue-900)",
+                  color: "var(--ink)",
                   textDecoration: "none",
                 }}
               >
@@ -237,7 +237,7 @@ export function AreasMap({
                     width: "9px",
                     height: "9px",
                     borderRadius: "50%",
-                    background: area.primary ? "var(--blue-900)" : "var(--color-primary)",
+                    background: area.primary ? "var(--ink)" : "var(--color-primary)",
                     boxShadow: `0 0 0 3px ${area.primary ? "rgba(16,31,61,0.15)" : "rgba(45,116,215,0.18)"}`,
                   }}
                 />

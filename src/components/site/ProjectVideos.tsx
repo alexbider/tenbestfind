@@ -35,9 +35,10 @@ export function ProjectVideos({ videos }: { videos: ProfileVideo[] }) {
         <article
           key={video.id}
           data-vcard=""
+          data-card=""
           style={{
             border: "1px solid var(--border-subtle)",
-            borderRadius: "18px",
+            borderRadius: "22px",
             overflow: "hidden",
             background: "var(--surface-card)",
             boxShadow: "var(--shadow-xs)",
@@ -100,11 +101,11 @@ export function ProjectVideos({ videos }: { videos: ProfileVideo[] }) {
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    width: "68px",
-                    height: "48px",
-                    borderRadius: "14px",
-                    background: "#FF0033",
-                    color: "#fff",
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    background: "var(--gold-ink)",
+                    color: "var(--ink)",
                     boxShadow: "0 16px 40px -12px rgba(0,0,0,0.6)",
                   }}
                 >
@@ -134,7 +135,7 @@ export function ProjectVideos({ videos }: { videos: ProfileVideo[] }) {
             )}
           </div>
           <div style={{ padding: "16px 18px" }}>
-            <h3 style={{ fontSize: "15.5px", fontWeight: "600", color: "var(--blue-900)", marginBottom: "3px" }}>
+            <h3 style={{ fontSize: "15.5px", fontWeight: "600", color: "var(--ink)", marginBottom: "3px" }}>
               {video.title}
             </h3>
             {video.meta ? (

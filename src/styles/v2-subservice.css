@@ -1,1 +1,12 @@
-/* October 2026 design: subservice template. */
+/* October 2026 design: subservice template.
+
+   The page keeps the legacy .sub-2026 wrapper, whose stylesheet carries the
+   design's own breakpoints. The hero grid is marked data-herogrid here, not
+   data-hero, because data-hero now sits on the section for the pointer glow,
+   so the stylesheet's 1080px rule for the grid is repeated for the new name. */
+@media (max-width: 1080px) {
+  .sub-2026 [data-herogrid] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 32px !important;
+  }
+}

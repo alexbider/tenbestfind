@@ -4,28 +4,28 @@ import { FaqJsonLd } from "@/components/site/FaqSection";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { TrackView } from "@/components/site/Track";
 import { BusinessLogo } from "@/components/site/BusinessLogo";
+import { initials } from "@/components/site/page-parts";
+import { Checklist } from "@/components/site/ranking/Checklist";
+import { CoverageMap, type CoveragePin } from "@/components/site/ranking/CoverageMap";
+import { RankingList, type RankItem } from "@/components/site/ranking/RankingList";
 import {
-  Arrow,
-  BTN_GHOST,
-  BTN_PRIMARY,
-  CHIP,
-  Chevron,
-  Crumbs,
-  FaqItem,
-  FinalSearchBand,
-  GRID_BACKDROP,
-  H2,
-  LABEL,
-  LEAD,
-  PILL,
-  PageToc,
-  RowLink,
-  SHELL,
-  TD,
-  TH,
-  TenOutline,
-  initials,
-} from "@/components/site/page-parts";
+  Accent,
+  ArrowSvg,
+  CRITERIA_ICONS,
+  FaqList,
+  FinalBand,
+  H2S,
+  HeroBackdrop,
+  HeroCrumbs,
+  ICO,
+  Kicker,
+  NOTE_ICONS,
+  OutArrow,
+  PageNav,
+  Pop,
+  SHELL_STYLE,
+  Tile,
+} from "@/components/site/ranking/parts";
 import { JsonLd, Media } from "@/components/ui/primitives";
 import { money, monthYear } from "@/lib/format";
 import { parseList, parseNotes } from "@/lib/json";
@@ -247,1247 +247,1348 @@ export async function RankingPage({
     ...(faqs.length > 0 ? [{ href: "#faqs", label: "FAQs" }] : []),
   ];
 
-  return (
-    <SiteChrome active="rankings">
-      <div className="rank-2026">
-      {/* One graph: the page, the list it carries, and the two editors who
-          signed it. A "best of" claim with nobody's name on it is the one thing
-          an engine has no way to weigh, and the names are already on the page. */}
-      <JsonLd
-        label={path4}
-        data={graph(
-          pageEntity({
-            path: path4,
-            name: copy.h1,
-            description: copy.description,
-            type: "CollectionPage",
-            datePublished: ranking.publishedAt,
-            dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
-            mainEntity: { "@id": listId(path4) },
-            author: ranking.author ? personRef(ranking.author.slug) : null,
-            reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
-          }),
-          rankingListEntity({
-            path: path4,
-            name: copy.h1,
-            description: copy.description,
-            datePublished: ranking.publishedAt,
-            dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
-            author: ranking.author ? personRef(ranking.author.slug) : null,
-            reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
-            businesses: ranking.entries.map((entry) =>
-              businessSchemaInput(entry.business, {
-                cityName: city.name,
-                regionCode: region.code,
-                countryCode: country.code,
-                categorySlug: category.slug,
-                areaServed: entry.business.areas
-                  .map((area) => area.city?.name)
-                  .filter((name): name is string => Boolean(name)),
-              }),
-            ),
-          }),
-          ranking.author ? personEntity(personFromRow(ranking.author)) : null,
-          // Only once when the same person did both.
-          ranking.reviewer && ranking.reviewer.id !== ranking.author?.id
-            ? personEntity(personFromRow(ranking.reviewer))
-            : null,
-        )}
-      />
-      <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
-      <FaqJsonLd faqs={faqs} />
-      <TrackView type="RANKING_VIEW" rankingId={ranking.id} />
+  const total = ranking.entries.length;
+  const serviceLower = category.serviceName.toLowerCase();
+  const reviewedOn = ranking.lastReviewedAt ?? ranking.publishedAt;
+  const year = reviewedOn ? new Date(reviewedOn).getFullYear() : null;
+  // The share of the companies looked at that did not make the list, which is
+  // where the gold part of the bar starts.
+  const funnelPct =
+    ranking.companiesReviewed > total ? Math.round(((ranking.companiesReviewed - total) / ranking.companiesReviewed) * 100) : null;
+  const reviewer = ranking.reviewer;
+  const author = ranking.author;
+  const podium = total >= 3 ? ranking.entries.slice(0, 3) : [];
+  const hasSide = podium.length > 0 || Boolean(placement);
 
-      {/* ------------------------------------------------------------- hero */}
-      <section style={GRID_BACKDROP}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 48px" }}>
-          <Crumbs
-            items={crumbs}
-          />
+  const coveragePlaces = [
+    city,
+    ...areas.filter((area) => area.id !== city.id),
+  ].filter((place) => place.latitude != null && place.longitude != null);
+  const pins: CoveragePin[] = coveragePlaces.map((place) => ({
+    id: place.id,
+    name: place.name,
+    latitude: place.latitude as number,
+    longitude: place.longitude as number,
+    primary: place.id === city.id,
+  }));
 
-          <div
-            data-split=""
-            style={{
-              display: "grid",
-              gridTemplateColumns: placement ? "1.25fr 0.75fr" : "1fr",
-              gap: "48px",
-              alignItems: "start",
-            }}
-          >
-            <div>
-              <h1
-                data-hero-in="2"
-                style={{
-                  fontSize: "clamp(32px, 4.2vw, 50px)",
-                  lineHeight: "1.08",
-                  letterSpacing: "-0.04em",
-                  fontWeight: "800",
-                  textWrap: "balance",
-                }}
+  const items: RankItem[] = ranking.entries.map((entry, index) => {
+    const business = entry.business;
+    const num = String(index + 1).padStart(2, "0");
+    const likes = parseList(entry.likes);
+    const concerns = parseList(entry.concerns);
+    const services = business.services.map((link) => link.subservice.name);
+    const area = business.areas.find((a) => a.primary)?.city.name ?? city.name;
+    const credential = business.credentials[0];
+    const href = routes.business(business.slug);
+    const years = business.yearFounded ? `${new Date().getFullYear() - business.yearFounded} years` : null;
+    const details = (
+      [
+        ["Best for", business.bestFor],
+        ["Service area", area],
+        ["Address", business.addressLine],
+        ["Years in business", years],
+        ["Warranty", business.warrantyTerms],
+        ["Emergency service", business.emergency ? "Available" : null],
+        ["Financing", business.financing ? "Available" : null],
+        ["Credentials", credential ? credential.label : null],
+      ] as [string, string | null | undefined][]
+    ).filter(([, value]) => Boolean(value)) as [string, string][];
+
+    return {
+      id: entry.id,
+      anchor: `rank-${index + 1}`,
+      rankNum: num,
+      rankLabel: `Rank ${index + 1}`,
+      name: business.name,
+      href,
+      top3: index < 3,
+      emergency: business.emergency,
+      financing: business.financing,
+      logo: business.logoUrl ? (
+        <BusinessLogo name={business.name} url={business.logoUrl} size={52} radius={15} />
+      ) : (
+        <span
+          aria-hidden="true"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "52px",
+            height: "52px",
+            borderRadius: "15px",
+            background: "var(--ink)",
+            color: "var(--gold-ink)",
+            fontSize: "15px",
+            fontWeight: "800",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {initials(business.name)}
+        </span>
+      ),
+      info: (
+        <>
+          {entry.designation ? (
+            <p style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-primary)", marginBottom: "3px" }}>
+              {entry.designation}
+            </p>
+          ) : null}
+          <h3 style={{ ["--fs" as string]: "20px", fontSize: "20px", lineHeight: "1.2", fontWeight: "700", letterSpacing: "-0.022em" }}>
+            <Link href={href} style={{ color: "var(--ink)" }}>
+              {business.name}
+            </Link>
+          </h3>
+          <div style={{ marginTop: "6px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px", fontSize: "13px", color: "var(--text-secondary)" }}>
+            {business.googleRating ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
+                <Stars rating={business.googleRating} index={index} />
+                <strong style={{ fontSize: "14px", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{business.googleRating.toFixed(1)}</strong>
+                <span>({business.googleReviewCount} Google reviews)</span>
+              </span>
+            ) : null}
+            {business.verified ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: "600", color: "#178054" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                Details verified
+              </span>
+            ) : null}
+          </div>
+        </>
+      ),
+      spec: (
+        <div
+          data-spec=""
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            margin: "0 20px 16px",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "14px",
+            background: "var(--paper)",
+          }}
+        >
+          {(
+            [
+              ["Best for", business.bestFor],
+              ["In business", years],
+              ["Warranty", business.warrantyTerms],
+              ["Emergency", business.emergency ? "Available" : null],
+            ] as [string, string | null][]
+          ).map(([label, value], i) => (
+            <div key={label} style={{ padding: "10px 14px", borderRight: i < 3 ? "1px solid var(--border-subtle)" : undefined, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: "10.5px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "2px" }}>
+                {label}
+              </span>
+              <span
+                title={value ?? undefined}
+                style={{ display: "block", fontSize: "13.5px", fontWeight: "700", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
               >
-                {copy.h1}
-              </h1>
-              <p
-                data-hero-in="3"
-                style={{ ...LEAD, marginTop: "20px", fontSize: "18px", maxWidth: "680px", textWrap: "pretty" }}
-              >
-                {ranking.summary}
-              </p>
-              <div style={{ marginTop: "22px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                <a href="#rankings" style={{ ...BTN_PRIMARY, boxShadow: "var(--shadow-primary)" }}>
-                  See the top {ranking.entries.length}
-                </a>
-                <a href="#compare" style={BTN_GHOST}>
-                  Compare all {ranking.entries.length}
-                </a>
-              </div>
-              <ul
-                style={{
-                  marginTop: "22px",
-                  display: "flex",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "8px 20px",
-                  fontSize: "14px",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20" />
-                    <path d="M12 6v6l4 2" />
-                  </svg>
-                  Last reviewed {monthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
-                </li>
-                {/* The names sit beside the date rather than at the foot of
-                    the page, and they are the same two names the markup
-                    references. A review date with nobody attached to it is the
-                    part a reader cannot check. */}
-                {ranking.author ? (
-                  <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-                    </svg>
-                    Written by{" "}
-                    <Link href={routes.expert(ranking.author.slug)} style={{ fontWeight: "600" }}>
-                      {ranking.author.name}
-                    </Link>
-                  </li>
-                ) : null}
-                {ranking.reviewer ? (
-                  <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                      <path d="M9 3a4 4 0 1 0 0 8 4 4 0 1 0 0-8" />
-                    </svg>
-                    Reviewed by{" "}
-                    <Link href={routes.expert(ranking.reviewer.slug)} style={{ fontWeight: "600" }}>
-                      {ranking.reviewer.name}
-                    </Link>
-                  </li>
-                ) : null}
-                <li style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z" />
-                    <path d="M10 7h4" />
-                    <path d="M10 11h4" />
-                  </svg>
-                  {ranking.companiesReviewed} companies reviewed ·{" "}
-                  <Link href={routes.howWeRank()} style={{ fontWeight: "600" }}>
-                    How We Rank
-                  </Link>
-                </li>
-              </ul>
+                {value ?? "Not listed"}
+              </span>
             </div>
-
-            {placement ? (
-              <aside
-                aria-labelledby="partner-h2"
-                style={{
-                  borderRadius: "22px",
-                  overflow: "hidden",
-                  border: "1.5px solid #EBCE95",
-                  background: "var(--surface-card)",
-                  boxShadow: "var(--shadow-xl)",
-                }}
-              >
-                <div
-                  aria-hidden="true"
-                  style={{ height: "4px", background: "linear-gradient(90deg, #E8B551 0%, #D99A1C 60%, var(--blue-900) 100%)" }}
-                />
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    padding: "13px 22px",
-                    background:
-                      "linear-gradient(120deg, var(--amber-50) 0%, rgba(254,246,231,0.5) 70%, var(--surface-card) 100%)",
-                    borderBottom: "1px solid #F0DDB4",
-                  }}
-                >
-                  <h2
-                    id="partner-h2"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "var(--ls-wider)",
-                      textTransform: "uppercase",
-                      color: "#8A5F0B",
-                    }}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" />
-                      <path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1" />
-                    </svg>
-                    Featured Partner
-                  </h2>
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: "600",
-                      letterSpacing: "var(--ls-wide)",
-                      textTransform: "uppercase",
-                      color: "#8A5F0B",
-                    }}
-                  >
-                    Sponsored
-                  </span>
-                </div>
-                <div style={{ padding: "24px 26px 26px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        flex: "0 0 56px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "14px",
-                        border: "1px solid #EBCE95",
-                        background: "var(--amber-50)",
-                        boxShadow: "var(--shadow-xs)",
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        color: "#8A5F0B",
-                      }}
-                    >
-                      {initials(placement.business.name)}
-                    </span>
-                    <div>
-                      <h3 style={{ fontSize: "19px", fontWeight: "700", lineHeight: "1.25", marginBottom: "4px" }}>
-                        {placement.business.name}
-                      </h3>
-                      {placement.business.verified ? (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            color: "var(--text-success)",
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z" />
-                            <path d="m9 12 2 2 4-4" />
+          ))}
+        </div>
+      ),
+      body: (
+        <div
+          data-split=""
+          style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(0, 0.65fr)", gap: "28px", paddingTop: "18px", borderTop: "1px dashed var(--border-subtle)" }}
+        >
+          <div>
+            {entry.whyPicked ? (
+              <>
+                <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "8px" }}>Why we picked them</h4>
+                <p style={{ fontSize: "15.5px", lineHeight: "1.7", color: "var(--text-primary)", marginBottom: "18px", textWrap: "pretty" }}>{entry.whyPicked}</p>
+              </>
+            ) : null}
+            {likes.length > 0 || concerns.length > 0 ? (
+              <div data-two="" style={{ display: "grid", gridTemplateColumns: likes.length > 0 && concerns.length > 0 ? "1fr 1fr" : "1fr", gap: "12px" }}>
+                {likes.length > 0 ? (
+                  <div style={{ padding: "16px", borderRadius: "16px", background: "rgba(31,157,107,0.06)", border: "1px solid rgba(31,157,107,0.18)" }}>
+                    <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "#178054", marginBottom: "10px" }}>What we like</h4>
+                    <ul style={{ display: "grid", gap: "8px" }}>
+                      {likes.map((item) => (
+                        <li key={item} style={{ display: "flex", gap: "9px", fontSize: "14px", lineHeight: "1.5", color: "var(--text-primary)" }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F9D6B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
+                            <path d="M20 6 9 17l-5-5" />
                           </svg>
-                          Business details verified
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                    {placement.business.description}
-                  </p>
-                  <ul style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "18px" }}>
-                    {parseList(placement.business.strengths)
-                      .slice(0, 3)
-                      .map((item) => (
-                        <li key={item} style={{ ...CHIP, padding: "5px 11px", fontSize: "12px" }}>
                           {item}
                         </li>
                       ))}
-                  </ul>
-                  <details data-pop="" style={{ position: "relative", marginBottom: "16px" }}>
-                    <summary
-                      aria-label="About sponsored placements"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "7px",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
+                    </ul>
+                  </div>
+                ) : null}
+                {concerns.length > 0 ? (
+                  <div style={{ padding: "16px", borderRadius: "16px", background: "var(--gold-soft)", border: "1px solid #F0DDB4" }}>
+                    <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "10px" }}>Things to consider</h4>
+                    <ul style={{ display: "grid", gap: "8px" }}>
+                      {concerns.map((item) => (
+                        <li key={item} style={{ display: "flex", gap: "9px", fontSize: "14px", lineHeight: "1.5", color: "var(--text-primary)" }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A5F0B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
+                            <path d="M12 8v5" />
+                            <path d="M12 16h.01" />
+                          </svg>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {services.length > 0 ? (
+              <>
+                <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "18px 0 8px" }}>Services</h4>
+                <ul style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {services.map((name) => (
+                    <li key={name} style={{ padding: "6px 12px", borderRadius: "999px", background: "var(--blue-50)", color: "var(--blue-800)", fontSize: "12.5px", fontWeight: "600" }}>
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <dl style={{ margin: "0", padding: "4px 16px 6px", borderRadius: "16px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ padding: "10px 0 6px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>Key details</div>
+              {details.map(([term, value]) => (
+                <div key={term} style={{ display: "grid", gridTemplateColumns: "112px minmax(0, 1fr)", gap: "10px", padding: "9px 0", borderTop: "1px solid var(--border-subtle)" }}>
+                  <dt style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>{term}</dt>
+                  <dd style={{ margin: "0", fontSize: "14px", fontWeight: "600", color: "var(--ink)", overflowWrap: "anywhere" }}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div style={{ display: "grid", gridTemplateColumns: business.website ? "1fr 1fr" : "1fr", gap: "8px" }}>
+              <Link
+                data-btn=""
+                data-btn-dark=""
+                href={href}
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "46px", padding: "0 10px", textAlign: "center", borderRadius: "12px", background: "var(--ink)", color: "#fff", fontSize: "14px", fontWeight: "700" }}
+              >
+                View Company Profile
+              </Link>
+              {business.website ? (
+                <a
+                  data-btn=""
+                  href={business.website}
+                  rel="nofollow noopener"
+                  target="_blank"
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "46px", padding: "0 10px", borderRadius: "12px", border: "1.5px solid var(--border-strong)", color: "var(--ink)", fontSize: "14px", fontWeight: "700" }}
+                >
+                  Visit Website
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ),
+    };
+  });
+
+  return (
+    <SiteChrome active="rankings">
+      <div className="rk2">
+        {/* One graph: the page, the list it carries, and the two editors who
+          signed it. A "best of" claim with nobody's name on it is the one thing
+          an engine has no way to weigh, and the names are already on the page. */}
+        <JsonLd
+          label={path4}
+          data={graph(
+            pageEntity({
+              path: path4,
+              name: copy.h1,
+              description: copy.description,
+              type: "CollectionPage",
+              datePublished: ranking.publishedAt,
+              dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
+              mainEntity: { "@id": listId(path4) },
+              author: ranking.author ? personRef(ranking.author.slug) : null,
+              reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
+            }),
+            rankingListEntity({
+              path: path4,
+              name: copy.h1,
+              description: copy.description,
+              datePublished: ranking.publishedAt,
+              dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
+              author: ranking.author ? personRef(ranking.author.slug) : null,
+              reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
+              businesses: ranking.entries.map((entry) =>
+                businessSchemaInput(entry.business, {
+                  cityName: city.name,
+                  regionCode: region.code,
+                  countryCode: country.code,
+                  categorySlug: category.slug,
+                  areaServed: entry.business.areas
+                    .map((area) => area.city?.name)
+                    .filter((name): name is string => Boolean(name)),
+                }),
+              ),
+            }),
+            ranking.author ? personEntity(personFromRow(ranking.author)) : null,
+            // Only once when the same person did both.
+            ranking.reviewer && ranking.reviewer.id !== ranking.author?.id
+              ? personEntity(personFromRow(ranking.reviewer))
+              : null,
+          )}
+        />
+        <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
+        <FaqJsonLd faqs={faqs} />
+        <TrackView type="RANKING_VIEW" rankingId={ranking.id} />
+
+        {/* ------------------------------------------------------------- hero */}
+        <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)" }}>
+          <HeroBackdrop />
+          <div data-shell="" data-hero-shell="" style={{ position: "relative", ...SHELL_STYLE, padding: "20px 24px 48px" }}>
+            <HeroCrumbs items={crumbs} />
+
+            <div
+              data-split=""
+              style={{
+                display: "grid",
+                gridTemplateColumns: hasSide ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "minmax(0, 1fr)",
+                gap: "48px",
+                alignItems: "start",
+              }}
+            >
+              <div>
+                <p
+                  data-in="1"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "4px 10px",
+                    minHeight: "34px",
+                    padding: "4px 14px 4px 10px",
+                    borderRadius: "999px",
+                    background: "rgba(255,255,255,0.85)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "12.5px",
+                    fontWeight: "700",
+                    color: "var(--ink)",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <span data-live-dot="" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--gold-ink)" }} />
+                  {category.name} · {cityLabel}
+                  <span style={{ color: "var(--text-muted)", fontWeight: "600" }}>Last reviewed {monthYear(reviewedOn)}</span>
+                </p>
+                <h1
+                  data-in="2"
+                  style={{
+                    fontSize: "clamp(36px, 5vw, 64px)",
+                    lineHeight: "0.98",
+                    fontWeight: "800",
+                    letterSpacing: "-0.045em",
+                    textWrap: "balance",
+                  }}
+                >
+                  <LeadAccent text={copy.h1} />
+                </h1>
+                {ranking.summary ? (
+                  <p data-in="3" style={{ marginTop: "18px", fontSize: "17px", lineHeight: "1.65", color: "var(--text-secondary)", maxWidth: "640px", textWrap: "pretty" }}>
+                    {ranking.summary}
+                  </p>
+                ) : null}
+                <div data-in="4" style={{ marginTop: "24px", display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  <a
+                    data-btn=""
+                    data-btn-dark=""
+                    href="#rankings"
+                    style={{ display: "inline-flex", alignItems: "center", gap: "10px", height: "52px", padding: "0 24px", borderRadius: "16px", background: "var(--ink)", color: "#fff", fontSize: "15.5px", fontWeight: "700" }}
+                  >
+                    See the top {total}
+                    <ArrowSvg stroke="var(--gold-ink)" width={2.4} />
+                  </a>
+                  <a
+                    data-btn=""
+                    href="#compare"
+                    style={{ display: "inline-flex", alignItems: "center", height: "52px", padding: "0 22px", borderRadius: "16px", border: "1.5px solid var(--border-strong)", background: "var(--surface-card)", color: "var(--ink)", fontSize: "15.5px", fontWeight: "700" }}
+                  >
+                    Compare all {total}
+                  </a>
+                </div>
+                <div
+                  data-in="5"
+                  style={{ marginTop: "26px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "14px 22px", paddingTop: "20px", borderTop: "1px solid var(--border-subtle)", maxWidth: "640px" }}
+                >
+                  {/* The names sit beside the date rather than at the foot of
+                      the page, and they are the same two names the markup
+                      references. A review date with nobody attached to it is the
+                      part a reader cannot check. */}
+                  {reviewer ? (
+                    <Link href={routes.expert(reviewer.slug)} style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "var(--ink)" }}>
                       <span
+                        aria-hidden="true"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: "18px",
-                          height: "18px",
+                          width: "38px",
+                          height: "38px",
                           borderRadius: "50%",
-                          border: "1.5px solid var(--border-strong)",
-                          fontSize: "11px",
-                          fontWeight: "700",
-                          color: "var(--color-primary)",
+                          background: "var(--ink)",
+                          color: "var(--gold-ink)",
+                          fontSize: "12.5px",
+                          fontWeight: "800",
+                          boxShadow: "0 0 0 2px var(--paper), 0 0 0 3.5px var(--gold-ink)",
                         }}
                       >
-                        i
+                        {initials(reviewer.name)}
                       </span>
-                      Why am I seeing this?
-                    </summary>
-                    <div
-                      role="note"
-                      style={{
-                        position: "absolute",
-                        bottom: "calc(100% + 10px)",
-                        left: "0",
-                        right: "0",
-                        zIndex: "180",
-                        background: "var(--blue-900)",
-                        color: "var(--text-on-ink)",
-                        borderRadius: "14px",
-                        boxShadow: "var(--shadow-xl)",
-                        padding: "16px 18px",
-                      }}
-                    >
-                      <p style={{ fontSize: "13px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>
-                        This is a sponsored placement. Sponsorship does not determine TenBestFind editorial rankings,
-                        and paid partners hold no position in the Top {ranking.entries.length} unless they earned it
-                        independently.
-                      </p>
-                      <p style={{ marginTop: "10px" }}>
-                        <Link href={routes.advertisingDisclosure()} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
-                          Advertising &amp; Sponsorship Disclosure →
-                        </Link>
-                      </p>
-                    </div>
-                  </details>
-                  <Link
-                    href={routes.business(placement.business.slug)}
-                    style={{ ...BTN_PRIMARY, width: "100%", height: "52px", fontSize: "16px", boxShadow: "var(--shadow-primary)" }}
-                  >
-                    Visit Partner
+                      <span style={{ display: "block", lineHeight: "1.25" }}>
+                        <span style={{ display: "block", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)" }}>Reviewed by</span>
+                        <span style={{ fontSize: "14px", fontWeight: "700" }}>{reviewer.name}</span>
+                        {reviewer.role ? <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>, {reviewer.role}</span> : null}
+                      </span>
+                    </Link>
+                  ) : null}
+                  {author ? (
+                    <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                      Written by{" "}
+                      <Link href={routes.expert(author.slug)} style={{ fontWeight: "700", color: "var(--ink)" }}>
+                        {author.name}
+                      </Link>
+                    </span>
+                  ) : null}
+                  {ranking.companiesReviewed > 0 ? (
+                    <span style={{ display: "inline-flex", flexDirection: "column", gap: "6px", minWidth: "190px" }}>
+                      <span style={{ display: "flex", justifyContent: "space-between", gap: "14px", fontSize: "12.5px", fontWeight: "700", color: "var(--ink)" }}>
+                        <span>{ranking.companiesReviewed} companies reviewed</span>
+                        <span style={{ color: "var(--gold)" }}>{total} ranked</span>
+                      </span>
+                      <span aria-hidden="true" style={{ position: "relative", display: "block", height: "6px", borderRadius: "99px", background: "rgba(16,31,61,0.1)", overflow: "hidden" }}>
+                        <span
+                          data-funnel=""
+                          style={{
+                            position: "absolute",
+                            left: "0",
+                            top: "0",
+                            bottom: "0",
+                            width: "100%",
+                            background:
+                              funnelPct === null
+                                ? "var(--gold-ink)"
+                                : `linear-gradient(90deg, rgba(16,31,61,0.25) 0%, rgba(16,31,61,0.25) ${funnelPct}%, var(--gold-ink) ${funnelPct}%)`,
+                          }}
+                        />
+                      </span>
+                    </span>
+                  ) : null}
+                  <Link data-link="" href={routes.howWeRank()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: "600", minHeight: "44px" }}>
+                    How We Rank
+                    <ArrowSvg />
                   </Link>
                 </div>
-              </aside>
-            ) : null}
-          </div>
-        </div>
-      </section>
+              </div>
 
-      <PageToc items={toc} />
+              {hasSide ? (
+                <div data-hero-side="" style={{ display: "grid", gap: "14px" }}>
+                  {podium.length > 0 ? (
+                    <aside
+                      data-in="4"
+                      data-tilt=""
+                      aria-labelledby="podium-h2"
+                      style={{ position: "relative", background: "var(--ink)", color: "#fff", borderRadius: "24px", overflow: "hidden", boxShadow: "0 50px 90px -40px rgba(16,31,61,0.75)", transition: "transform 500ms var(--spring)" }}
+                    >
+                      <div aria-hidden="true" style={{ position: "absolute", inset: "0", background: "radial-gradient(420px 260px at 100% 0%, rgba(45,116,215,0.38), transparent 70%)", pointerEvents: "none" }} />
+                      <div
+                        data-scan=""
+                        aria-hidden="true"
+                        style={{ position: "absolute", left: "0", right: "0", top: "0", height: "30%", background: "linear-gradient(180deg, transparent, rgba(231,184,99,0.1) 70%, rgba(231,184,99,0.3))", pointerEvents: "none" }}
+                      />
+                      <div style={{ position: "relative", padding: "20px 22px 18px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                          <h2 id="podium-h2" data-minih="" style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold-ink)" }}>
+                            Top 3 at a glance
+                          </h2>
+                          <span style={{ fontSize: "12px", color: "rgba(232,237,245,0.62)" }}>Editorial rank</span>
+                        </div>
+                        <ol data-podium="">
+                          {podium.map((entry, index) => (
+                            <li key={entry.id} style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                              <a href={`#rank-${index + 1}`} style={{ display: "flex", alignItems: "center", gap: "14px", minHeight: "64px", padding: "10px 0", color: "#fff" }}>
+                                <span className="serif-accent" style={{ fontSize: "34px", lineHeight: "1", color: "var(--gold-ink)", width: "40px", flexShrink: 0, letterSpacing: "0" }}>
+                                  {String(index + 1).padStart(2, "0")}
+                                </span>
+                                <span style={{ flex: "1", minWidth: "0" }}>
+                                  <span style={{ display: "block", fontSize: "15.5px", fontWeight: "700", color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {entry.business.name}
+                                  </span>
+                                  {entry.designation ? (
+                                    <span style={{ display: "block", fontSize: "12.5px", color: "rgba(232,237,245,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {entry.designation}
+                                    </span>
+                                  ) : null}
+                                </span>
+                                {entry.business.googleRating ? (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "13px", fontWeight: "700", color: "#fff", fontVariantNumeric: "tabular-nums" }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#E7B863" aria-hidden="true">
+                                      <path d={ICO.star} />
+                                    </svg>
+                                    {entry.business.googleRating.toFixed(1)}
+                                  </span>
+                                ) : null}
+                              </a>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    </aside>
+                  ) : null}
 
-      {/* -------------------------------------------------------- the ten */}
-      <section id="rankings" aria-labelledby="rank-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ ...SHELL, padding: "24px 24px 72px" }}>
-          <h2 id="rank-h2" style={{ ...H2, marginBottom: "8px" }}>
-            Our top {ranking.entries.length} {category.serviceName.toLowerCase()} companies in {city.name}
-          </h2>
-          <p style={{ ...LEAD, marginBottom: "32px", maxWidth: "720px" }}>
-            {ranking.intro ??
-              "Each entry explains why the company was selected, what it does well and what to weigh before hiring."}
-          </p>
-
-          <ol style={{ display: "grid", gap: "20px" }}>
-            {ranking.entries.map((entry, index) => {
-              const business = entry.business;
-              const likes = parseList(entry.likes);
-              const concerns = parseList(entry.concerns);
-              const services = business.services.map((link) => link.subservice.name);
-              const area = business.areas.find((a) => a.primary)?.city.name ?? city.name;
-              const credential = business.credentials[0];
-              return (
-                <li key={entry.id}>
-                  <article
-                    data-card=""
-                    style={{
-                      background: "var(--surface-card)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "22px",
-                      boxShadow: "var(--shadow-sm)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        height: "4px",
-                        background: "linear-gradient(90deg, var(--blue-900) 0%, var(--color-primary) 55%, #E8B551 100%)",
-                      }}
-                    />
-                    {/* The review opens rather than being open.
-
-                        On a desktop there is a column wide enough to read a
-                        review in, so the CSS holds every one of these open and
-                        the summary is only the card's header. On a phone ten
-                        open reviews are ten screens of scrolling before the
-                        tenth company is even a name, which is the opposite of
-                        what a list of ten is for: there the header is the whole
-                        card and the review is a tap away. Every word is in the
-                        page either way, so nothing is kept from a reader who
-                        searched for it.
-
-                        The header is built from spans because a summary takes
-                        phrasing content and headings, not divs. */}
-                    <details data-entry="">
-                      <summary
-                        data-entry-head=""
+                  {placement ? (
+                    <aside
+                      data-in="5"
+                      aria-labelledby="partner-h2"
+                      style={{ position: "relative", borderRadius: "20px", background: "var(--surface-card)", border: "1.5px solid #EBCE95", boxShadow: "0 20px 40px -30px rgba(138,95,11,0.5)" }}
+                    >
+                      <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "20px",
-                          padding: "26px",
-                          borderBottom: "1px solid var(--border-subtle)",
-                          background:
-                            "linear-gradient(120deg, var(--blue-50) 0%, rgba(234,244,255,0.35) 45%, var(--surface-card) 100%)",
-                          flexWrap: "wrap",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                          padding: "10px 18px",
+                          borderBottom: "1px solid #F0DDB4",
+                          background: "linear-gradient(120deg, var(--gold-soft), var(--surface-card))",
+                          borderRadius: "18px 18px 0 0",
                         }}
                       >
-                        <span data-entry-plate="" aria-hidden="true">
-                          <span data-entry-plate-n="">{String(index + 1).padStart(2, "0")}</span>
-                          <span data-entry-plate-l="">Rank</span>
-                        </span>
-                        <BusinessLogo name={business.name} url={business.logoUrl} size={64} radius={16} />
-                        <span data-entry-name="" style={{ display: "block", flex: "1", minWidth: "240px" }}>
-                          <h3
+                        <h2 id="partner-h2" data-minih="" style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M12 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" />
+                            <path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1" />
+                          </svg>
+                          Featured Partner
+                        </h2>
+                        <span style={{ fontSize: "10.5px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)" }}>Sponsored</span>
+                      </div>
+                      <div style={{ padding: "16px 18px 18px", display: "grid", gap: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span
+                            aria-hidden="true"
                             style={{
-                              fontSize: "25px",
-                              lineHeight: "1.2",
-                              fontWeight: "700",
-                              letterSpacing: "var(--ls-tighter)",
-                              marginBottom: "5px",
-                              color: "var(--blue-900)",
+                              flexShrink: 0,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "46px",
+                              height: "46px",
+                              borderRadius: "13px",
+                              border: "1px solid #EBCE95",
+                              background: "var(--gold-soft)",
+                              fontSize: "15px",
+                              fontWeight: "800",
+                              color: "var(--gold)",
                             }}
                           >
-                            {business.name}
-                          </h3>
-                          {entry.designation ? (
-                            <span
-                              data-entry-designation=""
-                              style={{
-                                display: "block",
-                                fontSize: "15px",
-                                fontWeight: "600",
-                                color: "var(--color-primary)",
-                                marginBottom: "10px",
-                              }}
-                            >
-                              {entry.designation}
-                            </span>
-                          ) : null}
-                          <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px 16px" }}>
-                            {business.googleRating ? (
-                              <>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#D99A1C" stroke="none" aria-hidden="true">
-                                    <path d="M12 2.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 8.7l5.8-.8z" />
-                                  </svg>
-                                  <span style={{ fontSize: "16px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}>
-                                    {business.googleRating.toFixed(1)}
-                                  </span>
-                                  <span data-entry-reviews="" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                                    ({business.googleReviewCount} Google reviews)
-                                  </span>
-                                </span>
-                                <span aria-hidden="true" data-entry-rule="" style={{ width: "1px", height: "14px", background: "var(--border-strong)" }} />
-                              </>
-                            ) : null}
-                            {business.addressLine ? (
-                              <span data-entry-address="" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "var(--text-secondary)" }}>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-                                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
-                                  <path d="M12 7a3 3 0 1 0 0 6 3 3 0 1 0 0-6" />
-                                </svg>
-                                {business.addressLine}
-                              </span>
-                            ) : null}
-                            {business.verified ? (
-                              <span data-entry-verified="" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: "600", color: "#178054" }}>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            {initials(placement.business.name)}
+                          </span>
+                          <span style={{ flex: "1", minWidth: "0" }}>
+                            <h3 style={{ fontSize: "16.5px", fontWeight: "700" }}>{placement.business.name}</h3>
+                            {placement.business.verified ? (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12.5px", fontWeight: "600", color: "var(--color-success)" }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                   <path d="M20 6 9 17l-5-5" />
                                 </svg>
-                                Details verified
+                                Business details verified
                               </span>
                             ) : null}
                           </span>
-                          {business.bestFor ? (
-                            <span data-entry-bestfor="">
-                              <strong>Best for</strong> {business.bestFor}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span
-                          data-entry-mark=""
-                          style={{
-                            flex: "0 0 auto",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "2px",
-                            paddingLeft: "8px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: "10px",
-                              fontWeight: "700",
-                              letterSpacing: "var(--ls-wider)",
-                              textTransform: "uppercase",
-                              color: "var(--color-primary)",
-                            }}
+                          <Link
+                            data-btn=""
+                            href={routes.business(placement.business.slug)}
+                            style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", height: "42px", padding: "0 16px", borderRadius: "12px", background: "var(--color-primary)", color: "#fff", fontSize: "14px", fontWeight: "700" }}
                           >
-                            Rank
-                          </span>
+                            Visit Partner
+                          </Link>
+                        </div>
+                        {placement.business.description ? (
+                          <p style={{ fontSize: "13.5px", lineHeight: "1.55", color: "var(--text-secondary)" }}>{placement.business.description}</p>
+                        ) : null}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+                          <ul style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                            {parseList(placement.business.strengths)
+                              .slice(0, 3)
+                              .map((item) => (
+                                <li key={item} style={{ padding: "4px 10px", borderRadius: "999px", background: "var(--blue-50)", color: "var(--blue-800)", fontSize: "11.5px", fontWeight: "600" }}>
+                                  {item}
+                                </li>
+                              ))}
+                          </ul>
+                          <Pop ariaLabel="About sponsored placements" label="Why am I seeing this?">
+                            <p style={{ fontSize: "13px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>
+                              This is a sponsored placement. Sponsorship does not determine TenBestFind editorial rankings,
+                              and paid partners hold no position in the Top {total} unless they earned it
+                              independently.
+                            </p>
+                            <p style={{ marginTop: "10px" }}>
+                              <Link href={routes.advertisingDisclosure()} style={{ fontSize: "13px", fontWeight: "600", color: "var(--gold-ink)" }}>
+                                Advertising &amp; Sponsorship Disclosure →
+                              </Link>
+                            </p>
+                          </Pop>
+                        </div>
+                      </div>
+                    </aside>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <PageNav items={toc} />
+
+        {/* -------------------------------------------------------- the ten */}
+        <section id="rankings" aria-labelledby="rank-h2" style={{ background: "var(--surface-card)" }}>
+          <div data-shell="" style={{ ...SHELL_STYLE, padding: "48px 24px 64px" }}>
+            <RankingList
+              items={items}
+              heading={
+                <>
+                  <Kicker>The Ranking</Kicker>
+                  <h2 id="rank-h2" style={{ ...H2S, marginBottom: "10px" }}>
+                    Our <Accent>top {total}</Accent> {serviceLower} companies in {city.name}
+                  </h2>
+                  <p style={{ fontSize: "16px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
+                    {ranking.intro ??
+                      "Each entry explains why the company was selected, what it does well and what to weigh before hiring."}
+                  </p>
+                </>
+              }
+            />
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------- comparison */}
+        <section id="compare" aria-labelledby="cmp-h2" style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}>
+          <div data-shell="" style={{ ...SHELL_STYLE, padding: "64px 24px" }}>
+            <div data-reveal="" style={{ maxWidth: "720px", marginBottom: "22px" }}>
+              <Kicker>Side by Side</Kicker>
+              <h2 id="cmp-h2" style={{ ...H2S, marginBottom: "10px" }}>
+                Compare the top {serviceLower} companies <Accent>in {city.name}</Accent>
+              </h2>
+              <p style={{ fontSize: "16px", color: "var(--text-secondary)" }}>Ranking position reflects our editorial review, not customer ratings.</p>
+            </div>
+            <div data-reveal="" style={{ border: "1px solid var(--border-subtle)", borderRadius: "22px", background: "var(--surface-card)", overflow: "auto", boxShadow: "0 30px 60px -44px rgba(16,31,61,0.45)" }}>
+              <table data-ctable="" style={{ minWidth: "960px" }}>
+                <caption style={{ textAlign: "left", padding: "14px 20px", fontSize: "13px", color: "var(--text-secondary)", borderBottom: "1px solid var(--border-subtle)", captionSide: "top" }}>
+                  Editorial comparison of the {total} ranked companies. Customer ratings, where shown, come from the
+                  source named on each company profile.
+                </caption>
+                <thead>
+                  <tr>
+                    {["Rank", "Company", "Best for", "Key services", "Service area", "Google rating", "Emergency", "Profile"].map((label, i) => (
+                      <th
+                        key={label}
+                        scope="col"
+                        style={{
+                          position: "sticky",
+                          top: "0",
+                          padding: i === 0 ? "12px 16px 12px 20px" : i === 7 ? "12px 20px 12px 16px" : "12px 16px",
+                          fontSize: "10.5px",
+                          fontWeight: "800",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: "rgba(232,237,245,0.75)",
+                          background: "var(--ink)",
+                          ...(i === 0 ? { left: "0", zIndex: "3" } : i === 1 ? { left: "72px", zIndex: "3" } : null),
+                        }}
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody data-stagger="">
+                  {ranking.entries.map((entry, index) => {
+                    const business = entry.business;
+                    const href = routes.business(business.slug);
+                    const td = { padding: "14px 16px", fontSize: "14px", color: "var(--text-secondary)", borderBottom: "1px solid var(--border-subtle)", verticalAlign: "middle" } as const;
+                    return (
+                      <tr key={entry.id} data-trow="">
+                        <th scope="row" style={{ position: "sticky", left: "0", zIndex: "1", width: "72px", padding: "14px 16px 14px 20px", background: "var(--surface-card)", borderBottom: "1px solid var(--border-subtle)" }}>
                           <span
                             style={{
-                              display: "block",
-                              fontSize: "56px",
-                              lineHeight: "0.9",
-                              fontWeight: "700",
-                              letterSpacing: "-0.05em",
-                              color: "var(--color-primary)",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "38px",
+                              height: "38px",
+                              borderRadius: "11px",
+                              background: index < 3 ? "var(--gold-ink)" : "var(--paper)",
+                              color: "var(--ink)",
+                              fontSize: "13px",
+                              fontWeight: "800",
                               fontVariantNumeric: "tabular-nums",
                             }}
                           >
                             {String(index + 1).padStart(2, "0")}
                           </span>
-                          <span style={{ display: "block", width: "28px", height: "3px", borderRadius: "2px", background: "#D99A1C" }} />
-                        </span>
-                        <span data-entry-open="" aria-hidden="true">
-                          <span data-entry-open-label="">Read review</span>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m9 6 6 6-6 6" />
-                          </svg>
-                        </span>
-                      </summary>
-                      <div data-split="" style={{ display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: "32px", padding: "26px" }}>
-                        <div>
-                          {entry.whyPicked ? (
-                            <>
-                              <h4 style={{ ...LABEL, marginBottom: "8px" }}>Why we picked them</h4>
-                              <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-primary)", marginBottom: "22px" }}>
-                                {entry.whyPicked}
-                              </p>
-                            </>
-                          ) : null}
-
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                            {likes.length > 0 ? (
-                              <div>
-                                <h4 style={{ ...LABEL, color: "var(--text-success)", marginBottom: "10px" }}>What we like</h4>
-                                <ul style={{ display: "grid", gap: "8px" }}>
-                                  {likes.map((item) => (
-                                    <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F9D6B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
-                                        <path d="M20 6 9 17l-5-5" />
-                                      </svg>
-                                      {item}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : null}
-                            {concerns.length > 0 ? (
-                              <div>
-                                <h4 style={{ ...LABEL, color: "#8A5F0B", marginBottom: "10px" }}>Things to consider</h4>
-                                <ul style={{ display: "grid", gap: "8px" }}>
-                                  {concerns.map((item) => (
-                                    <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A5F0B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "3px" }}>
-                                        <path d="M12 8v5" />
-                                        <path d="M12 16h.01" />
-                                      </svg>
-                                      {item}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : null}
-                          </div>
-
-                          {services.length > 0 ? (
-                            <>
-                              <h4 style={{ ...LABEL, margin: "22px 0 10px" }}>Services</h4>
-                              <ul style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                                {services.map((name) => (
-                                  <li key={name} style={CHIP}>
-                                    {name}
-                                  </li>
-                                ))}
-                              </ul>
-                            </>
-                          ) : null}
-                        </div>
-
-                        <div>
-                          <div
+                        </th>
+                        <td style={{ ...td, position: "sticky", left: "72px", zIndex: "1", fontSize: "14.5px", fontWeight: "700", background: "var(--surface-card)", borderRight: "1px solid var(--border-subtle)", whiteSpace: "nowrap" }}>
+                          <Link href={href} style={{ color: "var(--ink)" }}>
+                            {business.name}
+                          </Link>
+                        </td>
+                        <td style={td}>{business.bestFor}</td>
+                        <td style={td}>{business.services.slice(0, 3).map((link) => link.subservice.name).join(", ")}</td>
+                        <td style={td}>{business.areas.find((a) => a.primary)?.city.name ?? city.name}</td>
+                        <td style={td}>
+                          {business.googleRating ? (
+                            <span style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}>
+                              <strong style={{ color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{business.googleRating.toFixed(1)}</strong>
+                              <span aria-hidden="true" style={{ position: "relative", display: "block", width: "56px", height: "5px", borderRadius: "99px", background: "rgba(16,31,61,0.1)", overflow: "hidden" }}>
+                                <span
+                                  data-mbar=""
+                                  style={{ display: "block", height: "100%", width: `${Math.min(100, (business.googleRating / 5) * 100).toFixed(1)}%`, background: "var(--gold-ink)", borderRadius: "99px" }}
+                                />
+                              </span>
+                              <span>({business.googleReviewCount})</span>
+                            </span>
+                          ) : (
+                            "Not listed"
+                          )}
+                        </td>
+                        <td style={td}>
+                          <span
                             style={{
-                              background: "var(--surface-page)",
-                              border: "1px solid var(--border-subtle)",
-                              borderRadius: "16px",
-                              padding: "20px 22px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              height: "26px",
+                              padding: "0 10px",
+                              borderRadius: "999px",
+                              background: business.emergency ? "rgba(31,157,107,0.12)" : "var(--paper)",
+                              color: business.emergency ? "#178054" : "var(--text-muted)",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            <h4 style={{ ...LABEL, marginBottom: "14px" }}>Key details</h4>
-                            <dl style={{ display: "grid", gap: "10px", margin: "0" }}>
-                              {[
-                                ["Best for", business.bestFor],
-                                ["Service area", area],
-                                ["Years in business", business.yearFounded ? `${new Date().getFullYear() - business.yearFounded} years` : null],
-                                ["Warranty", business.warrantyTerms],
-                                ["Emergency service", business.emergency ? "Available" : null],
-                                ["Financing", business.financing ? "Available" : null],
-                                ["Credentials", credential ? credential.label : null],
-                              ]
-                                .filter(([, value]) => Boolean(value))
-                                .map(([term, value]) => (
-                                  <div key={term as string} style={{ display: "grid", gap: "2px" }}>
-                                    <dt style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{term}</dt>
-                                    <dd style={{ margin: "0", fontSize: "15px", color: "var(--text-primary)" }}>{value}</dd>
-                                  </div>
-                                ))}
-                            </dl>
-                          </div>
-                          <div style={{ display: "grid", gap: "10px", marginTop: "16px" }}>
-                            <Link href={routes.business(business.slug)} style={BTN_PRIMARY}>
-                              View Company Profile
-                            </Link>
-                            {business.website ? (
-                              <a href={business.website} rel="nofollow noopener" target="_blank" style={BTN_GHOST}>
-                                Visit Website
-                              </a>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </details>
-                  </article>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- comparison */}
-      <section id="compare" aria-labelledby="cmp-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ ...SHELL, padding: "72px 24px" }}>
-          <h2 id="cmp-h2" style={{ ...H2, marginBottom: "8px" }}>
-            Compare the top {category.serviceName.toLowerCase()} companies in {city.name}
-          </h2>
-          <p style={{ ...LEAD, marginBottom: "28px" }}>
-            Ranking position reflects our editorial review, not customer ratings.
-          </p>
-          <div
-            style={{
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "18px",
-              background: "var(--surface-card)",
-              overflow: "hidden",
-              overflowX: "auto",
-              boxShadow: "var(--shadow-sm)",
-            }}
-            data-rtable-wrap=""
-          >
-            <table role="table" style={{ minWidth: "880px" }} data-rtable="">
-              <caption
-                style={{
-                  textAlign: "left",
-                  padding: "18px 24px",
-                  fontSize: "14px",
-                  color: "var(--text-secondary)",
-                  borderBottom: "1px solid var(--border-subtle)",
-                }}
-              >
-                Editorial comparison of the {ranking.entries.length} ranked companies. Customer ratings, where shown,
-                come from the source named on each company profile.
-              </caption>
-              <thead role="rowgroup">
-                <tr role="row" style={{ background: "var(--surface-page)" }}>
-                  <th role="columnheader" scope="col" style={{ ...TH, padding: "12px 24px" }}>Rank</th>
-                  <th role="columnheader" scope="col" style={TH}>Company</th>
-                  <th role="columnheader" scope="col" style={TH}>Best for</th>
-                  <th role="columnheader" scope="col" style={TH}>Key services</th>
-                  <th role="columnheader" scope="col" style={TH}>Service area</th>
-                  <th role="columnheader" scope="col" style={TH}>Google rating</th>
-                  <th role="columnheader" scope="col" style={TH}>Emergency</th>
-                  <th role="columnheader" scope="col" style={{ ...TH, padding: "12px 24px" }}>Profile</th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                {ranking.entries.map((entry, index) => {
-                  const business = entry.business;
-                  return (
-                    <tr role="row" key={entry.id}>
-                      <th role="rowheader" scope="row" style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-subtle)", verticalAlign: "middle" }}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            minWidth: "34px",
-                            height: "34px",
-                            padding: "0 8px",
-                            borderRadius: "10px",
-                            background: "var(--blue-50)",
-                            color: "var(--blue-800)",
-                            fontSize: "15px",
-                            fontWeight: "700",
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                      </th>
-                      <td role="cell" style={TD} data-label="Company">
-                        <Link href={routes.business(business.slug)} style={{ fontWeight: "600", color: "var(--blue-900)" }}>
-                          {business.name}
-                        </Link>
-                      </td>
-                      <td role="cell" style={TD} data-label="Best for">{business.bestFor}</td>
-                      <td role="cell" style={TD} data-label="Key services">
-                        {business.services.slice(0, 3).map((link) => link.subservice.name).join(", ")}
-                      </td>
-                      <td role="cell" style={TD} data-label="Service area">
-                        {business.areas.find((a) => a.primary)?.city.name ?? city.name}
-                      </td>
-                      <td role="cell" style={TD} data-label="Google rating">
-                        {business.googleRating ? `${business.googleRating.toFixed(1)} (${business.googleReviewCount})` : "Not listed"}
-                      </td>
-                      <td role="cell" style={TD} data-label="Emergency">{business.emergency ? "Yes" : "Not listed"}</td>
-                      <td role="cell" style={{ ...TD, padding: "16px 24px" }} data-label="Profile">
-                        <Link href={routes.business(business.slug)} style={{ fontWeight: "600", whiteSpace: "nowrap" }}>
-                          View →
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* --------------------------------------------------------- coverage */}
-      {areas.length > 0 || nearbyRankings.length > 0 ? (
-        <section id="coverage" aria-labelledby="cov-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div
-            data-split=""
-            style={{ ...SHELL, padding: "72px 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", alignItems: "start" }}
-          >
-            <div>
-              <h2 id="cov-h2" style={{ ...H2, marginBottom: "16px", textWrap: "balance" }}>
-                {category.serviceName} companies serving {city.name} and nearby areas
-              </h2>
-              <p style={{ ...LEAD, marginBottom: "22px" }}>
-                Most companies in this ranking work across {region.name} and the surrounding suburbs. Coverage and
-                travel fees vary, so confirm your address is inside the service area before scheduling.
-              </p>
-              {areas.length > 0 ? (
-                <ul style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {areas.map((area) => (
-                    <li key={area.id} style={PILL}>
-                      {area.name}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {nearbyRankings.length > 0 ? (
-                <>
-                  <h3 style={{ fontSize: "17px", fontWeight: "700", margin: "28px 0 12px" }}>Nearby rankings</h3>
-                  <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "8px" }}>
-                    {nearbyRankings.map((near) => (
-                      <RowLink key={near.id} href={rankingUrl({ category, city: near.city ? { slug: near.city.slug, region: { slug: region.slug, country: { code: country.code } } } : null })}>
-                        {near.city?.name}
-                      </RowLink>
-                    ))}
-                  </ul>
-                </>
-              ) : null}
-            </div>
-            <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "20px", overflow: "hidden", background: "var(--surface-card)" }}>
-              <div style={{ height: "320px", background: "var(--surface-sunken)" }}>
-                <Media src={city.heroImage} alt={`${city.name}, ${region.name}`} />
-              </div>
-              <p style={{ padding: "14px 18px", fontSize: "13px", color: "var(--text-secondary)" }}>
-                Service coverage across {city.name}. Individual company areas are listed on each profile.
-              </p>
+                            {business.emergency ? "Yes" : "Not listed"}
+                          </span>
+                        </td>
+                        <td style={{ ...td, paddingRight: "20px" }}>
+                          <Link data-link="" href={href} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: "700", whiteSpace: "nowrap" }}>
+                            View
+                            <ArrowSvg />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
-      ) : null}
 
-      {/* ------------------------------------------------------- methodology */}
-      <section id="method" aria-labelledby="method-h2" style={{ background: "var(--blue-900)", color: "var(--text-on-ink)" }}>
-        <div style={{ ...SHELL, padding: "76px 24px" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "16px" }}>
-            <h2 id="method-h2" style={{ ...H2, color: "#fff" }}>
-              How we chose the best {category.serviceName.toLowerCase()} companies in {city.name}
-            </h2>
-            <Link href={routes.howWeRank()} style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
-              Read our full ranking methodology →
-            </Link>
-          </div>
-          <p style={{ fontSize: "17px", lineHeight: "1.7", color: "rgba(232,237,245,0.78)", maxWidth: "760px", marginBottom: "40px" }}>
-            {ranking.methodologyNote ??
-              `We started from ${ranking.companiesReviewed} ${category.serviceName.toLowerCase()} companies serving ${city.name} and narrowed the list against the criteria below. Position reflects our editorial judgment of overall fit for local homeowners, not payment.`}
-          </p>
-          {ranking.criteria.length > 0 ? (
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
-              {ranking.criteria.map((criterion) => (
-                <li
-                  key={criterion.id}
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    borderRadius: "16px",
-                    padding: "22px 24px",
-                  }}
-                >
-                  <h3 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{criterion.title}</h3>
-                  <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)" }}>{criterion.body}</p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ costs */}
-      {ranking.costs.length > 0 ? (
-        <section id="cost" aria-labelledby="cost-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div
-            data-split=""
-            style={{ ...SHELL, padding: "76px 24px", display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
-          >
-            <div>
-              <h2 id="cost-h2" style={{ ...H2, marginBottom: "18px", textWrap: "balance" }}>
-                How much does {category.serviceName.toLowerCase()} cost in {city.name}?
-              </h2>
-              <p style={{ ...LEAD, lineHeight: "1.75" }}>
-                Prices depend on the size of the job, the materials, access, permits and how much has to be removed
-                before the new work starts. The figures below are what local companies quote most often.
-              </p>
-              <p style={{ marginTop: "20px" }}>
-                <Link href={routes.category(category.slug)} style={{ fontSize: "16px", fontWeight: "600" }}>
-                  See our {category.serviceName.toLowerCase()} cost guide →
-                </Link>
-              </p>
-            </div>
-            <div>
-              <div style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "18px", background: "var(--surface-card)", boxShadow: "var(--shadow-sm)" }}>
-                <table style={{ minWidth: "520px" }}>
-                  <caption
-                    style={{
-                      textAlign: "left",
-                      padding: "20px 26px 16px",
-                      fontSize: "15px",
-                      fontWeight: "700",
-                      color: "var(--blue-900)",
-                      borderBottom: "1px solid var(--border-subtle)",
-                    }}
-                  >
-                    Typical {city.name} {category.serviceName.toLowerCase()} costs
-                  </caption>
-                  <thead>
-                    <tr style={{ background: "var(--surface-page)" }}>
-                      <th scope="col" style={{ ...TH, padding: "12px 26px" }}>Service</th>
-                      <th scope="col" style={{ ...TH, padding: "12px 20px", whiteSpace: "nowrap" }}>Typical range</th>
-                      <th scope="col" style={{ ...TH, padding: "12px 26px" }}>What moves the price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ranking.costs.map((row) => (
-                      <tr key={row.id}>
-                        <td style={{ ...TD, padding: "16px 26px", fontWeight: "600", color: "var(--blue-900)" }}>{row.label}</td>
-                        <td style={{ ...TD, padding: "16px 20px", whiteSpace: "nowrap" }}>
-                          {row.lowPrice && row.highPrice
-                            ? `${money(row.lowPrice, row.currency)} – ${money(row.highPrice, row.currency)}`
-                            : row.typical
-                              ? money(row.typical, row.currency)
-                              : "On request"}
-                        </td>
-                        <td style={{ ...TD, padding: "16px 26px", color: "var(--text-secondary)" }}>{row.note}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <details data-pop="" style={{ position: "relative", marginTop: "16px" }}>
-                <summary
-                  aria-label="About these cost ranges"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}
-                >
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                      border: "1.5px solid var(--border-strong)",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      color: "var(--color-primary)",
-                    }}
-                  >
-                    i
-                  </span>
-                  How to read these ranges
-                </summary>
-                <div
-                  role="note"
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 10px)",
-                    left: "0",
-                    right: "0",
-                    zIndex: "180",
-                    background: "var(--blue-900)",
-                    color: "var(--text-on-ink)",
-                    borderRadius: "14px",
-                    boxShadow: "var(--shadow-xl)",
-                    padding: "18px 20px",
-                  }}
-                >
-                  <p style={{ fontSize: "13px", lineHeight: "1.65", color: "rgba(232,237,245,0.88)" }}>
-                    Ranges are for installed work, including removal, materials, labour and disposal. Your own quote
-                    moves with the size of the job, the grade of material, what is found underneath, access, permits
-                    and the extent of any damage. Where an insurance claim is involved, what you pay is usually the
-                    excess rather than the figures above.
+        {/* --------------------------------------------------------- coverage */}
+        {areas.length > 0 || nearbyRankings.length > 0 ? (
+          <section id="coverage" aria-labelledby="cov-h2" style={{ background: "var(--surface-card)", borderTop: "1px solid var(--border-subtle)" }}>
+            <div data-shell="" style={{ ...SHELL_STYLE, padding: "64px 24px" }}>
+              <div data-split="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1.1fr)", gap: "40px", alignItems: "start" }}>
+                <div data-reveal="">
+                  <Kicker>Coverage</Kicker>
+                  <h2 id="cov-h2" style={{ ...H2S, marginBottom: "14px" }}>
+                    {category.serviceName} companies serving {city.name} <Accent>and nearby areas</Accent>
+                  </h2>
+                  <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                    Most companies in this ranking work across {region.name} and the surrounding suburbs. Coverage and
+                    travel fees vary, so confirm your address is inside the service area before scheduling.
                   </p>
-                  <p style={{ marginTop: "12px", fontSize: "12px", lineHeight: "1.6", color: "rgba(232,237,245,0.7)" }}>
-                    Ranges are updated with each editorial review of this page.
-                  </p>
-                  <p style={{ marginTop: "10px" }}>
-                    <Link href={routes.howWeRank()} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
-                      Full cost methodology →
-                    </Link>
+                  {areas.length > 0 ? (
+                    <ul style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "26px" }}>
+                      {areas.map((area) => (
+                        <li
+                          key={area.id}
+                          style={{ display: "inline-flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 13px", borderRadius: "999px", background: "var(--paper)", border: "1px solid var(--border-subtle)", fontSize: "13.5px", fontWeight: "600", color: "var(--ink)" }}
+                        >
+                          <span aria-hidden="true" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--gold-ink)" }} />
+                          {area.name}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {nearbyRankings.length > 0 ? (
+                    <>
+                      <h3 style={{ ["--fs" as string]: "12px", fontSize: "12px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "10px" }}>Nearby rankings</h3>
+                      <ul data-two="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                        {nearbyRankings.map((near) => (
+                          <li key={near.id}>
+                            <Link
+                              data-rowlink=""
+                              href={rankingUrl({ category, city: near.city ? { slug: near.city.slug, region: { slug: region.slug, country: { code: country.code } } } : null })}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "8px",
+                                minHeight: "48px",
+                                padding: "0 14px",
+                                borderRadius: "14px",
+                                border: "1px solid var(--border-subtle)",
+                                background: "var(--surface-card)",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "var(--ink)",
+                                transition: "background 200ms ease, border-color 200ms ease",
+                              }}
+                            >
+                              {near.city?.name}
+                              <OutArrow />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                </div>
+                <div data-reveal="" style={{ position: "relative", borderRadius: "26px", overflow: "hidden", background: "var(--ink)", boxShadow: "0 40px 80px -44px rgba(16,31,61,0.7)" }}>
+                  {pins.length > 0 ? (
+                    <CoverageMap pins={pins} label={`Map of ${city.name} areas served`} />
+                  ) : (
+                    <div style={{ height: "320px", background: "var(--ink-2)" }}>
+                      <Media src={city.heroImage} alt={`${city.name}, ${region.name}`} tone="dark" />
+                    </div>
+                  )}
+                  <p style={{ padding: "14px 18px", fontSize: "13px", color: "rgba(232,237,245,0.75)" }}>
+                    Service coverage across {city.name}. Individual company areas are listed on each profile.
                   </p>
                 </div>
-              </details>
+              </div>
             </div>
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      {localNotes.length > 0 ? (
-        <section id="local" aria-labelledby="local-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-          <div style={{ ...SHELL, padding: "76px 24px" }}>
-            <h2 id="local-h2" style={{ ...H2, marginBottom: "12px" }}>
-              What {city.name} homeowners should know about {category.serviceName.toLowerCase()}
-            </h2>
-            <p style={{ ...LEAD, maxWidth: "760px", marginBottom: "32px" }}>
-              Local conditions shape both the work and the paperwork. These are the factors that come up most often in
-              the {city.name} market.
-            </p>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
-              {localNotes.map((note) => (
-                <li
-                  key={note.title}
-                  style={{
-                    background: "var(--surface-card)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "16px",
-                    padding: "22px 24px",
-                  }}
-                >
-                  <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{note.title}</h3>
-                  <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{note.body}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
-
-      {/* ----------------------------------------------------------- hiring */}
-      <section id="hiring" aria-labelledby="hire-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ ...SHELL, padding: "76px 24px" }}>
-          <div data-split="" style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: "48px", alignItems: "start" }}>
-            <div>
-              <h2 id="hire-h2" style={{ ...H2, marginBottom: "20px", textWrap: "balance" }}>
-                How to choose a {category.singular.toLowerCase()} in {city.name}
-              </h2>
-              <ul data-hire-steps="" style={{ display: "grid", gap: "18px" }}>
-                {HIRING_STEPS.map((step) => (
-                  <li key={step.title} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-                    <span aria-hidden="true" style={{ flex: "0 0 auto", color: "var(--color-primary)", display: "inline-flex", paddingTop: "2px" }}>
-                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20" />
-                        <path d="m8 12 3 3 5-6" />
-                      </svg>
+        {/* ------------------------------------------------------- methodology */}
+        <section id="method" aria-labelledby="method-h2" style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: "0",
+              background: "radial-gradient(700px 420px at 0% 110%, rgba(45,116,215,0.3), transparent 62%), radial-gradient(520px 320px at 100% 0%, rgba(231,184,99,0.1), transparent 62%)",
+              pointerEvents: "none",
+            }}
+          />
+          <div data-shell="" style={{ ...SHELL_STYLE, padding: "72px 24px" }}>
+            <div data-reveal="" style={{ position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "26px" }}>
+              <div style={{ maxWidth: "760px" }}>
+                <Kicker tone="ink">Methodology</Kicker>
+                <h2 id="method-h2" style={{ ...H2S, color: "#fff", marginBottom: "12px" }}>
+                  How we chose the best {serviceLower} companies <Accent>in {city.name}</Accent>
+                </h2>
+                <p style={{ fontSize: "16px", lineHeight: "1.7", color: "rgba(232,237,245,0.78)" }}>
+                  {ranking.methodologyNote ??
+                    `We started from ${ranking.companiesReviewed} ${serviceLower} companies serving ${city.name} and narrowed the list against the criteria below. Position reflects our editorial judgment of overall fit for local homeowners, not payment.`}
+                </p>
+              </div>
+              <Link data-link="" href={routes.howWeRank()} style={{ display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", fontSize: "15px", fontWeight: "700", color: "var(--gold-ink)" }}>
+                Read our full ranking methodology
+                <ArrowSvg />
+              </Link>
+            </div>
+            {ranking.companiesReviewed > 0 ? (
+              <div data-reveal="" style={{ position: "relative", display: "grid", gap: "8px", marginBottom: "26px", maxWidth: "760px" }}>
+                {[
+                  { label: "Evaluated", value: ranking.companiesReviewed, pct: 100, color: "rgba(255,255,255,0.3)", text: "#fff", labelColor: "rgba(232,237,245,0.7)" },
+                  {
+                    label: "Ranked",
+                    value: total,
+                    pct: Math.min(100, Math.round((total / ranking.companiesReviewed) * 1000) / 10),
+                    color: "var(--gold-ink)",
+                    text: "var(--gold-ink)",
+                    labelColor: "var(--gold-ink)",
+                  },
+                ].map((bar, i) => (
+                  <div key={bar.label} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <span style={{ width: "92px", fontSize: "12.5px", fontWeight: "700", color: bar.labelColor }}>{bar.label}</span>
+                    <span aria-hidden="true" style={{ flex: "1", height: "10px", borderRadius: "99px", background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                      <span data-mbar="" style={{ ["--i" as string]: i * 6, display: "block", height: "100%", width: `${bar.pct}%`, background: bar.color, borderRadius: "99px" }} />
+                    </span>
+                    <span style={{ minWidth: "32px", fontSize: "18px", fontWeight: "800", color: bar.text, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{bar.value}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {ranking.criteria.length > 0 ? (
+              <ul data-stagger="" style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
+                {ranking.criteria.map((criterion, index) => (
+                  <li
+                    key={criterion.id}
+                    data-hov=""
+                    data-dark-card=""
+                    style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "20px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", transition: "background 200ms ease, border-color 200ms ease" }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Tile d={CRITERIA_ICONS[index % CRITERIA_ICONS.length]} tone="goldDark" />
+                      <span className="serif-accent" style={{ fontSize: "26px", color: "rgba(231,184,99,0.55)" }}>
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                     </span>
                     <span style={{ display: "block" }}>
-                      <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "4px" }}>{step.title}</h3>
-                      <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{step.body}</p>
+                      <h3 style={{ fontSize: "16.5px", fontWeight: "700", color: "#fff", marginBottom: "5px" }}>{criterion.title}</h3>
+                      <p style={{ fontSize: "14px", lineHeight: "1.55", color: "rgba(232,237,245,0.75)" }}>{criterion.body}</p>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------ costs */}
+        {ranking.costs.length > 0 ? (
+          <section id="cost" aria-labelledby="cost-h2" style={{ background: "var(--surface-card)" }}>
+            <div data-shell="" style={{ ...SHELL_STYLE, padding: "72px 24px" }}>
+              <div data-split="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 1.2fr)", gap: "48px", alignItems: "start" }}>
+                <div data-reveal="" style={{ position: "sticky", top: "150px" }}>
+                  <Kicker>Costs</Kicker>
+                  <h2 id="cost-h2" style={{ ...H2S, marginBottom: "16px" }}>
+                    How much does {serviceLower} <Accent>cost in {city.name}?</Accent>
+                  </h2>
+                  <p style={{ fontSize: "16px", lineHeight: "1.75", color: "var(--text-secondary)" }}>
+                    Prices depend on the size of the job, the materials, access, permits and how much has to be removed
+                    before the new work starts. The figures below are what local companies quote most often.
+                  </p>
+                  <Link data-link="" href={routes.category(category.slug)} style={{ marginTop: "16px", display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", fontSize: "15px", fontWeight: "700" }}>
+                    See our {serviceLower} cost guide
+                    <ArrowSvg />
+                  </Link>
+                </div>
+                <div data-reveal="">
+                  <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "16px 22px", borderBottom: "1px solid var(--border-subtle)", background: "var(--paper)" }}>
+                      <h3 style={{ ["--fs" as string]: "15px", fontSize: "15px", fontWeight: "700" }}>
+                        Typical {city.name} {serviceLower} costs
+                      </h3>
+                      {year ? <span style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)" }}>{year} ranges</span> : null}
+                    </div>
+                    <table data-costs="">
+                      <thead>
+                        <tr>
+                          <th scope="col">Service</th>
+                          <th scope="col">Typical range</th>
+                          <th scope="col">What moves the price</th>
+                        </tr>
+                      </thead>
+                      <tbody data-stagger="">
+                        {ranking.costs.map((row) => (
+                          <tr key={row.id} data-trow="">
+                            <td style={{ fontSize: "15px", fontWeight: "700", color: "var(--ink)" }}>{row.label}</td>
+                            <td style={{ fontSize: "16px", fontWeight: "800", color: "var(--ink)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", textAlign: "right" }}>
+                              {row.lowPrice && row.highPrice
+                                ? `${money(row.lowPrice, row.currency)} to ${money(row.highPrice, row.currency)}`
+                                : row.typical
+                                  ? money(row.typical, row.currency)
+                                  : "On request"}
+                            </td>
+                            <td style={{ fontSize: "13.5px", lineHeight: "1.55", color: "var(--text-secondary)" }}>{row.note}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <Pop ariaLabel="About these cost ranges" label="How to read these ranges" side="wide" style={{ marginTop: "14px" }}>
+                    <p style={{ fontSize: "13px", lineHeight: "1.65", color: "rgba(232,237,245,0.88)" }}>
+                      Ranges are for installed work, including removal, materials, labour and disposal. Your own quote
+                      moves with the size of the job, the grade of material, what is found underneath, access, permits
+                      and the extent of any damage. Where an insurance claim is involved, what you pay is usually the
+                      excess rather than the figures above.
+                    </p>
+                    <p style={{ marginTop: "12px", fontSize: "12px", lineHeight: "1.6", color: "rgba(232,237,245,0.7)" }}>
+                      Ranges are updated with each editorial review of this page.
+                    </p>
+                    <p style={{ marginTop: "10px" }}>
+                      <Link href={routes.howWeRank()} style={{ fontSize: "13px", fontWeight: "600", color: "var(--gold-ink)" }}>
+                        Full cost methodology →
+                      </Link>
+                    </p>
+                  </Pop>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------------ local notes */}
+        {localNotes.length > 0 ? (
+          <section id="local" aria-labelledby="local-h2" style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}>
+            <div data-shell="" style={{ ...SHELL_STYLE, padding: "64px 24px" }}>
+              <div data-reveal="" style={{ maxWidth: "760px", marginBottom: "24px" }}>
+                <Kicker>{city.name} Notes</Kicker>
+                <h2 id="local-h2" style={{ ...H2S, marginBottom: "12px" }}>
+                  What {city.name} homeowners should know <Accent>about {serviceLower}</Accent>
+                </h2>
+                <p style={{ fontSize: "16px", lineHeight: "1.7", color: "var(--text-secondary)" }}>
+                  Local conditions shape both the work and the paperwork. These are the factors that come up most often in
+                  the {city.name} market.
+                </p>
+              </div>
+              <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                {localNotes.map((note, index) => (
+                  <li
+                    key={note.title}
+                    data-card=""
+                    style={{ display: "flex", gap: "16px", alignItems: "flex-start", background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "20px" }}
+                  >
+                    <Tile d={NOTE_ICONS[index % NOTE_ICONS.length]} />
+                    <span style={{ display: "block" }}>
+                      <h3 style={{ fontSize: "16.5px", fontWeight: "700", marginBottom: "5px" }}>{note.title}</h3>
+                      <p style={{ fontSize: "14.5px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{note.body}</p>
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
+          </section>
+        ) : null}
 
-            <div style={{ display: "grid", gap: "20px" }}>
-              <details data-tip="" style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", borderRadius: "20px", padding: "26px" }}>
-                <summary data-tip-head="">
-                  <h3 style={{ fontSize: "20px", fontWeight: "700" }}>Questions to ask before hiring</h3>
-                  <span data-tip-ico="" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
-                    </svg>
-                  </span>
-                </summary>
-                <ul style={{ display: "grid", gap: "10px" }}>
-                  {QUESTIONS.map((question) => (
-                    <li key={question} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "var(--text-primary)" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "4px" }}>
-                        <path d="M4 5h16v12a1 1 0 0 1-1 1H9l-5 4z" />
-                      </svg>
-                      {question}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-              <details data-tip="" style={{ background: "var(--surface-card)", border: "1px solid #F0DDB4", borderRadius: "20px", padding: "26px" }}>
-                <summary data-tip-head="">
-                  <h3 style={{ fontSize: "20px", fontWeight: "700" }}>Red flags</h3>
-                  <span data-tip-ico="" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
-                    </svg>
-                  </span>
-                </summary>
-                <ul style={{ display: "grid", gap: "10px" }}>
-                  {RED_FLAGS.map((flag) => (
-                    <li key={flag} style={{ display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "var(--text-primary)" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C32620" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: "4px" }}>
+        {/* ----------------------------------------------------------- hiring */}
+        <section id="hiring" aria-labelledby="hire-h2" style={{ background: "var(--surface-card)" }}>
+          <div data-shell="" style={{ ...SHELL_STYLE, padding: "72px 24px" }}>
+            <div data-split="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 0.95fr)", gap: "44px", alignItems: "start" }}>
+              <div>
+                <div data-reveal="">
+                  <Kicker>Hiring</Kicker>
+                  <h2 id="hire-h2" style={{ ...H2S, marginBottom: "22px" }}>
+                    How to choose a {category.singular.toLowerCase()} <Accent>in {city.name}</Accent>
+                  </h2>
+                </div>
+                <div data-reveal="" style={{ position: "relative" }}>
+                  <span data-tl="" aria-hidden="true" style={{ position: "absolute", left: "19px", top: "20px", bottom: "20px", width: "2px", background: "linear-gradient(180deg, var(--gold-ink), var(--color-primary))" }} />
+                  <ol style={{ position: "relative", display: "grid", gap: "4px" }}>
+                    {HIRING_STEPS.map((step, index) => (
+                      <li key={step.title} style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", gap: "16px", alignItems: "start", padding: "10px 0" }}>
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            background: "var(--ink)",
+                            color: "var(--gold-ink)",
+                            fontSize: "12.5px",
+                            fontWeight: "800",
+                            boxShadow: "0 0 0 5px var(--surface-card)",
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <span style={{ display: "block", paddingTop: "8px" }}>
+                          <h3 style={{ fontSize: "16.5px", fontWeight: "700", marginBottom: "4px" }}>{step.title}</h3>
+                          <p style={{ fontSize: "14.5px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{step.body}</p>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: "14px", position: "sticky", top: "150px" }}>
+                <div data-reveal="" style={{ border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px", background: "var(--paper)" }}>
+                  <h2 data-minih="" style={{ fontSize: "19px", fontWeight: "700", marginBottom: "6px" }}>Questions to ask before hiring</h2>
+                  <Checklist questions={QUESTIONS} />
+                </div>
+                <div data-reveal="" style={{ border: "1px solid rgba(195,38,32,0.22)", borderRadius: "22px", padding: "22px", background: "rgba(195,38,32,0.03)" }}>
+                  <h2 data-minih="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "19px", fontWeight: "700", marginBottom: "12px" }}>
+                    <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "10px", background: "rgba(195,38,32,0.1)", color: "#C32620" }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 9v4" />
                         <path d="M12 17h.01" />
                         <path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z" />
                       </svg>
-                      {flag}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+                    </span>
+                    Red flags
+                  </h2>
+                  <ul data-stagger="" style={{ display: "grid", gap: "8px" }}>
+                    {RED_FLAGS.map((flag) => (
+                      <li key={flag} style={{ display: "flex", gap: "10px", fontSize: "14.5px", lineHeight: "1.55", color: "var(--text-primary)" }}>
+                        <span aria-hidden="true" style={{ flexShrink: 0, width: "6px", height: "6px", marginTop: "8px", borderRadius: "50%", background: "#C32620" }} />
+                        {flag}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ---------------------------------------------------------- related */}
-      {relatedRankings.length > 0 || guides.length > 0 ? (
-        <section id="guides" aria-labelledby="rel-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-          <div style={{ ...SHELL, padding: "72px 24px" }}>
-            {relatedRankings.length > 0 ? (
-              <>
-                <h2 id="rel-h2" style={{ ...H2, marginBottom: "24px" }}>
-                  Related home services in {city.name}
+        {/* ---------------------------------------------------------- related */}
+        {relatedRankings.length > 0 || guides.length > 0 ? (
+          <section id="guides" aria-labelledby={relatedRankings.length > 0 ? "rel-h2" : undefined} style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}>
+            <div data-shell="" style={{ ...SHELL_STYLE, padding: "64px 24px" }}>
+              {relatedRankings.length > 0 ? (
+                <>
+                  <div data-reveal="">
+                    <Kicker>Keep Going</Kicker>
+                    <h2 id="rel-h2" style={{ ...H2S, marginBottom: "20px" }}>
+                      Related home services <Accent>in {city.name}</Accent>
+                    </h2>
+                  </div>
+                  <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "8px", marginBottom: guides.length > 0 ? "44px" : "0" }}>
+                    {relatedRankings.map((rel) => (
+                      <li key={rel.id}>
+                        <Link
+                          data-rowlink=""
+                          href={routes.ranking(country.code, region.slug, city.slug, rel.category.slug)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "10px",
+                            minHeight: "56px",
+                            padding: "0 18px",
+                            background: "var(--surface-card)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "16px",
+                            fontSize: "14.5px",
+                            fontWeight: "700",
+                            color: "var(--ink)",
+                            transition: "background 200ms ease, border-color 200ms ease",
+                          }}
+                        >
+                          {rel.category.name}
+                          <OutArrow />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+
+              {guides.length > 0 ? (
+                <>
+                  <h2 data-reveal="" style={{ fontSize: "clamp(22px, 2.4vw, 28px)", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "18px" }}>
+                    {category.serviceName} guides for <Accent>{city.name} homeowners</Accent>
+                  </h2>
+                  <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
+                    {guides.map((guide) => (
+                      <li
+                        key={guide.id}
+                        data-card=""
+                        style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}
+                      >
+                        <span style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", height: "24px", padding: "0 9px", borderRadius: "999px", background: "var(--gold-soft)", fontSize: "10.5px", fontWeight: "800", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gold)" }}>
+                          {category.name}
+                        </span>
+                        <h3 style={{ ["--fs" as string]: "17px", fontSize: "17px", lineHeight: "1.3", fontWeight: "700" }}>
+                          <Link href={routes.guide(guide.slug)} style={{ color: "var(--ink)" }}>
+                            {guide.title}
+                          </Link>
+                        </h3>
+                        <p style={{ marginTop: "auto", fontSize: "12.5px", color: "var(--text-muted)" }}>
+                          {guide.author ? `${guide.author.name} · ` : ""}
+                          {guide.readingMinutes} min read
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------------------- faqs */}
+        {faqs.length > 0 ? (
+          <section id="faqs" aria-labelledby="faqs-h2" style={{ background: "var(--surface-card)", borderTop: "1px solid var(--border-subtle)" }}>
+            <div data-shell="" style={{ ...SHELL_STYLE, padding: "72px 24px" }}>
+              <div data-split="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 0.75fr) minmax(0, 1.25fr)", gap: "48px", alignItems: "start" }}>
+                <div data-reveal="" style={{ position: "sticky", top: "150px" }}>
+                  <Kicker>FAQ</Kicker>
+                  <h2 id="faqs-h2" style={H2S}>
+                    {category.serviceName} companies in {city.name} <Accent>FAQs</Accent>
+                  </h2>
+                </div>
+                <FaqList faqs={faqs} />
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------- about this ranking */}
+        <section id="about" aria-labelledby="about-h2" style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}>
+          <div data-shell="" style={{ ...SHELL_STYLE, padding: "56px 24px" }}>
+            <div
+              data-reveal=""
+              data-split=""
+              style={{
+                display: "grid",
+                gridTemplateColumns: author ? "minmax(0, 1.25fr) minmax(0, 0.75fr)" : "minmax(0, 1fr)",
+                gap: "36px",
+                alignItems: "stretch",
+                background: "var(--surface-card)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "22px",
+                padding: "28px",
+              }}
+            >
+              <div>
+                <Kicker>Editorial Record</Kicker>
+                <h2 id="about-h2" style={{ fontSize: "24px", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "8px" }}>
+                  About this ranking
                 </h2>
-                <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", marginBottom: "44px" }}>
-                  {relatedRankings.map((related) => (
-                    <RowLink
-                      key={related.id}
-                      boxed
-                      href={routes.ranking(country.code, region.slug, city.slug, related.category.slug)}
-                    >
-                      {related.category.name}
-                    </RowLink>
+                <dl data-two="" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "0 28px", margin: "0" }}>
+                  {[
+                    { term: "Originally published", node: monthYear(ranking.publishedAt) },
+                    { term: "Last reviewed", node: monthYear(reviewedOn) },
+                    ...(reviewer
+                      ? [
+                          {
+                            term: "Reviewed by",
+                            node: (
+                              <>
+                                <Link href={routes.expert(reviewer.slug)}>{reviewer.name}</Link>
+                                {reviewer.role ? `, ${reviewer.role}` : ""}
+                              </>
+                            ),
+                          },
+                        ]
+                      : []),
+                    { term: "Companies evaluated", node: ranking.companiesReviewed },
+                    { term: "Methodology", node: <Link href={routes.howWeRank()}>Ranking methodology</Link> },
+                    ...(ranking.sources.length > 0
+                      ? [
+                          {
+                            term: "Sources reviewed",
+                            node: (
+                              <a href="#method">
+                                {ranking.sources.length} {ranking.sources.length === 1 ? "source" : "sources"}
+                              </a>
+                            ),
+                          },
+                        ]
+                      : []),
+                  ].map((fact) => (
+                    <div key={fact.term} style={{ padding: "14px 0", borderTop: "1px solid var(--border-subtle)" }}>
+                      <dt style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "3px" }}>{fact.term}</dt>
+                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "700", color: "var(--ink)" }}>{fact.node}</dd>
+                    </div>
                   ))}
-                </ul>
-              </>
-            ) : null}
-
-            {guides.length > 0 ? (
-              <>
-                <h2 style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", marginBottom: "24px" }}>
-                  {category.serviceName} guides for {city.name} homeowners
-                </h2>
-                <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
-                  {guides.map((guide) => (
-                    <li
-                      key={guide.id}
-                      data-card=""
+                </dl>
+              </div>
+              {author ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "22px", borderRadius: "18px", background: "var(--ink)", color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <span
+                      aria-hidden="true"
                       style={{
-                        background: "var(--surface-card)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: "16px",
-                        padding: "22px 24px",
-                        boxShadow: "var(--shadow-sm)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        width: "58px",
+                        height: "58px",
+                        borderRadius: "50%",
+                        background: "var(--ink-2)",
+                        color: "var(--gold-ink)",
+                        fontSize: "18px",
+                        fontWeight: "800",
+                        boxShadow: "0 0 0 2px var(--ink), 0 0 0 4px var(--gold-ink)",
                       }}
                     >
-                      <p style={{ ...LABEL, fontSize: "11px", marginBottom: "8px" }}>{category.name}</p>
-                      <h3 style={{ fontSize: "17px", lineHeight: "1.35", fontWeight: "700", marginBottom: "10px" }}>
-                        <Link href={routes.guide(guide.slug)} style={{ color: "var(--blue-900)" }}>
-                          {guide.title}
+                      {initials(author.name)}
+                    </span>
+                    <span>
+                      <h3 style={{ ["--fs" as string]: "16px", fontSize: "16px", fontWeight: "700", color: "#fff" }}>
+                        <Link href={routes.expert(author.slug)} style={{ color: "#fff" }}>
+                          {author.name}
                         </Link>
                       </h3>
-                      <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                        {guide.author ? `${guide.author.name} · ` : ""}
-                        {guide.readingMinutes} min read
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      {/* ------------------------------------------------------------- faqs */}
-      {faqs.length > 0 ? (
-        <section id="faqs" aria-labelledby="faqs-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div
-            data-split=""
-            style={{ ...SHELL, padding: "76px 24px", display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "56px", alignItems: "start" }}
-          >
-            <h2 id="faqs-h2" style={{ ...H2, textWrap: "balance" }}>
-              {category.serviceName} companies in {city.name} FAQs
-            </h2>
-            <ul style={{ display: "grid", gap: "12px" }}>
-              {faqs.map((faq) => (
-                <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
-
-      {/* ------------------------------------------------- about this ranking */}
-      <section id="about" aria-labelledby="about-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ ...SHELL, padding: "64px 24px" }}>
-          <div
-            data-split=""
-            data-about-card=""
-            style={{
-              display: "grid",
-              gridTemplateColumns: ranking.author ? "1.2fr 0.8fr" : "1fr",
-              gap: "40px",
-              alignItems: "start",
-              background: "var(--surface-card)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "20px",
-              padding: "30px",
-            }}
-          >
-            <div>
-              <h2 id="about-h2" style={{ fontSize: "22px", fontWeight: "700", marginBottom: "18px" }}>
-                About this ranking
-              </h2>
-              <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px 32px", margin: "0" }}>
-                <div>
-                  <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Originally published</dt>
-                  <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
-                    {monthYear(ranking.publishedAt)}
-                  </dd>
-                </div>
-                <div>
-                  <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Last reviewed</dt>
-                  <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
-                    {monthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
-                  </dd>
-                </div>
-                {ranking.reviewer ? (
-                  <div>
-                    <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Reviewed by</dt>
-                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600" }}>
-                      <Link href={routes.expert(ranking.reviewer.slug)}>{ranking.reviewer.name}</Link>
-                      {ranking.reviewer.role ? `, ${ranking.reviewer.role}` : ""}
-                    </dd>
+                      {author.role ? <span style={{ fontSize: "13px", color: "rgba(232,237,245,0.7)" }}>{author.role}</span> : null}
+                    </span>
                   </div>
-                ) : null}
-                <div>
-                  <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Companies evaluated</dt>
-                  <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
-                    {ranking.companiesReviewed}
-                  </dd>
-                </div>
-                <div>
-                  <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Methodology</dt>
-                  <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600" }}>
-                    <Link href={routes.howWeRank()}>Ranking methodology</Link>
-                  </dd>
-                </div>
-                {ranking.sources.length > 0 ? (
-                  <div>
-                    <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>Sources reviewed</dt>
-                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600" }}>
-                      <a href="#method">
-                        {ranking.sources.length} {ranking.sources.length === 1 ? "source" : "sources"}
-                      </a>
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-            {ranking.author ? (
-              <div data-author-bio="" style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "6px" }}>
-                    <Link href={routes.expert(ranking.author.slug)}>{ranking.author.name}</Link>
-                  </h3>
-                  <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                    {ranking.author.bio}
-                  </p>
+                  <p style={{ fontSize: "14px", lineHeight: "1.6", color: "rgba(232,237,245,0.8)" }}>{author.bio}</p>
                   <Link
+                    data-btn=""
                     href={routes.corrections()}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      height: "44px",
-                      padding: "0 18px",
-                      borderRadius: "12px",
-                      border: "1.5px solid var(--border-strong)",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "var(--blue-900)",
-                    }}
+                    style={{ marginTop: "auto", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", height: "46px", borderRadius: "12px", background: "var(--gold-ink)", color: "var(--ink)", fontSize: "14px", fontWeight: "800" }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M11 4h2" />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="m14.5 5.5 4 4" />
                       <path d="M4 20l1-4 11-11a2 2 0 0 1 3 3L8 19z" />
                     </svg>
                     Suggest a correction
                   </Link>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <RelatedContent groups={related} title="Keep comparing" />
+        <RelatedContent groups={related} title="Keep comparing" />
 
-      <FinalSearchBand
-        heading={`Need a ${category.singular.toLowerCase()} in ${city.name}?`}
-        service={category.serviceName}
-        after={
-          <a href="#compare" style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
-            Or compare the {city.name} {category.serviceName.toLowerCase()} companies again
-          </a>
-        }
-      />
+        <FinalBand
+          heading={
+            <>
+              Need a {category.singular.toLowerCase()} <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>in {city.name}?</span>
+            </>
+          }
+          service={category.serviceName}
+          after={
+            <a data-link="" href="#compare" style={{ display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", fontSize: "15px", fontWeight: "600", color: "var(--gold-ink)" }}>
+              Or compare the {city.name} {serviceLower} companies again
+              <ArrowSvg />
+            </a>
+          }
+        />
       </div>
     </SiteChrome>
+  );
+}
+
+/** Five stars, filled to the rating by clipping a gold row over a pale one. */
+function Stars({ rating, index }: { rating: number; index: number }) {
+  const pct = `${Math.max(0, Math.min(100, (rating / 5) * 100)).toFixed(1)}%`;
+  const row = (fill: string) => (
+    <svg viewBox="0 0 120 24" width="80" height="16" aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
+      {[0, 24, 48, 72, 96].map((x) => (
+        <path key={x} transform={`translate(${x} 0)`} d={ICO.star} fill={fill} />
+      ))}
+    </svg>
+  );
+  return (
+    <span style={{ ["--i" as string]: Math.min(index, 12), position: "relative", display: "inline-block", width: "80px", height: "16px", flexShrink: 0 }}>
+      {row("rgba(16,31,61,0.14)")}
+      <span data-starfill="" style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: pct, overflow: "hidden" }}>
+        {row("#D99A1C")}
+      </span>
+    </span>
+  );
+}
+
+/** The leading "10 Best" (or "Best") in the serif accent, with the gold rule under it. */
+function LeadAccent({ text }: { text: string }) {
+  const match = text.match(/^(\d+\s+Best|Best)\b/);
+  if (!match) return <>{text}</>;
+  return (
+    <>
+      <span
+        className="serif-accent"
+        style={{ position: "relative", display: "inline-block", isolation: "isolate", paddingRight: "0.06em", letterSpacing: "-0.02em" }}
+      >
+        {match[1]}
+        <span
+          data-uline=""
+          aria-hidden="true"
+          style={{ position: "absolute", left: "0", right: "0.06em", bottom: "0.04em", height: "0.12em", borderRadius: "99px", background: "var(--gold-ink)", zIndex: -1 }}
+        />
+      </span>
+      {text.slice(match[1].length)}
+    </>
   );
 }

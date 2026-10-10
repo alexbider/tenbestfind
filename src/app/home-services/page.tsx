@@ -3,16 +3,19 @@ import Link from "next/link";
 import { PROJECT_GROUPS, CATEGORY_BANDS } from "../../../prisma/data/taxonomy";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Chevron, Crumbs, SHELL, SR_ONLY } from "@/components/site/page-parts";
 import {
-  Chevron,
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  SR_ONLY,
-  TenOutline,
-} from "@/components/site/page-parts";
+  ArrowLink,
+  DarkBackdrop,
+  FaqRow,
+  HeroBackdrop,
+  Kicker,
+  SectionToc,
+  Tile,
+  autoGrid,
+  heroAccentTail,
+} from "@/components/site/services/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { monthYear, shortMonthYear } from "@/lib/format";
@@ -50,20 +53,19 @@ const CARD = {
   boxShadow: "var(--shadow-sm)",
 };
 const DARK_CARD = {
+  transition: "background 200ms ease, border-color 200ms ease",
   background: "rgba(255,255,255,0.06)",
   border: "1px solid rgba(255,255,255,0.14)",
   borderRadius: "16px",
   padding: "22px 24px",
 };
-const ICON_TILE = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "42px",
-  height: "42px",
-  borderRadius: "12px",
-  background: "var(--blue-50)",
-  color: "var(--color-primary)",
+/** The display heading the design sets on its two-column sections. */
+const SPLIT_H2 = {
+  fontSize: "clamp(28px, 3.4vw, 42px)",
+  lineHeight: "1.06",
+  fontWeight: "800",
+  letterSpacing: "-0.04em",
+  textWrap: "balance" as const,
 };
 const ROW = {
   display: "flex",
@@ -293,7 +295,7 @@ export default async function ServicesIndexPage() {
 
   return (
     <SiteChrome active="services" skin>
-      <div className="hs-2026">
+      <div className="v2-svc" style={{ display: "contents" }}>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -305,29 +307,31 @@ export default async function ServicesIndexPage() {
       <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
-      <section style={GRID_BACKDROP}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 56px" }}>
-          <Crumbs items={[{ label: "Home", href: "/" }, { label: "Home services" }]} />
+      <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)" }}>
+        <HeroBackdrop />
+        <div style={{ ...SHELL, position: "relative", padding: "20px 24px 56px" }}>
+          <div style={{ marginBottom: "30px" }}>
+            <Crumbs flush items={[{ label: "Home", href: "/" }, { label: "Home services" }]} />
+          </div>
 
           <div style={{ maxWidth: "860px" }}>
-            <Eyebrow heroIn="1" gap="16px">
+            <Kicker hero="1" gap="16px">
               Home services
-            </Eyebrow>
+            </Kicker>
             <h1
-              data-hero-in="2"
+              data-in="2"
               style={{
-                fontSize: "clamp(36px, 4.6vw, 56px)",
+                fontSize: "clamp(36px, 5vw, 60px)",
                 lineHeight: "1.06",
                 letterSpacing: "-0.04em",
                 fontWeight: "800",
                 textWrap: "balance",
               }}
             >
-              {copy.h1}
+              {heroAccentTail(copy.h1, 2)}
             </h1>
             <p
-              data-hero-in="3"
+              data-in="3"
               style={{
                 marginTop: "20px",
                 fontSize: "19px",
@@ -463,7 +467,7 @@ export default async function ServicesIndexPage() {
         </div>
 
         <div style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
-          <ul style={{ ...SHELL, padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <ul data-ag="" data-facts="" style={{ ...SHELL, ...autoGrid(220, "0", { padding: "0 24px" }) }}>
             {TRUST.map((item, index, all) => (
               <li
                 key={item.label}
@@ -486,6 +490,23 @@ export default async function ServicesIndexPage() {
         </div>
       </section>
 
+      <SectionToc
+        items={[
+          { href: "#intro", label: "Start" },
+          { href: "#categories", label: "Categories" },
+          { href: "#projects", label: "Your needs" },
+          ...(rankings.length > 0 ? [{ href: "#rankings", label: "Rankings" }] : []),
+          { href: "#locations", label: "Explore" },
+          { href: "#choose", label: "Choosing" },
+          ...(costRows.length > 0 ? [{ href: "#costs", label: "Costs" }] : []),
+          ...(emergency.length > 0 ? [{ href: "#emergency", label: "Timing" }] : []),
+          { href: "#methodology", label: "Method" },
+          ...(leadGuides.length > 0 ? [{ href: "#guides", label: "Guides" }] : []),
+          ...(faqs.length > 0 ? [{ href: "#faqs", label: "FAQs" }] : []),
+          { href: "#biz", label: "Businesses" },
+        ]}
+      />
+
       {/* ------------------------------------------------------------ intro */}
       <section
         id="intro"
@@ -496,27 +517,10 @@ export default async function ServicesIndexPage() {
           data-split=""
           style={{ ...SHELL, padding: "72px 24px", display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
         >
-          {/* Open on a desktop, where it sits in its own column beside the
-              heading, and closed on a phone, where six hundred pixels of
-              preamble stand between the reader and the trades they came for.
-              The CSS decides which, so it is right on the first paint and
-              every word is in the page either way. */}
-          <details data-intro="">
-            <summary data-intro-head="">
-              <span>
-                <h2 id="intro-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", textWrap: "balance" }}>
-                  Your starting point for home services
-                </h2>
-                <span data-intro-note="">What this page covers and how to use it</span>
-              </span>
-              <span data-intro-ico="" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </span>
-            </summary>
-            <div data-intro-body="">
+          <h2 data-reveal="" id="intro-h2" style={SPLIT_H2}>
+            {accentTail("Your starting point for home services", 2)}
+          </h2>
+          <div>
             <p style={{ fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
               Home services cover the trades and companies homeowners hire to keep a property working,
               safe and comfortable: repairs to core systems like plumbing, heating and electrical,
@@ -539,8 +543,7 @@ export default async function ServicesIndexPage() {
               </Link>
               .
             </p>
-            </div>
-          </details>
+          </div>
         </div>
       </section>
 
@@ -551,16 +554,16 @@ export default async function ServicesIndexPage() {
         style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
       >
         <div style={SECTION}>
-          <Eyebrow heroIn="1" gap="14px">
+          <Kicker gap="14px">
             Explore services
-          </Eyebrow>
+          </Kicker>
           <div style={{ ...SECTION_HEAD, marginBottom: "40px" }}>
-            <h2 id="cats-h2" style={SECTION_H2}>
-              Find the right home service professional
+            <h2 data-reveal="" id="cats-h2" style={SECTION_H2}>
+              {accentTail("Find the right home service professional", 2)}
             </h2>
-            <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-              View all rankings →
-            </Link>
+            <ArrowLink href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+              View all rankings
+            </ArrowLink>
           </div>
 
           {bands.map((band) => (
@@ -578,7 +581,7 @@ export default async function ServicesIndexPage() {
                 <h3 style={{ fontSize: "20px", fontWeight: "700" }}>{band.title}</h3>
                 <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>{band.note}</span>
               </div>
-              <ul data-band-grid="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "14px" }}>
+              <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "14px" }}>
                 {band.items.map((category) => (
                   <li
                     key={category.id}
@@ -594,9 +597,7 @@ export default async function ServicesIndexPage() {
                       gap: "14px",
                     }}
                   >
-                    <span aria-hidden="true" style={{ ...ICON_TILE, flex: "0 0 42px" }}>
-                      <Icon name={icon(category.iconKey)} size={20} strokeWidth={1.75} />
-                    </span>
+                    <Tile icon={icon(category.iconKey)} flex />
                     <span style={{ display: "block", minWidth: "0" }}>
                       <h4 style={{ fontSize: "16px", fontWeight: "700", lineHeight: "1.3", marginBottom: "4px" }}>
                         <Link href={routes.category(category.slug)} style={{ color: "var(--blue-900)" }}>
@@ -618,36 +619,21 @@ export default async function ServicesIndexPage() {
       {/* --------------------------------------------------------- projects */}
       <section id="projects" aria-labelledby="proj-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <Eyebrow heroIn="1" gap="14px">
+          <Kicker gap="14px">
             Start with your project
-          </Eyebrow>
+          </Kicker>
           <div style={SECTION_HEAD}>
-            <h2 id="proj-h2" style={SECTION_H2}>
-              What do you need help with?
+            <h2 data-reveal="" id="proj-h2" style={SECTION_H2}>
+              {accentTail("What do you need help with?", 2)}
             </h2>
             <p style={{ fontSize: "16px", color: "var(--text-secondary)", maxWidth: "420px" }}>
               Not sure which trade you need? Start from the job instead of the job title.
             </p>
           </div>
-          <div data-jobs="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "18px" }}>
+          <div data-stagger="" data-ag="" data-facts="" style={autoGrid(230, "18px")}>
             {PROJECT_GROUPS.map((group) => (
               <div key={group.title} data-card="" style={{ ...CARD, padding: "24px 22px 18px" }}>
-                <span
-                  aria-hidden="true"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "46px",
-                    height: "46px",
-                    borderRadius: "14px",
-                    background: "var(--amber-50)",
-                    color: "#8A5F0B",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <Icon name={icon(group.iconKey)} size={22} strokeWidth={1.75} />
-                </span>
+                <Tile icon={icon(group.iconKey)} size={46} iconSize={22} tone="amber" style={{ marginBottom: "16px" }} />
                 <h3
                   style={{
                     fontSize: "17px",
@@ -662,7 +648,7 @@ export default async function ServicesIndexPage() {
                 <ul>
                   {group.links.map(([label, href]) => (
                     <li key={href}>
-                      <Link data-row="" href={href} style={{ ...ROW, padding: "8px 10px" }}>
+                      <Link data-row="proj" href={href} style={{ ...ROW, padding: "8px 10px" }}>
                         {label}
                         <Chevron />
                       </Link>
@@ -675,7 +661,6 @@ export default async function ServicesIndexPage() {
 
           {trending.length > 0 ? (
             <div
-              data-trend-rail=""
               style={{
                 marginTop: "36px",
                 padding: "22px 24px",
@@ -737,18 +722,18 @@ export default async function ServicesIndexPage() {
           style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
         >
           <div style={SECTION}>
-            <Eyebrow heroIn="1" gap="14px">
+            <Kicker gap="14px">
               Popular local rankings
-            </Eyebrow>
+            </Kicker>
             <div style={SECTION_HEAD}>
-              <h2 id="rank-h2" style={SECTION_H2}>
-                Popular home service rankings
+              <h2 data-reveal="" id="rank-h2" style={SECTION_H2}>
+                {accentTail("Popular home service rankings", 2)}
               </h2>
-              <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                View all rankings →
-              </Link>
+              <ArrowLink href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                View all rankings
+              </ArrowLink>
             </div>
-            <ul data-rank-rail="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
               {rankings.map((ranking) => (
                 <li key={ranking.id} data-card="" style={{ ...CARD, padding: "22px 24px", display: "flex", gap: "18px" }}>
                   <span
@@ -805,9 +790,9 @@ export default async function ServicesIndexPage() {
                       <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
                         Updated {monthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
                       </span>
-                      <Link href={rankingUrl(ranking)} style={{ fontSize: "14px", fontWeight: "600" }}>
-                        View ranking →
-                      </Link>
+                      <ArrowLink href={rankingUrl(ranking)} style={{ fontSize: "14px", fontWeight: "600" }}>
+                        View ranking
+                      </ArrowLink>
                     </span>
                   </span>
                 </li>
@@ -820,11 +805,11 @@ export default async function ServicesIndexPage() {
       {/* -------------------------------------------------------- locations */}
       <section id="locations" aria-labelledby="geo-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <Eyebrow heroIn="1" gap="14px">
+          <Kicker gap="14px">
             Local expertise, nationwide
-          </Eyebrow>
-          <h2 id="geo-h2" style={{ ...SECTION_H2, marginBottom: "32px", maxWidth: "680px", textWrap: "balance" }}>
-            Explore home services across every market we cover
+          </Kicker>
+          <h2 data-reveal="" id="geo-h2" style={{ ...SECTION_H2, marginBottom: "32px", maxWidth: "680px", textWrap: "balance" }}>
+            {accentTail("Explore home services across every market we cover", 3)}
           </h2>
 
           <div data-split="" style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: "24px" }}>
@@ -864,10 +849,10 @@ export default async function ServicesIndexPage() {
                   >
                     {group.country.name}
                   </p>
-                  <ul data-places="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+                  <ul style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
                     {group.regions.slice(0, 6).map((region) => (
                       <li key={region.id}>
-                        <Link data-row="" href={routes.region(region.country.code, region.slug)} style={ROW}>
+                        <Link data-row="place" href={routes.region(region.country.code, region.slug)} style={ROW}>
                           {region.name}
                           <Chevron />
                         </Link>
@@ -894,11 +879,11 @@ export default async function ServicesIndexPage() {
                   Browse all cities
                 </Link>
               </div>
-              <ul data-places="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0 20px" }}>
+              <ul data-stagger="" data-ag="" data-facts="" style={autoGrid(150, "0 20px")}>
                 {cities.map((city) => (
                   <li key={city.id}>
                     <Link
-                      data-row=""
+                      data-row="place"
                       href={routes.city(city.region.country.code, city.region.slug, city.slug)}
                       style={ROW}
                     >
@@ -920,13 +905,13 @@ export default async function ServicesIndexPage() {
         style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
       >
         <div style={SECTION}>
-          <Eyebrow heroIn="1" gap="14px">
+          <Kicker gap="14px">
             Before you hire
-          </Eyebrow>
+          </Kicker>
           <div data-split="" style={{ display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: "56px", alignItems: "start" }}>
             <div style={{ position: "sticky", top: "100px" }}>
-              <h2 id="choose-h2" style={{ ...SECTION_H2, lineHeight: "1.15", marginBottom: "20px", textWrap: "balance" }}>
-                How to choose a home service professional
+              <h2 data-reveal="" id="choose-h2" style={{ ...SECTION_H2, lineHeight: "1.15", marginBottom: "20px", textWrap: "balance" }}>
+                {accentTail("How to choose a home service professional", 2)}
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.8", color: "var(--text-secondary)", marginBottom: "16px", textWrap: "pretty" }}>
                 Hiring well has less to do with finding the cheapest quote than with confirming a
@@ -942,15 +927,16 @@ export default async function ServicesIndexPage() {
                 of the risk in the relationship.
               </p>
               <p style={{ marginTop: "20px" }}>
-                <Link href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
-                  Read the full hiring guide →
-                </Link>
+                <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
+                  Read the full hiring guide
+                </ArrowLink>
               </p>
             </div>
-            <ul data-checks="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
               {HIRING_CRITERIA.map((item) => (
                 <li
                   key={item.title}
+                  data-card=""
                   style={{
                     background: "var(--surface-card)",
                     border: "1px solid var(--border-subtle)",
@@ -985,14 +971,11 @@ export default async function ServicesIndexPage() {
             style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
           >
             <div>
-              <Eyebrow heroIn="1" gap="14px">
+              <Kicker gap="14px">
                 Project planning
-              </Eyebrow>
-              <h2
-                id="costs-h2"
-                style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", marginBottom: "18px", textWrap: "balance" }}
-              >
-                Understanding home service costs
+              </Kicker>
+              <h2 data-reveal="" id="costs-h2" style={{ ...SPLIT_H2, marginBottom: "18px" }}>
+                {accentTail("Understanding home service costs", 2)}
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)" }}>
                 Pricing for home services moves with location, labour availability, materials, project
@@ -1002,9 +985,9 @@ export default async function ServicesIndexPage() {
                 number.
               </p>
               <p style={{ marginTop: "20px" }}>
-                <Link href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
-                  Explore home service cost guides →
-                </Link>
+                <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
+                  Explore home service cost guides
+                </ArrowLink>
               </p>
             </div>
             <div style={{ ...CARD, overflowX: "auto" }}>
@@ -1099,8 +1082,8 @@ export default async function ServicesIndexPage() {
             </p>
             <div data-split="" style={{ display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "48px", alignItems: "start" }}>
               <div>
-                <h2 id="emg-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", marginBottom: "16px", textWrap: "balance" }}>
-                  When you need a pro quickly
+                <h2 data-reveal="" id="emg-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
+                  {accentTail("When you need a pro quickly", 2)}
                 </h2>
                 <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)" }}>
                   Urgent service availability varies by provider and by market. Some companies staff
@@ -1109,11 +1092,11 @@ export default async function ServicesIndexPage() {
                   before assuming same-day help.
                 </p>
               </div>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
+              <ul data-stagger="" data-ag="" data-facts="" style={autoGrid(240, "12px")}>
                 {emergency.map((sub) => (
                   <li key={sub.id}>
                     <Link
-                      data-row=""
+                      data-row="pill"
                       href={routes.subservice(sub.category.slug, sub.slug)}
                       style={{
                         display: "flex",
@@ -1150,8 +1133,13 @@ export default async function ServicesIndexPage() {
       ) : null}
 
       {/* ------------------------------------------------------ methodology */}
-      <section id="methodology" aria-labelledby="method-h2" style={{ background: "var(--blue-900)", color: "var(--text-on-ink)" }}>
-        <div style={SECTION}>
+      <section
+        id="methodology"
+        aria-labelledby="method-h2"
+        style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}
+      >
+        <DarkBackdrop />
+        <div style={{ ...SECTION, position: "relative" }}>
           <p
             style={{
               fontSize: "13px",
@@ -1165,40 +1153,51 @@ export default async function ServicesIndexPage() {
             Our research process
           </p>
           <div style={{ ...SECTION_HEAD, marginBottom: "16px" }}>
-            <h2 id="method-h2" style={{ ...SECTION_H2, color: "#fff" }}>
-              How we evaluate home service businesses
+            <h2 data-reveal="" id="method-h2" style={{ ...SECTION_H2, color: "#fff" }}>
+              {accentTail("How we evaluate home service businesses", 2)}
             </h2>
-            <Link href={routes.howWeRank()} style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
-              Read our ranking methodology →
-            </Link>
+            <ArrowLink dark href={routes.howWeRank()} style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
+              Read our ranking methodology
+            </ArrowLink>
           </div>
           <p style={{ fontSize: "17px", lineHeight: "1.7", color: "rgba(232,237,245,0.78)", maxWidth: "760px", marginBottom: "40px" }}>
             This is the shared framework. Criteria are then written per category: a chimney company is
             not evaluated the same way as a moving company or a remodeling contractor, because the
             decisions consumers face are different.
           </p>
-          <ul data-crit="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "48px" }}>
+          <ul data-stagger="" data-ag="" data-facts="" style={{ ...autoGrid(240, "16px", { marginBottom: "48px" }) }}>
             {EVAL_CRITERIA.map((item) => (
-              <li key={item.title} style={DARK_CARD}>
+              <li key={item.title} data-hov="" data-dark-card="" style={DARK_CARD}>
                 <h3 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{item.title}</h3>
                 <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)" }}>{item.text}</p>
               </li>
             ))}
           </ul>
 
-          <h3 style={{ fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700", color: "#fff", marginBottom: "24px" }}>
-            Home service research you can understand
+          <h3
+            data-reveal=""
+            data-h2=""
+            style={{
+              fontSize: "clamp(26px, 3vw, 36px)",
+              lineHeight: "1.08",
+              fontWeight: "800",
+              letterSpacing: "-0.035em",
+              color: "#fff",
+              marginBottom: "24px",
+            }}
+          >
+            {accentTail("Home service research you can understand", 2)}
           </h3>
-          <ul data-eeat="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "32px" }}>
+          <ul data-stagger="" data-ag="" data-facts="" style={{ ...autoGrid(240, "16px", { marginBottom: "32px" }) }}>
             {EEAT.map((item) => (
-              <li key={item.title} style={DARK_CARD}>
+              <li key={item.title} data-hov="" data-dark-card="" style={DARK_CARD}>
                 <h4 style={{ fontSize: "17px", fontWeight: "700", color: "#fff", marginBottom: "6px" }}>{item.title}</h4>
                 <p style={{ fontSize: "15px", lineHeight: "1.6", color: "rgba(232,237,245,0.78)", marginBottom: "12px" }}>
                   {item.body}
                 </p>
-                <Link href={item.href} style={{ fontSize: "14px", fontWeight: "600", color: "#E8B551" }}>
-                  {item.cta} →
-                </Link>
+                <ArrowLink dark href={item.href} style={{ fontSize: "14px", fontWeight: "600", color: "#E8B551" }}>
+                  {item.cta}
+                </ArrowLink>
               </li>
             ))}
           </ul>
@@ -1216,19 +1215,19 @@ export default async function ServicesIndexPage() {
       {leadGuides.length > 0 ? (
         <section id="guides" aria-labelledby="guides-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
-            <Eyebrow heroIn="1" gap="14px">
+            <Kicker gap="14px">
               Homeowner resources
-            </Eyebrow>
+            </Kicker>
             <div style={SECTION_HEAD}>
-              <h2 id="guides-h2" style={SECTION_H2}>
-                Guides for hiring and maintaining your home
+              <h2 data-reveal="" id="guides-h2" style={SECTION_H2}>
+                {accentTail("Guides for hiring and maintaining your home", 2)}
               </h2>
-              <Link href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All homeowner guides →
-              </Link>
+              <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                All homeowner guides
+              </ArrowLink>
             </div>
             <ul
-              data-lead-guides=""
+              data-stagger=""
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -1260,7 +1259,7 @@ export default async function ServicesIndexPage() {
             {categoryGuides.length > 0 ? (
               <>
                 <h3 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "18px" }}>Guides by category</h3>
-                <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                <ul data-stagger="" data-ag="" data-facts="" style={autoGrid(300, "12px")}>
                   {categoryGuides.map((guide) => (
                     <li
                       key={guide.id}
@@ -1313,12 +1312,12 @@ export default async function ServicesIndexPage() {
             data-split=""
             style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "56px", alignItems: "start" }}
           >
-            <h2 id="faqs-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", textWrap: "balance" }}>
-              Common questions about home services
+            <h2 data-reveal="" id="faqs-h2" style={SPLIT_H2}>
+              {accentTail("Common questions about home services", 2)}
             </h2>
-            <ul data-faqs="" style={{ display: "grid", gap: "12px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
               {faqs.map((faq) => (
-                <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
+                <FaqRow key={faq.id} question={faq.question} answer={faq.answer} />
               ))}
             </ul>
           </div>
@@ -1326,7 +1325,7 @@ export default async function ServicesIndexPage() {
       ) : null}
 
       {/* -------------------------------------------------------------- biz */}
-      <section aria-labelledby="biz-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <section id="biz" aria-labelledby="biz-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={{ ...SHELL, padding: "72px 24px" }}>
           <div
             data-split=""
@@ -1341,11 +1340,11 @@ export default async function ServicesIndexPage() {
             }}
           >
             <div style={{ padding: "44px 44px 48px", background: "var(--blue-50)" }}>
-              <Eyebrow heroIn="1" gap="16px">
+              <Kicker gap="16px">
                 For home service businesses
-              </Eyebrow>
-              <h2 id="biz-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.15", fontWeight: "700", marginBottom: "16px", textWrap: "balance" }}>
-                Reach homeowners researching local pros
+              </Kicker>
+              <h2 data-reveal="" id="biz-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
+                {accentTail("Reach homeowners researching local pros", 2)}
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.7", color: "var(--text-secondary)", maxWidth: "460px" }}>
                 TenBestFind offers clearly identified promotional opportunities for home service
@@ -1353,6 +1352,7 @@ export default async function ServicesIndexPage() {
               </p>
               <div style={{ marginTop: "28px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <Link
+                  data-btn=""
                   href={routes.advertise()}
                   style={{
                     display: "inline-flex",
@@ -1391,9 +1391,7 @@ export default async function ServicesIndexPage() {
             <ul style={{ padding: "44px", background: "var(--surface-card)", display: "grid", gap: "22px", alignContent: "center" }}>
               {BIZ_POINTS.map((point) => (
                 <li key={point.title} style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
-                  <span aria-hidden="true" style={{ ...ICON_TILE, flex: "0 0 44px", width: "44px", height: "44px" }}>
-                    <Icon name={point.icon} size={21} strokeWidth={1.75} />
-                  </span>
+                  <Tile icon={point.icon} size={44} iconSize={21} flex />
                   <span style={{ display: "block" }}>
                     <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "4px" }}>{point.title}</h3>
                     <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{point.body}</p>
@@ -1406,10 +1404,14 @@ export default async function ServicesIndexPage() {
       </section>
 
       {/* ------------------------------------------------------------ final */}
-      <section aria-labelledby="final-h2" style={{ background: "var(--blue-900)" }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "76px 24px", textAlign: "center" }}>
-          <h2 id="final-h2" style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "700", color: "#fff", marginBottom: "24px" }}>
-            Find the right home service pro near you
+      <section
+        aria-labelledby="final-h2"
+        style={{ position: "relative", overflow: "hidden", background: "var(--ink)" }}
+      >
+        <DarkBackdrop />
+        <div style={{ position: "relative", maxWidth: "900px", margin: "0 auto", padding: "76px 24px", textAlign: "center" }}>
+          <h2 data-reveal="" id="final-h2" style={{ ...SPLIT_H2, color: "#fff", marginBottom: "24px" }}>
+            {accentTail("Find the right home service pro near you", 2)}
           </h2>
           <form
             action={routes.search()}
@@ -1441,7 +1443,7 @@ export default async function ServicesIndexPage() {
               </label>
               <input id="hs-loc2" name="location" type="text" autoComplete="postal-code" placeholder="City or ZIP" style={FIELD} />
             </div>
-            <button type="submit" style={SUBMIT}>
+            <button data-btn="" type="submit" style={SUBMIT}>
               Find the best
             </button>
           </form>

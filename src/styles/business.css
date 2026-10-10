@@ -1151,8 +1151,8 @@
   }
 }
 
-/* The quote button sits in the contact card's stack, so it carries the design's
-   secondary-button shape rather than the shared .btn one. */
+/* The quote button sits in the contact card's stack: the design's glass
+   button on the navy card, same shape and weight as the phone link under it. */
 .biz-2026 .biz-quote-btn {
   display: inline-flex;
   align-items: center;
@@ -1161,16 +1161,17 @@
   width: 100%;
   height: 50px;
   border-radius: 14px;
-  border: 1.5px solid var(--border-strong);
-  background: var(--surface-card);
-  color: var(--blue-900);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
   font-family: var(--font-sans);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
 .biz-2026 .biz-quote-btn:hover {
-  border-color: var(--blue-200);
-  color: var(--color-primary-hover);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.34);
 }

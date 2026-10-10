@@ -23,6 +23,25 @@ import { companyCopy } from "@/lib/seo-copy";
 import { companyGate } from "@/lib/seo-report";
 import { breadcrumbSchema, companyCrumbs } from "@/lib/breadcrumbs";
 import { Crumbs } from "@/components/site/page-parts";
+import { Accent } from "@/components/ui/Accent";
+import {
+  ArrowRight,
+  CARD,
+  Caution,
+  Eyebrow,
+  H2_BASE,
+  H2_LARGE,
+  NameHeading,
+  NavyEyebrow,
+  ProfileToc,
+  RowChevron,
+  SHELL,
+  Star,
+  Tick,
+  TenMark,
+  TitleTile,
+  splitName,
+} from "@/components/site/business/parts";
 
 export const revalidate = 60;
 
@@ -32,89 +51,63 @@ type Props = { params: Promise<{ slug: string }> };
    Named rather than inlined because most of them are used twice: once to
    decide whether a section has anything to say, and once to render it. */
 
-const SHELL = { maxWidth: "1240px", margin: "0 auto" } as const;
-const SECTION_H2 = { fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700" } as const;
-const CARD = {
+const REP_CARD = {
+  position: "relative",
+  overflow: "hidden",
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
-  borderRadius: "18px",
-  padding: "22px 24px",
-  boxShadow: "var(--shadow-sm)",
+  borderRadius: "24px",
+  padding: "24px 26px",
 } as const;
 
-/** The gold star the rating lines are built from. */
-function Star({ size = 20, filled = true }: { size?: number; filled?: boolean }) {
-  return filled ? (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#D99A1C" stroke="none" aria-hidden="true">
-      <path d="M12 2.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 8.7l5.8-.8z" />
-    </svg>
-  ) : (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#D99A1C" strokeWidth="1.8" aria-hidden="true">
-      <path d="M12 2.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 8.7l5.8-.8z" />
-    </svg>
-  );
-}
+const REP_TEN = {
+  position: "absolute",
+  right: "-10px",
+  top: "-26px",
+  fontSize: "120px",
+  fontWeight: "800",
+  letterSpacing: "-0.08em",
+  lineHeight: "1",
+  color: "rgba(16,31,61,0.04)",
+  pointerEvents: "none",
+} as const;
 
-/** The tick used on every "we checked this" list. */
-function Tick({ colour, size = 16, nudge = true }: { colour: string; size?: number; nudge?: boolean }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={colour}
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ flexShrink: "0", ...(nudge ? { marginTop: "3px" } : null) }}
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
+const REP_H3 = {
+  position: "relative",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  fontSize: "11px",
+  fontWeight: "800",
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "var(--text-secondary)",
+  marginBottom: "16px",
+} as const;
 
-/** The caution mark, for the things worth checking before signing. */
-function Caution({ colour, size = 16, nudge = true }: { colour: string; size?: number; nudge?: boolean }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={colour}
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ flexShrink: "0", ...(nudge ? { marginTop: "3px" } : null) }}
-    >
-      <path d="M12 8v5" />
-      <path d="M12 16h.01" />
-    </svg>
-  );
-}
+const REP_TILE = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "34px",
+  height: "34px",
+  borderRadius: "11px",
+  background: "var(--gold-soft)",
+  border: "1px solid #EBCE95",
+  color: "var(--gold)",
+} as const;
 
-/** The chevron that ends every row link. */
-function RowChevron({ size = 15 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ flexShrink: "0" }}
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
+/** The small caps label and the white value in the contact card. */
+const FACT_DT = {
+  fontSize: "11px",
+  fontWeight: "700",
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "rgba(232,237,245,0.55)",
+  marginBottom: "3px",
+} as const;
+
+const FACT_DD = { margin: "0", color: "#fff", fontWeight: "600" } as const;
 
 /**
  * The plural noun for a trade. Most categories already hold one ("Plumbers"),
@@ -707,8 +700,48 @@ export default async function BusinessProfilePage({ params }: Props) {
 
   const reviewer = topRanking?.author ?? null;
 
+  // "Lone Star Roofing Co. FAQs": the last word of the name and "FAQs" take the accent.
+  const nameCut = business.name.trimEnd().lastIndexOf(" ");
+  const faqHead = nameCut > 0 ? business.name.slice(0, nameCut + 1) : `${business.name} `;
+  const faqTail = nameCut > 0 ? `${business.name.slice(nameCut + 1)} FAQs` : "FAQs";
+
+  // Which sections the page will draw, so the "on this page" strip lists only
+  // what is there to jump to.
+  const showGlance = factStats.length > 0 || factGroups.length > 0;
+  const showTake = takeParas.length > 0 || strengths.length > 0 || considerations.length > 0;
+  const showReviews = Boolean(business.googleRating);
+  const showThemes = praised.length > 0 || concerns.length > 0;
+  const showRank = Boolean(topEntry && topRanking);
+  const showServices = business.services.length > 0 || business.areas.length > 0;
+  const showAbout = aboutParas.length > 0 || business.credentials.length > 0;
+  const showReputation = Boolean(business.googleRating || business.bbbRating || topEntry);
+  const showPricing = pricingRows.length > 0 || costRows.length > 0;
+  const showPhotos = business.photos.length > 0;
+  const showVideos = business.videos.length > 0;
+  const showSimilar = similar.length > 0;
+
+  const tocItems = [
+    showGlance ? { href: "#glance", label: "Overview" } : null,
+    showTake ? { href: "#take", label: "Our take" } : null,
+    showReviews ? { href: "#reviews", label: "Reviews" } : null,
+    showThemes ? { href: "#themes", label: "Themes" } : null,
+    showRank ? { href: "#rankings", label: "Rankings" } : null,
+    showServices ? { href: "#services", label: "Services" } : null,
+    showAbout ? { href: "#about", label: "About" } : null,
+    showReputation ? { href: "#reputation", label: "Reputation" } : null,
+    showPricing ? { href: "#pricing", label: "Pricing" } : null,
+    showPhotos ? { href: "#photos", label: "Photos" } : null,
+    showVideos ? { href: "#videos", label: "Videos" } : null,
+    showSimilar ? { href: "#similar", label: "Similar" } : null,
+  ].filter(Boolean) as { href: string; label: string }[];
+
+  const nameParts = splitName(business.name);
+  // What the sticky phone bar offers: the website when there is one, and the
+  // phone number when there is only that.
+  const stickyHref = business.website ?? (business.phone ? `tel:${business.phone.replace(/[^\d+]/g, "")}` : null);
+
   return (
-    <SiteChrome active="none" phoneLayer={false}>
+    <SiteChrome active="none" skin phoneLayer={false}>
       {/* The page belongs to TenBestFind; the company is the thing the page is
           about. Saying it this way keeps the two apart: a profile we wrote is
           not the company's own site, and nothing here should imply we run it. */}
@@ -741,16 +774,45 @@ export default async function BusinessProfilePage({ params }: Props) {
 
       <div className="biz-2026">
         {/* ----------------------------------------------------------- hero */}
-        <section
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            background: "var(--paper)",
-            backgroundImage:
-              "linear-gradient(rgba(16,31,61,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(16,31,61,0.045) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
-          }}
-        >
+        <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: "0",
+              backgroundImage:
+                "linear-gradient(rgba(16,31,61,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(16,31,61,0.025) 1px, transparent 1px)",
+              backgroundSize: "56px 56px",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: "0",
+              backgroundImage:
+                "linear-gradient(rgba(16,31,61,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(16,31,61,0.07) 1px, transparent 1px)",
+              backgroundSize: "56px 56px",
+              WebkitMaskImage: "radial-gradient(520px 420px at var(--mx) var(--my), #000, transparent 75%)",
+              maskImage: "radial-gradient(520px 420px at var(--mx) var(--my), #000, transparent 75%)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            data-blob=""
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              right: "-8%",
+              top: "-25%",
+              width: "640px",
+              height: "640px",
+              borderRadius: "50%",
+              background: "radial-gradient(closest-side, rgba(45,116,215,0.18), transparent)",
+              pointerEvents: "none",
+            }}
+          />
           <svg
             data-ten-outline=""
             aria-hidden="true"
@@ -763,8 +825,8 @@ export default async function BusinessProfilePage({ params }: Props) {
               pathLength="1"
               d="M18 40 L52 16 L52 158"
               fill="none"
-              stroke="rgba(16,31,61,0.16)"
-              strokeWidth="2.4"
+              stroke="rgba(16,31,61,0.09)"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -772,15 +834,15 @@ export default async function BusinessProfilePage({ params }: Props) {
               pathLength="1"
               d="M150 16 C 196 16, 226 46, 226 87 C 226 128, 196 158, 150 158 C 104 158, 74 128, 74 87 C 74 46, 104 16, 150 16 Z"
               fill="none"
-              stroke="rgba(16,31,61,0.16)"
-              strokeWidth="2.4"
+              stroke="rgba(16,31,61,0.09)"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             <circle cx="226" cy="30" r="5" fill="var(--gold-ink)" />
           </svg>
 
-          <div style={{ ...SHELL, padding: "20px 24px 56px" }}>
+          <div style={{ position: "relative", ...SHELL, padding: "20px 24px 56px" }}>
             <Crumbs items={crumbs} />
 
             <div
@@ -803,28 +865,60 @@ export default async function BusinessProfilePage({ params }: Props) {
                   }}
                 >
                   <span
+                    data-in="1"
                     aria-hidden="true"
                     style={{
                       gridRow: "1 / span 2",
+                      position: "relative",
+                      overflow: "hidden",
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
                       width: "76px",
                       height: "76px",
-                      borderRadius: "18px",
-                      border: "1px solid var(--border-subtle)",
-                      background: "var(--surface-card)",
-                      boxShadow: "var(--shadow-sm)",
-                      fontSize: "24px",
-                      fontWeight: "700",
-                      color: "var(--blue-900)",
-                      overflow: "hidden",
+                      borderRadius: "22px",
+                      background: business.logoUrl ? "var(--surface-card)" : "var(--ink)",
+                      border: business.logoUrl ? "1px solid var(--border-subtle)" : undefined,
+                      boxShadow: business.logoUrl
+                        ? "0 18px 36px -22px rgba(16,31,61,0.5)"
+                        : "0 18px 36px -18px rgba(16,31,61,0.7), inset 0 1px 0 rgba(255,255,255,0.12)",
+                      fontSize: "26px",
+                      fontWeight: "800",
+                      letterSpacing: "-0.04em",
+                      color: "#fff",
                     }}
                   >
                     {business.logoUrl ? (
                       <Media src={business.logoUrl} alt="" />
                     ) : (
-                      initials
+                      <>
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: "-4px",
+                            bottom: "-12px",
+                            fontSize: "40px",
+                            fontWeight: "800",
+                            letterSpacing: "-0.08em",
+                            color: "var(--gold-ink)",
+                            opacity: 0.28,
+                          }}
+                        >
+                          10
+                        </span>
+                        <span style={{ position: "relative" }}>{initials}</span>
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: "9px",
+                            top: "9px",
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: "var(--gold-ink)",
+                          }}
+                        />
+                      </>
                     )}
                   </span>
 
@@ -838,20 +932,53 @@ export default async function BusinessProfilePage({ params }: Props) {
                     }}
                   >
                     <h1
-                      data-hero-in="2"
+                      data-in="2"
                       style={{
-                        fontSize: "clamp(32px, 4vw, 46px)",
+                        fontSize: "clamp(36px, 5vw, 60px)",
                         lineHeight: "1.04",
                         letterSpacing: "-0.04em",
                         fontWeight: "800",
                       }}
                     >
-                      {business.name}
+                      {nameParts.tail ? (
+                        <>
+                          {nameParts.head}
+                          <span
+                            style={{
+                              position: "relative",
+                              display: "inline-block",
+                              fontFamily: "var(--serif)",
+                              fontStyle: "italic",
+                              fontWeight: "400",
+                              letterSpacing: "-0.02em",
+                              paddingRight: "0.06em",
+                            }}
+                          >
+                            {nameParts.tail}
+                            <span
+                              data-uline=""
+                              aria-hidden="true"
+                              style={{
+                                position: "absolute",
+                                left: "0",
+                                right: "0.06em",
+                                bottom: "0.04em",
+                                height: "0.12em",
+                                borderRadius: "99px",
+                                background: "var(--gold-ink)",
+                                zIndex: -1,
+                              }}
+                            />
+                          </span>
+                        </>
+                      ) : (
+                        business.name
+                      )}
                     </h1>
                     {/* The line directly under the name says what the company
                         is and where it is based, in that order. Where it works
                         is a different fact and follows as its own clause. */}
-                    <p data-hero-in="3" style={{ fontSize: "17px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
+                    <p data-in="3" style={{ fontSize: "17px", lineHeight: "1.5", color: "var(--text-secondary)" }}>
                       <Link href={routes.category(business.category.slug)} style={{ fontWeight: "600" }}>
                         {business.category.serviceName} Company
                       </Link>
@@ -882,13 +1009,26 @@ export default async function BusinessProfilePage({ params }: Props) {
                   >
                     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px 16px" }}>
                       {business.googleRating ? (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", lineHeight: "1" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            lineHeight: "1",
+                            height: "40px",
+                            padding: "0 14px 0 10px",
+                            borderRadius: "999px",
+                            background: "var(--surface-card)",
+                            border: "1px solid var(--border-subtle)",
+                            boxShadow: "0 10px 24px -18px rgba(16,31,61,0.5)",
+                          }}
+                        >
                           <Star size={19} />
                           <span
                             style={{
                               fontSize: "19px",
                               fontWeight: "700",
-                              color: "var(--blue-900)",
+                              color: "var(--ink)",
                               fontVariantNumeric: "tabular-nums",
                             }}
                           >
@@ -947,11 +1087,11 @@ export default async function BusinessProfilePage({ params }: Props) {
                             gap: "7px",
                             padding: "8px 14px",
                             borderRadius: "999px",
-                            background: "var(--blue-50)",
-                            border: "1px solid var(--blue-100)",
+                            background: "var(--ink)",
+                            border: "1px solid var(--ink)",
                             fontSize: "13px",
-                            fontWeight: "600",
-                            color: "var(--blue-800)",
+                            fontWeight: "700",
+                            color: "#fff",
                           }}
                         >
                           <svg
@@ -968,7 +1108,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                             <path d="M11 3a8 8 0 1 0 0 16 8 8 0 1 0 0-16" />
                             <path d="m21 21-4.3-4.3" />
                           </svg>
-                          TenBestFind Reviewed
+                          <span>
+                            TenBestFind <span style={{ color: "var(--gold-ink)" }}>Reviewed</span>
+                          </span>
                         </li>
                       ) : null}
 
@@ -1103,13 +1245,15 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 {overview ? (
                   <div
+                    data-in="4"
                     style={{
+                      position: "relative",
                       marginTop: "28px",
-                      border: "1px solid var(--blue-100)",
-                      borderRadius: "20px",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "24px",
                       overflow: "hidden",
                       background: "var(--surface-card)",
-                      boxShadow: "var(--shadow-sm)",
+                      boxShadow: "0 30px 60px -40px rgba(16,31,61,0.45)",
                     }}
                   >
                     <div
@@ -1118,9 +1262,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                         alignItems: "center",
                         justifyContent: "space-between",
                         gap: "12px",
-                        padding: "13px 22px",
-                        background: "var(--blue-50)",
-                        borderBottom: "1px solid var(--blue-100)",
+                        padding: "14px 22px",
+                        background: "var(--paper)",
+                        borderBottom: "1px solid var(--border-subtle)",
                       }}
                     >
                       <h2
@@ -1130,9 +1274,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                           gap: "9px",
                           fontSize: "12px",
                           fontWeight: "700",
-                          letterSpacing: "var(--ls-wider)",
+                          letterSpacing: "0.12em",
                           textTransform: "uppercase",
-                          color: "var(--blue-900)",
+                          color: "var(--ink)",
                         }}
                       >
                         <svg
@@ -1140,7 +1284,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                           height="16"
                           viewBox="0 0 24 24"
                           fill="none"
-                          stroke="#2D74D7"
+                          stroke="#8A5F0B"
                           strokeWidth="1.9"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -1150,7 +1294,19 @@ export default async function BusinessProfilePage({ params }: Props) {
                           <path d="M12 8v8" />
                           <path d="M9 11h6" />
                         </svg>
-                        Quick Overview
+                        <span>
+                          Quick{" "}
+                          <span
+                            style={{
+                              fontFamily: "var(--serif)",
+                              fontStyle: "italic",
+                              fontWeight: "400",
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            Overview
+                          </span>
+                        </span>
                       </h2>
                       <Pop label="How this is made" align="right" small>
                         <PopText>
@@ -1162,7 +1318,22 @@ export default async function BusinessProfilePage({ params }: Props) {
                         <PopLink href="/how-we-rank/">Editorial Standards →</PopLink>
                       </Pop>
                     </div>
-                    <div style={{ padding: "22px 24px 24px" }}>
+                    <div style={{ position: "relative", padding: "22px 24px 24px 64px" }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: "absolute",
+                          left: "20px",
+                          top: "8px",
+                          fontFamily: "var(--serif)",
+                          fontStyle: "italic",
+                          fontSize: "64px",
+                          lineHeight: "1",
+                          color: "var(--gold-ink)",
+                        }}
+                      >
+                        “
+                      </span>
                       <p style={{ fontSize: "16px", lineHeight: "1.75", color: "var(--text-primary)" }}>{overview}</p>
                       {business.bestFor || strengths.length > 0 || considerations.length > 0 ? (
                         <ul
@@ -1227,18 +1398,84 @@ export default async function BusinessProfilePage({ params }: Props) {
               </div>
 
               <aside
+                data-tilt=""
+                data-in="4"
                 aria-label="Contact this business"
                 style={{
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "20px",
-                  boxShadow: "var(--shadow-lg)",
-                  padding: "24px 26px",
+                  position: "relative",
+                  overflow: "hidden",
+                  transition: "transform 500ms var(--spring)",
+                  background: "var(--ink)",
+                  color: "#fff",
+                  borderRadius: "26px",
+                  boxShadow: "0 50px 90px -40px rgba(16,31,61,0.75)",
+                  padding: "24px 24px 22px",
                 }}
               >
-                <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    inset: "0",
+                    background: "radial-gradient(420px 260px at 100% 0%, rgba(45,116,215,0.38), transparent 70%)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <div
+                  data-scan=""
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "0",
+                    right: "0",
+                    top: "0",
+                    height: "30%",
+                    background:
+                      "linear-gradient(180deg, transparent, rgba(231,184,99,0.1) 70%, rgba(231,184,99,0.3))",
+                    pointerEvents: "none",
+                  }}
+                />
+                <p
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "16px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--gold-ink)",
+                  }}
+                >
+                  Contact
+                  {business.emergency ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "7px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        letterSpacing: "0",
+                        textTransform: "none",
+                        color: "rgba(232,237,245,0.75)",
+                      }}
+                    >
+                      <span
+                        data-live-dot=""
+                        style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--gold-ink)" }}
+                      />
+                      Available 24/7
+                    </span>
+                  ) : null}
+                </p>
+
+                <div style={{ position: "relative", display: "grid", gap: "10px", marginBottom: "18px" }}>
                   {business.website ? (
                     <a
+                      data-btn=""
                       href={business.website}
                       rel="nofollow noopener"
                       target="_blank"
@@ -1249,11 +1486,11 @@ export default async function BusinessProfilePage({ params }: Props) {
                         gap: "8px",
                         height: "52px",
                         borderRadius: "14px",
-                        background: "var(--color-primary)",
-                        color: "#fff",
+                        background: "var(--gold-ink)",
+                        color: "var(--ink)",
                         fontSize: "16px",
-                        fontWeight: "600",
-                        boxShadow: "var(--shadow-primary)",
+                        fontWeight: "800",
+                        boxShadow: "0 16px 30px -16px rgba(231,184,99,0.7)",
                       }}
                     >
                       <svg
@@ -1285,6 +1522,7 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                   {business.phone ? (
                     <a
+                      data-btn=""
                       href={`tel:${business.phone.replace(/[^\d+]/g, "")}`}
                       style={{
                         display: "inline-flex",
@@ -1293,9 +1531,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                         gap: "8px",
                         height: "50px",
                         borderRadius: "14px",
-                        border: "1.5px solid var(--border-strong)",
-                        background: "var(--surface-card)",
-                        color: "var(--blue-900)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#fff",
                         fontSize: "15px",
                         fontWeight: "600",
                       }}
@@ -1320,43 +1558,57 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 <dl
                   style={{
+                    position: "relative",
                     display: "grid",
                     gap: "12px",
                     margin: "0",
                     paddingTop: "16px",
-                    borderTop: "1px solid var(--border-subtle)",
+                    borderTop: "1px solid rgba(255,255,255,0.12)",
                     fontSize: "14px",
                   }}
                 >
                   {business.addressLine || city ? (
                     <div>
-                      <dt style={{ color: "var(--text-secondary)", marginBottom: "2px" }}>Address</dt>
-                      <dd style={{ margin: "0", color: "var(--text-primary)" }}>
-                        {formatAddress(business.addressLine, placeLabel, business.postalCode)}
-                      </dd>
+                      <dt style={FACT_DT}>Address</dt>
+                      <dd style={FACT_DD}>{formatAddress(business.addressLine, placeLabel, business.postalCode)}</dd>
                     </div>
                   ) : null}
 
                   {hoursLabel ? (
                     <div>
-                      <dt style={{ color: "var(--text-secondary)", marginBottom: "2px" }}>Hours</dt>
-                      <dd style={{ margin: "0", color: "var(--text-primary)" }}>{hoursLabel}</dd>
+                      <dt style={FACT_DT}>Hours</dt>
+                      <dd style={FACT_DD}>{hoursLabel}</dd>
                     </div>
                   ) : null}
 
                   {business.emergency ? (
                     <div>
-                      <dt style={{ color: "var(--text-secondary)", marginBottom: "2px" }}>Emergency service</dt>
-                      <dd style={{ margin: "0", color: "var(--text-primary)" }}>Available 24/7</dd>
+                      <dt style={FACT_DT}>Emergency service</dt>
+                      <dd style={FACT_DD}>Available 24/7</dd>
                     </div>
                   ) : null}
                 </dl>
 
                 {business.freeEstimates || business.financing ? (
-                  <p style={{ marginTop: "14px", fontSize: "13px", color: "var(--text-secondary)" }}>
+                  <p style={{ position: "relative", marginTop: "16px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
                     {[business.freeEstimates ? "Free estimates" : null, business.financing ? "Financing available" : null]
                       .filter(Boolean)
-                      .join(" · ")}
+                      .map((chip) => (
+                        <span
+                          key={chip}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "999px",
+                            background: "rgba(231,184,99,0.14)",
+                            border: "1px solid rgba(231,184,99,0.35)",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            color: "var(--gold-ink)",
+                          }}
+                        >
+                          {chip}
+                        </span>
+                      ))}
                   </p>
                 ) : null}
               </aside>
@@ -1364,8 +1616,9 @@ export default async function BusinessProfilePage({ params }: Props) {
           </div>
         </section>
 
+        <ProfileToc items={tocItems} />
         {/* ------------------------------------------------------- at a glance */}
-        {factStats.length > 0 || factGroups.length > 0 ? (
+        {showGlance ? (
           <section
             id="glance"
             aria-labelledby="glance-h2"
@@ -1387,12 +1640,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                 }}
               >
                 <div>
-                  <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "12px" }}>
-                    <span data-eyebrow-rule="" aria-hidden="true" />
-                    Company Facts
-                  </p>
-                  <h2 id="glance-h2" style={SECTION_H2}>
-                    {business.name} at a Glance
+                  <NavyEyebrow marginBottom="12px">Company Facts</NavyEyebrow>
+                  <h2 data-reveal="" id="glance-h2" style={H2_BASE}>
+                    {business.name} at <Accent>a Glance</Accent>
                   </h2>
                 </div>
               </div>
@@ -1418,12 +1668,13 @@ export default async function BusinessProfilePage({ params }: Props) {
               >
                 {factStats.length > 0 ? (
                   <div
+                    data-reveal=""
                     style={{
                       position: "relative",
                       overflow: "hidden",
-                      background: "var(--blue-900)",
+                      background: "var(--ink)",
                       color: "#fff",
-                      borderRadius: "22px",
+                      borderRadius: "26px",
                       padding: "28px 26px",
                       display: "flex",
                       flexDirection: "column",
@@ -1489,6 +1740,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                           <dd style={{ margin: "0", display: "inline-flex", alignItems: "baseline", gap: "6px" }}>
                             <span
                               data-fnum=""
+                              data-countup=""
                               style={{
                                 fontSize: "38px",
                                 lineHeight: "1",
@@ -1527,13 +1779,14 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 {factGroups.length > 0 ? (
                   <div
+                    data-reveal=""
                     data-fact-cols=""
                     style={{
                       background: "var(--surface-card)",
                       border: "1px solid var(--border-subtle)",
-                      borderRadius: "22px",
+                      borderRadius: "26px",
                       padding: "26px 28px",
-                      boxShadow: "var(--shadow-sm)",
+                      boxShadow: "0 30px 60px -44px rgba(16,31,61,0.5)",
                       display: "grid",
                       gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                       gap: "0 40px",
@@ -1547,101 +1800,114 @@ export default async function BusinessProfilePage({ params }: Props) {
                       // rather than running the whole panel.
                       const spans = index === factGroups.length - 1 && factGroups.length % 2 === 1;
                       return (
-                      <div key={group.title} style={{ gridColumn: spans ? "span 2" : "span 1" }}>
-                        <p
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "9px",
-                            fontSize: "11px",
-                            fontWeight: "700",
-                            letterSpacing: "0.12em",
-                            textTransform: "uppercase",
-                            color: "var(--text-muted)",
-                            margin: "6px 0 4px",
-                          }}
-                        >
-                          {group.iconKey ? (
-                            <span aria-hidden="true" style={{ display: "inline-flex", color: "var(--color-primary)" }}>
-                              <Icon name={group.iconKey as IconName} size={14} />
-                            </span>
-                          ) : null}
-                          {group.title}
-                        </p>
-                        <dl
-                          data-fspan={spans ? "" : undefined}
-                          style={
-                            spans
-                              ? {
-                                  margin: "0 0 18px",
-                                  display: "grid",
-                                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                                  columnGap: "40px",
-                                }
-                              : { margin: "0 0 18px" }
-                          }
-                        >
-                          {group.items.map((item) => {
-                            // A dotted leader works for an answer, not for a
-                            // sentence. "Yes, 24/7" sits on one, and "condo
-                            // owners with fan coil or in-suite HVAC problems"
-                            // shrank to one word a line against it, so anything
-                            // that long takes its own line under the label.
-                            const stacked = item.value.length > 30 || item.label.length > 24;
-                            return (
-                              <div
-                                key={`${group.title}-${item.label}`}
-                                data-frow=""
+                        <div key={group.title} style={{ gridColumn: spans ? "span 2" : "span 1" }}>
+                          <p
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "9px",
+                              fontSize: "11px",
+                              fontWeight: "700",
+                              letterSpacing: "0.12em",
+                              textTransform: "uppercase",
+                              color: "var(--ink)",
+                              margin: "6px 0 4px",
+                            }}
+                          >
+                            {group.iconKey ? (
+                              <span
+                                aria-hidden="true"
                                 style={{
-                                  display: "flex",
-                                  flexDirection: stacked ? "column" : "row",
-                                  alignItems: stacked ? "stretch" : "baseline",
-                                  gap: stacked ? "5px" : "10px",
-                                  padding: "11px 0",
-                                  borderBottom: "1px solid var(--border-subtle)",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  width: "26px",
+                                  height: "26px",
+                                  borderRadius: "8px",
+                                  background: "var(--gold-soft)",
+                                  border: "1px solid #EBCE95",
+                                  color: "var(--gold)",
                                 }}
                               >
-                                <dt
+                                <Icon name={group.iconKey as IconName} size={14} strokeWidth={2} />
+                              </span>
+                            ) : null}
+                            {group.title}
+                          </p>
+                          <dl
+                            data-fspan={spans ? "" : undefined}
+                            style={
+                              spans
+                                ? {
+                                    margin: "0 0 18px",
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                    columnGap: "40px",
+                                  }
+                                : { margin: "0 0 18px" }
+                            }
+                          >
+                            {group.items.map((item) => {
+                              // A dotted leader works for an answer, not for a
+                              // sentence. "Yes, 24/7" sits on one, and "condo
+                              // owners with fan coil or in-suite HVAC problems"
+                              // shrank to one word a line against it, so anything
+                              // that long takes its own line under the label.
+                              const stacked = item.value.length > 30 || item.label.length > 24;
+                              return (
+                                <div
+                                  key={`${group.title}-${item.label}`}
+                                  data-frow=""
                                   style={{
-                                    fontSize: "14.5px",
-                                    color: "var(--text-secondary)",
-                                    whiteSpace: stacked ? "normal" : "nowrap",
-                                    flexShrink: 0,
+                                    display: "flex",
+                                    flexDirection: stacked ? "column" : "row",
+                                    alignItems: stacked ? "stretch" : "baseline",
+                                    gap: stacked ? "5px" : "10px",
+                                    padding: "11px 0",
+                                    borderBottom: "1px solid var(--border-subtle)",
                                   }}
                                 >
-                                  {item.label}
-                                </dt>
-                                {stacked ? null : (
-                                  <span
-                                    aria-hidden="true"
+                                  <dt
                                     style={{
-                                      flex: "1 1 16px",
-                                      minWidth: "16px",
-                                      borderBottom: "1px dotted var(--border-strong)",
-                                      transform: "translateY(-4px)",
+                                      fontSize: "14.5px",
+                                      color: "var(--text-secondary)",
+                                      whiteSpace: stacked ? "normal" : "nowrap",
+                                      flexShrink: 0,
                                     }}
-                                  />
-                                )}
-                                <dd
-                                  style={{
-                                    margin: "0",
-                                    fontSize: "15px",
-                                    lineHeight: stacked ? "1.5" : undefined,
-                                    fontWeight: "600",
-                                    color: "var(--blue-900)",
-                                    textAlign: stacked ? "left" : "right",
-                                    // Without this a flex item refuses to go
-                                    // narrower than its longest word.
-                                    minWidth: "0",
-                                  }}
-                                >
-                                  {item.value}
-                                </dd>
-                              </div>
-                            );
-                          })}
-                        </dl>
-                      </div>
+                                  >
+                                    {item.label}
+                                  </dt>
+                                  {stacked ? null : (
+                                    <span
+                                      aria-hidden="true"
+                                      style={{
+                                        flex: "1 1 16px",
+                                        minWidth: "16px",
+                                        borderBottom: "1px dotted var(--border-strong)",
+                                        transform: "translateY(-4px)",
+                                      }}
+                                    />
+                                  )}
+                                  <dd
+                                    style={{
+                                      margin: "0",
+                                      fontSize: "15px",
+                                      lineHeight: stacked ? "1.5" : undefined,
+                                      fontWeight: "600",
+                                      color: "var(--ink)",
+                                      textAlign: stacked ? "left" : "right",
+                                      // Without this a flex item refuses to go
+                                      // narrower than its longest word.
+                                      minWidth: "0",
+                                    }}
+                                  >
+                                    {item.value}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
+                        </div>
                       );
                     })}
                   </div>
@@ -1652,7 +1918,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ---------------------------------------------------------- our take */}
-        {takeParas.length > 0 || strengths.length > 0 || considerations.length > 0 ? (
+        {showTake ? (
           <section id="take" aria-labelledby="take-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div
               data-split=""
@@ -1666,15 +1932,9 @@ export default async function BusinessProfilePage({ params }: Props) {
               }}
             >
               <div>
-                <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "14px" }}>
-                  <span data-eyebrow-rule="" aria-hidden="true" />
-                  Editorial Review
-                </p>
-                <h2
-                  id="take-h2"
-                  style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.2", fontWeight: "700", marginBottom: "18px" }}
-                >
-                  Our Take on {business.name}
+                <NavyEyebrow marginBottom="14px">Editorial Review</NavyEyebrow>
+                <h2 data-reveal="" id="take-h2" style={{ ...H2_LARGE, marginBottom: "18px" }}>
+                  <NameHeading lead="Our Take on " name={business.name} />
                 </h2>
                 {takeParas.map((text, index) => (
                   <p
@@ -1692,35 +1952,59 @@ export default async function BusinessProfilePage({ params }: Props) {
                 {business.bestFor ? (
                   <p
                     style={{
-                      marginTop: "20px",
-                      padding: "14px 16px",
-                      borderRadius: "12px",
-                      background: "var(--blue-50)",
+                      marginTop: "22px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      padding: "8px 16px 8px 8px",
+                      borderRadius: "999px",
+                      background: "var(--ink)",
                       fontSize: "15px",
-                      color: "var(--blue-900)",
+                      color: "#fff",
                     }}
                   >
-                    <strong style={{ fontWeight: "700" }}>Best for:</strong> {business.bestFor}
+                    <span
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "999px",
+                        background: "var(--gold-ink)",
+                        fontSize: "11px",
+                        fontWeight: "800",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "var(--ink)",
+                      }}
+                    >
+                      Best for
+                    </span>
+                    {business.bestFor}
                   </p>
                 ) : null}
               </div>
 
-              <div style={{ display: "grid", gap: "16px" }}>
+              <div data-stagger="" style={{ display: "grid", gap: "16px" }}>
                 {strengths.length > 0 ? (
-                  <div style={CARD}>
+                  <div data-card="" style={CARD}>
                     <h3
                       style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "var(--text-success)",
-                        marginBottom: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        fontSize: "18px",
+                        fontWeight: "800",
+                        letterSpacing: "-0.02em",
+                        marginBottom: "16px",
                       }}
                     >
-                      What We Like
+                      <TitleTile tone="green">
+                        <Tick colour="currentColor" size={18} nudge={false} />
+                      </TitleTile>
+                      <span>
+                        What We <Accent>Like</Accent>
+                      </span>
                     </h3>
-                    <ul style={{ display: "grid", gap: "9px" }}>
+                    <ul data-stagger="" style={{ display: "grid", gap: "9px" }}>
                       {strengths.map((item) => (
                         <li
                           key={item}
@@ -1741,20 +2025,26 @@ export default async function BusinessProfilePage({ params }: Props) {
                 ) : null}
 
                 {considerations.length > 0 ? (
-                  <div style={CARD}>
+                  <div data-card="" style={CARD}>
                     <h3
                       style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "#8A5F0B",
-                        marginBottom: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        fontSize: "18px",
+                        fontWeight: "800",
+                        letterSpacing: "-0.02em",
+                        marginBottom: "16px",
                       }}
                     >
-                      Things to Consider
+                      <TitleTile tone="gold">
+                        <Caution colour="currentColor" size={18} nudge={false} />
+                      </TitleTile>
+                      <span>
+                        Things to <Accent>Consider</Accent>
+                      </span>
                     </h3>
-                    <ul style={{ display: "grid", gap: "9px" }}>
+                    <ul data-stagger="" style={{ display: "grid", gap: "9px" }}>
                       {considerations.map((item) => (
                         <li
                           key={item}
@@ -1779,18 +2069,16 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ---------------------------------------------------------- reviews */}
-        {business.googleRating ? (
+        {showReviews ? (
           <section
             id="reviews"
             aria-labelledby="rev-h2"
             style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
           >
             <div style={{ ...SHELL, padding: "72px 24px" }}>
-              <h2
-                id="rev-h2"
-                style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "700", marginBottom: "8px" }}
-              >
-                Google Reviews for {business.name}
+              <Eyebrow>Customer Ratings</Eyebrow>
+              <h2 data-reveal="" id="rev-h2" style={{ ...H2_LARGE, marginBottom: "8px" }}>
+                <NameHeading lead="Google Reviews for " name={business.name} />
               </h2>
               <p style={{ fontSize: "16px", color: "var(--text-secondary)", marginBottom: "28px" }}>
                 Customer ratings shown here come from Google. They are separate from our editorial review above.
@@ -1807,22 +2095,52 @@ export default async function BusinessProfilePage({ params }: Props) {
                 }}
               >
                 <div
+                  data-reveal=""
                   style={{
-                    background: "var(--surface-card)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "20px",
-                    padding: "26px",
-                    boxShadow: "var(--shadow-sm)",
+                    position: "relative",
+                    overflow: "hidden",
+                    background: "var(--ink)",
+                    color: "#fff",
+                    borderRadius: "26px",
+                    padding: "28px 26px",
                     textAlign: "center",
+                    boxShadow: "0 40px 80px -44px rgba(16,31,61,0.7)",
                   }}
                 >
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      inset: "0",
+                      background: "radial-gradient(360px 220px at 50% 0%, rgba(45,116,215,0.4), transparent 70%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      right: "-20px",
+                      bottom: "-40px",
+                      fontSize: "180px",
+                      lineHeight: "0.8",
+                      fontWeight: "800",
+                      letterSpacing: "-0.08em",
+                      color: "transparent",
+                      WebkitTextStroke: "1px rgba(255,255,255,0.08)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    10
+                  </span>
                   <p
                     style={{
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "var(--ls-wide)",
+                      position: "relative",
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      letterSpacing: "0.12em",
                       textTransform: "uppercase",
-                      color: "var(--text-secondary)",
+                      color: "var(--gold-ink)",
                       marginBottom: "10px",
                     }}
                   >
@@ -1830,43 +2148,46 @@ export default async function BusinessProfilePage({ params }: Props) {
                   </p>
                   <p
                     style={{
-                      fontSize: "52px",
+                      position: "relative",
+                      fontSize: "72px",
                       lineHeight: "1",
-                      fontWeight: "700",
-                      color: "var(--blue-900)",
+                      fontWeight: "800",
+                      color: "#fff",
                       letterSpacing: "-0.04em",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    {business.googleRating.toFixed(1)}
+                    {business.googleRating!.toFixed(1)}
                   </p>
-                  <p aria-hidden="true" style={{ marginTop: "10px", display: "flex", justifyContent: "center", gap: "3px" }}>
+                  <p
+                    aria-hidden="true"
+                    style={{ position: "relative", marginTop: "12px", display: "flex", justifyContent: "center", gap: "3px" }}
+                  >
                     {[1, 2, 3, 4, 5].map((step) => (
                       <Star key={step} filled={business.googleRating! >= step} />
                     ))}
                   </p>
                   {business.googleReviewCount ? (
-                    <p style={{ marginTop: "12px", fontSize: "15px", color: "var(--text-secondary)" }}>
-                      Based on{" "}
-                      <strong style={{ color: "var(--blue-900)" }}>
-                        {business.googleReviewCount} Google reviews
-                      </strong>
+                    <p style={{ position: "relative", marginTop: "14px", fontSize: "15px", color: "rgba(232,237,245,0.8)" }}>
+                      Based on <strong style={{ color: "#fff" }}>{business.googleReviewCount} Google reviews</strong>
                     </p>
                   ) : null}
                   {business.googleDataUpdated ? (
-                    <p style={{ marginTop: "10px", fontSize: "13px", color: "var(--text-secondary)" }}>
+                    <p style={{ position: "relative", marginTop: "8px", fontSize: "13px", color: "rgba(232,237,245,0.55)" }}>
                       Review data updated {fullDate(business.googleDataUpdated)}
                     </p>
                   ) : null}
                   {googleMapsUrl ? (
-                    <p style={{ marginTop: "16px" }}>
+                    <p style={{ position: "relative", marginTop: "18px" }}>
                       <a
+                        data-link=""
                         href={googleMapsUrl}
                         rel="nofollow noopener"
                         target="_blank"
-                        style={{ fontSize: "14px", fontWeight: "600" }}
+                        style={{ fontSize: "14px", fontWeight: "700", color: "var(--gold-ink)" }}
                       >
-                        View on Google Maps →
+                        View on Google Maps
+                        <ArrowRight />
                       </a>
                     </p>
                   ) : null}
@@ -1874,27 +2195,18 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 {distribution.length > 0 ? (
                   <div
+                    data-reveal=""
                     style={{
                       background: "var(--surface-card)",
                       border: "1px solid var(--border-subtle)",
-                      borderRadius: "20px",
-                      padding: "26px",
-                      boxShadow: "var(--shadow-sm)",
+                      borderRadius: "26px",
+                      padding: "28px",
                     }}
                   >
-                    <h3
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "var(--text-secondary)",
-                        marginBottom: "16px",
-                      }}
-                    >
-                      Rating Distribution
+                    <h3 style={{ fontSize: "18px", fontWeight: "800", letterSpacing: "-0.02em", marginBottom: "18px" }}>
+                      Rating <Accent>Distribution</Accent>
                     </h3>
-                    <ul style={{ display: "grid", gap: "12px" }}>
+                    <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
                       {distribution.map((row) => (
                         <li
                           key={row.label}
@@ -1912,16 +2224,17 @@ export default async function BusinessProfilePage({ params }: Props) {
                               display: "block",
                               height: "10px",
                               borderRadius: "999px",
-                              background: "var(--surface-sunken)",
+                              background: "rgba(16,31,61,0.07)",
                               overflow: "hidden",
                             }}
                           >
                             <span
+                              data-cbar=""
                               style={{
                                 display: "block",
                                 height: "100%",
                                 borderRadius: "999px",
-                                background: "#D99A1C",
+                                background: "linear-gradient(90deg, var(--gold-ink), #D99A1C)",
                                 width: row.pct,
                               }}
                             />
@@ -1930,7 +2243,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                             style={{
                               fontSize: "14px",
                               fontWeight: "600",
-                              color: "var(--blue-900)",
+                              color: "var(--ink)",
                               textAlign: "right",
                               fontVariantNumeric: "tabular-nums",
                             }}
@@ -1940,14 +2253,10 @@ export default async function BusinessProfilePage({ params }: Props) {
                         </li>
                       ))}
                     </ul>
-                    <Pop
-                      label="About this distribution"
-                      style={{ display: "inline-block", marginTop: "14px" }}
-                    >
+                    <Pop label="About this distribution" style={{ display: "inline-block", marginTop: "14px" }}>
                       <PopText>
-                        The distribution reflects the{" "}
-                        {business.googleReviewCount ?? distributionTotal} Google reviews available when this
-                        profile&apos;s review data was last refreshed
+                        The distribution reflects the {business.googleReviewCount ?? distributionTotal} Google reviews
+                        available when this profile&apos;s review data was last refreshed
                         {business.googleDataUpdated ? ` on ${fullDate(business.googleDataUpdated)}` : ""}. Ratings and
                         counts change continuously on Google, so figures here may lag the live profile slightly. We
                         publish only the values returned by the source, never estimates for missing bands.
@@ -1960,8 +2269,11 @@ export default async function BusinessProfilePage({ params }: Props) {
 
               {shownReviews.length > 0 ? (
                 <>
-                  <h3 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>Recent Google Reviews</h3>
+                  <h3 style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "16px" }}>
+                    Recent <Accent>Google Reviews</Accent>
+                  </h3>
                   <ul
+                    data-stagger=""
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
@@ -1972,8 +2284,32 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <li
                         key={review.id}
                         data-card=""
-                        style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}
+                        style={{
+                          ...CARD,
+                          position: "relative",
+                          overflow: "hidden",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
+                        }}
                       >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            right: "16px",
+                            top: "2px",
+                            fontFamily: "var(--serif)",
+                            fontStyle: "italic",
+                            fontSize: "90px",
+                            lineHeight: "1",
+                            color: "var(--gold-ink)",
+                            opacity: 0.35,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          ”
+                        </span>
                         <span
                           style={{
                             display: "flex",
@@ -1989,18 +2325,19 @@ export default async function BusinessProfilePage({ params }: Props) {
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                width: "34px",
-                                height: "34px",
+                                width: "38px",
+                                height: "38px",
                                 borderRadius: "50%",
-                                background: "var(--blue-50)",
+                                background: "var(--ink)",
+                                boxShadow: "0 0 0 2px #fff, 0 0 0 3.5px var(--gold-ink)",
                                 fontSize: "13px",
-                                fontWeight: "700",
-                                color: "var(--blue-900)",
+                                fontWeight: "800",
+                                color: "var(--gold-ink)",
                               }}
                             >
                               {initialsOf(review.author)}
                             </span>
-                            <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                            <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                               {review.author}
                             </span>
                           </span>
@@ -2011,16 +2348,24 @@ export default async function BusinessProfilePage({ params }: Props) {
                               gap: "5px",
                               fontSize: "14px",
                               fontWeight: "700",
-                              color: "var(--blue-900)",
+                              color: "var(--ink)",
                             }}
                           >
                             <Star size={15} />
                             {review.rating.toFixed(1)}
                           </span>
                         </span>
-                        <span style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>
+                        <p
+                          style={{
+                            position: "relative",
+                            fontSize: "15.5px",
+                            lineHeight: "1.65",
+                            color: "var(--text-primary)",
+                            textWrap: "pretty",
+                          }}
+                        >
                           {review.body}
-                        </span>
+                        </p>
                         <span
                           style={{
                             marginTop: "auto",
@@ -2055,12 +2400,14 @@ export default async function BusinessProfilePage({ params }: Props) {
                   {googleMapsUrl ? (
                     <p style={{ marginTop: "18px" }}>
                       <a
+                        data-link=""
                         href={googleMapsUrl}
                         rel="nofollow noopener"
                         target="_blank"
                         style={{ fontSize: "15px", fontWeight: "600" }}
                       >
-                        View more Google reviews →
+                        View more Google reviews
+                        <ArrowRight />
                       </a>
                     </p>
                   ) : null}
@@ -2071,11 +2418,12 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ----------------------------------------------------- review themes */}
-        {praised.length > 0 || concerns.length > 0 ? (
+        {showThemes ? (
           <section id="themes" aria-labelledby="themes-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div style={{ ...SHELL, padding: "64px 24px" }}>
-              <h2 id="themes-h2" style={{ ...SECTION_H2, marginBottom: "8px" }}>
-                What Customers Commonly Mention
+              <Eyebrow>Review Themes</Eyebrow>
+              <h2 data-reveal="" id="themes-h2" style={{ ...H2_BASE, marginBottom: "8px" }}>
+                What Customers <Accent>Commonly Mention</Accent>
               </h2>
               <p
                 style={{
@@ -2111,15 +2459,57 @@ export default async function BusinessProfilePage({ params }: Props) {
               >
                 {praised.length > 0 ? (
                   <div
+                    data-card=""
                     style={{
-                      background: "var(--green-50)",
-                      border: "1px solid var(--green-100)",
-                      borderRadius: "18px",
-                      padding: "24px 26px",
+                      position: "relative",
+                      overflow: "hidden",
+                      background: "var(--surface-card)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "24px",
+                      padding: "26px",
                     }}
                   >
-                    <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "14px" }}>Frequently Praised</h3>
-                    <ul style={{ display: "grid", gap: "10px" }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        left: "0",
+                        right: "0",
+                        top: "0",
+                        height: "4px",
+                        background: "linear-gradient(90deg, #1F9D6B, #7DD3A8)",
+                      }}
+                    />
+                    <h3
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        fontSize: "18px",
+                        fontWeight: "800",
+                        letterSpacing: "-0.02em",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <TitleTile tone="green">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 2.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 8.7l5.8-.8z" />
+                        </svg>
+                      </TitleTile>
+                      <span>
+                        Frequently <Accent>Praised</Accent>
+                      </span>
+                    </h3>
+                    <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
                       {praised.map((text) => (
                         <li
                           key={text}
@@ -2141,15 +2531,57 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 {concerns.length > 0 ? (
                   <div
+                    data-card=""
                     style={{
-                      background: "var(--amber-50)",
-                      border: "1px solid #EBCE95",
-                      borderRadius: "18px",
-                      padding: "24px 26px",
+                      position: "relative",
+                      overflow: "hidden",
+                      background: "var(--surface-card)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "24px",
+                      padding: "26px",
                     }}
                   >
-                    <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "14px" }}>Concerns Mentioned</h3>
-                    <ul style={{ display: "grid", gap: "10px" }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        left: "0",
+                        right: "0",
+                        top: "0",
+                        height: "4px",
+                        background: "linear-gradient(90deg, var(--gold), var(--gold-ink))",
+                      }}
+                    />
+                    <h3
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        fontSize: "18px",
+                        fontWeight: "800",
+                        letterSpacing: "-0.02em",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <TitleTile tone="gold">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </TitleTile>
+                      <span>
+                        Concerns <Accent>Mentioned</Accent>
+                      </span>
+                    </h3>
+                    <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
                       {concerns.map((text) => (
                         <li
                           key={text}
@@ -2172,16 +2604,15 @@ export default async function BusinessProfilePage({ params }: Props) {
             </div>
           </section>
         ) : null}
-
         {/* --------------------------------------------------- why it ranks */}
-        {topEntry && topRanking ? (
+        {showRank && topEntry && topRanking ? (
           <section
             id="rankings"
             aria-labelledby="rank-h2"
             style={{
               position: "relative",
               overflow: "hidden",
-              background: "var(--blue-900)",
+              background: "var(--ink)",
               color: "var(--text-on-ink)",
             }}
           >
@@ -2338,6 +2769,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                   Editorial Ranking
                 </p>
                 <h2
+                  data-reveal=""
                   id="rank-h2"
                   style={{
                     fontSize: "clamp(28px, 3.2vw, 42px)",
@@ -2349,7 +2781,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     textWrap: "balance",
                   }}
                 >
-                  Why {business.name} Made Our Top {topRanking._count.entries}
+                  Why {business.name} Made Our <Accent>Top {topRanking._count.entries}</Accent>
                 </h2>
                 <p
                   style={{
@@ -2465,35 +2897,24 @@ export default async function BusinessProfilePage({ params }: Props) {
 
                 <div style={{ display: "flex", alignItems: "center", gap: "14px 22px", flexWrap: "wrap" }}>
                   <Link
+                    data-btn=""
                     data-btn-primary=""
                     href={rankingUrl(topRanking)}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "9px",
-                      height: "50px",
+                      height: "52px",
                       padding: "0 22px",
-                      borderRadius: "12px",
-                      background: "#fff",
-                      color: "var(--blue-900)",
+                      borderRadius: "14px",
+                      background: "var(--gold-ink)",
+                      color: "var(--ink)",
                       fontSize: "15px",
-                      fontWeight: "600",
+                      fontWeight: "800",
                     }}
                   >
                     See the Full {topRanking.city ? topRanking.city.name : ""} Ranking
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
+                    <ArrowRight size={16} inline={false} />
                   </Link>
                   <span
                     style={{
@@ -2540,7 +2961,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ------------------------------------------------ services and areas */}
-        {business.services.length > 0 || business.areas.length > 0 ? (
+        {showServices ? (
           <section id="services" aria-labelledby="svc-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div
               data-split=""
@@ -2556,8 +2977,9 @@ export default async function BusinessProfilePage({ params }: Props) {
             >
               {business.services.length > 0 ? (
                 <div>
-                  <h2 id="svc-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
-                    Services Offered
+                  <Eyebrow>What They Do</Eyebrow>
+                  <h2 data-reveal="" id="svc-h2" style={{ ...H2_BASE, marginBottom: "20px" }}>
+                    Services <Accent>Offered</Accent>
                   </h2>
 
                   {/* The trades this company works in, when it works in more
@@ -2568,7 +2990,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       {[business.category, ...business.extraServices.map((row) => row.category)].map(
                         (trade, index, all) => (
                           <span key={trade.id}>
-                            <Link href={routes.category(trade.slug)} style={{ color: "var(--blue-900)", fontWeight: 600 }}>
+                            <Link href={routes.category(trade.slug)} style={{ color: "var(--ink)", fontWeight: 600 }}>
                               {trade.serviceName}
                             </Link>
                             {index < all.length - 2 ? ", " : index === all.length - 2 ? " and " : ""}
@@ -2579,6 +3001,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     </p>
                   ) : null}
                   <ul
+                    data-stagger=""
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -2600,7 +3023,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                             borderRadius: "12px",
                             fontSize: "15px",
                             fontWeight: "600",
-                            color: "var(--blue-900)",
+                            color: "var(--ink)",
                             textDecoration: "none",
                           }}
                         >
@@ -2638,11 +3061,17 @@ export default async function BusinessProfilePage({ params }: Props) {
 
               {business.areas.length > 0 ? (
                 <div>
-                  <h2 style={{ ...SECTION_H2, marginBottom: "8px" }}>Areas Served</h2>
+                  <h2
+                    data-reveal=""
+                    id={business.services.length > 0 ? undefined : "svc-h2"}
+                    style={{ ...H2_BASE, marginBottom: "8px" }}
+                  >
+                    Areas <Accent>Served</Accent>
+                  </h2>
                   <p style={{ fontSize: "15px", color: "var(--text-secondary)", marginBottom: "18px" }}>
                     {city ? (
                       <>
-                        Based in <strong style={{ color: "var(--blue-900)" }}>{placeLabel}</strong>
+                        Based in <strong style={{ color: "var(--ink)" }}>{placeLabel}</strong>
                       </>
                     ) : (
                       "Coverage as the company describes it"
@@ -2656,10 +3085,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     label={`Map of areas served by ${business.name}`}
                   />
 
-                  <Pop
-                    label="About service coverage"
-                    style={{ display: "inline-block", marginTop: "14px" }}
-                  >
+                  <Pop label="About service coverage" style={{ display: "inline-block", marginTop: "14px" }}>
                     <PopText>
                       Coverage is as the business describes it, cross-checked against where its recent documented work
                       is. A company will often travel beyond the areas listed here for a large job and decline a small
@@ -2674,7 +3100,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ------------------------------------------------------------ about */}
-        {aboutParas.length > 0 || business.credentials.length > 0 ? (
+        {showAbout ? (
           <section
             id="about"
             aria-labelledby="about-h2"
@@ -2694,14 +3120,12 @@ export default async function BusinessProfilePage({ params }: Props) {
             >
               {aboutParas.length > 0 ? (
                 <div>
-                  <h2 id="about-h2" style={{ ...SECTION_H2, marginBottom: "18px" }}>
-                    About {business.name}
+                  <Eyebrow>Company Background</Eyebrow>
+                  <h2 data-reveal="" id="about-h2" style={{ ...H2_BASE, marginBottom: "18px" }}>
+                    <NameHeading lead="About " name={business.name} />
                   </h2>
                   <AboutBody paragraphs={aboutParas} />
-                  <Pop
-                    label="Where this information comes from"
-                    style={{ display: "block", marginTop: "10px" }}
-                  >
+                  <Pop label="Where this information comes from" style={{ display: "block", marginTop: "10px" }}>
                     <PopText>
                       Company history, ownership and capability details on this page are provided by the business and
                       reviewed by our editors for plausibility and consistency. They are not the same as the
@@ -2713,43 +3137,98 @@ export default async function BusinessProfilePage({ params }: Props) {
               ) : null}
 
               {business.credentials.length > 0 ? (
-                <div>
+                <div
+                  data-reveal=""
+                  style={{
+                    position: "relative",
+                    overflow: "hidden",
+                    background: "var(--surface-card)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "26px",
+                    padding: "28px",
+                    boxShadow: "0 30px 60px -44px rgba(16,31,61,0.5)",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      left: "0",
+                      right: "0",
+                      top: "0",
+                      height: "4px",
+                      background: "linear-gradient(90deg, var(--gold-ink), var(--color-primary))",
+                    }}
+                  />
                   <h2
                     id={aboutParas.length > 0 ? undefined : "about-h2"}
-                    style={{ fontSize: "21px", fontWeight: "700", marginBottom: "14px" }}
+                    style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "18px" }}
                   >
-                    Credentials
+                    <Accent>Credentials</Accent>
                   </h2>
-                  <ul style={{ display: "grid", gap: "10px" }}>
+                  <ul data-stagger="" style={{ display: "grid", gap: "14px" }}>
                     {business.credentials.map((credential) => {
                       const verified = credential.status === "VERIFIED";
                       const expired = credential.status === "EXPIRED";
                       return (
                         <li
                           key={credential.id}
+                          data-hov=""
                           style={{
                             display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
+                            alignItems: "center",
                             gap: "14px",
-                            padding: "16px 18px",
-                            background: "var(--surface-card)",
-                            border: "1px solid var(--border-subtle)",
-                            borderRadius: "14px",
+                            paddingBottom: "14px",
+                            borderBottom: "1px solid var(--border-subtle)",
                           }}
                         >
-                          <span style={{ minWidth: "0" }}>
+                          <span
+                            data-tile=""
+                            aria-hidden="true"
+                            style={{
+                              position: "relative",
+                              flexShrink: "0",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "38px",
+                              height: "38px",
+                              borderRadius: "12px",
+                              background: "var(--paper)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--ink)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <TenMark size={19} />
+                            <svg
+                              data-ico=""
+                              width="17"
+                              height="17"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ position: "relative" }}
+                            >
+                              <path pathLength="1" d="M12 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M15.5 12.9 17 22l-5-3-5 3 1.5-9.1" />
+                            </svg>
+                          </span>
+                          <span style={{ display: "block", flex: "1", minWidth: "0" }}>
                             <span
                               style={{
                                 display: "block",
                                 fontSize: "15px",
                                 fontWeight: "600",
-                                color: "var(--blue-900)",
+                                color: "var(--ink)",
+                                marginBottom: "2px",
                               }}
                             >
                               {credential.label}
                             </span>
-                            <span style={{ display: "block", fontSize: "13.5px", color: "var(--text-secondary)" }}>
+                            <span style={{ display: "block", fontSize: "13px", color: "var(--text-secondary)" }}>
                               {[credential.authority, credential.identifier].filter(Boolean).join(" · ")}
                               {verified && credential.checkedAt ? ` · checked ${fullDate(credential.checkedAt)}` : ""}
                             </span>
@@ -2775,7 +3254,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       );
                     })}
                   </ul>
-                  <Pop label="What verified means here" style={{ display: "block", marginTop: "12px" }}>
+                  <Pop label="What verified means here" style={{ display: "inline-block", marginTop: "14px" }}>
                     <PopText>
                       Verified means we checked the credential against the authority that issues it and recorded the
                       date. Reported means the business told us and we could not independently confirm it. We publish
@@ -2790,15 +3269,16 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ------------------------------------------------ reputation by source */}
-        {business.googleRating || business.bbbRating || topEntry ? (
+        {showReputation ? (
           <section
             id="reputation"
             aria-labelledby="rep-h2"
             style={{ borderBottom: "1px solid var(--border-subtle)" }}
           >
             <div style={{ ...SHELL, padding: "64px 24px" }}>
-              <h2 id="rep-h2" style={{ ...SECTION_H2, marginBottom: "8px" }}>
-                Reputation by Source
+              <Eyebrow>Other Sources</Eyebrow>
+              <h2 data-reveal="" id="rep-h2" style={{ ...H2_BASE, marginBottom: "8px" }}>
+                Reputation by <Accent>Source</Accent>
               </h2>
               <p
                 style={{
@@ -2812,6 +3292,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                 different things.
               </p>
               <ul
+                data-stagger=""
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
@@ -2819,26 +3300,36 @@ export default async function BusinessProfilePage({ params }: Props) {
                 }}
               >
                 {business.googleRating ? (
-                  <li style={{ ...CARD, padding: "24px 26px" }}>
-                    <h3
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "var(--text-secondary)",
-                        marginBottom: "10px",
-                      }}
-                    >
+                  <li data-card="" style={REP_CARD}>
+                    <span aria-hidden="true" style={REP_TEN}>
+                      10
+                    </span>
+                    <h3 style={REP_H3}>
+                      <span aria-hidden="true" style={REP_TILE}>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 2.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 8.7l5.8-.8z" />
+                        </svg>
+                      </span>
                       Google
                     </h3>
                     <p style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                       <Star />
                       <span
                         style={{
-                          fontSize: "26px",
-                          fontWeight: "700",
-                          color: "var(--blue-900)",
+                          fontSize: "40px",
+                          lineHeight: "1",
+                          fontWeight: "800",
+                          letterSpacing: "-0.04em",
+                          color: "var(--ink)",
                           fontVariantNumeric: "tabular-nums",
                         }}
                       >
@@ -2855,20 +3346,38 @@ export default async function BusinessProfilePage({ params }: Props) {
                 ) : null}
 
                 {business.bbbRating ? (
-                  <li style={{ ...CARD, padding: "24px 26px" }}>
-                    <h3
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "var(--text-secondary)",
-                        marginBottom: "10px",
-                      }}
-                    >
+                  <li data-card="" style={REP_CARD}>
+                    <span aria-hidden="true" style={REP_TEN}>
+                      10
+                    </span>
+                    <h3 style={REP_H3}>
+                      <span aria-hidden="true" style={REP_TILE}>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z" />
+                          <path d="m9 12 2 2 4-4" />
+                        </svg>
+                      </span>
                       Better Business Bureau
                     </h3>
-                    <p style={{ fontSize: "26px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "6px" }}>
+                    <p
+                      style={{
+                        fontSize: "40px",
+                        lineHeight: "1",
+                        fontWeight: "800",
+                        letterSpacing: "-0.04em",
+                        color: "var(--ink)",
+                        marginBottom: "8px",
+                      }}
+                    >
                       {business.bbbRating}
                     </p>
                     {business.bbbAccreditedSince ? (
@@ -2880,47 +3389,63 @@ export default async function BusinessProfilePage({ params }: Props) {
                 ) : null}
 
                 {topEntry && topRanking ? (
-                  <li style={{ ...CARD, padding: "24px 26px" }}>
-                    <h3
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        letterSpacing: "var(--ls-wide)",
-                        textTransform: "uppercase",
-                        color: "var(--text-secondary)",
-                        marginBottom: "10px",
-                      }}
-                    >
+                  <li
+                    data-card=""
+                    style={{ ...REP_CARD, background: "var(--ink)", color: "#fff", border: "1px solid var(--ink)" }}
+                  >
+                    <span aria-hidden="true" style={{ ...REP_TEN, color: "rgba(255,255,255,0.06)" }}>
+                      10
+                    </span>
+                    <h3 style={{ ...REP_H3, color: "var(--gold-ink)" }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          ...REP_TILE,
+                          background: "rgba(231,184,99,0.14)",
+                          border: "1px solid rgba(231,184,99,0.35)",
+                          color: "var(--gold-ink)",
+                        }}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M11 3a8 8 0 1 0 0 16 8 8 0 1 0 0-16" />
+                          <path d="m21 21-4.3-4.3" />
+                        </svg>
+                      </span>
                       TenBestFind
                     </h3>
-                    <p
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "7px",
-                        fontSize: "17px",
-                        fontWeight: "700",
-                        color: "var(--blue-900)",
-                        marginBottom: "6px",
-                      }}
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#2D74D7"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                    <p style={{ position: "relative", display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "8px" }}>
+                      <span
                         aria-hidden="true"
+                        style={{
+                          fontFamily: "var(--serif)",
+                          fontStyle: "italic",
+                          fontSize: "30px",
+                          lineHeight: "1",
+                          color: "var(--gold-ink)",
+                        }}
                       >
-                        <path d="M11 3a8 8 0 1 0 0 16 8 8 0 1 0 0-16" />
-                        <path d="m21 21-4.3-4.3" />
-                      </svg>
-                      Editorially reviewed
+                        #
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        style={{ fontSize: "40px", lineHeight: "1", fontWeight: "800", letterSpacing: "-0.04em", color: "#fff" }}
+                      >
+                        {topEntry.position}
+                      </span>
+                      <span style={{ fontSize: "14px", fontWeight: "600", color: "rgba(232,237,245,0.75)" }}>
+                        Editorially reviewed
+                      </span>
                     </p>
-                    <p style={{ fontSize: "15px", color: "var(--text-secondary)" }}>
+                    <p style={{ position: "relative", fontSize: "15px", color: "rgba(232,237,245,0.72)" }}>
                       Ranked #{topEntry.position} in {topRanking.city ? `${topRanking.city.name} ` : ""}
                       {topRanking.category.name.toLowerCase()}
                       {topRanking.lastReviewedAt ? `, ${monthYear(topRanking.lastReviewedAt)}` : ""}
@@ -2933,7 +3458,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ---------------------------------------------------------- pricing */}
-        {pricingRows.length > 0 || costRows.length > 0 ? (
+        {showPricing ? (
           <section
             id="pricing"
             aria-labelledby="price-h2"
@@ -2952,27 +3477,42 @@ export default async function BusinessProfilePage({ params }: Props) {
             >
               {pricingRows.length > 0 ? (
                 <div
+                  data-reveal=""
                   style={{
                     background: "var(--surface-card)",
                     border: "1px solid var(--border-subtle)",
-                    borderRadius: "20px",
-                    padding: "26px",
+                    borderRadius: "26px",
+                    padding: "28px",
                   }}
                 >
-                  <h2 id="price-h2" style={{ fontSize: "22px", fontWeight: "700", marginBottom: "6px" }}>
-                    Company Pricing &amp; Estimates
+                  <Eyebrow>Pricing</Eyebrow>
+                  <h2
+                    data-reveal=""
+                    id="price-h2"
+                    style={{ fontSize: "24px", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "6px" }}
+                  >
+                    Company Pricing <Accent>&amp; Estimates</Accent>
                   </h2>
                   <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>
                     What this company publishes about its own pricing.
                   </p>
-                  <dl style={{ display: "grid", gap: "12px", margin: "0" }}>
+                  <dl style={{ display: "grid", gap: "0", margin: "0" }}>
                     {pricingRows.map((row) => (
                       <div
                         key={row.label}
-                        style={{ display: "flex", justifyContent: "space-between", gap: "16px", fontSize: "15px" }}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: "16px",
+                          padding: "12px 0",
+                          borderTop: "1px solid var(--border-subtle)",
+                          fontSize: "15px",
+                        }}
                       >
                         <dt style={{ color: "var(--text-secondary)" }}>{row.label}</dt>
-                        <dd style={{ margin: "0", fontWeight: "600", color: "var(--blue-900)" }}>{row.value}</dd>
+                        <dd style={{ margin: "0", fontWeight: "700", color: "var(--ink)", textAlign: "right" }}>
+                          {row.value}
+                        </dd>
                       </div>
                     ))}
                   </dl>
@@ -2981,35 +3521,90 @@ export default async function BusinessProfilePage({ params }: Props) {
 
               {costRows.length > 0 ? (
                 <div
+                  data-reveal=""
                   style={{
-                    background: "var(--blue-50)",
-                    border: "1px solid var(--blue-100)",
-                    borderRadius: "20px",
-                    padding: "26px",
+                    position: "relative",
+                    overflow: "hidden",
+                    background: "var(--ink)",
+                    color: "#fff",
+                    borderRadius: "26px",
+                    padding: "28px",
                   }}
                 >
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      inset: "0",
+                      background: "radial-gradient(380px 240px at 100% 0%, rgba(45,116,215,0.38), transparent 70%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  {city ? (
+                    <p
+                      style={{
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        fontSize: "11.5px",
+                        fontWeight: "700",
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        color: "var(--gold-ink)",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      <span aria-hidden="true" style={{ width: "22px", height: "2px", background: "var(--gold-ink)" }} />
+                      {city.name} benchmark
+                    </p>
+                  ) : null}
                   <h2
+                    data-reveal=""
                     id={pricingRows.length > 0 ? undefined : "price-h2"}
-                    style={{ fontSize: "22px", fontWeight: "700", marginBottom: "6px" }}
+                    style={{
+                      position: "relative",
+                      fontSize: "24px",
+                      fontWeight: "800",
+                      letterSpacing: "-0.03em",
+                      color: "#fff",
+                      marginBottom: "6px",
+                    }}
                   >
-                    Local Market Pricing
+                    Local Market <Accent>Pricing</Accent>
                   </h2>
-                  <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>
+                  <p
+                    style={{
+                      position: "relative",
+                      fontSize: "14px",
+                      color: "rgba(232,237,245,0.7)",
+                      marginBottom: "18px",
+                    }}
+                  >
                     What {city ? `${city.name} ` : ""}homeowners generally pay, independent of this company.
                   </p>
-                  <dl style={{ display: "grid", gap: "12px", margin: "0" }}>
+                  <dl style={{ position: "relative", display: "grid", gap: "0", margin: "0" }}>
                     {costRows.map((row) => (
                       <div
                         key={row.id}
-                        style={{ display: "flex", justifyContent: "space-between", gap: "16px", fontSize: "15px" }}
+                        style={{
+                          position: "relative",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: "16px",
+                          padding: "12px 0",
+                          borderTop: "1px solid rgba(255,255,255,0.12)",
+                          fontSize: "15px",
+                        }}
                       >
-                        <dt style={{ color: "var(--text-secondary)" }}>{row.label}</dt>
+                        <dt style={{ color: "rgba(232,237,245,0.75)" }}>{row.label}</dt>
                         <dd
                           style={{
                             margin: "0",
-                            fontWeight: "600",
-                            color: "var(--blue-900)",
+                            fontWeight: "800",
+                            color: "#fff",
                             fontVariantNumeric: "tabular-nums",
+                            textAlign: "right",
                           }}
                         >
                           {priceRange(row.lowPrice, row.highPrice, row.currency)}
@@ -3018,9 +3613,14 @@ export default async function BusinessProfilePage({ params }: Props) {
                     ))}
                   </dl>
                   {costRows[0]?.guide ? (
-                    <p style={{ marginTop: "18px" }}>
-                      <Link href={routes.guide(costRows[0].guide.slug)} style={{ fontSize: "15px", fontWeight: "600" }}>
-                        {costRows[0].guide.title} →
+                    <p style={{ position: "relative", marginTop: "18px" }}>
+                      <Link
+                        data-link=""
+                        href={routes.guide(costRows[0].guide.slug)}
+                        style={{ fontSize: "15px", fontWeight: "700", color: "var(--gold-ink)" }}
+                      >
+                        {costRows[0].guide.title}
+                        <ArrowRight />
                       </Link>
                     </p>
                   ) : null}
@@ -3031,7 +3631,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ----------------------------------------------------------- photos */}
-        {business.photos.length > 0 ? (
+        {showPhotos ? (
           <section id="photos" aria-labelledby="photos-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div style={{ ...SHELL, padding: "64px 24px" }}>
               <div
@@ -3044,14 +3644,18 @@ export default async function BusinessProfilePage({ params }: Props) {
                   marginBottom: "20px",
                 }}
               >
-                <h2 id="photos-h2" style={SECTION_H2}>
-                  Project Photos
-                </h2>
+                <div>
+                  <Eyebrow>Gallery</Eyebrow>
+                  <h2 data-reveal="" id="photos-h2" style={H2_BASE}>
+                    Project <Accent>Photos</Accent>
+                  </h2>
+                </div>
                 <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
                   Business-submitted, reviewed by our editors
                 </p>
               </div>
               <ul
+                data-stagger=""
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -3061,14 +3665,23 @@ export default async function BusinessProfilePage({ params }: Props) {
                 {business.photos.map((photo) => (
                   <li
                     key={photo.id}
+                    data-card=""
                     style={{
                       border: "1px solid var(--border-subtle)",
-                      borderRadius: "18px",
+                      borderRadius: "22px",
                       overflow: "hidden",
                       background: "var(--surface-card)",
                     }}
                   >
-                    <span style={{ display: "block", height: "220px", background: "var(--surface-sunken)" }}>
+                    <span
+                      style={{
+                        position: "relative",
+                        display: "block",
+                        height: "220px",
+                        background: "var(--surface-sunken)",
+                        overflow: "hidden",
+                      }}
+                    >
                       <Media src={photo.url} alt={photo.alt ?? ""} />
                     </span>
                     {photo.alt ? (
@@ -3078,7 +3691,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                             display: "block",
                             fontSize: "15px",
                             fontWeight: "600",
-                            color: "var(--blue-900)",
+                            color: "var(--ink)",
                           }}
                         >
                           {photo.alt}
@@ -3093,7 +3706,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ----------------------------------------------------------- videos */}
-        {business.videos.length > 0 ? (
+        {showVideos ? (
           <section
             id="videos"
             aria-labelledby="videos-h2"
@@ -3111,8 +3724,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                 }}
               >
                 <div>
-                  <h2 id="videos-h2" style={{ ...SECTION_H2, marginBottom: "6px" }}>
-                    Project Videos
+                  <Eyebrow>Video</Eyebrow>
+                  <h2 data-reveal="" id="videos-h2" style={{ ...H2_BASE, marginBottom: "6px" }}>
+                    Project <Accent>Videos</Accent>
                   </h2>
                   <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
                     From the company&apos;s own channel and website. Loads only when you press play.
@@ -3121,6 +3735,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                 {business.youtubeChannel ? (
                   <a
                     className="arrow-link"
+                    data-link=""
                     href={business.youtubeChannel}
                     rel="noopener nofollow"
                     target="_blank"
@@ -3157,18 +3772,20 @@ export default async function BusinessProfilePage({ params }: Props) {
         ) : null}
 
         {/* ---------------------------------------------------------- similar */}
-        {similar.length > 0 ? (
+        {showSimilar ? (
           <section
             id="similar"
             aria-labelledby="sim-h2"
             style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
           >
             <div style={{ ...SHELL, padding: "64px 24px" }}>
-              <h2 id="sim-h2" style={{ ...SECTION_H2, marginBottom: "24px" }}>
-                Similar {tradePlural(business.category.name, business.category.serviceName)} in{" "}
-                {city ? city.name : "your area"}
+              <Eyebrow>Compare</Eyebrow>
+              <h2 data-reveal="" id="sim-h2" style={{ ...H2_BASE, marginBottom: "24px" }}>
+                Similar {tradePlural(business.category.name, business.category.serviceName)}{" "}
+                <Accent>in {city ? city.name : "your area"}</Accent>
               </h2>
               <ul
+                data-stagger=""
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -3179,29 +3796,39 @@ export default async function BusinessProfilePage({ params }: Props) {
                   <li
                     key={company.id}
                     data-card=""
-                    style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}
+                    style={{
+                      ...CARD,
+                      boxShadow: "var(--shadow-sm)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                    }}
                   >
                     <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <span
+                        data-tile=""
                         aria-hidden="true"
                         style={{
-                          flex: "0 0 44px",
+                          position: "relative",
+                          overflow: "hidden",
+                          flex: "0 0 46px",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: "44px",
-                          height: "44px",
-                          borderRadius: "12px",
-                          border: "1px solid var(--border-subtle)",
+                          width: "46px",
+                          height: "46px",
+                          borderRadius: "14px",
+                          background: "var(--ink)",
                           fontSize: "14px",
-                          fontWeight: "700",
-                          color: "var(--blue-900)",
+                          fontWeight: "800",
+                          color: "#fff",
                         }}
                       >
-                        {initialsOf(company.name)}
+                        <TenMark size={24} bottom="-8px" opacity={0.3} />
+                        <span style={{ position: "relative" }}>{initialsOf(company.name)}</span>
                       </span>
                       <h3 style={{ fontSize: "17px", lineHeight: "1.3", fontWeight: "700" }}>
-                        <Link href={routes.business(company.slug)} style={{ color: "var(--blue-900)" }}>
+                        <Link href={routes.business(company.slug)} style={{ color: "var(--ink)" }}>
                           {company.name}
                         </Link>
                       </h3>
@@ -3217,7 +3844,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                         }}
                       >
                         <Star size={15} />
-                        <strong style={{ fontWeight: "700", color: "var(--blue-900)" }}>
+                        <strong style={{ fontWeight: "700", color: "var(--ink)" }}>
                           {company.googleRating.toFixed(1)}
                         </strong>
                         {company.googleReviewCount ? `(${company.googleReviewCount} Google reviews)` : null}
@@ -3232,13 +3859,13 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <span style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                         <span
                           style={{
-                            padding: "4px 10px",
+                            padding: "5px 11px",
                             borderRadius: "999px",
-                            background: "var(--amber-50)",
+                            background: "var(--gold-soft)",
                             border: "1px solid #EBCE95",
                             fontSize: "12px",
-                            fontWeight: "700",
-                            color: "#8A5F0B",
+                            fontWeight: "800",
+                            color: "var(--gold)",
                           }}
                         >
                           Ranked #{company.entries[0].position}
@@ -3246,10 +3873,12 @@ export default async function BusinessProfilePage({ params }: Props) {
                       </span>
                     ) : null}
                     <Link
+                      data-link=""
                       href={routes.business(company.slug)}
                       style={{ marginTop: "auto", paddingTop: "8px", fontSize: "14px", fontWeight: "600" }}
                     >
-                      View profile →
+                      View profile
+                      <ArrowRight />
                     </Link>
                   </li>
                 ))}
@@ -3262,40 +3891,43 @@ export default async function BusinessProfilePage({ params }: Props) {
         {relatedServices.length > 0 || guides.length > 0 ? (
           <section id="related" aria-labelledby="rel-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div style={{ ...SHELL, padding: "64px 24px" }}>
+              <Eyebrow>Explore</Eyebrow>
               {relatedServices.length > 0 ? (
                 <>
-                  <h2 id="rel-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
-                    Related Home Services{city ? ` in ${city.name}` : ""}
+                  <h2 data-reveal="" id="rel-h2" style={{ ...H2_BASE, marginBottom: "20px" }}>
+                    Related Home Services{city ? <Accent>{` in ${city.name}`}</Accent> : null}
                   </h2>
                   <ul
+                    data-stagger=""
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
                       gap: "12px",
-                      marginBottom: guides.length > 0 ? "44px" : "0",
                     }}
                   >
                     {relatedServices.map((entry) => (
                       <li key={entry.id}>
                         <Link
-                          data-row=""
+                          data-rowlink=""
                           href={routes.category(entry.slug)}
                           style={{
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
                             gap: "10px",
-                            padding: "15px 18px",
+                            minHeight: "54px",
+                            padding: "0 18px",
                             border: "1px solid var(--border-subtle)",
-                            borderRadius: "14px",
+                            borderRadius: "16px",
+                            background: "var(--paper)",
                             fontSize: "15px",
-                            fontWeight: "600",
-                            color: "var(--blue-900)",
+                            fontWeight: "700",
+                            color: "var(--ink)",
                             textDecoration: "none",
                           }}
                         >
                           {entry.serviceName}
-                          <RowChevron size={16} />
+                          <RowChevron size={16} arrow />
                         </Link>
                       </li>
                     ))}
@@ -3306,12 +3938,22 @@ export default async function BusinessProfilePage({ params }: Props) {
               {guides.length > 0 ? (
                 <>
                   <h2
+                    data-reveal=""
                     id={relatedServices.length > 0 ? undefined : "rel-h2"}
-                    style={{ fontSize: "clamp(22px, 2.4vw, 30px)", fontWeight: "700", marginBottom: "20px" }}
+                    style={{
+                      fontSize: "clamp(22px, 2.4vw, 30px)",
+                      fontWeight: "800",
+                      letterSpacing: "-0.035em",
+                      // On the h2 rather than under the list above: the phone layer
+                      // zeroes a list's own margins.
+                      marginTop: relatedServices.length > 0 ? "44px" : "0",
+                      marginBottom: "20px",
+                    }}
                   >
-                    Helpful {business.category.serviceName} Guides
+                    Helpful {business.category.serviceName} <Accent>Guides</Accent>
                   </h2>
                   <ul
+                    data-stagger=""
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
@@ -3322,20 +3964,56 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <li
                         key={guide.id}
                         data-card=""
-                        style={{ ...CARD, borderRadius: "16px" }}
+                        style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}
                       >
-                        <p
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: "700",
-                            letterSpacing: "var(--ls-wide)",
-                            textTransform: "uppercase",
-                            color: "var(--text-secondary)",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          {guide.category?.name ?? "Guide"}
-                        </p>
+                        <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                          <span
+                            data-tile=""
+                            aria-hidden="true"
+                            style={{
+                              position: "relative",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "42px",
+                              height: "42px",
+                              borderRadius: "13px",
+                              background: "var(--paper)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--ink)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <TenMark size={21} bottom="-7px" opacity={0.32} />
+                            <svg
+                              width="19"
+                              height="19"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.7"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ position: "relative" }}
+                            >
+                              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                            </svg>
+                          </span>
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: "999px",
+                              background: "var(--gold-soft)",
+                              fontSize: "10.5px",
+                              fontWeight: "800",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "var(--gold)",
+                            }}
+                          >
+                            {guide.category?.name ?? "Guide"}
+                          </span>
+                        </span>
                         <h3
                           style={{
                             fontSize: "17px",
@@ -3344,12 +4022,20 @@ export default async function BusinessProfilePage({ params }: Props) {
                             marginBottom: "10px",
                           }}
                         >
-                          <Link href={routes.guide(guide.slug)} style={{ color: "var(--blue-900)" }}>
+                          <Link href={routes.guide(guide.slug)} style={{ color: "var(--ink)" }}>
                             {guide.title}
                           </Link>
                         </h3>
                         {guide.publishedAt ? (
-                          <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                          <p
+                            style={{
+                              marginTop: "auto",
+                              paddingTop: "10px",
+                              borderTop: "1px dashed var(--border-subtle)",
+                              fontSize: "13px",
+                              color: "var(--text-secondary)",
+                            }}
+                          >
                             Updated {monthYear(guide.updatedAt ?? guide.publishedAt)}
                           </p>
                         ) : null}
@@ -3380,12 +4066,14 @@ export default async function BusinessProfilePage({ params }: Props) {
             }}
           >
             <h2
+              data-reveal=""
               id="faq-h2"
-              style={{ fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700" }}
+              style={{ fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" }}
             >
-              {business.name} FAQs
+              {faqHead}
+              <Accent>{faqTail}</Accent>
             </h2>
-            <ul style={{ display: "grid", gap: "12px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
               {faqs.map((faq) => (
                 <li key={faq.question}>
                   <details
@@ -3406,23 +4094,38 @@ export default async function BusinessProfilePage({ params }: Props) {
                         padding: "18px 0",
                         fontSize: "17px",
                         fontWeight: "700",
-                        color: "var(--blue-900)",
+                        color: "var(--ink)",
                       }}
                     >
                       {faq.question}
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#2D74D7"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <span
+                        data-fq-ico=""
                         aria-hidden="true"
+                        style={{
+                          flexShrink: "0",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "34px",
+                          height: "34px",
+                          borderRadius: "50%",
+                          border: "1px solid var(--border-strong)",
+                          color: "var(--ink)",
+                        }}
                       >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M12 5v14" />
+                          <path d="M5 12h14" />
+                        </svg>
+                      </span>
                     </summary>
                     <p
                       style={{
@@ -3463,8 +4166,12 @@ export default async function BusinessProfilePage({ params }: Props) {
                 padding: "26px",
               }}
             >
-              <h2 id="acc-h2" style={{ fontSize: "21px", fontWeight: "700", marginBottom: "10px" }}>
-                Is Something Incorrect?
+              <h2
+                data-reveal=""
+                id="acc-h2"
+                style={{ fontSize: "21px", fontWeight: "700", marginBottom: "10px" }}
+              >
+                Is Something <Accent>Incorrect?</Accent>
               </h2>
               <p
                 style={{
@@ -3489,7 +4196,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                   border: "1.5px solid var(--border-strong)",
                   fontSize: "15px",
                   fontWeight: "600",
-                  color: "var(--blue-900)",
+                  color: "var(--ink)",
                 }}
               >
                 <svg
@@ -3519,7 +4226,9 @@ export default async function BusinessProfilePage({ params }: Props) {
                 padding: "26px",
               }}
             >
-              <h2 style={{ fontSize: "21px", fontWeight: "700", marginBottom: "10px" }}>Own {business.name}?</h2>
+              <h2 data-reveal="" style={{ fontSize: "21px", fontWeight: "700", marginBottom: "10px" }}>
+                <NameHeading lead="Own " name={business.name} trail="?" />
+              </h2>
               <p
                 style={{
                   fontSize: "15px",
@@ -3534,6 +4243,7 @@ export default async function BusinessProfilePage({ params }: Props) {
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
                 <Link
+                  data-btn=""
                   href={business.claimed ? "/portal/" : `/claim/?business=${business.slug}`}
                   style={{
                     display: "inline-flex",
@@ -3584,10 +4294,15 @@ export default async function BusinessProfilePage({ params }: Props) {
               }}
             >
               <div>
-                <h2 id="meta-h2" style={{ fontSize: "21px", fontWeight: "700", marginBottom: "18px" }}>
-                  About This Business Profile
+                <h2
+                  data-reveal=""
+                  id="meta-h2"
+                  style={{ fontSize: "21px", fontWeight: "700", marginBottom: "18px" }}
+                >
+                  About This <Accent>Business Profile</Accent>
                 </h2>
                 <dl
+                  data-stagger=""
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
@@ -3600,7 +4315,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                         Last reviewed
                       </dt>
-                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                         {monthYear(topRanking.lastReviewedAt)}
                       </dd>
                     </div>
@@ -3609,7 +4324,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                       Profile last updated
                     </dt>
-                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                       {fullDate(business.updatedAt)}
                     </dd>
                   </div>
@@ -3618,7 +4333,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                         Google review data updated
                       </dt>
-                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                         {fullDate(business.googleDataUpdated)}
                       </dd>
                     </div>
@@ -3638,7 +4353,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                       Sources checked
                     </dt>
-                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                       {[
                         business.credentials.length > 0 ? "Issuing authorities" : null,
                         business.googleRating ? "Google Business Profile" : null,
@@ -3653,7 +4368,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                       Sponsorship status
                     </dt>
-                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)" }}>
+                    <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                       {isSponsored ? "Paid placement, labelled" : "No commercial relationship"}
                     </dd>
                   </div>
@@ -3676,7 +4391,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                       border: "1px solid var(--blue-100)",
                       fontSize: "18px",
                       fontWeight: "700",
-                      color: "var(--blue-900)",
+                      color: "var(--ink)",
                     }}
                   >
                     {initialsOf(reviewer.name)}
@@ -3713,6 +4428,74 @@ export default async function BusinessProfilePage({ params }: Props) {
           </div>
         </section>
       </div>
+
+      {/* The phone-width bar the design pins to the foot of the page; hidden
+          above 760px by business.css. */}
+      {stickyHref ? (
+        <div
+          data-sticky-cta=""
+          style={{
+            position: "fixed",
+            bottom: "0",
+            left: "0",
+            right: "0",
+            zIndex: "190",
+            alignItems: "center",
+            gap: "12px",
+            padding: "12px 16px",
+            background: "rgba(255,255,255,0.96)",
+            backdropFilter: "blur(12px)",
+            borderTop: "1px solid var(--border-subtle)",
+          }}
+        >
+          <span style={{ display: "block", flex: "1", minWidth: "0" }}>
+            <span
+              style={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: "700",
+                color: "var(--ink)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {business.name}
+            </span>
+            {business.googleRating || city ? (
+              <span style={{ display: "block", fontSize: "13px", color: "var(--text-secondary)" }}>
+                {[
+                  business.googleRating ? `${business.googleRating.toFixed(1)} on Google` : null,
+                  city ? `${city.name}${region ? `, ${region.code.toUpperCase()}` : ""}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            ) : null}
+          </span>
+          <a
+            data-btn=""
+            href={stickyHref}
+            {...(business.website ? { rel: "nofollow noopener", target: "_blank" } : null)}
+            style={{
+              flexShrink: "0",
+              display: "inline-flex",
+              alignItems: "center",
+              // 3rem, not 48px: the site's phone layer stretches every link whose
+              // style says 48px high to the full width of its row.
+              minHeight: "3rem",
+              padding: "0 22px",
+              borderRadius: "14px",
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: "15px",
+              fontWeight: "600",
+            }}
+          >
+            {business.website ? "Visit Website" : "Call"}
+          </a>
+        </div>
+      ) : null}
     </SiteChrome>
   );
 }
