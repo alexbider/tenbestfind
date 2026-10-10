@@ -113,7 +113,7 @@ export default async function ForBusinessesPage() {
   const plans = await db.plan.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

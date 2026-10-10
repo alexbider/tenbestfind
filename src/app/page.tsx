@@ -288,7 +288,7 @@ export default async function HomePage() {
   );
 
   return (
-    <SiteChrome active="none">
+    <SiteChrome active="home">
       {faqs.length > 0 ? (
         <JsonLd
           data={{

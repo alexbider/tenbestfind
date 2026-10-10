@@ -86,7 +86,7 @@ export async function CmsPage({ slug }: { slug: string }) {
   const related = TRUST_PAGES.filter((item) => item.href !== routes.page(page.slug)).slice(0, 4);
 
   return (
-    <SiteChrome active="trust">
+    <SiteChrome active="trust" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

@@ -42,7 +42,7 @@ const DESTINATIONS = [
 
 export default function NotFound() {
   return (
-    <SiteChrome>
+    <SiteChrome skin>
       <section style={GRID_BACKDROP}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />
         <div style={{ ...SHELL, padding: "72px 24px 40px", position: "relative" }}>

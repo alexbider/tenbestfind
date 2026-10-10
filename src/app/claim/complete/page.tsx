@@ -41,7 +41,7 @@ export default async function ClaimCompletePage({ searchParams }: Props) {
   const confirmed = record?.status === "ACTIVE";
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <CrumbBar
         items={[
           { label: "Home", href: "/" },

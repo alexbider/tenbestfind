@@ -173,6 +173,8 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
 
 export type NavKey =
   | "none"
+  | "home"
+  | "search"
   | "services"
   | "locations"
   | "rankings"

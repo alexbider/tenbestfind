@@ -268,7 +268,7 @@ export async function SubservicePage({
   const scale = detail.prices ? priceScale(detail.prices) : null;
 
   return (
-    <SiteChrome active="services">
+    <SiteChrome active="services" skin>
       <div className="sub-2026">
         {/* The page is a collection of companies that do this work. The Service
             beside it names the work itself, which is what a question about the

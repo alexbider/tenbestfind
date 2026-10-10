@@ -31,7 +31,7 @@ export default async function ExpertsIndexPage() {
   const related = await relatedForPerson();
 
   return (
-    <SiteChrome active="trust">
+    <SiteChrome active="trust" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

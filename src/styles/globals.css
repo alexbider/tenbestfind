@@ -20,6 +20,25 @@
 @import "./editorial.css";
 @import "./admin.css";
 @import "./motion.css";
+@import "./v2.css";
+@import "./v2-skin.css";
+@import "./v2-mobile.css";
+@import "./v2-home.css";
+@import "./v2-ranking.css";
+@import "./v2-city.css";
+@import "./v2-business.css";
+@import "./v2-services.css";
+@import "./v2-category.css";
+@import "./v2-subservice.css";
+@import "./v2-country.css";
+@import "./v2-region.css";
+@import "./v2-guide.css";
+@import "./v2-cost.css";
+@import "./v2-howrank.css";
+@import "./v2-expert.css";
+@import "./v2-search.css";
+@import "./v2-forbiz.css";
+@import "./v2-utility.css";
 
 /* ------------------------------------------------------------------
    TenBestFind additions on top of the base system.
@@ -31,9 +50,28 @@
   --gold-soft: #fbf4e6;
   --ink: #101f3d;
   --paper: #f7f9fc;
+  --ink-2: #172a50;
   --shell: 1240px;
   --gutter: 24px;
   --header-h: 74px;
+  /* The October 2026 design sets one or two words of most headings in a
+     light italic serif. */
+  --serif: "Instrument Serif", Georgia, serif;
+  --spring: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* The serif accent inside a heading. Same words, same order, so the heading
+   reads and indexes exactly as before; only the face changes. */
+.serif-accent {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--gold-ink);
+  color: var(--ink);
 }
 
 /* One number for how far the page holds off the edge of the screen.

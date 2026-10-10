@@ -349,7 +349,7 @@ export default async function GuidePage({ params }: Props) {
   );
 
   return (
-    <SiteChrome active="guides">
+    <SiteChrome active="guides" skin>
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />

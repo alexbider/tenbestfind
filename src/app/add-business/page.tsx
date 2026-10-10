@@ -30,7 +30,7 @@ export default async function AddBusinessPage() {
   ]);
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <FaqJsonLd faqs={BILLING_FAQS} />
       <CrumbBar
         items={[

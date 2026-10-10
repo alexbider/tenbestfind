@@ -145,7 +145,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
   const latest = rankings[0];
 
   return (
-    <SiteChrome active="services">
+    <SiteChrome active="services" skin>
       {/* CollectionPage says the page lists things. The Service beside it says
           which trade and where it is covered, which is the part an engine needs
           to answer a question about the trade rather than about the page. */}

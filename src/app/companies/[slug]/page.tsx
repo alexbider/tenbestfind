@@ -708,7 +708,7 @@ export default async function BusinessProfilePage({ params }: Props) {
   const reviewer = topRanking?.author ?? null;
 
   return (
-    <SiteChrome active="none">
+    <SiteChrome active="none" phoneLayer={false}>
       {/* The page belongs to TenBestFind; the company is the thing the page is
           about. Saying it this way keeps the two apart: a profile we wrote is
           not the company's own site, and nothing here should imply we run it. */}

@@ -32,7 +32,7 @@ export default async function ClaimPage() {
   ]);
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <FaqJsonLd faqs={BILLING_FAQS} />
       <CrumbBar
         items={[

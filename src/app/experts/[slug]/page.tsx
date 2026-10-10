@@ -263,7 +263,7 @@ export default async function ExpertProfilePage({ params }: Props) {
   ];
 
   return (
-    <SiteChrome active="trust">
+    <SiteChrome active="trust" skin>
       {/* The Person here is the definition; every ranking and guide this
           person signed points back at this @id rather than repeating a name. */}
       <JsonLd

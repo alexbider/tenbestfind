@@ -35,7 +35,7 @@ export default async function LocationsIndexPage() {
   });
 
   return (
-    <SiteChrome active="locations">
+    <SiteChrome active="locations" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

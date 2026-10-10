@@ -292,7 +292,7 @@ export default async function ServicesIndexPage() {
   ];
 
   return (
-    <SiteChrome active="services">
+    <SiteChrome active="services" skin>
       <div className="hs-2026">
       <JsonLd
         data={{

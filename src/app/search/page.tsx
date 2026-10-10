@@ -240,7 +240,7 @@ export default async function SearchPage({ searchParams }: Props) {
   );
 
   return (
-    <SiteChrome active="none">
+    <SiteChrome active="search" skin>
       {/* ------------------------------------------------------------- hero */}
       <section aria-labelledby="search-h1" style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
         <TenOutline style={{ right: "-30px", top: "-40px" }} />

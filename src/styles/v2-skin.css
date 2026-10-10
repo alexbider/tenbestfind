@@ -1,0 +1,48 @@
+/* ------------------------------------------------------------------
+   The design's "home-style skin" for secondary pages.
+
+   The design restyles the secondary templates by matching the inline styles
+   they were drawn with, so the same rules work here once the selectors are
+   written the way React serialises a style attribute (no space after the
+   colon). Primary buttons go navy with a gold icon, cards round to 22px,
+   eyebrows go gold with a rule, FAQs become a numbered list, and icon tiles
+   carry the gold "10".
+
+   The design applies it to the services, category, subservice, country,
+   region, guide, method, expert, search, business and utility pages, and not
+   to the home page, the city hub, the Top 10 page or the company profile,
+   which were drawn in the new style directly. SiteChrome's `skin` prop puts
+   data-skin on <main> for the first group.
+   ------------------------------------------------------------------ */
+main[data-skin] a[style*="background:var(--color-primary)"], main[data-skin] button[style*="background:var(--color-primary)"] { background: var(--ink) !important; border-color: var(--ink) !important; border-radius: 14px !important; color: #fff !important; font-weight: 700 !important; }
+@media (hover: hover) { main[data-skin] a[style*="background:var(--color-primary)"]:hover, main[data-skin] button[style*="background:var(--color-primary)"]:hover { background: var(--ink-2, #172A50) !important; box-shadow: 0 16px 32px -14px rgba(16,31,61,0.6); } }
+main[data-skin] a[style*="background:var(--color-primary)"] svg, main[data-skin] button[style*="background:var(--color-primary)"] svg { color: var(--gold-ink); stroke: var(--gold-ink); }
+main[data-skin] a[data-btn][style*="border:1"], main[data-skin] button[data-btn][style*="border:1"], main[data-skin] a[style*="border:1.5px solid var(--border-strong)"], main[data-skin] a[style*="border:1px solid var(--border-strong)"][style*="height"] { border-radius: 14px !important; }
+main[data-skin] [style*="border-radius:16px"][style*="border:1px solid var(--border-subtle)"], main[data-skin] [style*="border-radius:18px"][style*="border:1px solid var(--border-subtle)"], main[data-skin] [style*="border-radius:20px"][style*="border:1px solid var(--border-subtle)"], main[data-skin] [style*="border-radius:var(--radius-lg)"], main[data-skin] [style*="border-radius:var(--radius-xl)"] { border-radius: 22px !important; }
+main[data-skin] [style*="box-shadow:var(--shadow-sm)"] { box-shadow: 0 1px 0 rgba(16,31,61,0.02) !important; }
+main[data-skin] [style*="background:var(--blue-50)"][style*="border-radius"]:not([data-tile]) { background: var(--paper) !important; border-color: var(--border-subtle) !important; }
+main[data-skin] p[style*="text-transform:uppercase"]:has(+ h2), main[data-skin] p[style*="text-transform:uppercase"]:has(+ h1), main[data-skin] span[style*="text-transform:uppercase"]:has(+ h2) { display: flex !important; align-items: center; gap: 10px; font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: 0.14em !important; color: var(--gold) !important; }
+main[data-skin] p[style*="text-transform:uppercase"]:has(+ h2):not(:has(> span[aria-hidden]))::before, main[data-skin] p[style*="text-transform:uppercase"]:has(+ h1):not(:has(> span[aria-hidden]))::before { content: ""; width: 22px; height: 2px; background: var(--gold-ink); flex-shrink: 0; }
+main[data-skin] h2 { letter-spacing: -0.035em; }
+main[data-skin] h2:not([style*="font-weight:8"]) { font-weight: 800 !important; }
+main[data-skin] :has(> details:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav])) { counter-reset: tbfq; }
+main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) { border-radius: 0 !important; border: 0 !important; border-bottom: 1px solid var(--border-subtle) !important; background: transparent !important; box-shadow: none !important; margin: 0 !important; }
+main[data-skin] div:has(> details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav])), main[data-skin] ul:has(> li > details:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav])), main[data-skin] div[style*="display:grid"]:has(> details:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav])) { gap: 0 !important; }
+main[data-skin] :has(> details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav])) { border-top: 2px solid var(--ink); }
+main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) > summary { position: relative; padding-left: 44px !important; padding-right: 50px !important; min-height: 64px; font-weight: 600 !important; color: var(--ink) !important; }
+main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) > summary::before { counter-increment: tbfq; content: counter(tbfq, decimal-leading-zero); position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-family: var(--serif, Georgia, serif); font-style: italic; font-weight: 400; font-size: 20px; color: var(--gold); }
+main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) > summary [data-fq-ico], main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) > summary > svg:last-child { position: absolute; right: 2px; top: 50%; translate: 0 -50%; }
+main[data-skin] details[style*="border-radius"]:not([data-filter-toggle]):not([data-jump]):not([data-mobile-nav]) > :not(summary) { padding-left: 44px !important; }
+
+main[data-skin] span[aria-hidden="true"][style*="background:var(--blue-50)"]:not([data-tile]), main[data-skin] span[aria-hidden="true"][style*="background:var(--amber-50)"]:not([data-tile]) { position: relative; overflow: hidden; background: var(--paper) !important; border: 1px solid var(--border-subtle) !important; color: var(--ink) !important; transition: background 240ms ease, color 240ms ease, border-color 240ms ease, transform 360ms cubic-bezier(.2,.8,.2,1); }
+main[data-skin] span[aria-hidden="true"][style*="width:4"][style*="background:var(--blue-50)"]:not([data-tile])::after, main[data-skin] span[aria-hidden="true"][style*="width:5"][style*="background:var(--blue-50)"]:not([data-tile])::after, main[data-skin] span[aria-hidden="true"][style*="width:3"][style*="background:var(--blue-50)"]:not([data-tile])::after { content: "10"; position: absolute; right: -3px; bottom: -7px; font-size: 22px; font-weight: 800; letter-spacing: -0.08em; line-height: 1; color: var(--gold-ink); opacity: 0.32; pointer-events: none; transition: transform 600ms cubic-bezier(.2,.8,.2,1), opacity 300ms ease; transform-origin: 100% 100%; }
+main[data-skin] span[aria-hidden="true"][style*="background:var(--blue-50)"] > svg { position: relative; z-index: 1; }
+main[data-skin] [data-tile][style*="background:var(--blue-50)"] { background: var(--paper) !important; border-color: var(--border-subtle) !important; color: var(--ink) !important; }
+main[data-skin] [data-tile] [data-ten] { color: var(--gold-ink) !important; opacity: 0.32 !important; }
+@media (hover: hover) {
+  main[data-skin] :is(li, div, a, article)[style*="border-radius"]:hover > span[aria-hidden="true"][style*="background:var(--blue-50)"], main[data-skin] :is(li, div, a, article)[style*="border-radius"]:hover > * > span[aria-hidden="true"][style*="background:var(--blue-50)"] { background: var(--ink) !important; color: var(--gold-ink) !important; border-color: var(--ink) !important; transform: rotate(-4deg); }
+  main[data-skin] :is(li, div, a, article)[style*="border-radius"]:hover span[aria-hidden="true"][style*="background:var(--blue-50)"]::after { transform: translate(-3px, -3px) scale(1.25); opacity: 0.5; }
+}
+main[data-skin] details > summary > svg:last-child { box-sizing: content-box; width: 15px !important; height: 15px !important; padding: 9px; border-radius: 50%; border: 1px solid var(--border-strong); stroke: var(--ink) !important; flex-shrink: 0; transition: transform 380ms cubic-bezier(.2,.8,.2,1), background 200ms ease; }
+main[data-skin] details[open] > summary > svg:last-child { transform: rotate(180deg); background: var(--ink); stroke: var(--gold-ink) !important; border-color: var(--ink); }
+main[data-skin] details[style*="border-radius"] > summary { padding-top: 16px !important; padding-bottom: 16px !important; }

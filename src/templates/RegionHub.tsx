@@ -233,7 +233,7 @@ export async function RegionHub({
   const faqs = await faqsFor("REGION", region.id, generatedFaqs);
 
   return (
-    <SiteChrome active="locations">
+    <SiteChrome active="locations" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

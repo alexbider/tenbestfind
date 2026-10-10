@@ -434,7 +434,7 @@ export default async function HowWeRankPage() {
   ];
 
   return (
-    <SiteChrome active="trust">
+    <SiteChrome active="trust" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

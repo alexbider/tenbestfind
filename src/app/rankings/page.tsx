@@ -34,7 +34,7 @@ export default async function RankingsIndexPage() {
   ]);
 
   return (
-    <SiteChrome active="rankings">
+    <SiteChrome active="rankings" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

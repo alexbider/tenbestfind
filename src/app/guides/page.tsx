@@ -61,7 +61,7 @@ export default async function GuidesIndexPage() {
   const tradeHubs = hubs.filter((hub) => hub.kind === "trade");
 
   return (
-    <SiteChrome active="guides">
+    <SiteChrome active="guides" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",

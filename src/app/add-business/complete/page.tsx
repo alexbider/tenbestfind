@@ -32,7 +32,7 @@ export default async function AddCompletePage({ searchParams }: Props) {
       });
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <CrumbBar
         items={[
           { label: "Home", href: "/" },

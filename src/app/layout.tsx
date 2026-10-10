@@ -26,13 +26,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <head>
-        {/* Inter, per the design system. Loaded from the Google Fonts CDN;
-            swap for self-hosted woff2 if you need offline rendering. */}
+        {/* Inter for everything, Instrument Serif for the italic accents in
+            headings. Loaded from the Google Fonts CDN. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap"
         />
       </head>
       <body>

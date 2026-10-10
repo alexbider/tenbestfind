@@ -277,7 +277,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       .join(" · ");
 
   return (
-    <SiteChrome active="locations">
+    <SiteChrome active="locations" skin>
       <JsonLd
         data={{
           "@context": "https://schema.org",
