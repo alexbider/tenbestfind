@@ -108,6 +108,12 @@
   [data-mobile-nav] { display: block !important; }
   [data-hdr-cta], [data-hsearch] { display: none !important; }
 }
+/* With How We Rank back in the menu, the bar is wider than the space
+   between 1180px and 1320px. The header search steps out first; the search
+   page and the drawer both still offer it. */
+@media (max-width: 1320px) and (min-width: 1181px) {
+  [data-hsearch] { display: none !important; }
+}
 [data-util] a, [data-util] p { white-space: nowrap; }
 @media (max-width: 1180px) {
   [data-util-copy] { display: none !important; }
