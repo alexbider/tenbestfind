@@ -99,3 +99,8 @@ html body main[data-skin][id] .bc2 div[data-bcfaq] > details[data-faq][style] { 
 @media (max-width: 760px) {
   html body main[data-mskin] .bc2 [data-bcaside] h2[data-minih] { font-size: 13px !important; line-height: 1.3 !important; letter-spacing: 0.12em !important; }
 }
+
+/* The listing search draws its focus ring on the whole field, so the input
+   inside it does not draw a second one. */
+.bc2 [data-finder] input:focus,
+.bc2 [data-finder] input:focus-visible { outline: none !important; box-shadow: none !important; }
