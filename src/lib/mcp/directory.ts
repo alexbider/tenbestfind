@@ -6,6 +6,7 @@ import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
 import { isRealProfile } from "../schema";
+import { refundClaim } from "../billing";
 import { onListingPublished } from "../listing-lifecycle";
 import { routes } from "../urls";
 import {
@@ -1270,13 +1271,15 @@ export const DIRECTORY_TOOLS: Tool[] = [
         if (status === "APPROVED" && claim.businessId) {
           await db.business.update({ where: { id: claim.businessId }, data: { claimed: true } });
         }
+        // Rejecting refunds and cancels what the claim opened, as the admin does.
+        const refundFailures = status === "REJECTED" ? await refundClaim(claim) : [];
         await recordWrite(ctx, {
           action: "update",
           entityType: "claim",
           entityId: id,
           summary: `${claim.businessName} claim ${status.toLowerCase()}`,
         });
-        return { id, status };
+        return { id, status, ...(refundFailures.length ? { refundFailures } : {}) };
       }
 
       if (kind === "submission") {

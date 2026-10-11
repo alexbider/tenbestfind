@@ -172,6 +172,23 @@ export async function startCheckout(input: {
     },
     metadata: { ...STRIPE_METADATA, subscriptionId: subscription.id, businessId: input.businessId },
     allow_promotion_codes: true,
+    // Everyone pays in US dollars, wherever they are browsing from.
+    adaptive_pricing: { enabled: false },
+    // The Stripe account belongs to Bidernet, so the checkout page is branded
+    // TenBestFind here and says plainly who appears on the receipt.
+    branding_settings: {
+      display_name: "TenBestFind",
+      button_color: "#2D74D7",
+      background_color: "#F4F6F9",
+      border_style: "rounded",
+      font_family: "inter",
+      icon: { type: "url", url: siteUrl("/logo-512.png") },
+    },
+    custom_text: {
+      submit: {
+        message: "TenBestFind is billed through Bidernet. Your card statement shows TENBESTFIND and your receipt comes from Bidernet.",
+      },
+    },
   });
 
   await db.subscription.update({
@@ -307,6 +324,39 @@ export async function refundAndCancel(subscriptionId: string, reason: string) {
   }
 
   await cancelSubscription(subscriptionId, true);
+}
+
+/**
+ * The subscriptions a claim opened: the one recorded on it, plus any opened in
+ * the same submission (the Top 10 add-on). Never a subscription another owner
+ * already holds on the same business.
+ */
+export async function claimSubscriptions(claim: { businessId: string | null; subscriptionId: string | null; submittedAt: Date }) {
+  if (!claim.businessId) return [];
+  const windowEnd = new Date(claim.submittedAt.getTime() + 5 * 60_000);
+  return db.subscription.findMany({
+    where: {
+      businessId: claim.businessId,
+      status: { in: ["PENDING", "ACTIVE", "PAST_DUE"] },
+      OR: [
+        ...(claim.subscriptionId ? [{ id: claim.subscriptionId }] : []),
+        { createdAt: { gte: claim.submittedAt, lte: windowEnd } },
+      ],
+    },
+  });
+}
+
+/** Refunds and cancels everything a rejected claim opened. Returns any failures. */
+export async function refundClaim(claim: { businessId: string | null; subscriptionId: string | null; submittedAt: Date }) {
+  const failures: string[] = [];
+  for (const open of await claimSubscriptions(claim)) {
+    try {
+      await refundAndCancel(open.id, "Ownership could not be verified");
+    } catch (error) {
+      failures.push(`${open.id}: ${error instanceof Error ? error.message : "unknown"}`);
+    }
+  }
+  return failures;
 }
 
 /* ---------------------------------------------------------------- webhooks */
