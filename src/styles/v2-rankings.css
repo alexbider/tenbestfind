@@ -1,0 +1,59 @@
+/* October 2026 design: the rankings archive (/rankings/). */
+
+.rk-arch [data-rk-eyebrow] { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.rk-arch [data-rk-eyebrow] > i { display: inline-block; width: 28px; height: 2px; background: var(--gold-ink); }
+.rk-arch h1, .rk-arch h2 { font-weight: 800; letter-spacing: -0.035em; }
+
+.rk-arch [data-rchip] { transition: background 160ms ease, color 160ms ease, border-color 160ms ease; }
+.rk-arch [data-rchip]:hover { border-color: var(--blue-200); background: var(--blue-50); }
+.rk-arch [data-rchip][data-on="1"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.rk-arch [data-rchip][data-on="1"] > span { background: rgba(255,255,255,0.14); color: var(--gold-ink); }
+
+.rk-arch [data-rk] { transition: background 180ms ease; }
+.rk-arch [data-rk]:hover { background: var(--paper); text-decoration: none; }
+.rk-arch [data-rk] [data-rk-n] { transition: transform 240ms ease, background 240ms ease, color 240ms ease; }
+.rk-arch [data-rk]:hover [data-rk-n] { background: var(--ink); color: var(--gold-ink); transform: rotate(-6deg); }
+.rk-arch [data-rk] [data-rk-go] { transition: transform 200ms ease, color 200ms ease; }
+.rk-arch [data-rk]:hover [data-rk-go] { transform: translateX(3px); color: var(--color-primary); }
+
+.rk-arch [data-feat] { transition: transform 220ms ease, box-shadow 220ms ease; }
+.rk-arch [data-feat]:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); text-decoration: none; }
+
+.rk-arch [data-ct] { transition: background 160ms ease, border-color 160ms ease, color 160ms ease; }
+.rk-arch [data-ct]:hover { background: rgba(255,255,255,0.1) !important; }
+.rk-arch [data-ct][data-on="1"] { background: var(--gold-ink) !important; border-color: var(--gold-ink) !important; color: var(--ink) !important; }
+.rk-arch [data-ct][data-on="1"] > span { background: rgba(16,31,61,0.14) !important; }
+.rk-arch [data-cc] { transition: opacity 220ms ease, border-color 220ms ease, background 220ms ease; }
+.rk-arch [data-cc]:hover { border-color: rgba(231,184,99,0.5) !important; background: rgba(255,255,255,0.08) !important; }
+.rk-arch [data-cc][data-dim="1"] { opacity: 0.32; }
+.rk-arch [data-cell] { transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease; }
+.rk-arch [data-cell]:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(231,184,99,0.35); text-decoration: none; color: var(--ink) !important; }
+.rk-arch [data-cell][data-hl="1"] { background: #fff !important; box-shadow: 0 0 0 2px var(--gold-ink); }
+
+@media (max-width: 900px) {
+  .rk-arch [data-split] { grid-template-columns: 1fr !important; }
+  .rk-arch [data-rk] { grid-template-columns: 44px minmax(0,1fr) !important; }
+  .rk-arch [data-rk-side] { display: none !important; }
+}
+@media (max-width: 720px) {
+  .rk-arch [data-stack] { flex-direction: column !important; align-items: stretch !important; }
+}
+/* Declared here rather than inline so the legacy phone rules, which match
+   an inline repeat(auto-fit, ...) and turn it into a rail, leave them be. */
+.rk-arch [data-rk-feat-list] { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.rk-arch [data-cov-grid] { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.rk-arch [data-rk-crumbs] { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .rk-arch [data-rk-feat-list], .rk-arch [data-cov-grid] { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The legacy phone rules turn link lists into rails or two columns; the
+   archive list, the featured cards and the coverage cells keep their own
+   layout, the way the design draws them. */
+@media (max-width: 760px) {
+  html body main[data-mskin] .rk-arch [data-rk-feat-list] { display: grid !important; grid-template-columns: minmax(0,1fr) !important; margin-bottom: -44px !important; }
+  html body main[data-mskin] .rk-arch [data-cov-grid] { display: grid !important; grid-template-columns: minmax(0,1fr) !important; }
+  html body main[data-mskin] .rk-arch [data-cov-cells] { display: grid !important; grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+  html body main[data-mskin] .rk-arch [data-rk-list], html body main[data-mskin] .rk-arch [data-rk-list] > li { display: block !important; }
+  html body main[data-mskin] .rk-arch [data-rk] { display: grid !important; }
+}
