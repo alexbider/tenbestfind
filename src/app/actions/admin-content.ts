@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
-import { refundAndCancel } from "@/lib/billing";
+import { claimSubscriptions, refundAndCancel } from "@/lib/billing";
 import { db } from "@/lib/db";
 import { onListingPublished } from "@/lib/listing-lifecycle";
 import { stripeConfigured } from "@/lib/stripe";
@@ -1675,11 +1675,8 @@ export async function decideClaim(formData: FormData) {
   // updated either way.
   if (status === "REJECTED" && claim.businessId) {
     // The claim may have opened two subscriptions (profile plus Top 10), so
-    // every open one is refunded and cancelled.
-    const openSubscriptions = await db.subscription.findMany({
-      where: { businessId: claim.businessId, status: { in: ["PENDING", "ACTIVE", "PAST_DUE"] } },
-    });
-    for (const open of openSubscriptions) {
+    // every one it opened is refunded and cancelled, and nothing else.
+    for (const open of await claimSubscriptions(claim)) {
       try {
         await refundAndCancel(open.id, "Ownership could not be verified");
       } catch (error) {

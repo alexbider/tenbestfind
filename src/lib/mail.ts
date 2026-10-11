@@ -77,9 +77,14 @@ export async function sendMail(message: Message): Promise<{ id: string }> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     if (response.status === 401 || response.status === 403) {
+      // Resend answers 403 both for a bad key and for a sending domain that is
+      // not verified yet, so its own message is kept to tell the two apart.
+      const detail = body.slice(0, 240);
       throw new MailPermanentError(
-        "Resend rejected the API key.",
-        "Check the Resend API key under Admin, Integrations.",
+        `Resend refused the request (${response.status}). ${detail}`,
+        /domain/i.test(detail)
+          ? "Verify the sending domain in Resend, or change mail.from to an address on a verified domain."
+          : "Check the Resend API key under Admin, Integrations.",
       );
     }
     if (response.status === 422) {
