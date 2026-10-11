@@ -16,7 +16,8 @@ export const metadata = { title: "Subscriptions" };
 
 export default async function AdminSubscriptionsPage() {
   await requireStaff();
-  const stripeReady = stripeConfigured();
+  const stripeReady = await stripeConfigured();
+  const testMode = await isTestMode();
 
   const webhookEvents = await db.webhookEvent.findMany({
     orderBy: { receivedAt: "desc" },
@@ -57,8 +58,8 @@ export default async function AdminSubscriptionsPage() {
         description="Every business subscription and its billing state. Stripe webhooks keep these records in step; the webhook is what activates a subscription, never the browser."
         actions={
           stripeReady ? (
-            <Badge tone={isTestMode() ? "warning" : "positive"}>
-              Stripe {isTestMode() ? "test mode" : "live"}
+            <Badge tone={testMode ? "warning" : "positive"}>
+              Stripe {testMode ? "test mode" : "live"}
             </Badge>
           ) : (
             <Badge tone="neutral">Stripe not configured</Badge>

@@ -41,9 +41,9 @@ export default async function AdminPlanEditor({ params }: Props) {
         }
         actions={
           <>
-            {stripeConfigured() ? (
-              <Badge tone={isTestMode() ? "warning" : "positive"}>
-                Stripe {isTestMode() ? "test mode" : "live"}
+            {(await stripeConfigured()) ? (
+              <Badge tone={(await isTestMode()) ? "warning" : "positive"}>
+                Stripe {(await isTestMode()) ? "test mode" : "live"}
               </Badge>
             ) : (
               <Badge tone="neutral">Stripe not configured</Badge>

@@ -14,6 +14,9 @@ export const SECRET_KEYS = {
   dataForSeoLogin: "dataforseo.login",
   dataForSeoPassword: "dataforseo.password",
   googleServiceAccount: "google.serviceAccount",
+  stripeSecret: "stripe.secretKey",
+  stripePublishable: "stripe.publishableKey",
+  stripeWebhook: "stripe.webhookSecret",
 } as const;
 
 export type SecretKey = (typeof SECRET_KEYS)[keyof typeof SECRET_KEYS];
@@ -25,6 +28,9 @@ export const SECRET_LABEL: Record<SecretKey, string> = {
   "dataforseo.login": "DataForSEO login",
   "dataforseo.password": "DataForSEO password",
   "google.serviceAccount": "Google service account JSON",
+  "stripe.secretKey": "Stripe secret key",
+  "stripe.publishableKey": "Stripe publishable key",
+  "stripe.webhookSecret": "Stripe webhook signing secret",
 };
 
 // Each key can also arrive as an environment variable, which wins over whatever
@@ -37,6 +43,9 @@ const ENV_NAME: Record<SecretKey, string> = {
   "dataforseo.login": "DATAFORSEO_LOGIN",
   "dataforseo.password": "DATAFORSEO_PASSWORD",
   "google.serviceAccount": "GOOGLE_SERVICE_ACCOUNT_JSON",
+  "stripe.secretKey": "STRIPE_SECRET_KEY",
+  "stripe.publishableKey": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+  "stripe.webhookSecret": "STRIPE_WEBHOOK_SECRET",
 };
 
 const fromEnvironment = (key: SecretKey): string | undefined =>
@@ -57,6 +66,20 @@ function encryptionKey(): Buffer {
 export function secretProblem(key: SecretKey, value: string): string | null {
   const plain = value.trim();
   if (!plain) return null;
+
+  // Stripe keys are easy to paste into the wrong box: the publishable key into
+  // the secret one, or a restricted key's id rather than its value.
+  if (key === SECRET_KEYS.stripeSecret) {
+    return /^(sk|rk)_(live|test)_[A-Za-z0-9]+$/.test(plain)
+      ? null
+      : "That is not a Stripe secret key. It starts with sk_live_ (or rk_live_ for a restricted key) and is under Developers, API keys.";
+  }
+  if (key === SECRET_KEYS.stripePublishable) {
+    return /^pk_(live|test)_[A-Za-z0-9]+$/.test(plain) ? null : "That is not a Stripe publishable key. It starts with pk_live_.";
+  }
+  if (key === SECRET_KEYS.stripeWebhook) {
+    return /^whsec_[A-Za-z0-9]+$/.test(plain) ? null : "That is not a webhook signing secret. It starts with whsec_.";
+  }
 
   if (key !== SECRET_KEYS.googleServiceAccount) return null;
 
@@ -264,11 +287,19 @@ export async function secretStatus(): Promise<SecretReport[]> {
         };
       }
 
+      // Live or test is the thing to know at a glance about a Stripe key.
+      const stripeMode =
+        key === SECRET_KEYS.stripeSecret || key === SECRET_KEYS.stripePublishable
+          ? value.includes("_live_")
+            ? "Live mode"
+            : "Test mode"
+          : null;
+
       return {
         ...base,
         state: "connected" as const,
         status: fromEnv ? "Connected on the server" : last4 ? `Connected, ending ${last4}` : "Connected",
-        detail: null,
+        detail: stripeMode,
       };
     }),
   );

@@ -6,6 +6,7 @@ import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { parseJson, type FieldChange } from "@/lib/json";
 import { db } from "@/lib/db";
+import { emailMatchesWebsite } from "@/lib/claim-codes";
 
 export const metadata = { title: "Claims & verification" };
 
@@ -14,7 +15,7 @@ export default async function AdminClaimsPage() {
 
   const claims = await db.claimRequest.findMany({
     orderBy: [{ status: "asc" }, { submittedAt: "desc" }],
-    include: { business: { select: { id: true, name: true, slug: true } } },
+    include: { business: { select: { id: true, name: true, slug: true, website: true } } },
   });
 
   const awaiting = claims.filter((claim) => claim.status === "SUBMITTED" || claim.status === "VERIFYING");
@@ -93,8 +94,29 @@ export default async function AdminClaimsPage() {
                           {claim.role ? ` · ${claim.role}` : ""}
                         </span>
                       </td>
-                      <td style={{ textTransform: "capitalize" }}>
-                        {claim.verificationMethod.replace("_", " ").toLowerCase()}
+                      <td>
+                        <span style={{ textTransform: "capitalize" }}>
+                          {claim.verificationMethod.replace("_", " ").toLowerCase()}
+                        </span>
+                        {claim.verificationMethod === "EMAIL" ? (
+                          <span className="admin-table__meta">
+                            {claim.emailVerifiedAt
+                              ? `Code confirmed ${fullDate(claim.emailVerifiedAt)}`
+                              : claim.codeAttempts >= 5
+                                ? "Code locked after 5 wrong tries"
+                                : claim.codeSentAt
+                                  ? `Code sent ${fullDate(claim.codeSentAt)}, not yet entered`
+                                  : "No code sent"}
+                            {(() => {
+                              const match = emailMatchesWebsite(claim.ownerEmail, claim.business?.website);
+                              return match === null
+                                ? " · no website on file"
+                                : match
+                                  ? " · domain matches website"
+                                  : " · domain does not match website";
+                            })()}
+                          </span>
+                        ) : null}
                       </td>
                       <td>
                         {changes.length === 0 ? (

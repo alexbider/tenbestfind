@@ -920,7 +920,8 @@ model Subscription {
 
   stripeSubscriptionId String?  @unique
   stripeCustomerId     String?
-  // Set while a checkout session is open, cleared when the webhook lands.
+  // The Checkout session that opened it. Kept after payment so the return page
+  // can still find the subscription it belongs to.
   stripeCheckoutId     String?
   // Top 10 placements are scoped to one city and trade
   scopeCityId          String?
@@ -996,6 +997,15 @@ model ClaimRequest {
   notes              String?
   submittedAt        DateTime  @default(now())
   reviewedAt         DateTime?
+  // The subscription the claim opened at checkout, so the return page can find it.
+  subscriptionId     String?
+  // Email verification. Only a hash of the six-digit code is kept; it expires,
+  // and too many wrong guesses lock it until a new one is sent.
+  codeHash           String?
+  codeSentAt         DateTime?
+  codeExpiresAt      DateTime?
+  codeAttempts       Int       @default(0)
+  emailVerifiedAt    DateTime?
 
   business Business? @relation(fields: [businessId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
