@@ -1954,18 +1954,20 @@ export default async function BusinessProfilePage({ params }: Props) {
                     style={{
                       marginTop: "22px",
                       display: "inline-flex",
-                      alignItems: "center",
-                      flexWrap: "wrap",
+                      alignItems: "flex-start",
                       gap: "10px",
-                      padding: "8px 16px 8px 8px",
-                      borderRadius: "999px",
+                      maxWidth: "100%",
+                      padding: "8px 18px 8px 8px",
+                      borderRadius: "22px",
                       background: "var(--ink)",
                       fontSize: "15px",
+                      lineHeight: "1.45",
                       color: "#fff",
                     }}
                   >
                     <span
                       style={{
+                        flexShrink: 0,
                         padding: "6px 12px",
                         borderRadius: "999px",
                         background: "var(--gold-ink)",
@@ -1978,7 +1980,7 @@ export default async function BusinessProfilePage({ params }: Props) {
                     >
                       Best for
                     </span>
-                    {business.bestFor}
+                    <span style={{ paddingTop: "3px", minWidth: "0" }}>{business.bestFor}</span>
                   </p>
                 ) : null}
               </div>
