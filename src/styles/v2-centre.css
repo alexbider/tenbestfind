@@ -1,0 +1,101 @@
+/* ==================================================================
+   October 2026 design: the business centre pages (/claim/,
+   /add-business/, /advertise/). Layout is inline on the components; this
+   file carries the states, the hover and focus behaviour, the grids that
+   have to stay out of reach of the legacy phone rules, and the breakpoints.
+   ================================================================== */
+
+/* Business centre tabs in the hero. */
+.bc2 [data-bctab] { transition: border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.bc2 [data-bctab]:hover { border-color: var(--blue-200) !important; }
+.bc2 [data-bctab][data-on="1"],
+.bc2 [data-bctab][data-on="1"]:hover,
+.bc2 [data-bctab][data-on="1"]:visited { background: var(--ink) !important; color: #fff !important; border-color: var(--ink) !important; }
+.bc2 [data-bc-tabs]::-webkit-scrollbar { display: none; }
+
+/* Inputs. */
+.bc2 [data-fin]:focus { outline: none; border-color: var(--color-primary) !important; box-shadow: 0 0 0 4px rgba(45,116,215,0.14); }
+.bc2 [data-finder]:focus-within { border-color: var(--color-primary) !important; box-shadow: 0 0 0 4px rgba(45,116,215,0.14); }
+.bc2 [data-bad="1"] { border-color: var(--maple-600) !important; }
+
+/* Stepper. */
+.bc2 [data-st] > span:first-of-type { transition: background 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease; }
+.bc2 [data-st][data-s="now"] > span:first-of-type { background: var(--color-primary) !important; border-color: var(--color-primary) !important; color: #fff !important; box-shadow: 0 0 0 5px rgba(45,116,215,0.14); }
+.bc2 [data-st][data-s="done"] > span:first-of-type { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--gold-ink) !important; }
+.bc2 [data-st][data-s="now"] > span:last-child,
+.bc2 [data-st][data-s="done"] > span:last-child { color: var(--ink) !important; }
+.bc2 [data-st][data-s="done"] { cursor: pointer; }
+
+/* Radio cards, the add-on checkbox card and the listing results. */
+.bc2 [data-opt] { transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+.bc2 [data-opt]:hover { border-color: var(--blue-200) !important; }
+.bc2 [data-opt][data-on="1"] { border-color: var(--color-primary) !important; background: var(--blue-50) !important; box-shadow: 0 0 0 1px var(--color-primary); }
+.bc2 [data-opt][data-on="1"] [data-dot] { border-color: var(--color-primary) !important; box-shadow: inset 0 0 0 4px #fff; background: var(--color-primary) !important; }
+.bc2 [data-opt][data-on="1"] [data-box] { border-color: var(--color-primary) !important; background: var(--color-primary) !important; }
+.bc2 [data-choices] { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+/* Service chips. */
+.bc2 [data-chipx] { transition: background 160ms ease, color 160ms ease, border-color 160ms ease; }
+.bc2 [data-chipx]:hover { border-color: var(--blue-200) !important; }
+.bc2 [data-chipx][data-on="1"] { background: var(--ink) !important; color: #fff !important; border-color: var(--ink) !important; }
+
+/* Primary buttons lift on hover. */
+.bc2 [data-btnp] { transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease; }
+@media (hover: hover) { .bc2 [data-btnp]:hover { transform: translateY(-1px); } }
+.bc2 [data-btnp]:disabled { opacity: 0.7; cursor: progress; }
+.bc2 [data-bc-help] { transition: border-color 160ms ease, background 160ms ease; }
+.bc2 [data-bc-help]:hover { border-color: var(--blue-200) !important; background: var(--paper); }
+
+/* Advertising product cards lift 4px. */
+.bc2 [data-adcard] { transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease; }
+@media (hover: hover) { .bc2 [data-adcard]:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg) !important; border-color: var(--blue-200) !important; } }
+
+/* Grids declared here rather than inline, so the legacy phone rules that
+   match an inline repeat(auto-fit, ...) and turn it into a rail leave them be. */
+.bc2 [data-bc-grid][data-cols="260"] { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.bc2 [data-bc-grid][data-cols="320"] { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.bc2 [data-bc-grid][data-cols="250"] { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.bc2 [data-strip] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bc2 [data-strip] > li + li { border-left: 1px solid var(--border-subtle); }
+
+/* FAQ: numbered straight through, with the ink rule above every question as
+   the design draws it. */
+.bc2 [data-faq] > summary { list-style: none; cursor: pointer; }
+.bc2 [data-faq] > summary::-webkit-details-marker { display: none; }
+.bc2 [data-faq] [data-fq] { transition: transform 200ms ease; }
+.bc2 [data-faq][open] [data-fq] { transform: rotate(45deg); }
+html body main[data-skin][id] .bc2 div[data-bcfaq][style] { border-top: 0 !important; gap: 0 !important; }
+html body main[data-skin][id] .bc2 div[data-bcfaq] > details[data-faq][style] { border-top: 2px solid var(--ink) !important; }
+
+@media (max-width: 980px) {
+  .bc2 [data-split] { grid-template-columns: minmax(0, 1fr) !important; }
+  .bc2 [data-bcaside] { position: static !important; }
+}
+
+@media (max-width: 760px) {
+  .bc2 [data-strip] { grid-template-columns: minmax(0, 1fr); }
+  .bc2 [data-strip] > li + li { border-left: 0; border-top: 1px solid var(--border-subtle); }
+  .bc2 [data-bc-grid] { grid-template-columns: minmax(0, 1fr) !important; }
+  .bc2 [data-bc-top] { align-items: flex-start !important; }
+  .bc2 [data-bc-tabs] { margin-right: calc(-1 * var(--gutter, 16px)); padding-right: var(--gutter, 16px); max-width: calc(100% + var(--gutter, 16px)); }
+  .bc2 [data-review] > div { grid-template-columns: minmax(0, 1fr) auto !important; row-gap: 4px !important; }
+  .bc2 [data-review] > div > dt { grid-column: 1 / -1; }
+  .bc2 [data-review] > div > dd { grid-column: 1; }
+  .bc2 [data-flowcard] form > div:first-child,
+  .bc2 [data-flowcard] form > div:nth-child(2),
+  .bc2 [data-flowcard] form > div:last-child { padding-left: 20px !important; padding-right: 20px !important; }
+}
+
+@media (max-width: 720px) {
+  .bc2 [data-stack] { flex-direction: column !important; align-items: stretch !important; }
+  .bc2 [data-half] { grid-column: 1 / -1 !important; }
+  .bc2 [data-stepper] > li > span:last-child { display: none; }
+  .bc2 [data-stepper] > li { flex: 0 0 auto !important; }
+  .bc2 [data-stepper] { justify-content: space-between; }
+}
+
+/* The order summary label stays a small label on phones, where the shared
+   phone layer would otherwise set it at headline size. */
+@media (max-width: 760px) {
+  html body main[data-mskin] .bc2 [data-bcaside] h2[data-minih] { font-size: 13px !important; line-height: 1.3 !important; letter-spacing: 0.12em !important; }
+}
