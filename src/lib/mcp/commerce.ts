@@ -34,7 +34,7 @@ export const COMMERCE_TOOLS: Tool[] = [
       const take = limitOf(args, 25);
 
       return {
-        stripeConfigured: stripeConfigured(),
+        stripeConfigured: await stripeConfigured(),
         ...(!kind || kind === "plans"
           ? {
               plans: (await db.plan.findMany({ orderBy: { sortOrder: "asc" } })).map((row) => ({
@@ -155,7 +155,7 @@ export const COMMERCE_TOOLS: Tool[] = [
           summary: `package ${plan.name}`,
           paths: ["/", "/advertise/"],
         });
-        return { id: plan.id, name: plan.name, stripeConfigured: stripeConfigured() };
+        return { id: plan.id, name: plan.name, stripeConfigured: await stripeConfigured() };
       }
 
       const plan = await db.plan.update({ where: { id }, data });
@@ -166,7 +166,7 @@ export const COMMERCE_TOOLS: Tool[] = [
         summary: `package ${plan.name}`,
         paths: ["/", "/advertise/"],
       });
-      return { id: plan.id, name: plan.name, stripeConfigured: stripeConfigured() };
+      return { id: plan.id, name: plan.name, stripeConfigured: await stripeConfigured() };
     },
   },
 

@@ -266,7 +266,7 @@ export async function savePlan(_prev: ActionState, formData: FormData): Promise<
   let note = "";
   if (plan.interval === "quote") {
     note = " Quoted plans have no fixed price, so nothing was sent to Stripe.";
-  } else if (!stripeConfigured()) {
+  } else if (!(await stripeConfigured())) {
     note = " Stripe is not configured, so the price was not pushed.";
   } else {
     try {

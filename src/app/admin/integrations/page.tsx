@@ -25,7 +25,12 @@ export default async function AdminIntegrationsPage() {
     "anthropic.apiKey":
       "Writes the imported listings, the guides and the weekly topic plan. console.anthropic.com, API keys.",
     "resend.apiKey":
-      "Emails quote requests to companies. resend.com, API keys. The sending domain has to be verified there first.",
+      "Sends every email the site sends: leads to companies, claim codes, receipts of submissions, and the alerts to the team inbox. resend.com, API keys. The sending domain has to be verified there first.",
+    "stripe.secretKey":
+      "Takes payment for claims, listings and Top 10 placements. Stripe dashboard, Developers, API keys, Secret key (starts sk_live_). A restricted key (rk_live_) works too if it can write Checkout, Customers, Subscriptions, Products, Prices, Refunds and the Billing portal.",
+    "stripe.publishableKey": "Stripe dashboard, Developers, API keys, Publishable key (starts pk_live_). Not secret, kept here so both halves live together.",
+    "stripe.webhookSecret":
+      "How the site knows a payment notice really came from Stripe. Set when the endpoint https://tenbestfind.com/api/stripe/webhook is created in Stripe, Developers, Webhooks (starts whsec_).",
     "dataforseo.login":
       "Search volume, keyword difficulty and live results, for the guide writer and the topic radar. app.dataforseo.com, API access. This is the API login, which is an email address, not the one you sign in to the dashboard with.",
     "dataforseo.password":

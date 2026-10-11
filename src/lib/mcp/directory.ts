@@ -6,6 +6,7 @@ import { recordMove } from "../redirects";
 import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
 import { isRealProfile } from "../schema";
+import { onListingPublished } from "../listing-lifecycle";
 import { routes } from "../urls";
 import {
   arr,
@@ -319,7 +320,15 @@ export const DIRECTORY_TOOLS: Tool[] = [
         summary: `${business.name} set to ${status}`,
         paths: ["/", routes.business(business.slug)],
       });
-      return { id: business.id, status, url: routes.business(business.slug) };
+      // Going live starts billing for a submitted listing and tells the submitter.
+      const published =
+        status === "PUBLISHED" && existing.status !== "PUBLISHED" ? await onListingPublished(business.id) : null;
+      return {
+        id: business.id,
+        status,
+        url: routes.business(business.slug),
+        ...(published ? { billing: published } : {}),
+      };
     },
   },
 

@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { startCheckout } from "@/lib/billing";
+import { startCheckout, type CheckoutResult } from "@/lib/billing";
+import { claimReference, issueClaimCode, METHOD_LABEL } from "@/lib/claim-codes";
 import { db } from "@/lib/db";
+import {
+  alertAdvertisingQuote,
+  alertNewClaim,
+  alertNewListing,
+  sendClaimReceived,
+  sendListingSubmitted,
+} from "@/lib/notify";
 import { stripeConfigured } from "@/lib/stripe";
 import { routes } from "@/lib/urls";
 
@@ -79,29 +87,63 @@ export async function submitClaim(_prev: ClaimState, formData: FormData): Promis
     },
   });
 
-  const checkout = await startCheckout({
-    businessId: business.id,
-    planKey: data.planKey,
-    email: data.ownerEmail,
-    name: data.ownerName,
-    successPath: `${routes.claim()}complete/`,
-    cancelPath: routes.claim(),
-  });
-
-  // Top 10 is a second subscription rather than a line on the first, so it can
-  // be cancelled on its own without touching profile management.
-  if (data.addTop10 === "on") {
-    await startCheckout({
+  let checkout: CheckoutResult;
+  try {
+    checkout = await startCheckout({
       businessId: business.id,
-      planKey: "top10",
+      planKey: data.planKey,
       email: data.ownerEmail,
       name: data.ownerName,
-      scopeCityId: business.cityId ?? undefined,
-      scopeCategoryId: business.categoryId,
       successPath: `${routes.claim()}complete/`,
       cancelPath: routes.claim(),
     });
+
+    // Top 10 is a second subscription rather than a line on the first, so it can
+    // be cancelled on its own without touching profile management.
+    if (data.addTop10 === "on") {
+      await startCheckout({
+        businessId: business.id,
+        planKey: "top10",
+        email: data.ownerEmail,
+        name: data.ownerName,
+        scopeCityId: business.cityId ?? undefined,
+        scopeCategoryId: business.categoryId,
+        successPath: `${routes.claim()}complete/`,
+        cancelPath: routes.claim(),
+      });
+    }
+  } catch (error) {
+    console.error("[claim] checkout failed:", error instanceof Error ? error.message : error);
+    return {
+      status: "error",
+      message: "We could not open the secure checkout just now. Nothing was charged. Please try again in a minute.",
+    };
   }
+
+  await db.claimRequest.update({ where: { id: claim.id }, data: { subscriptionId: checkout.subscriptionId } });
+
+  // The receipt (with a code for email verification) and the team alert go out
+  // before the hand-off to Stripe. Neither can fail the claim.
+  await Promise.allSettled([
+    data.verificationMethod === "EMAIL"
+      ? issueClaimCode(claim.id)
+      : sendClaimReceived({
+          to: claim.ownerEmail,
+          ownerName: claim.ownerName,
+          businessName: claim.businessName,
+          reference: claimReference(claim.id),
+          method: METHOD_LABEL[claim.verificationMethod] ?? claim.verificationMethod,
+        }),
+    alertNewClaim({
+      businessName: claim.businessName,
+      ownerName: claim.ownerName,
+      ownerEmail: claim.ownerEmail,
+      role: claim.role,
+      method: METHOD_LABEL[claim.verificationMethod] ?? claim.verificationMethod,
+      plans: data.addTop10 === "on" ? `${data.planKey} + top10` : data.planKey,
+      claimId: claim.id,
+    }),
+  ]);
 
   revalidatePath(routes.admin("/claims"));
 
@@ -109,8 +151,8 @@ export async function submitClaim(_prev: ClaimState, formData: FormData): Promis
 
   return {
     status: "ok",
-    reference: claim.id.slice(-8).toUpperCase(),
-    message: stripeConfigured()
+    reference: claimReference(claim.id),
+    message: (await stripeConfigured())
       ? "Claim submitted. Verification usually completes within two business days."
       : "Claim submitted and recorded. Payment is not configured on this environment, so an editor will complete the subscription by hand.",
   };
@@ -201,15 +243,42 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
     },
   });
 
-  const checkout = await startCheckout({
-    businessId: business.id,
-    planKey: data.planKey,
-    email: data.contactEmail,
-    name: data.contactName,
-    trialUntilPublished: true,
-    successPath: `${routes.addBusiness()}complete/`,
-    cancelPath: routes.addBusiness(),
-  });
+  let checkout: CheckoutResult;
+  try {
+    checkout = await startCheckout({
+      businessId: business.id,
+      planKey: data.planKey,
+      email: data.contactEmail,
+      name: data.contactName,
+      trialUntilPublished: true,
+      successPath: `${routes.addBusiness()}complete/`,
+      cancelPath: routes.addBusiness(),
+    });
+  } catch (error) {
+    console.error("[add-business] checkout failed:", error instanceof Error ? error.message : error);
+    return {
+      status: "error",
+      message:
+        "We saved your submission but could not open the secure checkout just now. Nothing was charged. Please try again in a minute, or contact business support.",
+    };
+  }
+
+  await Promise.allSettled([
+    sendListingSubmitted({
+      to: data.contactEmail,
+      contactName: data.contactName,
+      businessName: business.name,
+      reference: business.id.slice(-8).toUpperCase(),
+    }),
+    alertNewListing({
+      businessName: business.name,
+      businessId: business.id,
+      contactName: data.contactName,
+      contactEmail: data.contactEmail,
+      category: category.name,
+      website: data.website || null,
+    }),
+  ]);
 
   revalidatePath(routes.admin("/businesses"));
 
@@ -218,7 +287,7 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
   return {
     status: "ok",
     reference: business.id.slice(-8).toUpperCase(),
-    message: stripeConfigured()
+    message: (await stripeConfigured())
       ? "Submission received. An editor reviews new listings against the same standards as everything else."
       : "Submission received and recorded. Payment is not configured on this environment, so nothing was charged.",
   };
@@ -250,6 +319,12 @@ export async function submitAdvertising(
       message: `Markets: ${parsed.data.markets}\n\n${parsed.data.message ?? ""}`,
       status: "NEW",
     },
+  });
+  await alertAdvertisingQuote({
+    company: parsed.data.company,
+    email: parsed.data.email,
+    markets: parsed.data.markets,
+    message: parsed.data.message || null,
   });
   revalidatePath(routes.admin("/submissions"));
   return {

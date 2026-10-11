@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 import {
   billingPortalUrl,
   cancelSubscription,
-  chargeOnPublish,
   refundAndCancel,
   resumeSubscription,
   syncPlanToStripe,
 } from "@/lib/billing";
 import { audit, requireAdmin, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { onListingPublished } from "@/lib/listing-lifecycle";
 
 export type BillingState = { status: "idle" | "ok" | "error"; message?: string; url?: string };
 
@@ -110,16 +110,16 @@ export async function publishListing(formData: FormData) {
     data: { status: "PUBLISHED", publishedAt: new Date() },
   });
 
-  try {
-    await chargeOnPublish(id);
-  } catch (error) {
-    // The listing is live either way; a billing fault is recorded, not fatal.
+  // Charges the held card and tells the submitter. The listing is live either
+  // way; a billing fault is recorded, not fatal.
+  const outcome = await onListingPublished(id);
+  if (outcome.error) {
     await audit({
       userId: user.id,
       action: "error",
       entityType: "subscription",
       entityId: id,
-      summary: `Charge on publish failed: ${describe(error)}`,
+      summary: `Charge on publish failed: ${outcome.error}`,
     });
   }
 

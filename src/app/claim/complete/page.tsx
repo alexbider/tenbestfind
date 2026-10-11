@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CrumbBar } from "@/components/site/blocks";
+import { ClaimCodeForm } from "@/components/site/ClaimCodeForm";
 import { BusinessCentreNav } from "@/components/site/business-centre";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { Check } from "@/components/ui/Icon";
 import { Badge, Section } from "@/components/ui/primitives";
 import { fullDate, money } from "@/lib/format";
+import { maskEmail } from "@/lib/claim-codes";
 import { db } from "@/lib/db";
 import { routes } from "@/lib/urls";
 
@@ -30,15 +32,15 @@ export default async function ClaimCompletePage({ searchParams }: Props) {
       })
     : null;
 
-  const recent = subscription
-    ? null
-    : await db.subscription.findFirst({
-        orderBy: { createdAt: "desc" },
-        include: { plan: true, business: true },
-      });
-
-  const record = subscription ?? recent;
+  // Only the session in the return link identifies the buyer. Without it there
+  // is nothing to show, rather than someone else's most recent subscription.
+  const record = subscription;
   const confirmed = record?.status === "ACTIVE";
+
+  const claim = record
+    ? await db.claimRequest.findFirst({ where: { subscriptionId: record.id }, orderBy: { submittedAt: "desc" } })
+    : null;
+  const needsCode = claim?.verificationMethod === "EMAIL" && !claim.emailVerifiedAt && claim.status !== "REJECTED";
 
   return (
     <SiteChrome active="business" skin>
@@ -76,6 +78,13 @@ export default async function ClaimCompletePage({ searchParams }: Props) {
               ? "Payment confirmed. Verification usually completes within two business days, and the charge is refunded in full if we cannot confirm ownership."
               : "Stripe is confirming the payment. That normally takes a few seconds; the subscription activates as soon as it lands, and you will get a receipt by email either way."}
           </p>
+
+          {needsCode && claim ? (
+            <div style={{ margin: "0 0 26px", padding: "22px 24px", borderRadius: 16, border: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
+              <h2 style={{ fontSize: 19, marginBottom: 12 }}>Confirm your email</h2>
+              <ClaimCodeForm claimId={claim.id} maskedEmail={maskEmail(claim.ownerEmail)} />
+            </div>
+          ) : null}
 
           {record ? (
             <dl className="transparency__grid" style={{ marginBottom: 26 }}>

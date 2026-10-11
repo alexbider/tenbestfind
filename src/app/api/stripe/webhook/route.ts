@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyStripeEvent } from "@/lib/billing";
 import { db } from "@/lib/db";
-import { getStripe, webhookConfigured, type Stripe } from "@/lib/stripe";
+import { getStripe, webhookSecret, type Stripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 // The signature is computed over the exact bytes, so the body must not be
@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
  * requires.
  */
 export async function POST(request: Request) {
-  if (!webhookConfigured()) {
+  const secret = await webhookSecret();
+  if (!secret) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
   }
 
@@ -30,11 +31,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
+    event = (await getStripe()).webhooks.constructEvent(body, signature, secret);
   } catch (error) {
     // A bad signature is either a misconfiguration or someone probing. Refuse
     // it without recording anything.
@@ -70,6 +67,9 @@ export async function POST(request: Request) {
       data: {
         status: outcome === null ? "IGNORED" : "PROCESSED",
         error: outcome ?? null,
+        // The Stripe account is shared. Events that belong to another business
+        // keep their id for idempotency but not their contents.
+        ...(outcome === null ? { payload: "" } : {}),
         processedAt: new Date(),
       },
     });

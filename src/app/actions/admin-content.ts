@@ -6,6 +6,8 @@ import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { refundAndCancel } from "@/lib/billing";
 import { db } from "@/lib/db";
+import { onListingPublished } from "@/lib/listing-lifecycle";
+import { stripeConfigured } from "@/lib/stripe";
 import { announce } from "@/lib/announce";
 import { recordMove } from "@/lib/redirects";
 import { analyzeSeo } from "@/lib/seo";
@@ -986,6 +988,21 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     ? await db.business.update({ where: { id: data.id }, data: payload })
     : await db.business.create({ data: payload });
 
+  // Publishing from the edit form starts billing and emails the submitter, the
+  // same as the publish button does.
+  if (previous && previous.status !== "PUBLISHED" && data.status === "PUBLISHED") {
+    const outcome = await onListingPublished(business.id);
+    if (outcome.error) {
+      await audit({
+        userId: user.id,
+        action: "error",
+        entityType: "subscription",
+        entityId: business.id,
+        summary: `Charge on publish failed: ${outcome.error}`,
+      });
+    }
+  }
+
   if (previous && previous.slug !== data.slug) {
     await recordMove(routes.business(previous.slug), routes.business(data.slug));
     revalidatePath(routes.business(previous.slug));
@@ -1163,6 +1180,7 @@ export async function setBusinessStatus(formData: FormData) {
   const parsed = z.enum(BUSINESS_STATUSES).safeParse(String(formData.get("status")));
   if (!parsed.success) return;
 
+  const previous = await db.business.findUnique({ where: { id }, select: { status: true } });
   const business = await db.business.update({
     where: { id },
     data: {
@@ -1170,6 +1188,18 @@ export async function setBusinessStatus(formData: FormData) {
       publishedAt: parsed.data === "PUBLISHED" ? new Date() : undefined,
     },
   });
+  if (parsed.data === "PUBLISHED" && previous?.status !== "PUBLISHED") {
+    const outcome = await onListingPublished(id);
+    if (outcome.error) {
+      await audit({
+        userId: user.id,
+        action: "error",
+        entityType: "subscription",
+        entityId: id,
+        summary: `Charge on publish failed: ${outcome.error}`,
+      });
+    }
+  }
   await audit({
     userId: user.id,
     action: "update",
@@ -1629,20 +1659,27 @@ export async function decideClaim(formData: FormData) {
   // that was opened when the claim was submitted.
   if (status === "APPROVED" && claim.businessId) {
     await db.business.update({ where: { id: claim.businessId }, data: { claimed: true } });
-    await db.subscription.updateMany({
-      where: { businessId: claim.businessId, status: "PENDING" },
-      data: { status: "ACTIVE", startedAt: new Date() },
-    });
+    // With Stripe live, the webhook activates what was actually paid for; an
+    // abandoned checkout must not turn into an active subscription here. Without
+    // Stripe, the recorded intent is activated by hand as before.
+    if (!(await stripeConfigured())) {
+      await db.subscription.updateMany({
+        where: { businessId: claim.businessId, status: "PENDING" },
+        data: { status: "ACTIVE", startedAt: new Date() },
+      });
+    }
   }
 
   // A rejected claim refunds the charge rather than leaving it open. The refund
   // goes through Stripe when it is configured, and the local records are
   // updated either way.
   if (status === "REJECTED" && claim.businessId) {
-    const open = await db.subscription.findFirst({
-      where: { businessId: claim.businessId, status: { in: ["PENDING", "ACTIVE"] } },
+    // The claim may have opened two subscriptions (profile plus Top 10), so
+    // every open one is refunded and cancelled.
+    const openSubscriptions = await db.subscription.findMany({
+      where: { businessId: claim.businessId, status: { in: ["PENDING", "ACTIVE", "PAST_DUE"] } },
     });
-    if (open) {
+    for (const open of openSubscriptions) {
       try {
         await refundAndCancel(open.id, "Ownership could not be verified");
       } catch (error) {

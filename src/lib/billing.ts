@@ -5,10 +5,16 @@ import {
   getStripe,
   mapInvoiceStatus,
   mapSubscriptionStatus,
+  PRODUCT_PREFIX,
   siteUrl,
+  STATEMENT_DESCRIPTOR,
+  STRIPE_METADATA,
   stripeConfigured,
   type Stripe,
 } from "./stripe";
+import { money } from "./format";
+import { parseJson } from "./json";
+import { sendPaymentFailed } from "./notify";
 
 /**
  * The internal billing API. Everything that talks to Stripe goes through here,
@@ -30,18 +36,19 @@ export async function syncPlanToStripe(planId: string) {
     throw new Error("Quoted plans have no fixed price, so there is nothing to sync.");
   }
 
-  const stripe = getStripe();
+  const stripe = await getStripe();
 
+  // The Stripe account is shared, so the product name, the card statement and
+  // the metadata all say TenBestFind.
+  const productFields = {
+    name: `${PRODUCT_PREFIX} ${plan.name}`,
+    description: plan.description || undefined,
+    statement_descriptor: STATEMENT_DESCRIPTOR,
+    metadata: { ...STRIPE_METADATA, planKey: plan.key },
+  };
   const product = plan.stripeProductId
-    ? await stripe.products.update(plan.stripeProductId, {
-        name: plan.name,
-        description: plan.description ?? undefined,
-      })
-    : await stripe.products.create({
-        name: plan.name,
-        description: plan.description ?? undefined,
-        metadata: { planKey: plan.key },
-      });
+    ? await stripe.products.update(plan.stripeProductId, productFields)
+    : await stripe.products.create(productFields);
 
   // Reuse the existing price when the amount and currency still match.
   let priceId = plan.stripePriceId;
@@ -61,7 +68,8 @@ export async function syncPlanToStripe(planId: string) {
       unit_amount: plan.priceCents,
       currency: plan.currency.toLowerCase(),
       recurring: { interval: plan.interval === "year" ? "year" : "month" },
-      metadata: { planKey: plan.key },
+      nickname: `${PRODUCT_PREFIX} ${plan.name}`,
+      metadata: { ...STRIPE_METADATA, planKey: plan.key },
     });
     priceId = price.id;
   }
@@ -82,11 +90,12 @@ export async function ensureCustomer(businessId: string, email: string, name?: s
   if (!business) throw new Error("Business not found");
   if (business.stripeCustomerId) return business.stripeCustomerId;
 
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const customer = await stripe.customers.create({
     email,
     name: name ?? business.name,
-    metadata: { businessId: business.id, businessSlug: business.slug },
+    description: `${PRODUCT_PREFIX}: ${business.name}`,
+    metadata: { ...STRIPE_METADATA, businessId: business.id, businessSlug: business.slug },
   });
 
   await db.business.update({ where: { id: business.id }, data: { stripeCustomerId: customer.id } });
@@ -135,11 +144,11 @@ export async function startCheckout(input: {
   });
 
   // Without keys the intent is recorded and an editor completes it by hand.
-  if (!stripeConfigured() || !plan.stripePriceId) {
+  if (!(await stripeConfigured()) || !plan.stripePriceId) {
     return { mode: "recorded", subscriptionId: subscription.id };
   }
 
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const customerId = await ensureCustomer(input.businessId, input.email, input.name);
 
   const session = await stripe.checkout.sessions.create({
@@ -150,7 +159,9 @@ export async function startCheckout(input: {
     cancel_url: siteUrl(input.cancelPath),
     client_reference_id: subscription.id,
     subscription_data: {
+      description: `${PRODUCT_PREFIX} ${plan.name}`,
       metadata: {
+        ...STRIPE_METADATA,
         subscriptionId: subscription.id,
         businessId: input.businessId,
         planKey: plan.key,
@@ -159,7 +170,7 @@ export async function startCheckout(input: {
       // bound on editorial review; the webhook ends the trial at publish time.
       ...(input.trialUntilPublished ? { trial_period_days: 90 } : {}),
     },
-    metadata: { subscriptionId: subscription.id, businessId: input.businessId },
+    metadata: { ...STRIPE_METADATA, subscriptionId: subscription.id, businessId: input.businessId },
     allow_promotion_codes: true,
   });
 
@@ -174,13 +185,28 @@ export async function startCheckout(input: {
 
 /* ---------------------------------------------------------- billing portal */
 
+/** The setting that holds the TenBestFind billing portal configuration id. */
+export const PORTAL_SETTING = "billing.portalConfiguration";
+
+async function portalConfiguration(): Promise<string | undefined> {
+  const env = process.env.STRIPE_PORTAL_CONFIGURATION?.trim();
+  if (env) return env;
+  const row = await db.setting.findUnique({ where: { key: PORTAL_SETTING } });
+  const stored = row ? parseJson<string>(row.value, "") : "";
+  return typeof stored === "string" && stored.trim() ? stored.trim() : undefined;
+}
+
 export async function billingPortalUrl(businessId: string, returnPath: string) {
   const business = await db.business.findUnique({ where: { id: businessId } });
   if (!business?.stripeCustomerId) return null;
-  const stripe = getStripe();
+  const stripe = await getStripe();
+  // The shared account's default portal belongs to someone else, so ours is
+  // named explicitly when one has been set up.
+  const configuration = await portalConfiguration();
   const session = await stripe.billingPortal.sessions.create({
     customer: business.stripeCustomerId,
     return_url: siteUrl(returnPath),
+    ...(configuration ? { configuration } : {}),
   });
   return session.url;
 }
@@ -191,17 +217,18 @@ export async function billingPortalUrl(businessId: string, returnPath: string) {
  * Ends the trial on a listing's subscription, which is what makes the first
  * charge happen. Called when an editor publishes a pending listing.
  */
-export async function chargeOnPublish(businessId: string) {
+export async function chargeOnPublish(businessId: string): Promise<boolean> {
   const subscription = await db.subscription.findFirst({
     where: { businessId, status: { in: ["PENDING", "ACTIVE"] }, stripeSubscriptionId: { not: null } },
   });
-  if (!subscription?.stripeSubscriptionId || !stripeConfigured()) return;
+  if (!subscription?.stripeSubscriptionId || !(await stripeConfigured())) return false;
 
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const remote = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
-  if (remote.status !== "trialing") return;
+  if (remote.status !== "trialing") return false;
 
   await stripe.subscriptions.update(subscription.stripeSubscriptionId, { trial_end: "now" });
+  return true;
 }
 
 /** Cancels at period end so the business keeps what it paid for. */
@@ -209,8 +236,8 @@ export async function cancelSubscription(subscriptionId: string, immediately = f
   const subscription = await db.subscription.findUnique({ where: { id: subscriptionId } });
   if (!subscription) throw new Error("Subscription not found");
 
-  if (subscription.stripeSubscriptionId && stripeConfigured()) {
-    const stripe = getStripe();
+  if (subscription.stripeSubscriptionId && (await stripeConfigured())) {
+    const stripe = await getStripe();
     if (immediately) {
       await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
     } else {
@@ -232,8 +259,8 @@ export async function resumeSubscription(subscriptionId: string) {
   const subscription = await db.subscription.findUnique({ where: { id: subscriptionId } });
   if (!subscription) throw new Error("Subscription not found");
 
-  if (subscription.stripeSubscriptionId && stripeConfigured()) {
-    const stripe = getStripe();
+  if (subscription.stripeSubscriptionId && (await stripeConfigured())) {
+    const stripe = await getStripe();
     await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
       cancel_at_period_end: false,
     });
@@ -259,8 +286,8 @@ export async function refundAndCancel(subscriptionId: string, reason: string) {
 
   const lastPaid = subscription.invoices.find((invoice) => invoice.status === "PAID");
 
-  if (stripeConfigured() && lastPaid?.stripeInvoiceId) {
-    const stripe = getStripe();
+  if ((await stripeConfigured()) && lastPaid?.stripeInvoiceId) {
+    const stripe = await getStripe();
     const invoice = await stripe.invoices.retrieve(lastPaid.stripeInvoiceId);
     const paymentIntent =
       typeof invoice.payments?.data[0]?.payment?.payment_intent === "string"
@@ -270,7 +297,7 @@ export async function refundAndCancel(subscriptionId: string, reason: string) {
       await stripe.refunds.create({
         payment_intent: paymentIntent,
         reason: "requested_by_customer",
-        metadata: { reason },
+        metadata: { ...STRIPE_METADATA, reason },
       });
     }
   }
@@ -289,8 +316,12 @@ export async function applyStripeEvent(event: Stripe.Event) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
-      const subscriptionId = session.client_reference_id ?? session.metadata?.subscriptionId;
-      if (!subscriptionId) return "no subscription reference on the session";
+      // The account is shared with other businesses, whose sessions arrive
+      // here too. Anything that does not point at one of our rows is ignored.
+      const subscriptionId = session.metadata?.subscriptionId ?? session.client_reference_id;
+      if (!subscriptionId) return null;
+      const ours = await db.subscription.findUnique({ where: { id: subscriptionId } });
+      if (!ours) return null;
 
       const stripeSubscriptionId =
         typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
@@ -301,7 +332,6 @@ export async function applyStripeEvent(event: Stripe.Event) {
           stripeSubscriptionId,
           stripeCustomerId:
             typeof session.customer === "string" ? session.customer : session.customer?.id,
-          stripeCheckoutId: null,
           status: "ACTIVE",
           startedAt: new Date(),
         },
@@ -321,7 +351,7 @@ export async function applyStripeEvent(event: Stripe.Event) {
           ],
         },
       });
-      if (!local) return `no local subscription for ${remote.id}`;
+      if (!local) return null;
 
       const periodEnd = remote.items.data[0]?.current_period_end;
 
@@ -347,13 +377,13 @@ export async function applyStripeEvent(event: Stripe.Event) {
         typeof invoice.parent?.subscription_details?.subscription === "string"
           ? invoice.parent.subscription_details.subscription
           : invoice.parent?.subscription_details?.subscription?.id;
-      if (!stripeSubscriptionId) return "invoice is not tied to a subscription";
+      if (!stripeSubscriptionId) return null;
 
       const local = await db.subscription.findFirst({
         where: { stripeSubscriptionId },
         include: { plan: true },
       });
-      if (!local) return `no local subscription for invoice ${invoice.id}`;
+      if (!local) return null;
 
       const status = event.type === "invoice.payment_failed" ? "OPEN" : mapInvoiceStatus(invoice.status);
 
@@ -384,6 +414,17 @@ export async function applyStripeEvent(event: Stripe.Event) {
 
       if (event.type === "invoice.payment_failed") {
         await db.subscription.update({ where: { id: local.id }, data: { status: "PAST_DUE" } });
+        const business = await db.business.findUnique({ where: { id: local.businessId } });
+        const to = invoice.customer_email ?? business?.email;
+        if (to && business) {
+          await sendPaymentFailed({
+            to,
+            businessName: business.name,
+            planName: local.plan.name,
+            amount: money(invoice.amount_due, invoice.currency.toUpperCase()),
+            payUrl: invoice.hosted_invoice_url,
+          });
+        }
       }
 
       return `recorded invoice ${invoice.id} as ${status}`;

@@ -21,15 +21,14 @@ type Props = { searchParams: Promise<{ session?: string }> };
 export default async function AddCompletePage({ searchParams }: Props) {
   const { session } = await searchParams;
 
+  // Only the session in the return link identifies the buyer; without it the
+  // page shows nothing rather than someone else's latest subscription.
   const subscription = session
     ? await db.subscription.findFirst({
         where: { stripeCheckoutId: session },
         include: { plan: true, business: true },
       })
-    : await db.subscription.findFirst({
-        orderBy: { createdAt: "desc" },
-        include: { plan: true, business: true },
-      });
+    : null;
 
   return (
     <SiteChrome active="business" skin>

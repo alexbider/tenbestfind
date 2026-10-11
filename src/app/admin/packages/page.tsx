@@ -12,7 +12,8 @@ export const metadata = { title: "Packages" };
 
 export default async function AdminPackagesPage() {
   await requireStaff();
-  const stripeReady = stripeConfigured();
+  const stripeReady = await stripeConfigured();
+  const testMode = await isTestMode();
 
   const plans = await db.plan.findMany({
     orderBy: { sortOrder: "asc" },
@@ -39,8 +40,8 @@ export default async function AdminPackagesPage() {
         actions={
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             {stripeReady ? (
-              <Badge tone={isTestMode() ? "warning" : "positive"}>
-                Stripe {isTestMode() ? "test mode" : "live"}
+              <Badge tone={testMode ? "warning" : "positive"}>
+                Stripe {testMode ? "test mode" : "live"}
               </Badge>
             ) : (
               <Badge tone="neutral">Stripe not configured</Badge>
