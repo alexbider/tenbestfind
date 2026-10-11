@@ -3,14 +3,20 @@ import Link from "next/link";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Crumbs, SHELL } from "@/components/site/page-parts";
 import {
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  TenOutline,
-} from "@/components/site/page-parts";
+  ArrowLink,
+  DarkBackdrop,
+  FaqRow,
+  HeroBackdrop,
+  Kicker,
+  PageProgress,
+  SectionToc,
+  Tile,
+  autoGrid,
+  heroAccentTail,
+} from "@/components/site/trust/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { fullDate, monthYear } from "@/lib/format";
@@ -352,22 +358,14 @@ const FAQS = [
 /* ------------------------------------------------------------- the layout */
 
 const SECTION = { ...SHELL, padding: "64px 24px" };
-const SECTION_H2 = { fontSize: "clamp(26px, 3vw, 36px)", fontWeight: "700" };
-const SPLIT_H2 = { fontSize: "clamp(24px, 2.8vw, 34px)", lineHeight: "1.2", fontWeight: "700" };
+const SECTION_H2 = { fontSize: "clamp(28px, 3.4vw, 42px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
+const SPLIT_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
 const LEAD = { fontSize: "17px", lineHeight: "1.7", color: "var(--text-secondary)" };
 const PANEL = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
   borderRadius: "20px",
   padding: "26px",
-};
-const TILE = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "12px",
-  background: "var(--blue-50)",
-  color: "var(--color-primary)",
 };
 const TICK_ITEM = { display: "flex", gap: "10px", fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" };
 
@@ -384,31 +382,43 @@ function Pill({
   icon,
   children,
   minWidth,
+  size = "md",
 }: {
   tone: "green" | "amber" | "blue" | "plain";
   icon?: IconName;
   children: React.ReactNode;
   minWidth?: string;
+  /** The design sets each pill kind at its own size: a factor's importance tag is small caps. */
+  size?: "tag" | "md" | "lg" | "label" | "verdict";
 }) {
   const skin = TONE[tone];
+  const kind = {
+    tag: { pad: "4px 10px", gap: "5px", font: "11px", ico: 12, stroke: 2.4, caps: true },
+    md: { pad: "5px 10px", gap: "6px", font: "12px", ico: 13, stroke: 2.3, caps: false },
+    lg: { pad: "6px 12px", gap: "7px", font: "12px", ico: 14, stroke: 2, caps: false },
+    label: { pad: "4px 10px", gap: "6px", font: "12px", ico: 13, stroke: 2.3, caps: false },
+    verdict: { pad: "4px 11px", gap: "6px", font: "12px", ico: 13, stroke: 2.3, caps: false },
+  }[size];
   return (
     <span
       style={{
         flexShrink: 0,
         display: "inline-flex",
         alignItems: "center",
-        gap: "6px",
-        padding: "5px 10px",
+        gap: kind.gap,
+        padding: kind.pad,
         borderRadius: "999px",
         background: skin.bg,
         border: `1px solid ${skin.border}`,
-        fontSize: "12px",
+        fontSize: kind.font,
         fontWeight: "700",
         color: skin.color,
         minWidth,
+        ...(kind.caps ? { letterSpacing: "var(--ls-wide)", textTransform: "uppercase" as const } : null),
+        ...(size === "verdict" ? { whiteSpace: "nowrap" as const } : null),
       }}
     >
-      {icon ? <Icon name={icon} size={12} strokeWidth={2.4} /> : null}
+      {icon ? <Icon name={icon} size={kind.ico} strokeWidth={kind.stroke} /> : null}
       {children}
     </span>
   );
@@ -434,7 +444,8 @@ export default async function HowWeRankPage() {
   ];
 
   return (
-    <SiteChrome active="trust">
+    <SiteChrome active="trust" skin>
+      <div className="tr2 hw2">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -447,27 +458,27 @@ export default async function HowWeRankPage() {
       <FaqJsonLd faqs={FAQS.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }))} />
 
       {/* ------------------------------------------------------------- hero */}
-      <section style={{ ...GRID_BACKDROP, borderBottom: "1px solid var(--border-subtle)" }}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
+      <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <HeroBackdrop />
+        <div style={{ ...SHELL, position: "relative", padding: "20px 24px 44px" }}>
           <Crumbs items={[{ label: "Home", href: "/" }, { label: "How we rank" }]} />
           <div style={{ maxWidth: "840px" }}>
-            <Eyebrow heroIn="1" gap="16px">
+            <Kicker hero="1" gap="16px">
               Ranking methodology
-            </Eyebrow>
+            </Kicker>
             <h1
-              data-hero-in="2"
+              data-in="2"
               style={{
-                fontSize: "clamp(32px, 4.2vw, 50px)",
+                fontSize: "clamp(36px, 5vw, 60px)",
                 lineHeight: "1.08",
                 letterSpacing: "-0.04em",
                 fontWeight: "800",
                 textWrap: "balance",
               }}
             >
-              How we rank local businesses, and why nobody can buy a spot
+              {heroAccentTail("How we rank local businesses, and why nobody can buy a spot", 2)}
             </h1>
-            <p data-hero-in="3" style={{ marginTop: "20px", fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
+            <p data-in="3" style={{ marginTop: "20px", fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
               We research local businesses using reputation, service quality, experience, credentials,
               local relevance, customer feedback and editorial evaluation. Rankings are reviewed by an
               editor before publication and revisited on a schedule. Businesses cannot buy an
@@ -505,58 +516,28 @@ export default async function HowWeRankPage() {
         </div>
       </section>
 
-      <nav
-        aria-label="On this page"
-        data-toc=""
-        style={{
-          position: "sticky",
-          top: "76px",
-          zIndex: 150,
-          background: "rgba(255,255,255,0.94)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
-      >
-        <div style={{ ...SHELL, padding: "0 24px", display: "flex", alignItems: "center", gap: "16px", overflowX: "auto" }}>
-          <span style={{ flexShrink: 0, fontSize: "11px", fontWeight: "700", letterSpacing: "var(--ls-wider)", textTransform: "uppercase", color: "var(--text-secondary)" }}>
-            On this page
-          </span>
-          <ul style={{ display: "flex", alignItems: "center", gap: "4px", padding: "10px 0" }}>
-            {TOC.map((item) => (
-              <li key={item.href}>
-                <a
-                  href={item.href}
-                  style={{ display: "block", padding: "8px 12px", borderRadius: "999px", fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", whiteSpace: "nowrap" }}
-                >
-                  {item.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <PageProgress />
+      <SectionToc items={TOC.map((item) => ({ href: item.href, label: item.name }))} />
 
       {/* ---------------------------------------------------------- process */}
       <section id="process" aria-labelledby="pr-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <h2 id="pr-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
-            Our ranking process at a glance
+          <h2 data-reveal="" id="pr-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
+            {accentTail("Our ranking process at a glance", 2)}
           </h2>
           <p style={{ ...LEAD, maxWidth: "760px", marginBottom: "32px" }}>
             Every ranked list follows the same six stages. The criteria applied inside them are written
             per category.
           </p>
-          <ol style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" }}>
+          <ol data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" }}>
             {STEPS.map((step) => (
               <li
                 key={step.n}
                 data-card=""
-                style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "18px", boxShadow: "var(--shadow-xs)", padding: "24px 22px" }}
+                style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", boxShadow: "var(--shadow-xs)", padding: "24px 22px" }}
               >
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
-                  <span aria-hidden="true" style={{ ...TILE, width: "42px", height: "42px" }}>
-                    <Icon name={step.icon} size={20} strokeWidth={1.8} />
-                  </span>
+                  <Tile icon={step.icon} size={42} iconSize={20} />
                   <span style={{ fontSize: "13px", fontWeight: "700", color: "#8A5F0B" }}>{step.n}</span>
                 </span>
                 <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "6px" }}>{step.title}</h3>
@@ -571,8 +552,8 @@ export default async function HowWeRankPage() {
       <section id="factors" aria-labelledby="fa-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "12px" }}>
-            <h2 id="fa-h2" style={SECTION_H2}>
-              What we look at
+            <h2 data-reveal="" id="fa-h2" style={SECTION_H2}>
+              {accentTail("What we look at", 2)}
             </h2>
             <InfoModal
               label="Ranking methodology details"
@@ -592,7 +573,7 @@ export default async function HowWeRankPage() {
             These factors are not weighted equally, and their importance shifts by category. We use
             qualitative importance labels rather than publishing invented percentages.
           </p>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
             {FACTORS.map((factor) => (
               <li
                 key={factor.title}
@@ -600,10 +581,8 @@ export default async function HowWeRankPage() {
                 style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "16px", boxShadow: "var(--shadow-xs)", padding: "22px" }}
               >
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "12px" }}>
-                  <span aria-hidden="true" style={{ ...TILE, width: "38px", height: "38px", borderRadius: "11px" }}>
-                    <Icon name={factor.icon} size={18} strokeWidth={1.8} />
-                  </span>
-                  <Pill tone={factor.weight === "high" ? "amber" : factor.weight === "moderate" ? "blue" : "plain"} icon="check">
+                  <Tile icon={factor.icon} size={38} iconSize={18} />
+                  <Pill size="tag" tone={factor.weight === "high" ? "amber" : factor.weight === "moderate" ? "blue" : "plain"} icon="check">
                     {WEIGHT_SKIN[factor.weight].label}
                   </Pill>
                 </span>
@@ -618,24 +597,22 @@ export default async function HowWeRankPage() {
       {/* --------------------------------------------------------- category */}
       <section id="category" aria-labelledby="ca-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <h2 id="ca-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
-            Rankings are category-specific
+          <h2 data-reveal="" id="ca-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
+            {accentTail("Rankings are category-specific", 1)}
           </h2>
           <p style={{ ...LEAD, maxWidth: "760px", marginBottom: "32px" }}>
             A chimney company should not be judged with the same checklist as a moving company. Each
             category has its own criteria document, and the emphasis below shows how differently they
             read.
           </p>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
             {CATEGORY_CRITERIA.map((entry) => (
-              <li key={entry.title} style={{ ...PANEL, borderRadius: "18px", padding: "24px", boxShadow: "var(--shadow-sm)" }}>
-                <span aria-hidden="true" style={{ ...TILE, width: "44px", height: "44px", marginBottom: "14px" }}>
-                  <Icon name={entry.icon} size={21} strokeWidth={1.8} />
-                </span>
+              <li key={entry.title} data-card="" style={{ ...PANEL, borderRadius: "22px", padding: "24px", boxShadow: "var(--shadow-sm)" }}>
+                <Tile icon={entry.icon} size={44} iconSize={21} style={{ marginBottom: "14px" }} />
                 <h3 style={{ fontSize: "18px", fontWeight: "700", paddingBottom: "14px", marginBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
                   {entry.title}
                 </h3>
-                <ul style={{ display: "grid", gap: "9px" }}>
+                <ul data-stagger="" style={{ display: "grid", gap: "9px" }}>
                   {entry.items.map((item) => (
                     <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
                       <Tick color="#2D74D7" />
@@ -653,8 +630,8 @@ export default async function HowWeRankPage() {
       <section id="reviews" aria-labelledby="re-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", alignItems: "start" }}>
           <div>
-            <h2 id="re-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
-              How we use Google reviews
+            <h2 data-reveal="" id="re-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
+              {accentTail("How we use Google reviews", 2)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)", marginBottom: "16px" }}>
               Google review data is one reputation signal among several. We read the rating alongside
@@ -706,7 +683,7 @@ export default async function HowWeRankPage() {
           </div>
           <div style={PANEL}>
             <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>How customer feedback is evaluated</h3>
-            <ul style={{ display: "grid", gap: "11px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "11px" }}>
               {FEEDBACK.map((item) => (
                 <li key={item} style={TICK_ITEM}>
                   <Tick />
@@ -721,8 +698,8 @@ export default async function HowWeRankPage() {
       {/* ----------------------------------------------------- verification */}
       <section id="verification" aria-labelledby="ve-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <h2 id="ve-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
-            How we verify credentials and business information
+          <h2 data-reveal="" id="ve-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
+            {accentTail("How we verify credentials and business information", 2)}
           </h2>
           <p style={{ ...LEAD, maxWidth: "780px", marginBottom: "28px" }}>
             We check against the issuing body or an official record wherever one exists, then label
@@ -748,7 +725,7 @@ export default async function HowWeRankPage() {
                   Five labels, so you can see how far a claim was actually checked.
                 </InfoModal>
               </div>
-              <ul style={{ display: "grid", gap: "12px" }}>
+              <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
                 {STATUSES.map((status) => (
                   <li key={status.label} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                     <Pill tone={status.tone} icon={status.icon} minWidth="132px">
@@ -776,7 +753,7 @@ export default async function HowWeRankPage() {
                   Primary sources take priority over anything aggregated.
                 </InfoModal>
               </div>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "9px 18px" }}>
+              <ul data-stagger="" data-ag="one" style={autoGrid(140, "9px 18px")}>
                 {CHECKS.map((item) => (
                   <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", color: "var(--text-secondary)" }}>
                     <Tick color="#2D74D7" />
@@ -795,15 +772,16 @@ export default async function HowWeRankPage() {
       </section>
 
       {/* ------------------------------------------------------------ local */}
-      <section id="local" aria-labelledby="lo-h2" style={{ background: "var(--blue-900)", color: "var(--text-on-ink)" }}>
-        <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "44px", alignItems: "start" }}>
+      <section id="local" aria-labelledby="lo-h2" style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}>
+        <DarkBackdrop />
+        <div data-split="" style={{ ...SECTION, position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "44px", alignItems: "start" }}>
           <div>
             <p style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: "700", letterSpacing: "var(--ls-wider)", textTransform: "uppercase", color: "#E8B551", marginBottom: "14px" }}>
               <Icon name="pin" size={16} strokeWidth={2} />
               Local relevance
             </p>
-            <h2 id="lo-h2" style={{ ...SPLIT_H2, color: "#fff", marginBottom: "16px" }}>
-              Why a business has to genuinely serve the market
+            <h2 data-reveal="" id="lo-h2" style={{ ...SPLIT_H2, color: "#fff", marginBottom: "16px" }}>
+              {accentTail("Why a business has to genuinely serve the market", 2)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.75", color: "rgba(232,237,245,0.82)" }}>
               A roofing company ranked in a city should show meaningful coverage of that area, not
@@ -816,7 +794,7 @@ export default async function HowWeRankPage() {
             <h3 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "rgba(232,237,245,0.6)", marginBottom: "14px" }}>
               How businesses enter our research pool
             </h3>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px 20px", marginBottom: "20px" }}>
+            <ul data-stagger="" data-ag="one" style={autoGrid(190, "10px 20px", { marginBottom: "20px" })}>
               {DISCOVERY.map((item) => (
                 <li key={item} style={{ display: "flex", gap: "9px", fontSize: "15px", color: "rgba(232,237,245,0.88)" }}>
                   <Tick color="#E8B551" />
@@ -845,11 +823,11 @@ export default async function HowWeRankPage() {
       <section id="qualify" aria-labelledby="qu-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
           <div style={{ ...PANEL, border: "1px solid var(--green-100)" }}>
-            <h2 id="qu-h2" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
-              <Icon name="check" size={20} color="#178054" strokeWidth={2.2} />
-              Minimum qualification standards
+            <h2 data-reveal="" id="qu-h2" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+              <Icon name="shield" size={20} color="#178054" strokeWidth={1.9} />
+              <span>{accentTail("Minimum qualification standards", 1)}</span>
             </h2>
-            <ul style={{ display: "grid", gap: "10px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
               {MINIMUMS.map((item) => (
                 <li key={item} style={{ ...TICK_ITEM, color: "var(--text-primary)" }}>
                   <Tick />
@@ -863,11 +841,11 @@ export default async function HowWeRankPage() {
             </p>
           </div>
           <div style={{ ...PANEL, border: "1px solid #F0DDB4" }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
-              <Icon name="alert" size={20} color="#8A5F0B" strokeWidth={2.2} />
-              Why a business may be excluded or removed
+            <h2 data-reveal="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: "700", marginBottom: "16px" }}>
+              <Icon name="alert" size={20} color="#8A5F0B" strokeWidth={1.9} />
+              <span>{accentTail("Why a business may be excluded or removed", 2)}</span>
             </h2>
-            <ul style={{ display: "grid", gap: "10px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
               {EXCLUSIONS.map((item) => (
                 <li key={item} style={{ ...TICK_ITEM, color: "var(--text-primary)" }}>
                   <Tick color="#8A5F0B" />
@@ -887,8 +865,8 @@ export default async function HowWeRankPage() {
       <section id="order" aria-labelledby="or-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "44px", alignItems: "start" }}>
           <div>
-            <h2 id="or-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
-              How we determine ranking order
+            <h2 data-reveal="" id="or-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
+              {accentTail("How we determine ranking order", 2)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)", marginBottom: "16px" }}>
               Position reflects overall strength across the whole evaluation rather than any single
@@ -903,7 +881,7 @@ export default async function HowWeRankPage() {
           </div>
           <div style={PANEL}>
             <h3 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700", marginBottom: "8px" }}>
-              <Icon name="tag" size={19} color="#2D74D7" strokeWidth={1.9} />
+              <Icon name="award" size={19} color="#8A5F0B" strokeWidth={1.9} />
               What &ldquo;best for&rdquo; labels mean
             </h3>
             <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)", marginBottom: "16px" }}>
@@ -911,10 +889,10 @@ export default async function HowWeRankPage() {
               editorial distinctions based on the evidence we gathered for that market. They are never
               sold.
             </p>
-            <ul style={{ display: "grid", gap: "10px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
               {LABELS.map((entry) => (
                 <li key={entry.label} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                  <Pill tone="amber">{entry.label}</Pill>
+                  <Pill size="label" tone="amber">{entry.label}</Pill>
                   <span style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{entry.text}</span>
                 </li>
               ))}
@@ -927,8 +905,8 @@ export default async function HowWeRankPage() {
       <section id="sponsorship" aria-labelledby="sp-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "12px" }}>
-            <h2 id="sp-h2" style={SECTION_H2}>
-              How sponsorship works
+            <h2 data-reveal="" id="sp-h2" style={SECTION_H2}>
+              {accentTail("How sponsorship works", 1)}
             </h2>
             <InfoModal
               label="Sponsored placements"
@@ -950,14 +928,14 @@ export default async function HowWeRankPage() {
             position. Paid partners may receive additional visibility in clearly marked slots, and
             nothing more.
           </p>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+          <ul data-stagger="" data-ag="one" style={autoGrid(240, "16px")}>
             {BADGES.map((badge) => (
               <li
                 key={badge.label}
                 style={{ background: "var(--surface-card)", border: `1px solid ${TONE[badge.tone].border}`, borderRadius: "18px", padding: "24px" }}
               >
                 <span style={{ display: "inline-block", marginBottom: "14px" }}>
-                  <Pill tone={badge.tone} icon={badge.icon}>
+                  <Pill size="lg" tone={badge.tone} icon={badge.icon}>
                     {badge.label}
                   </Pill>
                 </span>
@@ -976,8 +954,8 @@ export default async function HowWeRankPage() {
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "44px", alignItems: "start" }}>
           <div>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", marginBottom: "12px" }}>
-              <h2 id="up-h2" style={SPLIT_H2}>
-                How often we review rankings
+              <h2 data-reveal="" id="up-h2" style={SPLIT_H2}>
+                {accentTail("How often we review rankings", 2)}
               </h2>
               <InfoModal
                 label="Update policy"
@@ -1008,7 +986,7 @@ export default async function HowWeRankPage() {
             <ul style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {FRESHNESS.map((item) => (
                 <li key={item.label}>
-                  <Pill tone={item.tone} icon={item.icon}>
+                  <Pill size="lg" tone={item.tone} icon={item.icon}>
                     {item.label}
                   </Pill>
                 </li>
@@ -1061,8 +1039,8 @@ export default async function HowWeRankPage() {
       <section id="human" aria-labelledby="hu-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "44px", alignItems: "start" }}>
           <div>
-            <h2 id="hu-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
-              Human editorial review and AI assistance
+            <h2 data-reveal="" id="hu-h2" style={{ ...SPLIT_H2, marginBottom: "16px" }}>
+              {accentTail("Human editorial review and AI assistance", 2)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-secondary)", marginBottom: "16px" }}>
               Automated tools help us organise public data, group review themes, summarise research and
@@ -1098,17 +1076,17 @@ export default async function HowWeRankPage() {
               >
                 We use tools to help draft, and people to decide what is true.
               </InfoModal>
-              <Link href={routes.expertsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                Meet our experts and reviewers →
-              </Link>
+              <ArrowLink href={routes.expertsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
+                Meet our experts and reviewers
+              </ArrowLink>
             </div>
           </div>
           <div style={PANEL}>
             <h3 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>
-              <Icon name="clipboard" size={19} color="#2D74D7" strokeWidth={1.9} />
+              <Icon name="usercheck" size={19} color="#2D74D7" strokeWidth={1.9} />
               What an editor checks before publishing
             </h3>
-            <ul style={{ display: "grid", gap: "10px" }}>
+            <ul data-stagger="" style={{ display: "grid", gap: "10px" }}>
               {EDITOR_CHECKS.map((item) => (
                 <li key={item} style={TICK_ITEM}>
                   <Tick />
@@ -1123,8 +1101,8 @@ export default async function HowWeRankPage() {
       {/* ---------------------------------------------------------- example */}
       <section id="example" aria-labelledby="ex-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <h2 id="ex-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
-            Example: evaluating a roofer
+          <h2 data-reveal="" id="ex-h2" style={{ ...SECTION_H2, marginBottom: "12px" }}>
+            {accentTail("Example: evaluating a roofer", 2)}
           </h2>
           <p style={{ ...LEAD, maxWidth: "780px", marginBottom: "28px" }}>
             A simplified walkthrough of the framework in practice. This is an illustrative evaluation,
@@ -1147,7 +1125,7 @@ export default async function HowWeRankPage() {
                   <span style={{ fontSize: "15px", fontWeight: "700", color: "var(--blue-900)" }}>{row.factor}</span>
                   <span style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{row.finding}</span>
                   <span style={{ justifySelf: "end" }}>
-                    <Pill tone={row.verdict === "Noted" ? "blue" : "green"}>{row.verdict}</Pill>
+                    <Pill size="verdict" tone={row.verdict === "Noted" ? "blue" : "green"}>{row.verdict}</Pill>
                   </span>
                 </li>
               ))}
@@ -1170,24 +1148,22 @@ export default async function HowWeRankPage() {
       {/* ------------------------------------------------------ participate */}
       <section id="participate" aria-labelledby="pa-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={SECTION}>
-          <h2 id="pa-h2" style={{ ...SECTION_H2, marginBottom: "28px" }}>
-            Claiming, submissions and corrections
+          <h2 data-reveal="" id="pa-h2" style={{ ...SECTION_H2, marginBottom: "28px" }}>
+            {accentTail("Claiming, submissions and corrections", 2)}
           </h2>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
             {PARTICIPATE.map((entry) => (
               <li
                 key={entry.title}
                 data-card=""
-                style={{ ...PANEL, borderRadius: "18px", padding: "24px", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "12px" }}
+                style={{ ...PANEL, borderRadius: "22px", padding: "24px", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "12px" }}
               >
-                <span aria-hidden="true" style={{ ...TILE, width: "44px", height: "44px" }}>
-                  <Icon name={entry.icon} size={21} strokeWidth={1.8} />
-                </span>
+                <Tile icon={entry.icon} size={44} iconSize={21} />
                 <h3 style={{ fontSize: "18px", fontWeight: "700" }}>{entry.title}</h3>
                 <p style={{ fontSize: "15px", lineHeight: "1.65", color: "var(--text-secondary)" }}>{entry.text}</p>
-                <Link href={entry.href} style={{ marginTop: "auto", paddingTop: "8px", fontSize: "15px", fontWeight: "600" }}>
-                  {entry.cta} →
-                </Link>
+                <ArrowLink href={entry.href} style={{ marginTop: "auto", paddingTop: "8px", fontSize: "15px", fontWeight: "600" }}>
+                  {entry.cta}
+                </ArrowLink>
               </li>
             ))}
           </ul>
@@ -1201,12 +1177,12 @@ export default async function HowWeRankPage() {
       {/* ------------------------------------------------------------- faqs */}
       <section id="faqs" aria-labelledby="fq-h2" style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div data-split="" style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "48px", alignItems: "start" }}>
-          <h2 id="fq-h2" style={SPLIT_H2}>
-            Ranking methodology FAQs
+          <h2 data-reveal="" id="fq-h2" style={SPLIT_H2}>
+            {accentTail("Ranking methodology FAQs", 1)}
           </h2>
-          <ul style={{ display: "grid", gap: "12px" }}>
+          <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
             {FAQS.map((faq) => (
-              <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
+              <FaqRow key={faq.id} question={faq.question} answer={faq.answer} />
             ))}
           </ul>
         </div>
@@ -1215,10 +1191,10 @@ export default async function HowWeRankPage() {
       {/* ------------------------------------------------------------ trust */}
       <section id="trust" aria-labelledby="tr-h2">
         <div style={{ ...SHELL, padding: "64px 24px 72px" }}>
-          <h2 id="tr-h2" style={{ ...SPLIT_H2, marginBottom: "24px" }}>
-            Learn more about our editorial process
+          <h2 data-reveal="" id="tr-h2" style={{ ...SPLIT_H2, marginBottom: "24px" }}>
+            {accentTail("Learn more about our editorial process", 2)}
           </h2>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "14px", marginBottom: "44px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "14px", marginBottom: "44px" }}>
             {TRUST_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
@@ -1236,9 +1212,7 @@ export default async function HowWeRankPage() {
                     textDecoration: "none",
                   }}
                 >
-                  <span aria-hidden="true" style={{ ...TILE, flex: "0 0 40px", width: "40px", height: "40px", borderRadius: "11px" }}>
-                    <Icon name={link.icon} size={19} strokeWidth={1.8} />
-                  </span>
+                  <Tile icon={link.icon} size={40} iconSize={19} flex />
                   <span style={{ display: "block" }}>
                     <span style={{ display: "block", fontSize: "16px", fontWeight: "700", color: "var(--blue-900)" }}>{link.name}</span>
                     <span style={{ display: "block", fontSize: "13px", color: "var(--text-secondary)" }}>{link.meta}</span>
@@ -1250,7 +1224,9 @@ export default async function HowWeRankPage() {
 
           <div style={{ background: "var(--surface-page)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "30px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "22px" }}>
-              <h2 style={{ fontSize: "21px", fontWeight: "700" }}>About this methodology</h2>
+              <h2 data-reveal="" style={{ fontSize: "21px", fontWeight: "700" }}>
+                {accentTail("About this methodology", 1)}
+              </h2>
               <InfoModal
                 label="Corrections policy"
                 title="Corrections policy"
@@ -1265,7 +1241,7 @@ export default async function HowWeRankPage() {
                 Getting something wrong is not the problem. Leaving it wrong is.
               </InfoModal>
             </div>
-            <dl data-facts="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "18px 32px", margin: "0" }}>
+            <dl data-facts="" data-stagger="" data-ag="one" style={{ ...autoGrid(200, "18px 32px"), margin: "0" }}>
               {meta.map((item) => (
                 <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                   <span
@@ -1321,6 +1297,7 @@ export default async function HowWeRankPage() {
           </div>
         </div>
       </section>
+      </div>
     </SiteChrome>
   );
 }

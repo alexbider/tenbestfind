@@ -1,0 +1,37 @@
+/* October 2026 design: howrank template (11 How We Rank), scoped to .hw2,
+   plus the phone rules every trust page shares, scoped to .tr2 (the expert,
+   search, for-businesses and utility templates wear it too).
+
+   The older stylesheets rewrite any auto-fit list on a phone from its inline
+   text (pages.css: rails for cards, two columns for lists of links). The
+   design lets these lists fall to one column, and keeps rails only where
+   v2-mobile.css makes them. Lists opt out of the older rewrite with data-ag
+   (see autoGrid in components/site/trust/parts.tsx); the :not(#x) is only
+   there to outrank the long selectors in pages.css. */
+
+.tr2 { background: var(--surface-card); overflow-x: clip; }
+.tr2 [data-hero] { --mx: 75%; --my: 20%; }
+.tr2 [data-ten-outline] { animation: none; }
+
+@media (max-width: 760px) {
+  body .tr2 [data-ag]:not(#x):not(:is(ul, ol)[data-stagger]:has(> li[data-card]:nth-child(3))) {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--ag-min), 100%), 1fr)) !important;
+    gap: var(--ag-gap) !important;
+    overflow: visible !important;
+    padding: var(--ag-pad) !important;
+    margin: var(--ag-mt, 0) 0 var(--ag-mb) !important;
+    scroll-snap-type: none !important;
+  }
+  body .tr2 [data-ag="one"]:not(#x):not(:is(ul, ol)[data-stagger]:has(> li[data-card]:nth-child(3))) { grid-template-columns: minmax(0, 1fr) !important; }
+  body .tr2 [data-ag]:not(#x):not(:is(ul, ol)[data-stagger]:has(> li[data-card]:nth-child(3))) > * { width: auto !important; flex: initial; }
+
+  /* The design's rail for a row of linked cards, which pages.css would turn
+     into two columns because the cards hold no paragraph. */
+  body .tr2 ul[data-stagger]:has(> li > a[data-card]:nth-child(1)):has(> li:nth-child(4)):not(#x) {
+    display: flex !important; flex-wrap: nowrap !important; gap: 12px !important; overflow-x: auto !important; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory !important; scroll-padding-inline: 18px; margin-inline: -18px !important; padding: 4px 18px 14px !important;
+    scrollbar-width: none;
+  }
+  body .tr2 ul[data-stagger]:has(> li > a[data-card]:nth-child(1)):has(> li:nth-child(4)):not(#x) > li { flex: 0 0 82% !important; max-width: 340px; width: auto !important; scroll-snap-align: start; }
+}

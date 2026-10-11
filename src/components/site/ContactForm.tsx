@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { submitContact, type FormState } from "@/app/actions/public";
-import { Check, Icon } from "@/components/ui/Icon";
+import { Check } from "@/components/ui/Icon";
+import { Tile } from "@/components/site/trust/parts";
 import type { IconName } from "@/lib/icon-paths";
 
 const TOPICS: { value: string; label: string; body: string; icon: IconName }[] = [
@@ -46,33 +47,47 @@ export function ContactForm() {
   const needsUrl = topic === "correction" || topic === "accessibility";
 
   return (
-    <div className="split" style={{ display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: 48, alignItems: "start" }}>
-      <div>
-        <h3 className="related-heading">Where should it go?</h3>
-        <ul style={{ display: "grid", gap: 10 }}>
-          {TOPICS.map((item) => (
+    <div data-contact-form="">
+      <h3 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", margin: "0 0 12px" }}>
+        Where should it go?
+      </h3>
+      <ul style={{ display: "grid", gap: "10px", marginBottom: "22px" }}>
+        {TOPICS.map((item) => {
+          const on = topic === item.value;
+          return (
             <li key={item.value}>
               <button
                 type="button"
-                className="topic-card"
-                data-on={topic === item.value}
-                aria-pressed={topic === item.value}
+                data-on={on}
+                aria-pressed={on}
                 onClick={() => setTopic(item.value)}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  width: "100%",
+                  padding: "14px 16px",
+                  textAlign: "left",
+                  borderRadius: "14px",
+                  border: `1px solid ${on ? "var(--color-primary)" : "var(--border-subtle)"}`,
+                  background: on ? "var(--blue-50)" : "var(--surface-card)",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                  color: "var(--text-primary)",
+                }}
               >
-                <span className="topic-card__icon" aria-hidden="true">
-                  <Icon name={item.icon} size={20} strokeWidth={1.8} />
-                </span>
-                <span>
-                  <strong>{item.label}</strong>
-                  <span>{item.body}</span>
+                <Tile icon={item.icon} size={36} iconSize={17} flex />
+                <span style={{ display: "block", minWidth: "0" }}>
+                  <strong style={{ display: "block", fontSize: "15px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "2px" }}>{item.label}</strong>
+                  <span style={{ display: "block", fontSize: "14px", lineHeight: "1.55", color: "var(--text-secondary)" }}>{item.body}</span>
                 </span>
               </button>
             </li>
-          ))}
-        </ul>
-      </div>
+          );
+        })}
+      </ul>
 
-      <form action={action} className="card" style={{ padding: "28px 30px" }}>
+      <form action={action}>
         <input type="hidden" name="topic" value={topic} />
 
         {state.status === "ok" ? (
@@ -83,42 +98,74 @@ export function ContactForm() {
         ) : null}
         {state.status === "error" ? <p className="form-error">{state.message}</p> : null}
 
-        <div className="field">
-          <label htmlFor="contact-name">Your name</label>
-          <input id="contact-name" name="name" type="text" required autoComplete="name" />
-          {state.errors?.name ? <span className="field__error">{state.errors.name}</span> : null}
+        <div data-form-grid="" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <span style={{ display: "block" }}>
+            <label data-label="" htmlFor="contact-name">
+              Your name
+            </label>
+            <input data-field="" id="contact-name" name="name" type="text" required autoComplete="name" />
+            {state.errors?.name ? <span className="field__error">{state.errors.name}</span> : null}
+          </span>
+
+          <span style={{ display: "block" }}>
+            <label data-label="" htmlFor="contact-email">
+              Email
+            </label>
+            <input data-field="" id="contact-email" name="email" type="email" required autoComplete="email" />
+            {state.errors?.email ? <span className="field__error">{state.errors.email}</span> : null}
+          </span>
+
+          {needsUrl ? (
+            <span style={{ display: "block", gridColumn: "1 / -1" }}>
+              <label data-label="" htmlFor="contact-url">
+                Page address
+              </label>
+              <input
+                data-field=""
+                id="contact-url"
+                name="pageUrl"
+                type="text"
+                placeholder="/us/tx/dallas/roofing/"
+                autoComplete="off"
+              />
+              <span style={{ display: "block", marginTop: "6px", fontSize: "13px", color: "var(--text-secondary)" }}>
+                Which page is the problem on?
+              </span>
+            </span>
+          ) : null}
+
+          <span style={{ display: "block", gridColumn: "1 / -1" }}>
+            <label data-label="" htmlFor="contact-message">
+              Message
+            </label>
+            <textarea data-field="" id="contact-message" name="message" rows={5} required />
+            {state.errors?.message ? <span className="field__error">{state.errors.message}</span> : null}
+          </span>
         </div>
 
-        <div className="field">
-          <label htmlFor="contact-email">Email</label>
-          <input id="contact-email" name="email" type="email" required autoComplete="email" />
-          {state.errors?.email ? <span className="field__error">{state.errors.email}</span> : null}
-        </div>
-
-        {needsUrl ? (
-          <div className="field">
-            <label htmlFor="contact-url">Page address</label>
-            <input
-              id="contact-url"
-              name="pageUrl"
-              type="text"
-              placeholder="/us/tx/dallas/roofing/"
-              autoComplete="off"
-            />
-            <span className="field__hint">Which page is the problem on?</span>
-          </div>
-        ) : null}
-
-        <div className="field">
-          <label htmlFor="contact-message">Message</label>
-          <textarea id="contact-message" name="message" rows={6} required />
-          {state.errors?.message ? <span className="field__error">{state.errors.message}</span> : null}
-        </div>
-
-        <button type="submit" className="btn btn--primary" disabled={pending}>
+        <button
+          data-btn=""
+          type="submit"
+          disabled={pending}
+          style={{
+            marginTop: "20px",
+            height: "50px",
+            padding: "0 26px",
+            border: "0",
+            borderRadius: "14px",
+            background: "var(--color-primary)",
+            color: "#fff",
+            fontFamily: "var(--font-sans)",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            boxShadow: "var(--shadow-primary)",
+            opacity: pending ? 0.7 : 1,
+          }}
+        >
           {pending ? "Sending…" : "Send message"}
         </button>
-        <p style={{ marginTop: 14, fontSize: 13, color: "var(--text-muted)" }}>
+        <p style={{ marginTop: "14px", fontSize: "13px", color: "var(--text-muted)" }}>
           We use your email to reply to this message and nothing else.
         </p>
       </form>

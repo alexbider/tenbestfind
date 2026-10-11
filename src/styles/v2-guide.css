@@ -1,0 +1,30 @@
+/* October 2026 design: guide template (editorial and cost guides). */
+
+[data-guide] table { border-collapse: collapse; width: 100%; }
+[data-guide] th, [data-guide] td { text-align: left; }
+[data-guide] [data-rtable] tbody tr { transition: background 160ms ease; }
+@media (hover: hover) {
+  [data-guide] [data-rtable] tbody tr:hover { background: var(--blue-50); }
+}
+
+/* A phone has no room for a three-column comparison, so each row becomes its own card. */
+@media (max-width: 760px) {
+  [data-guide] table[data-rtable] { min-width: 0 !important; }
+  [data-guide] [data-rtable] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  [data-guide] [data-rtable], [data-guide] [data-rtable] tbody, [data-guide] [data-rtable] tr, [data-guide] [data-rtable] th, [data-guide] [data-rtable] td { display: block; width: 100%; }
+  [data-guide] [data-rtable] tr { border: 1px solid var(--border-subtle); border-radius: 14px; margin-bottom: 12px; padding: 8px 4px; }
+  [data-guide] [data-rtable] td, [data-guide] [data-rtable] th { border: 0 !important; padding: 8px 16px !important; }
+  [data-guide] [data-rtable] td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; font-weight: 700; letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+  [data-guide] [data-rtable] td:empty { display: none !important; }
+  [data-guide] div:has(> table[data-rtable]) { border: 0 !important; overflow: visible !important; border-radius: 0 !important; }
+}
+
+/* The hero picture of a cost guide is a desktop flourish. */
+@media (max-width: 980px) {
+  [data-guide] [data-hero-aside] { display: none !important; }
+}
+
+/* The skin starts its FAQ numbering again on every row, so each reads "01".
+   Count once per list instead. */
+main[data-skin] article[data-guide][data-guide] li:has(> details[data-faq]) { counter-reset: none; }
+main[data-skin] article[data-guide] ul:has(> li > details[data-faq]) { counter-reset: tbfq; }

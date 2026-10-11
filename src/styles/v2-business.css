@@ -1,0 +1,78 @@
+/* October 2026 design: business template. */
+
+/* The phone bar the design pins to the foot of a profile. It lives outside
+   .biz-2026 so the phone layer's full-width button rule leaves it alone, and it
+   sits above the site's own tab bar rather than behind it. */
+[data-sticky-cta] { display: none; }
+
+@media (max-width: 760px) {
+  [data-sticky-cta] {
+    display: flex !important;
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+  }
+  .biz-2026 #profile-meta { padding-bottom: 72px; }
+}
+
+/* ------------------------------------------------------------------ phones
+   pages.css turns every `repeat(auto-fit, minmax(...))` list on the site into
+   a swipe rail, or a two-up grid when it only holds short links. The design's
+   phone layer does less: only a row of three or more cards swipes, and the
+   short-link lists (services, related services) are one per line. So inside
+   .biz-2026 the two-up grid is answered here, and a row of fewer than three
+   cards is stacked. The first selector repeats the legacy one with .biz-2026
+   added so that it is the more specific of the two. */
+@media (max-width: 760px) {
+  .site-page .biz-2026
+    section
+    :is(ul, ol, div)[style*="repeat(auto-fit"]:not([data-rail]):not([data-rank-rail]):not(
+      [data-jobs]
+    ):not([data-trend-rail]):not([data-cat-grid]):not([data-band-grid]):not([data-facts]):not(
+      :has(> * :is(h2, h3, h4, p, img, [data-thumb]))
+    ) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .site-page .biz-2026
+    section
+    :is(ul, ol, div)[style*="minmax(220px"]:not([data-rail]):not([data-rank-rail]):not(
+      [data-jobs]
+    ):not([data-trend-rail]):not([data-cat-grid]):not([data-band-grid]):not([data-facts]):not(
+      :has(> * :is(h2, h3, h4, p, img, [data-thumb]))
+    ),
+  .site-page .biz-2026
+    section
+    :is(ul, ol, div)[style*="minmax(250px"]:not([data-rail]):not([data-rank-rail]):not(
+      [data-jobs]
+    ):not([data-trend-rail]):not([data-cat-grid]):not([data-band-grid]):not([data-facts]):not(
+      :has(> * :is(h2, h3, h4, p, img, [data-thumb]))
+    ) {
+    gap: 8px !important;
+  }
+
+  .site-page .biz-2026 section :is(ul, ol)[style*="repeat(auto-fit"]:not(:has(> li[data-card]:nth-child(3))) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .site-page .biz-2026 section :is(ul, ol)[style*="repeat(auto-fit"]:not(:has(> li[data-card]:nth-child(3))) > * {
+    width: auto !important;
+    flex: initial;
+    scroll-snap-align: none;
+  }
+
+  /* The design's section menu sits under the compact phone header. */
+  .biz-2026 [data-toc] { top: 64px !important; }
+  .biz-2026 [data-toc] ul { padding: 7px 0 !important; }
+  .biz-2026 [data-toc] > div > span:first-child { display: none; }
+}

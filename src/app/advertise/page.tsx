@@ -104,7 +104,7 @@ export default async function AdvertisePage() {
   });
 
   return (
-    <SiteChrome active="business">
+    <SiteChrome active="business" skin>
       <FaqJsonLd faqs={BILLING_FAQS} />
 
       {/* ------------------------------------------------------------- hero */}

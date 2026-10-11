@@ -45,16 +45,12 @@
 [data-mega] > [data-panel] { opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.995); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out), visibility 220ms; }
 [data-mega]:hover > [data-panel], [data-mega]:focus-within > [data-panel] { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
 [data-navlink] { position: relative; transition: background 160ms var(--ease-out), color 160ms var(--ease-out); }
-/* The three states of a tab, all of them light. The page a reader is on used
-   to invert to solid navy with white text, which read as a button rather than
-   a position and sat oddly against everything around it. It is the same wash
-   as the hover now, one step deeper and in the darker blue, so the current tab
-   is still the one your eye lands on, helped by the heavier weight. The
-   colour and the weight are important because both are set on the element
-   itself, where a stylesheet cannot reach them otherwise. */
+/* Hover is the pale wash, pressing is one step deeper, and the page a reader
+   is on is solid navy with white text, per the October 2026 design. The colour
+   is important because it is set on the element itself. */
 [data-navlink]:hover, [data-mega]:hover > [data-navlink], [data-mega]:focus-within > [data-navlink] { background: var(--blue-50); color: var(--color-primary-hover) !important; }
 [data-navlink]:active, [data-mega] > [data-navlink]:active { background: var(--blue-100); color: var(--color-primary-active) !important; }
-[data-navlink][data-active="1"] { background: var(--blue-100); color: var(--color-primary-active) !important; font-weight: 700 !important; }
+[data-navlink][data-active="1"] { background: var(--ink) !important; color: #fff !important; }
 [data-navlink] svg { transition: transform 200ms var(--ease-out); }
 [data-mega]:hover > [data-navlink] svg { transform: rotate(180deg); }
 [data-mitem] { transition: background 160ms var(--ease-out), color 160ms var(--ease-out), transform 160ms var(--ease-out); }
@@ -112,12 +108,27 @@
   [data-mobile-nav] { display: block !important; }
   [data-hdr-cta], [data-hsearch] { display: none !important; }
 }
+/* With How We Rank back in the menu, the bar is wider than the space
+   between 1180px and 1320px. The header search steps out first; the search
+   page and the drawer both still offer it. */
+@media (max-width: 1320px) and (min-width: 1181px) {
+  [data-hsearch] { display: none !important; }
+}
 [data-util] a, [data-util] p { white-space: nowrap; }
 @media (max-width: 1180px) {
   [data-util-copy] { display: none !important; }
   [data-util] > div { justify-content: flex-end !important; }
 }
+/* The phone tab bar: five destinations pinned to the bottom of the screen
+   below 760px. The body carries the padding that keeps the footer clear of it. */
+[data-tabbar] { display: none; }
+[data-tab] { transition: color 160ms var(--ease-out), background 160ms var(--ease-out); }
+[data-tab]:active { background: var(--blue-50); }
+[data-tab][data-on="1"] { color: var(--color-primary) !important; }
+[data-tab][data-on="1"] [data-tab-ico] { background: var(--blue-50); }
 @media (max-width: 760px) {
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  [data-tabbar] { display: flex !important; }
   [data-util] { display: none !important; }
   [data-wordmark] { display: none !important; }
   [data-mobile-sheet] { left: 0 !important; right: 0 !important; top: var(--hdr-h) !important; bottom: 0 !important; max-height: none !important; border-radius: 0 !important; padding-bottom: 96px !important; }

@@ -1,0 +1,44 @@
+/* October 2026 design: region template.
+
+   The page rules of 05 Region Hub, scoped to .rg2, plus the overrides the
+   older stylesheets need: pages.css pins heading tracking with !important and
+   rewrites narrow auto-fit lists on a phone from the minimum written in the
+   style, which the grids here avoid by reading it through a variable. */
+
+.rg2 { background: var(--surface-card); overflow-x: clip; }
+.rg2 h1, .rg2 h2, .rg2 h3 { margin: 0; color: var(--ink); }
+.rg2 h3 { letter-spacing: -0.02em; }
+.rg2 p { margin: 0; }
+.rg2 ul, .rg2 ol, .rg2 dl, .rg2 dd { margin: 0; padding: 0; list-style: none; }
+.rg2 a { text-decoration: none; }
+.rg2 table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.rg2 th, .rg2 td { text-align: left; }
+.rg2 section[id] { scroll-margin-top: 140px; }
+.rg2 [data-hero] { --mx: 75%; --my: 20%; }
+
+body .rg2.rg2 h1 { letter-spacing: -0.04em !important; }
+body .rg2.rg2 h2 { letter-spacing: -0.04em !important; }
+.rg2 .serif-accent { letter-spacing: -0.01em; }
+
+/* The outline of the hero "10" draws in once and stays. */
+.rg2 [data-ten-outline] { animation: none !important; }
+
+.rg2 [data-btn] { transition: transform 220ms var(--spring), background 200ms ease, box-shadow 260ms var(--spring), border-color 200ms ease, color 200ms ease; }
+.rg2 [data-btn]:active { transform: scale(0.97); }
+.rg2 [data-arrow] { transition: transform 260ms var(--spring); }
+
+/* The licensing band is --ink now, not --blue-900, so the dark-section rules
+   in pages.css no longer find it. The skin's gold eyebrow is for light pages;
+   on navy it stays the design's brighter gold. */
+.rg2 #licensing [data-info] { color: rgba(232, 237, 245, 0.85); }
+.rg2 #licensing [data-info] > span { border-color: rgba(255, 255, 255, 0.4); color: #E8B551; }
+.rg2 #licensing p[style*="text-transform:uppercase"] { color: #E8B551 !important; }
+
+/* pages.css turns any list of plain links into two columns on a phone. The
+   design keeps the other-markets and other-states lists to one. */
+@media (max-width: 760px) {
+  body .site-page .rg2 section ul[data-rg-one][data-rg-one][data-rg-one] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+}

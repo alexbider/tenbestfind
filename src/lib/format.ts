@@ -46,7 +46,7 @@ export function priceRange(
   high: number | null | undefined,
   currency = "USD",
 ): string {
-  if (low && high) return `${dollars(low, currency)}–${dollars(high, currency)}`;
+  if (low && high) return `${dollars(low, currency)} to ${dollars(high, currency)}`;
   if (low) return `From ${dollars(low, currency)}`;
   if (high) return `Up to ${dollars(high, currency)}`;
   return "Quoted per project";

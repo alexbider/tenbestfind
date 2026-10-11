@@ -21,7 +21,7 @@ const POP_NOTE = {
   top: "calc(100% + 10px)",
   left: "0",
   zIndex: "180",
-  background: "var(--blue-900)",
+  background: "var(--ink)",
   color: "var(--text-on-ink)",
   borderRadius: "16px",
   boxShadow: "var(--shadow-xl)",
@@ -122,10 +122,31 @@ export function PopText({ children }: { children: ReactNode }) {
 }
 
 export function PopLink({ href, children }: { href: string; children: ReactNode }) {
+  // Callers write "How We Rank →"; the arrow is drawn as the design's nudging
+  // svg rather than a character, so the glyph is lifted off the end of the text.
+  const arrowed = typeof children === "string" && /\s*→$/.test(children);
+  const label = arrowed ? (children as string).replace(/\s*→$/, "") : children;
   return (
-    <p style={{ marginTop: "14px" }}>
-      <Link href={href} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
-        {children}
+    <p style={{ marginTop: "12px" }}>
+      <Link data-link="" href={href} style={{ fontSize: "13px", fontWeight: "600", color: "#E8B551" }}>
+        {label}
+        {arrowed ? (
+          <svg
+            data-arrow=""
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            style={{ display: "inline-block", verticalAlign: "-0.18em", marginLeft: "6px" }}
+          >
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        ) : null}
       </Link>
     </p>
   );

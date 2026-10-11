@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteChrome } from "@/components/site/SiteChrome";
-import {
-  BTN_GHOST,
-  BTN_PRIMARY,
-  Eyebrow,
-  GRID_BACKDROP,
-  LEAD,
-  RowLink,
-  SHELL,
-  TenOutline,
-} from "@/components/site/page-parts";
+import { BTN_GHOST, BTN_PRIMARY, SHELL } from "@/components/site/page-parts";
+import { HeroBackdrop, Kicker, LinkRow, autoGrid, heroAccentTail } from "@/components/site/trust/parts";
+import { accentTail } from "@/components/ui/Accent";
+import type { IconName } from "@/components/ui/Icon";
 import { routes } from "@/lib/urls";
 
 /**
@@ -33,64 +27,57 @@ export const metadata: Metadata = {
   title: "Page not found",
 };
 
-const DESTINATIONS = [
-  { href: routes.servicesIndex(), label: "Home Services" },
-  { href: routes.locationsIndex(), label: "Locations" },
-  { href: routes.rankingsIndex(), label: "Rankings" },
-  { href: routes.guidesIndex(), label: "Guides" },
+const DESTINATIONS: { href: string; label: string; icon: IconName }[] = [
+  { href: routes.servicesIndex(), label: "Home Services", icon: "tools" },
+  { href: routes.locationsIndex(), label: "Locations", icon: "pin" },
+  { href: routes.rankingsIndex(), label: "Rankings", icon: "award" },
+  { href: routes.guidesIndex(), label: "Guides", icon: "book" },
 ];
 
 export default function NotFound() {
   return (
-    <SiteChrome>
-      <section style={GRID_BACKDROP}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "72px 24px 40px", position: "relative" }}>
-          <Eyebrow>404</Eyebrow>
-          <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", lineHeight: "1.1", margin: "0 0 16px" }}>
-            We could not find that page
-          </h1>
-          <p style={{ ...LEAD, maxWidth: "58ch", margin: "0 0 28px" }}>
-            The address may have changed, or it may never have existed. Everything the site
-            publishes is reachable from the four hubs below.
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-            <Link href={routes.home()} style={BTN_PRIMARY}>
-              Back to the homepage
-            </Link>
-            <Link href={routes.servicesIndex()} style={BTN_GHOST}>
-              Browse services
-            </Link>
+    <SiteChrome skin>
+      <div className="tr2 ut2">
+        <section data-hero="" style={{ position: "relative", overflow: "hidden", background: "var(--paper)", borderBottom: "1px solid var(--border-subtle)" }}>
+          <HeroBackdrop />
+          <div style={{ ...SHELL, padding: "72px 24px 48px", position: "relative" }}>
+            <Kicker hero="1" gap="14px">
+              404
+            </Kicker>
+            <h1
+              data-in="2"
+              style={{ fontSize: "clamp(36px, 5vw, 60px)", lineHeight: "1.08", letterSpacing: "-0.04em", fontWeight: "800", margin: "0 0 16px", textWrap: "balance" }}
+            >
+              {heroAccentTail("We could not find that page", 2)}
+            </h1>
+            <p data-in="3" style={{ fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", maxWidth: "58ch", margin: "0 0 28px", textWrap: "pretty" }}>
+              The address may have changed, or it may never have existed. Everything the site
+              publishes is reachable from the four hubs below.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+              <Link data-btn="" href={routes.home()} style={BTN_PRIMARY}>
+                Back to the homepage
+              </Link>
+              <Link href={routes.servicesIndex()} style={BTN_GHOST}>
+                Browse services
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section aria-labelledby="not-found-hubs">
-        <div style={{ ...SHELL, padding: "8px 24px 88px" }}>
-          <h2
-            id="not-found-hubs"
-            style={{ fontSize: "17px", fontWeight: "700", margin: "0 0 14px" }}
-          >
-            Start here instead
-          </h2>
-          <ul
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "8px",
-              listStyle: "none",
-              margin: "0",
-              padding: "0",
-            }}
-          >
-            {DESTINATIONS.map((destination) => (
-              <RowLink key={destination.href} href={destination.href} outline>
-                {destination.label}
-              </RowLink>
-            ))}
-          </ul>
-        </div>
-      </section>
+        <section aria-labelledby="not-found-hubs">
+          <div style={{ ...SHELL, padding: "48px 24px 88px" }}>
+            <h2 data-reveal="" id="not-found-hubs" style={{ fontSize: "20px", fontWeight: "700", margin: "0 0 18px" }}>
+              {accentTail("Start here instead", 1)}
+            </h2>
+            <ul data-stagger="" data-ag="auto" style={autoGrid(240, "12px")}>
+              {DESTINATIONS.map((destination) => (
+                <LinkRow key={destination.href} href={destination.href} label={destination.label} icon={destination.icon} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
     </SiteChrome>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { InfoModal } from "@/components/site/InfoModal";
 import { Icon } from "@/components/ui/Icon";
 import { routes } from "@/lib/urls";
+import { tail } from "./guides/parts";
 
 const FIELD = {
   width: "100%",
@@ -42,7 +43,11 @@ export function CostEstimator({
   const valid = Number.isFinite(amount) && amount > 0;
 
   return (
-    <section id="calculator" aria-labelledby="calc-h2" style={{ border: "1px solid var(--blue-100)", borderRadius: "20px", overflow: "hidden" }}>
+    <section
+      id="calculator"
+      aria-labelledby="calc-h2"
+      style={{ border: "1px solid var(--blue-100)", borderRadius: "20px", overflow: "hidden" }}
+    >
       <div
         style={{
           display: "flex",
@@ -54,9 +59,9 @@ export function CostEstimator({
           borderBottom: "1px solid var(--blue-100)",
         }}
       >
-        <h2 id="calc-h2" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700" }}>
+        <h2 id="calc-h2" data-reveal="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700" }}>
           <Icon name="calc" size={19} color="#2D74D7" strokeWidth={1.9} />
-          Estimate your {title.toLowerCase()}
+          <span>{tail(`Estimate your ${title.toLowerCase()}`)}</span>
         </h2>
         <InfoModal
           label="Calculator disclaimer"
@@ -75,7 +80,10 @@ export function CostEstimator({
       <div style={{ padding: "22px 24px 24px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px", marginBottom: "18px" }}>
           <span style={{ display: "block" }}>
-            <label htmlFor="calc-size" style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
+            <label
+              htmlFor="calc-size"
+              style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}
+            >
               Size ({unitLabel})
             </label>
             <input
@@ -95,7 +103,7 @@ export function CostEstimator({
             aria-live="polite"
             style={{ fontSize: "20px", fontWeight: "700", color: "var(--blue-900)", fontVariantNumeric: "tabular-nums" }}
           >
-            {valid ? `${money(amount * unitLow)} – ${money(amount * unitHigh)}` : "—"}
+            {valid ? `${money(amount * unitLow)} to ${money(amount * unitHigh)}` : "Not available"}
           </span>
           <span style={{ fontSize: "15px", color: "var(--text-secondary)" }}>
             {valid

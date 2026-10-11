@@ -2,16 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { SiteChrome } from "@/components/site/SiteChrome";
-import {
-  Arrow,
-  Chevron,
-  Crumbs,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  SR_ONLY,
-  TenOutline,
-} from "@/components/site/page-parts";
+import { Arrow, Chevron, Crumbs, SHELL, SR_ONLY } from "@/components/site/page-parts";
+import { DarkBackdrop, HeroBackdrop, HubFaq, SectionToc } from "@/components/site/hubs/parts";
+import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd, Media } from "@/components/ui/primitives";
 import { countryCopy, rankingCardTitle } from "@/lib/seo-copy";
@@ -31,6 +24,9 @@ const SECTION_H2 = {
   lineHeight: "1.1",
   fontWeight: "700",
 };
+// The on-page nav only lists sections this country actually renders.
+const toc = (entries: [boolean, string, string][]) =>
+  entries.filter(([show]) => show).map(([, href, label]) => ({ href, label }));
 const SECTION_HEAD = {
   display: "flex",
   alignItems: "flex-end",
@@ -277,7 +273,8 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       .join(" · ");
 
   return (
-    <SiteChrome active="locations">
+    <SiteChrome active="locations" skin>
+      <div className="cn2">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -291,9 +288,13 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       <FaqJsonLd faqs={faqs} />
 
       {/* ------------------------------------------------------------- hero */}
-      <section aria-labelledby="hero-h1" style={GRID_BACKDROP}>
-        <TenOutline style={{ right: "-30px", top: "-40px" }} />
-        <div style={{ ...SHELL, padding: "20px 24px 0" }}>
+      <section
+        data-hero=""
+        aria-labelledby="hero-h1"
+        style={{ position: "relative", overflow: "hidden", background: "var(--paper)" }}
+      >
+        <HeroBackdrop />
+        <div style={{ ...SHELL, position: "relative", padding: "20px 24px 0" }}>
           <Crumbs flush items={crumbs} />
         </div>
 
@@ -301,6 +302,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
           data-split=""
           style={{
             ...SHELL,
+            position: "relative",
             padding: "40px 24px 60px",
             display: "grid",
             gridTemplateColumns: "1.14fr 0.86fr",
@@ -344,10 +346,10 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               Independent research across {country.regions.length} {country.regionLabel}
             </p>
             <h1
-              data-hero-in="2"
+              data-in="2"
               id="hero-h1"
               style={{
-                fontSize: "clamp(38px, 4.6vw, 58px)",
+                fontSize: "clamp(36px, 5vw, 60px)",
                 lineHeight: "1.04",
                 fontWeight: "700",
                 color: "var(--ink)",
@@ -357,7 +359,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               {copy.h1}
             </h1>
             <p
-              data-hero-in="3"
+              data-in="3"
               style={{
                 marginTop: "22px",
                 fontSize: "19px",
@@ -461,9 +463,11 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
 
           {heroCard ? (
             <aside
+              data-tilt=""
               data-hero-aside=""
               aria-labelledby="hero-preview-h2"
               style={{
+                transition: "transform 500ms var(--spring)",
                 background: "var(--surface-card)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "20px",
@@ -494,7 +498,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 </span>
               </div>
               <div style={{ padding: "22px 24px 24px" }}>
-                <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "8px" }}>
+                <p data-eyebrow="" data-in="1" style={{ marginBottom: "8px" }}>
                   <span data-eyebrow-rule="" aria-hidden="true" />
                   {heroCard.category.name}
                   {heroCard.city ? ` · ${heroCard.city.name}, ${heroCard.city.region.code.toUpperCase()}` : ""}
@@ -545,7 +549,13 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
         <div style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-card)" }}>
           <ul
             data-trust-strip=""
-            style={{ ...SHELL, padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+            data-band-grid=""
+            style={{
+              ...SHELL,
+              padding: "0 24px",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(var(--ts-min, 220px), 1fr))",
+            }}
           >
             {[
               { icon: "house" as IconName, label: `${country.regions.length} ${country.regionLabel} covered` },
@@ -572,9 +582,25 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
         </div>
       </section>
 
+      <SectionToc
+        items={toc([
+          [categories.length > 0, "#cats", "Categories"],
+          [groups.size > 0, "#regions", "Regions"],
+          [metros.length > 0, "#metros", "Metros"],
+          [Boolean(leadRanking), "#feat", "Featured"],
+          [true, "#how", "Method"],
+          [latest.length > 0, "#latest", "Latest"],
+          [true, "#eeat", "Trust"],
+          [Boolean(leadGuide), "#guides", "Guides"],
+          [faqs.length > 0, "#faq", "FAQs"],
+          [true, "#biz", "Businesses"],
+        ])}
+      />
+
       {/* ------------------------------------------------------- categories */}
       {categories.length > 0 ? (
         <section
+          id="cats"
           aria-labelledby="cats-h2"
           style={{
             background: "var(--surface-page)",
@@ -585,7 +611,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
           <div style={SECTION}>
             <div style={SECTION_HEAD}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="cats-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="cats-h2" style={SECTION_H2}>
                   Browse home services in {country.name}
                 </h2>
                 <p style={{ ...SECTION_SUB, textWrap: "pretty" }}>
@@ -598,18 +624,13 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 <Arrow />
               </Link>
             </div>
-            <ul data-cat-grid="" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "14px" }}>
+            <ul data-cn-cats="" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "14px" }}>
               {categories.map((entry) => (
                 <li
                   key={entry.id}
                   data-card=""
                   style={{ ...CARD, borderRadius: "16px", padding: "22px" }}
                 >
-                  {/* The same shape as the trade tile on the home page: an
-                      icon in its own box, then the name, then the line under
-                      it. The phone layer turns that into a four-across grid
-                      of icons, and it can only do that if the tile is built
-                      the same way wherever it appears. */}
                   <Link
                     href={routes.category(entry.slug)}
                     style={{ display: "flex", flexDirection: "column", height: "100%", color: "inherit" }}
@@ -622,20 +643,15 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                         marginBottom: "16px",
                       }}
                     >
-                      <span
-                        data-tico=""
-                        aria-hidden="true"
-                        style={{ color: "var(--blue-700)", display: "inline-flex" }}
-                      >
+                      <span aria-hidden="true" style={{ color: "var(--blue-700)", display: "inline-flex" }}>
                         <Icon name={icon(entry.iconKey)} size={24} strokeWidth={1.7} />
                       </span>
-                      <span data-tarrow="" aria-hidden="true" style={{ display: "inline-flex" }}>
+                      <span aria-hidden="true" style={{ display: "inline-flex", color: "var(--gray-300)" }}>
                         <Chevron size={16} />
                       </span>
                     </span>
                     <h3
                       data-cat-name=""
-                      data-tname=""
                       style={{
                         fontSize: "17px",
                         fontWeight: "700",
@@ -647,7 +663,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                     >
                       {entry.name}
                     </h3>
-                    <p data-tsub="" style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                    <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
                       {entry.tagline}
                     </p>
                   </Link>
@@ -660,11 +676,11 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
 
       {/* ---------------------------------------------------------- regions */}
       {groups.size > 0 ? (
-        <section aria-labelledby="regions-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="regions" aria-labelledby="regions-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={SECTION_HEAD}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="regions-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="regions-h2" style={SECTION_H2}>
                   Browse by {regionWord}
                 </h2>
                 <p style={{ ...SECTION_SUB, textWrap: "pretty" }}>
@@ -677,7 +693,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 <Arrow />
               </Link>
             </div>
-            <div data-region-grid="" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "16px" }}>
+            <div data-cn-regions="" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "16px" }}>
               {[...groups.entries()].map(([title, list]) => (
                 <div key={title} style={{ ...CARD, borderRadius: "18px", padding: "24px 22px" }}>
                   <div
@@ -730,13 +746,14 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       {/* ----------------------------------------------------------- metros */}
       {metros.length > 0 ? (
         <section
+          id="metros"
           aria-labelledby="metros-h2"
           style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
         >
           <div style={SECTION}>
             <div style={SECTION_HEAD}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="metros-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="metros-h2" style={SECTION_H2}>
                   Popular {country.name} metros
                 </h2>
                 <p style={SECTION_SUB}>The cities with the most published rankings right now.</p>
@@ -746,7 +763,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 <Arrow />
               </Link>
             </div>
-            <ul data-metro-grid="" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "18px" }}>
+            <ul data-cn-metros="" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "18px" }}>
               {metros.map((city) => {
                 const links = byCity.get(city.id) ?? [];
                 return (
@@ -756,7 +773,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                     style={{
                       background: "var(--surface-card)",
                       border: "1px solid var(--border-subtle)",
-                      borderRadius: "18px",
+                      borderRadius: "22px",
                       overflow: "hidden",
                       boxShadow: "var(--shadow-sm)",
                     }}
@@ -855,11 +872,11 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
 
       {/* --------------------------------------------------------- featured */}
       {leadRanking ? (
-        <section aria-labelledby="feat-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="feat" aria-labelledby="feat-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={SECTION_HEAD}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="feat-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="feat-h2" style={SECTION_H2}>
                   Popular rankings in {country.name}
                 </h2>
                 <p style={SECTION_SUB}>The lists people open most this month.</p>
@@ -948,7 +965,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 </div>
               </article>
 
-              <ul style={{ display: "grid", gap: "16px" }}>
+              <ul data-stagger="" style={{ display: "grid", gap: "16px" }}>
                 {sideRankings.map((entry) => (
                   <li
                     key={entry.id}
@@ -956,7 +973,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                     style={{
                       background: "var(--surface-card)",
                       border: "1px solid var(--border-subtle)",
-                      borderRadius: "18px",
+                      borderRadius: "22px",
                       boxShadow: "var(--shadow-sm)",
                       display: "flex",
                       gap: "18px",
@@ -1011,13 +1028,13 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       ) : null}
 
       {/* -------------------------------------------------------------- how */}
-      <section aria-labelledby="how-h2" style={{ background: "var(--surface-soft)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <section id="how" aria-labelledby="how-h2" style={{ background: "var(--surface-soft)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div
           data-split=""
           style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.82fr 1.18fr", gap: "56px", alignItems: "start" }}
         >
           <div>
-            <h2 id="how-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "18px", textWrap: "balance" }}>
+            <h2 data-reveal="" id="how-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "18px", textWrap: "balance" }}>
               How a {country.name} ranking gets made
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.7", color: "var(--text-secondary)", marginBottom: "18px", textWrap: "pretty" }}>
@@ -1027,19 +1044,20 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               From there we compare service range, years working in the metro, how the company quotes, and what customers
               say in public. Ten names go up with the criteria and the date.
             </p>
-            <Link href={routes.howWeRank()} style={BTN_FILLED}>
+            <Link data-btn="" href={routes.howWeRank()} style={BTN_FILLED}>
               Read our full methodology
               <Arrow size={17} />
             </Link>
           </div>
-          <ol style={{ display: "grid", gap: "14px" }}>
+          <ol data-stagger="" style={{ display: "grid", gap: "14px" }}>
             {STEPS.map((step) => (
               <li
                 key={step.n}
+                data-card=""
                 style={{
                   background: "var(--surface-card)",
                   border: "1px solid var(--border-subtle)",
-                  borderRadius: "18px",
+                  borderRadius: "22px",
                   padding: "26px 28px",
                   display: "flex",
                   gap: "22px",
@@ -1061,11 +1079,11 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
 
       {/* ----------------------------------------------------------- latest */}
       {latest.length > 0 ? (
-        <section aria-labelledby="latest-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="latest" aria-labelledby="latest-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ ...SECTION_HEAD, marginBottom: "32px" }}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="latest-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="latest-h2" style={SECTION_H2}>
                   Latest {country.name} rankings
                 </h2>
                 <p style={SECTION_SUB}>Newly published and recently re-checked lists.</p>
@@ -1144,25 +1162,44 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       ) : null}
 
       {/* ------------------------------------------------------------- eeat */}
-      <section aria-labelledby="eeat-h2" style={{ background: "var(--ink)", color: "var(--text-on-ink)" }}>
+      <section
+        id="eeat"
+        aria-labelledby="eeat-h2"
+        style={{ position: "relative", overflow: "hidden", background: "var(--ink)", color: "var(--text-on-ink)" }}
+      >
+        <DarkBackdrop />
         <div
           data-split=""
-          style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
+          style={{
+            ...SECTION,
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "0.8fr 1.2fr",
+            gap: "56px",
+            alignItems: "start",
+          }}
         >
           <div>
-            <h2 id="eeat-h2" style={{ ...SECTION_H2, lineHeight: "1.12", color: "#fff", marginBottom: "16px", textWrap: "balance" }}>
-              Who is behind the rankings
+            <h2
+              data-reveal=""
+              id="eeat-h2"
+              style={{ ...SECTION_H2, lineHeight: "1.12", color: "#fff", marginBottom: "16px", textWrap: "balance" }}
+            >
+              {accentTail("Who is behind the rankings", 2)}
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.7", color: "rgba(232,237,245,0.72)", textWrap: "pretty" }}>
               Who writes the {country.name} lists, which registers we check, how we make money, and how we fix mistakes.
               All of it is public.
             </p>
           </div>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(var(--eeat-min, 240px), 1fr))", gap: "14px" }}>
             {EEAT.map((item) => (
               <li
                 key={item.title}
+                data-hov=""
+                data-dark-card=""
                 style={{
+                  transition: "background 200ms ease, border-color 200ms ease",
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: "16px",
@@ -1186,13 +1223,14 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       {/* ----------------------------------------------------------- guides */}
       {leadGuide ? (
         <section
+          id="guides"
           aria-labelledby="guides-h2"
           style={{ background: "var(--surface-page)", borderBottom: "1px solid var(--border-subtle)" }}
         >
           <div style={SECTION}>
             <div style={SECTION_HEAD}>
               <div style={{ maxWidth: "640px" }}>
-                <h2 id="guides-h2" style={SECTION_H2}>
+                <h2 data-reveal="" id="guides-h2" style={SECTION_H2}>
                   Know what to ask before you call
                 </h2>
                 <p style={{ ...SECTION_SUB, textWrap: "pretty" }}>
@@ -1219,7 +1257,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                   <Media src={leadGuide.heroImage} alt="" />
                 </div>
                 <div style={{ padding: "26px 28px 28px" }}>
-                  <p data-eyebrow="" data-hero-in="1" style={{ marginBottom: "10px" }}>
+                  <p data-reveal="" data-eyebrow="" style={{ marginBottom: "10px" }}>
                     <span data-eyebrow-rule="" aria-hidden="true" />
                     {leadGuide.category?.serviceName ?? "Guides"}
                   </p>
@@ -1236,7 +1274,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                   <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{guideByline(leadGuide)}</p>
                 </div>
               </article>
-              <ul style={{ display: "grid", gap: "12px" }}>
+              <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
                 {sideGuides.map((guide) => (
                   <li key={guide.id} data-card="" style={{ ...CARD, borderRadius: "16px", padding: "20px 22px" }}>
                     <p
@@ -1273,6 +1311,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       {/* -------------------------------------------------------------- faq */}
       {faqs.length > 0 ? (
         <section
+          id="faq"
           aria-labelledby="faq-h2"
           itemScope
           itemType="https://schema.org/FAQPage"
@@ -1283,7 +1322,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
             style={{ ...SECTION, display: "grid", gridTemplateColumns: "0.72fr 1.28fr", gap: "56px", alignItems: "start" }}
           >
             <div data-faq-sticky="" style={{ position: "sticky", top: "106px" }}>
-              <h2 id="faq-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "16px", textWrap: "balance" }}>
+              <h2 data-reveal="" id="faq-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "16px", textWrap: "balance" }}>
                 Questions about our {country.name} rankings
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.7", color: "var(--text-secondary)", marginBottom: "22px", textWrap: "pretty" }}>
@@ -1296,7 +1335,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
             </div>
             <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
               {faqs.map((faq) => (
-                <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
+                <HubFaq key={faq.id} question={faq.question} answer={faq.answer} />
               ))}
             </div>
           </div>
@@ -1305,7 +1344,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
 
       {/* ----------------------------------------------------------- switch */}
       {otherCountry ? (
-        <section aria-labelledby="switch-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <section id="switch" aria-labelledby="switch-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={{ ...SHELL, padding: "64px 24px" }}>
             <div
               data-split=""
@@ -1321,7 +1360,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               }}
             >
               <div>
-                <h2 id="switch-h2" style={{ fontSize: "24px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
+                <h2 data-reveal="" id="switch-h2" style={{ fontSize: "24px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
                   Looking for a business in {otherCountry.name}?
                 </h2>
                 <p style={{ fontSize: "16px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
@@ -1330,7 +1369,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                 </p>
               </div>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <Link href={routes.country(otherCountry.code)} style={BTN_FILLED}>
+                <Link data-btn="" href={routes.country(otherCountry.code)} style={BTN_FILLED}>
                   Browse {otherCountry.name}
                   <Arrow />
                 </Link>
@@ -1344,20 +1383,20 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       ) : null}
 
       {/* -------------------------------------------------------------- biz */}
-      <section aria-labelledby="biz-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <section id="biz" aria-labelledby="biz-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div
           data-split=""
           style={{ ...SECTION, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "56px", alignItems: "center" }}
         >
           <div>
-            <h2 id="biz-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "16px", textWrap: "balance" }}>
+            <h2 data-reveal="" id="biz-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "16px", textWrap: "balance" }}>
               Own a {country.name} business people are comparing?
             </h2>
             <p style={{ fontSize: "18px", lineHeight: "1.65", color: "var(--text-secondary)", marginBottom: "28px", maxWidth: "500px", textWrap: "pretty" }}>
               Get in front of homeowners in the areas you actually serve, at the point where they are shortlisting.
             </p>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "24px" }}>
-              <Link href={routes.advertise()} style={BTN_FILLED}>
+              <Link data-btn="" href={routes.advertise()} style={BTN_FILLED}>
                 Sponsor your business
               </Link>
               <Link href={routes.addBusiness()} style={BTN_OUTLINE}>
@@ -1399,7 +1438,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               Sponsorship buys visibility, not a spot on an editorial list. Paid placements are always labelled.
             </p>
           </div>
-          <ul style={{ display: "grid", gap: "14px" }}>
+          <ul data-stagger="" style={{ display: "grid", gap: "14px" }}>
             {BIZ_POINTS.map((point) => (
               <li
                 key={point.title}
@@ -1426,9 +1465,11 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
       </section>
 
       {/* ------------------------------------------------------------ final */}
-      <section aria-labelledby="final-h2" style={{ background: "var(--ink)" }}>
-        <div style={{ maxWidth: "880px", margin: "0 auto", padding: "88px 24px", textAlign: "center" }}>
+      <section id="final" aria-labelledby="final-h2" style={{ position: "relative", overflow: "hidden", background: "var(--ink)" }}>
+        <DarkBackdrop />
+        <div style={{ position: "relative", maxWidth: "880px", margin: "0 auto", padding: "88px 24px", textAlign: "center" }}>
           <h2
+            data-reveal=""
             id="final-h2"
             style={{
               fontSize: "clamp(28px, 3.2vw, 42px)",
@@ -1479,12 +1520,13 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
               </label>
               <input id="c-loc2" name="location" type="text" placeholder={locPlaceholder} style={FIELD} />
             </div>
-            <button type="submit" style={{ ...SUBMIT, padding: "0 28px" }}>
+            <button data-btn="" type="submit" style={{ ...SUBMIT, padding: "0 28px" }}>
               Find the best
             </button>
           </form>
         </div>
       </section>
+      </div>
     </SiteChrome>
   );
 }

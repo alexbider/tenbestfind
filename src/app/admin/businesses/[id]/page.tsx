@@ -979,7 +979,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                         <td className="admin-table__primary">{invoice.number}</td>
                         <td>{fullDate(invoice.issuedAt)}</td>
                         <td>
-                          {fullDate(invoice.periodStart)} – {fullDate(invoice.periodEnd)}
+                          {fullDate(invoice.periodStart)} to {fullDate(invoice.periodEnd)}
                         </td>
                         <td className="admin-table__num">{money(invoice.amountCents, invoice.currency)}</td>
                         <td>

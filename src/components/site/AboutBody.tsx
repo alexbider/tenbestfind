@@ -60,7 +60,7 @@ export function AboutBody({ paragraphs }: { paragraphs: string[] }) {
             fontFamily: "var(--font-sans)",
             fontSize: "14px",
             fontWeight: "600",
-            color: "var(--blue-900)",
+            color: "var(--ink)",
             cursor: "pointer",
           }}
         >

@@ -71,6 +71,7 @@ const NAVLINK = {
   fontSize: "15px",
   fontWeight: "600",
   color: "var(--ink)",
+  whiteSpace: "nowrap" as const,
 };
 
 const NAVLINK_WITH_CHEVRON = { ...NAVLINK, gap: "7px" };
@@ -169,6 +170,13 @@ function Glyph({ d, size = 16, width = 1.8 }: { d: string; size?: number; width?
 const path = (name: IconName | undefined) => ICON_PATHS[name ?? "house"] ?? ICON_PATHS.house;
 
 /** The five destinations the phone tab bar offers. */
+const TABS: { id: NavKey; name: string; href: string; d: string }[] = [
+  { id: "home", name: "Home", href: "/", d: "M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 21v-8h6v8" },
+  { id: "services", name: "Services", href: routes.servicesIndex(), d: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z" },
+  { id: "locations", name: "Locations", href: routes.locationsIndex(), d: "M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
+  { id: "rankings", name: "Top 10", href: routes.rankingsIndex(), d: "M7 4h10v5a5 5 0 0 1-10 0z M7 6H4v2a3 3 0 0 0 3 3 M17 6h3v2a3 3 0 0 1-3 3 M9 20h6 M12 14v6" },
+  { id: "search", name: "Search", href: routes.search(), d: "M11 3a8 8 0 1 0 0 16 8 8 0 1 0 0-16 M21 21l-4.3-4.3" },
+];
 
 /* ---------------------------------------------------------------- header */
 
@@ -483,6 +491,9 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
               </div>
             </div>
 
+            <Link data-navlink="" data-active={on("trust")} href={routes.howWeRank()} style={NAVLINK}>
+              How We Rank
+            </Link>
           </nav>
 
           {/* -------------------------------------------------- mobile drawer */}
@@ -669,6 +680,11 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
                   </Link>
                 </li>
                 <li>
+                  <Link href={routes.howWeRank()} style={MOBILE_ROW}>
+                    How We Rank
+                  </Link>
+                </li>
+                <li>
                   <Link href={routes.forBusinesses()} style={{ ...MOBILE_ROW, color: "var(--text-secondary)", borderBottom: undefined }}>
                     For Businesses
                   </Link>
@@ -768,6 +784,61 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
         </div>
       </div>
 
+      {/* ------------------------------------------------ phone tab bar */}
+      <nav
+        data-tabbar=""
+        aria-label="Quick navigation"
+        style={{
+          position: "fixed",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          zIndex: "220",
+          alignItems: "stretch",
+          justifyContent: "space-around",
+          height: "calc(64px + env(safe-area-inset-bottom))",
+          padding: "6px 6px calc(6px + env(safe-area-inset-bottom))",
+          background: "rgba(255,255,255,0.94)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
+          borderTop: "1px solid var(--border-subtle)",
+          boxShadow: "0 -10px 30px -20px rgba(16,31,61,0.35)",
+        }}
+      >
+        {TABS.map((tab) => (
+          <Link
+            key={tab.id}
+            data-tab=""
+            data-on={on(tab.id)}
+            href={tab.href}
+            aria-current={active === tab.id ? "page" : undefined}
+            style={{
+              flex: "1",
+              minWidth: "0",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "3px",
+              minHeight: "52px",
+              borderRadius: "12px",
+              fontSize: "11px",
+              fontWeight: "600",
+              color: "var(--text-secondary)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span
+              data-tab-ico=""
+              aria-hidden="true"
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "28px", borderRadius: "999px" }}
+            >
+              <Glyph d={tab.d} size={20} width={1.9} />
+            </span>
+            {tab.name}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

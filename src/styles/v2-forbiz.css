@@ -1,0 +1,48 @@
+/* ==================================================================
+   For businesses.
+
+   The business centre bar: the design pins it under the header as a navy
+   strip of white-outlined pills. The shared stylesheet draws it as a static
+   bar of square buttons, so on this page it is put back to the design's.
+   ================================================================== */
+.site-page .centre-nav {
+  position: sticky;
+  top: 76px;
+  z-index: 150;
+  background: var(--blue-900);
+}
+.site-page .centre-nav__inner {
+  flex-wrap: nowrap;
+  gap: 18px;
+  overflow-x: auto;
+  padding-top: 0;
+  padding-bottom: 0;
+  scrollbar-width: none;
+}
+.site-page .centre-nav__label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: #e8b551;
+}
+.site-page .centre-nav nav { flex: 0 0 auto; }
+.site-page .centre-nav ul {
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 10px 0;
+}
+.site-page .centre-nav a {
+  height: auto;
+  min-height: 40px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(232, 237, 245, 0.9);
+  white-space: nowrap;
+}
+.site-page .centre-nav a:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.site-page .centre-nav a[data-on="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: var(--blue-900);
+}

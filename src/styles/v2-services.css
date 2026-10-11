@@ -1,0 +1,42 @@
+/* ==================================================================
+   The services index, the category page and the subservice page, on a phone.
+
+   The design's phone layer (v2-mobile.css) does the work. This file only
+   puts back what the older shared phone rules in pages.css take away from
+   the three pages' wrapping grids: they rewrite any auto-fit list into a rail
+   or two columns from its inline text, where the design lets it fall to the
+   number of columns that fit. Grids opt in with data-ag and carry their
+   minimum track, gap, padding and bottom margin as custom properties (see
+   autoGrid in components/site/services/parts.tsx).
+   ================================================================== */
+@media (max-width: 760px) {
+  .site-page .v2-svc [data-ag] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--ag-min), 100%), 1fr)) !important;
+    gap: var(--ag-gap) !important;
+    overflow: visible !important;
+    padding: var(--ag-pad) !important;
+    margin: 0 0 var(--ag-mb) !important;
+    scroll-snap-type: none !important;
+  }
+  .site-page .v2-svc [data-ag] > * {
+    width: auto !important;
+    flex: initial;
+  }
+}
+
+/* The shared stylesheet sets every link row to 48px and 10px 12px of padding
+   on a phone. The design keeps each list's own: put them back by kind. */
+@media (max-width: 760px) {
+  .site-page .v2-svc [data-row] { min-height: 0; }
+  .site-page .v2-svc [data-row="proj"] { padding: 8px 10px !important; }
+  .site-page .v2-svc [data-row="place"] { padding: 9px 10px !important; }
+  .site-page .v2-svc [data-row="tight"] { padding: 8px 10px !important; }
+  .site-page .v2-svc [data-row="pill"] { padding: 15px 18px !important; }
+}
+
+/* A heading the design draws as an h2 but the page keeps as an h3 for its
+   outline: on a phone it gets the h2 size, not the h3 one. */
+@media (max-width: 760px) {
+  .site-page .v2-svc [data-h2] { font-size: clamp(25px, 7vw, 32px) !important; line-height: 1.08 !important; }
+}

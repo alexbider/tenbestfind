@@ -1,0 +1,130 @@
+/* October 2026 design: ranking template.
+
+   The page rules of 07 Ranking Top 10, scoped to .rk2, plus the overrides the
+   older stylesheets need: pages.css forces heading tracking and the mobile
+   h3 size with !important, and ranking.css targets .rank-2026, which this
+   page no longer wears. */
+
+.rk2 { background: var(--surface-card); overflow-x: clip; }
+
+/* The pointer glow starts where the design parks it. */
+.rk2 [data-hero] { --mx: 75%; --my: 20%; }
+.rk2 h1, .rk2 h2, .rk2 h3, .rk2 h4 { margin: 0; color: var(--ink); letter-spacing: -0.025em; }
+.rk2 p { margin: 0; }
+.rk2 ul, .rk2 ol { margin: 0; padding: 0; list-style: none; }
+.rk2 section[id] { scroll-margin-top: 140px; }
+.rk2 table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.rk2 th, .rk2 td { text-align: left; }
+.rk2 a { text-decoration: none; }
+
+/* pages.css pins every h1 and h2 to one tracking; each heading here carries
+   its own through --ls. */
+body .rk2.rk2 h1 { --ls: -0.045em; }
+body .rk2.rk2 h1, body .rk2.rk2 h2 { letter-spacing: var(--ls, -0.04em) !important; }
+body .rk2.rk2 h2[data-minih] { --ls: -0.02em; }
+
+@keyframes numUp { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes starFill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes checkPop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: none; } }
+
+/* The hero's drift is the design's blob and outline only. */
+.rk2 [data-ten-outline] { animation: none !important; }
+
+.rk2 [data-press], .rk2 [data-btn] { transition: transform 220ms var(--spring), background 200ms ease, box-shadow 260ms var(--spring), border-color 200ms ease, color 200ms ease; }
+.rk2 [data-press]:active, .rk2 [data-btn]:active { transform: scale(0.97); }
+.rk2 [data-arrow] { transition: transform 260ms var(--spring); }
+
+/* filter chips */
+.rk2 [data-chip] { transition: background 200ms ease, color 200ms ease, border-color 200ms ease, transform 220ms var(--spring); }
+.rk2 [data-chip][aria-pressed="true"] { background: var(--ink) !important; color: #fff !important; border-color: var(--ink) !important; }
+.rk2 [data-chip][aria-pressed="true"] [data-cnt] { background: var(--gold-ink) !important; color: var(--ink) !important; }
+.rk2 [data-chip]:not([aria-pressed="true"]):hover { transform: none; background: var(--surface-card); border-color: var(--ink) !important; color: var(--ink); }
+.rk2 [data-chiprow]::-webkit-scrollbar { display: none; }
+
+/* the ranked cards and their accordion */
+.rk2 [data-rk] { transition: box-shadow 400ms var(--spring), border-color 300ms ease, transform 400ms var(--spring); }
+.rk2 [data-rk][data-open="1"] { border-color: var(--ink) !important; box-shadow: 0 30px 60px -36px rgba(16, 31, 61, 0.5); }
+.rk2 [data-acc] { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 560ms var(--spring); }
+.rk2 [data-rk][data-open="1"] [data-acc] { grid-template-rows: 1fr; }
+.rk2 [data-acc] > div { overflow: hidden; min-height: 0; }
+.rk2 [data-acc] > div > div { opacity: 0; transform: translateY(-6px); transition: opacity 300ms ease, transform 400ms var(--spring); }
+.rk2 [data-rk][data-open="1"] [data-acc] > div > div { opacity: 1; transform: none; transition-delay: 120ms; }
+.rk2 [data-tog] svg { transition: transform 420ms var(--spring); }
+.rk2 [data-rk][data-open="1"] [data-tog] { background: var(--ink) !important; color: var(--gold-ink) !important; border-color: var(--ink) !important; }
+.rk2 [data-rk][data-open="1"] [data-tog] svg { transform: rotate(180deg); }
+.rk2 [data-rnum] { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.rk2 [data-rnum] > span { display: inline-block; }
+.rk2 [data-trow] { transition: background 160ms ease; }
+
+/* tick-off list of questions */
+.rk2 [data-q] [data-qbox] { transition: background 200ms ease, border-color 200ms ease, color 200ms ease; }
+.rk2 [data-q][aria-pressed="true"] [data-qbox] { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--gold-ink) !important; }
+.rk2 [data-q][aria-pressed="true"] [data-qtext] { color: var(--text-secondary) !important; text-decoration: line-through; text-decoration-color: rgba(16, 31, 61, 0.3); }
+.rk2 [data-q] [data-qbox] svg { opacity: 0; }
+.rk2 [data-q][aria-pressed="true"] [data-qbox] svg { opacity: 1; animation: checkPop 380ms var(--spring); }
+
+/* the one disclosure pattern (sponsored note, how to read the costs) */
+.rk2 [data-pop] > summary { list-style: none; cursor: pointer; padding: 0; }
+.rk2 [data-pop] > summary::-webkit-details-marker { display: none; }
+.rk2 [data-pop][open] > summary > span { background: transparent; }
+
+/* faq: pages.css turns the plus a quarter turn, the design a three-eighths */
+.rk2 [data-faq][open] [data-fq-ico] { transform: rotate(135deg); }
+.rk2 [data-faq] > summary:hover { color: var(--ink); }
+
+/* the cost list: a table, drawn as the design's rows */
+.rk2 table[data-costs] { display: block; min-width: 0 !important; }
+.rk2 [data-costs] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.rk2 [data-costs] tbody { display: block; }
+.rk2 [data-costs] tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; align-items: baseline; padding: 16px 22px; border-bottom: 1px solid var(--border-subtle); }
+.rk2 [data-costs] tbody tr:last-child { border-bottom: 0; }
+.rk2 [data-costs] td { display: block; padding: 0; border: 0; }
+.rk2 [data-costs] td:nth-child(3) { grid-column: 1 / -1; }
+
+/* comparison table: the sticky cells keep the row's hover colour */
+.rk2 [data-ctable] tbody tr:last-child > * { border-bottom: 0; }
+@media (hover: hover) {
+  .rk2 [data-ctable] [data-trow]:hover > th, .rk2 [data-ctable] [data-trow]:hover > td { background: var(--gold-soft); }
+}
+
+/* motion that belongs to this page */
+@media (prefers-reduced-motion: no-preference) {
+  .rk2 [data-funnel] { transform-origin: left; animation: barGrow 1400ms var(--spring) 700ms both; }
+  .rk2 [data-shown] [data-rnum] > span { animation: numUp 800ms var(--spring) both; animation-delay: calc(var(--i, 0) * 70ms + 200ms); }
+  .rk2 [data-shown] [data-starfill] { animation: starFill 1100ms var(--spring) both; animation-delay: calc(var(--i, 0) * 70ms + 400ms); }
+  .rk2 [data-shown] [data-mbar] { transform-origin: left; animation: barGrow 1100ms var(--spring) both; animation-delay: calc(var(--i, 0) * 50ms + 200ms); }
+  .rk2 [data-hero] [data-tilt] { will-change: transform; }
+}
+
+/* the coverage map: the design softens the street tiles toward the card */
+.rk2 [data-covmap] .leaflet-tile-pane { filter: saturate(0.45) brightness(1.04) contrast(0.95); }
+.rk2 [data-covmap] { z-index: 0; }
+
+@media (max-width: 1080px) {
+  .rk2 [data-hero-side] { max-width: 560px; }
+}
+
+@media (max-width: 760px) {
+  html body main .rk2 [data-shell] { padding: 44px 18px 40px !important; }
+  html body main .rk2 [data-hero-shell] { padding-top: 14px !important; }
+  html body main .rk2 [data-two] { grid-template-columns: minmax(0, 1fr) !important; }
+  html body main .rk2 [data-rkhead] { grid-template-columns: 44px minmax(0, 1fr) 44px !important; gap: 12px !important; padding: 16px !important; }
+  html body main .rk2 [data-rklogo] { display: none !important; }
+  html body main .rk2 [data-rkact] { display: none !important; }
+  html body main .rk2 [data-rkmob] { display: grid !important; }
+  html body main .rk2 [data-spec] { grid-template-columns: minmax(0, 1fr) !important; }
+  html body main .rk2 [data-spec] > div { border-right: 0 !important; }
+  html body main .rk2 [data-spec] > div:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+  html body main .rk2 [data-rnum] { font-size: 34px !important; }
+  html body main .rk2 h2[data-eyebrow] { font-size: 11px !important; line-height: 1.4 !important; }
+  html body main .rk2 h2[data-sm] { font-size: 19px !important; line-height: 1.25 !important; }
+  .rk2 [data-costs] tr { grid-template-columns: minmax(0, 1fr); padding: 14px 18px; }
+  .rk2 [data-costs] td { text-align: left !important; }
+  html body main .rk2 [data-accin] { padding: 0 16px 18px !important; }
+  html body main .rk2 [data-ten-outline] { width: 170px !important; height: 120px !important; right: -60px !important; top: -10px !important; }
+  html body main .rk2 table[data-ctable] { min-width: 960px !important; }
+
+  /* pages.css sets every h3 to 17px on a phone; the design keeps its own sizes */
+  html body main .rk2 h3 { font-size: var(--fs, 16.5px) !important; }
+  body .rk2.rk2 h1 { --ls: -0.04em; }
+}

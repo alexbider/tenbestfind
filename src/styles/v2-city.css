@@ -1,0 +1,81 @@
+/* October 2026 design: city template.
+
+   The page rules of 06 City Hub, scoped to .ct2, plus the overrides the older
+   stylesheets need: pages.css forces heading tracking and the mobile h3 size
+   with !important, and the legacy table and grid rules would flatten the
+   cost card and the hero. */
+
+.ct2 { background: var(--surface-card); overflow-x: clip; }
+.ct2 h1, .ct2 h2, .ct2 h3, .ct2 h4 { margin: 0; color: var(--ink); letter-spacing: -0.025em; }
+.ct2 p { margin: 0; }
+.ct2 ul, .ct2 ol, .ct2 dl, .ct2 dd { margin: 0; padding: 0; list-style: none; }
+.ct2 section[id] { scroll-margin-top: 140px; }
+.ct2 table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.ct2 th, .ct2 td { text-align: left; }
+.ct2 a { text-decoration: none; }
+
+/* The pointer glow starts where the design parks it. */
+.ct2 [data-hero] { --mx: 75%; --my: 20%; }
+
+/* pages.css pins every h1 and h2 to one tracking; each heading here carries
+   its own through --ls. */
+body .ct2.ct2 h1 { --ls: -0.045em; }
+body .ct2.ct2 h1, body .ct2.ct2 h2 { letter-spacing: var(--ls, -0.04em) !important; }
+body .ct2.ct2 h2[data-minih] { --ls: -0.035em; }
+.ct2 .serif-accent { letter-spacing: inherit; }
+.ct2 h1 .serif-accent { letter-spacing: -0.02em; }
+
+/* The hero's drift is the design's blob and outline only. */
+.ct2 [data-ten-outline] { animation: none !important; }
+
+.ct2 [data-press], .ct2 [data-btn] { transition: transform 220ms var(--spring), background 200ms ease, box-shadow 260ms var(--spring), border-color 200ms ease, color 200ms ease; }
+.ct2 [data-press]:active, .ct2 [data-btn]:active { transform: scale(0.97); }
+.ct2 [data-arrow] { transition: transform 260ms var(--spring); }
+.ct2 [data-trow] { transition: background 160ms ease; }
+
+/* faq: pages.css turns the plus a quarter turn, the design a three-eighths */
+.ct2 [data-faq][open] [data-fq-ico] { transform: rotate(135deg); }
+.ct2 [data-faq] > summary:hover { color: var(--ink); }
+
+/* The cost card: a table, drawn as the design's rows. The header row stays in
+   the markup for anyone reading the table, and out of sight for everyone else
+   because the card carries its own title. */
+.ct2 table[data-costs] { display: block; min-width: 0 !important; }
+.ct2 [data-costs] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ct2 [data-costs] tbody { display: block; }
+.ct2 [data-costs] tr { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 6px 22px; align-items: center; padding: 16px 22px; border-bottom: 1px solid var(--border-subtle); }
+.ct2 [data-costs] tbody tr:last-child { border-bottom: 0; }
+.ct2 [data-costs] th, .ct2 [data-costs] td { display: block; padding: 0; border: 0; }
+.ct2 [data-costs] td:nth-child(3) { grid-column: 1 / -1; }
+.ct2 [data-costs] td:empty { display: none; }
+@media (hover: hover) {
+  .ct2 [data-costs] [data-trow]:hover { background: var(--gold-soft); }
+}
+
+/* the season in progress: the card is lit and the number draws the eye */
+.ct2 [data-season] h3 { font-family: var(--serif); font-style: italic; font-weight: 400; }
+
+/* the coverage map: the design softens the street tiles toward the card */
+.ct2 [data-covmap] .leaflet-tile-pane { filter: saturate(0.45) brightness(1.04) contrast(0.95); }
+.ct2 [data-covmap] { z-index: 0; }
+
+/* Five steps in one row while the connecting rail is visible; auto-fit would strand the fifth step alone. */
+@media (min-width: 901px) {
+  .ct2 ol[data-steps] { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 1080px) {
+  .ct2 [data-hero-side] { max-width: 560px; }
+}
+
+@media (max-width: 760px) {
+  html body main .ct2 [data-shell] { padding: 44px 18px 40px !important; }
+  html body main .ct2 [data-hero-shell] { padding-top: 14px !important; }
+  html body main .ct2 [data-ten-outline] { width: 170px !important; height: 120px !important; right: -60px !important; top: -10px !important; }
+
+  /* pages.css sets every h3 to 17px on a phone; the design keeps its own sizes */
+  html body main .ct2 h3:not(.prose h3) { font-size: var(--fs, 16.5px) !important; }
+  body .ct2.ct2 h1 { --ls: -0.04em; }
+
+  /* the cost rows stack: name over range */
+  .ct2 [data-costs] tr { grid-template-columns: minmax(0, 1fr); padding: 14px 18px; }
+}

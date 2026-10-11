@@ -92,7 +92,21 @@ export function CountUp({ value, suffix = "" }: { value: number; suffix?: string
   return (
     <span ref={ref}>
       {shown.toLocaleString("en-US")}
-      {suffix}
+      {suffix ? (
+        <span
+          style={{
+            fontFamily: "var(--serif)",
+            fontStyle: "italic",
+            fontWeight: 400,
+            fontSize: "0.5em",
+            letterSpacing: 0,
+            color: "var(--gold-ink)",
+            marginLeft: "2px",
+          }}
+        >
+          {suffix}
+        </span>
+      ) : null}
     </span>
   );
 }

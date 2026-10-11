@@ -2,29 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { GuideBlock } from "../../../../prisma/data/editorial";
-import { GuideBody } from "@/components/site/blocks";
+import { GuideBody } from "@/components/site/guides/GuideBody";
+import { ArrowLink, GuideFaq, HeroBackdrop, HeroTitle, Tile, tail } from "@/components/site/guides/parts";
 import { GuideHub } from "@/templates/GuideHub";
 import { CostEstimator, CostSummary, CostTables, priceModal } from "@/components/site/CostGuide";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
 import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
-import {
-  Chevron,
-  Crumbs,
-  Eyebrow,
-  FaqItem,
-  GRID_BACKDROP,
-  SHELL,
-  SR_ONLY,
-  TenOutline,
-  initials,
-} from "@/components/site/page-parts";
+import { Crumbs, GRID_BACKDROP, SHELL, SR_ONLY, TenOutline, initials } from "@/components/site/page-parts";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
 import { dollars, fullDate, monthYear, priceRange, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { coverOf, imageMap, parseIllustrations } from "@/lib/guide-images";
+import { describeImage, srcSetFor } from "@/lib/image-srcset";
 import { parseJson, parseList } from "@/lib/json";
 import { db } from "@/lib/db";
 import { findGuideHub, guidesForHub } from "@/lib/guide-hubs";
@@ -41,7 +33,7 @@ export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 
 const SECTION = { ...SHELL, padding: "64px 24px" };
-const SECTION_H2 = { fontSize: "clamp(24px, 2.6vw, 32px)", fontWeight: "700" };
+const SECTION_H2 = { fontSize: "clamp(26px, 3vw, 36px)", lineHeight: "1.08", fontWeight: "800", letterSpacing: "-0.035em" };
 const CARD = {
   background: "var(--surface-card)",
   border: "1px solid var(--border-subtle)",
@@ -311,10 +303,11 @@ export default async function GuidePage({ params }: Props) {
   // editor wrote, in the order they appear on the page.
   const toc = [
     !isCost && guide.shortAnswer ? { name: "The short answer", href: "#short-answer" } : null,
+    // A cost guide opens on its numbers, so the at-a-glance band leads the rail too.
+    isCost ? { name: "Cost at a glance", href: "#summary" } : null,
     takeaways.length > 0 ? { name: "Key takeaways", href: "#takeaways" } : null,
-    ...headings.map((heading) => ({ name: heading.text, href: `#${heading.id}` })),
-    isCost && guide.costs.length > 0 ? { name: "Cost at a glance", href: "#summary" } : null,
     isCost && guide.unitLow && guide.unitHigh ? { name: "Estimate your cost", href: "#calculator" } : null,
+    ...headings.map((heading) => ({ name: heading.text, href: `#${heading.id}` })),
     !isCost && guide.costs.length > 0 ? { name: "What it costs", href: "#cost" } : null,
     faqs.length > 0 ? { name: "Frequently asked questions", href: "#faqs" } : null,
     guide.bottomLine ? { name: "Bottom line", href: "#bottom-line" } : null,
@@ -348,126 +341,251 @@ export default async function GuidePage({ params }: Props) {
     </InfoModal>
   );
 
+  const coverAlt = coverOf(illustrations)?.alt ?? "";
+  const typicalRange = guide.typicalLow || guide.typicalHigh ? priceRange(guide.typicalLow, guide.typicalHigh) : null;
+  const showHeroAside = isCost && Boolean(hero);
+
+  const bylineAuthor = guide.author ? (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+      <span
+        aria-hidden="true"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "38px",
+          height: "38px",
+          borderRadius: "50%",
+          background: "var(--blue-50)",
+          border: "1px solid var(--blue-100)",
+          fontSize: "13px",
+          fontWeight: "700",
+          color: "var(--blue-900)",
+        }}
+      >
+        {initials(guide.author.name)}
+      </span>
+      <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+        Written by{" "}
+        <Link href={routes.expert(guide.author.slug)} style={{ fontWeight: "600" }}>
+          {guide.author.name}
+        </Link>
+        , {guide.author.role}
+      </span>
+    </span>
+  ) : null;
+  const bylineReviewer = guide.reviewer ? (
+    <span style={META_ITEM}>
+      <Icon name="shield" size={16} color="#1F9D6B" strokeWidth={1.9} />
+      Reviewed by{" "}
+      <Link href={routes.expert(guide.reviewer.slug)} style={{ fontWeight: "600" }}>
+        {guide.reviewer.name}
+      </Link>
+      , {guide.reviewer.role}
+    </span>
+  ) : null;
+  const bylineUpdated = (
+    <span style={META_ITEM}>
+      <Icon name="refresh" size={16} color="#2D74D7" strokeWidth={1.9} />
+      Updated {monthYear(guide.reviewedAt ?? guide.updatedAt)}
+    </span>
+  );
+  const bylineRead = (
+    <span style={META_ITEM}>
+      <Icon name="clock" size={16} color="#2D74D7" strokeWidth={1.9} />
+      {guide.readingMinutes} min read
+    </span>
+  );
+
+  const heroText = (
+    <>
+      <p data-eyebrow="" data-in="1" style={{ marginBottom: "16px" }}>
+        <span data-eyebrow-rule="" aria-hidden="true" />
+        {isCost ? `${service} cost guide` : `${service} guide`}
+        {place ? ` · ${place.name}` : ""}
+      </p>
+      <h1
+        data-in="2"
+        style={{
+          fontSize: "clamp(36px, 5vw, 60px)",
+          lineHeight: isCost ? "1.1" : "1.12",
+          letterSpacing: "-0.04em",
+          fontWeight: "800",
+          textWrap: "balance",
+        }}
+      >
+        <HeroTitle text={guide.title} />
+      </h1>
+      {guide.excerpt ? (
+        <p
+          data-in="3"
+          style={{
+            marginTop: "20px",
+            fontSize: "18px",
+            lineHeight: "1.75",
+            color: "var(--text-secondary)",
+            maxWidth: "720px",
+            textWrap: "pretty",
+          }}
+        >
+          {guide.excerpt}
+        </p>
+      ) : null}
+    </>
+  );
+
   return (
-    <SiteChrome active="guides">
+    <SiteChrome active="guides" skin>
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema(crumbs, absoluteUrl)} />
       <FaqJsonLd faqs={faqs} />
 
-      <article>
+      <article data-guide={isCost ? "cost" : "editorial"}>
         <div
+          data-hero=""
           style={{
+            position: "relative",
+            overflow: "hidden",
             borderBottom: "1px solid var(--border-subtle)",
             background:
               "linear-gradient(180deg, var(--blue-50) 0%, rgba(234,244,255,0.3) 70%, var(--surface-card) 100%)",
           }}
         >
-          <div style={{ ...SHELL, padding: "20px 24px 44px" }}>
+          <HeroBackdrop />
+          <div style={{ ...SHELL, position: "relative", padding: "20px 24px 44px" }}>
             {/* The same trail the BreadcrumbList publishes, from one array, so
                 the two cannot drift. The trade step points at the guide hub
                 rather than the service page: that is where the reader of a
                 guide actually wants to go next. */}
-            <Crumbs items={crumbs} />
-
-            <div style={{ maxWidth: "820px" }}>
-              <Eyebrow heroIn="1" gap="16px">
-                {isCost ? `${service} cost guide` : `${service} guide`}
-                {place ? ` · ${place.name}` : ""}
-              </Eyebrow>
-              <h1
-                data-hero-in="2"
-                style={{
-                  fontSize: "clamp(31px, 4vw, 46px)",
-                  lineHeight: "1.12",
-                  letterSpacing: "-0.04em",
-                  fontWeight: "800",
-                  textWrap: "balance",
-                }}
-              >
-                {guide.title}
-              </h1>
-              {guide.excerpt ? (
-                <p
-                  data-hero-in="3"
-                  style={{
-                    marginTop: "20px",
-                    fontSize: "18px",
-                    lineHeight: "1.75",
-                    color: "var(--text-secondary)",
-                    maxWidth: "720px",
-                    textWrap: "pretty",
-                  }}
-                >
-                  {guide.excerpt}
-                </p>
-              ) : null}
+            <div style={{ marginBottom: "24px" }}>
+              <Crumbs items={crumbs} flush />
             </div>
 
-            <div style={{ marginTop: "26px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px 26px" }}>
-              {guide.author ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+            {showHeroAside ? (
+              <div data-split="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "56px", alignItems: "center" }}>
+                <div style={{ minWidth: 0 }}>
+                  {heroText}
+                  <div style={{ marginTop: "24px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px 24px" }}>
+                    {bylineUpdated}
+                    {guide.author ? (
+                      <span style={META_ITEM}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                          <path d="M9 3a4 4 0 1 0 0 8 4 4 0 1 0 0-8" />
+                        </svg>
+                        Written by{" "}
+                        <Link href={routes.expert(guide.author.slug)} style={{ fontWeight: "600" }}>
+                          {guide.author.name}
+                        </Link>
+                        , {guide.author.role}
+                      </span>
+                    ) : null}
+                    {bylineReviewer}
+                    {bylineRead}
+                    {editorialModal}
+                  </div>
+                </div>
+                <div data-hero-aside="" style={{ position: "relative" }}>
                   <span
                     aria-hidden="true"
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "50%",
-                      background: "var(--blue-50)",
-                      border: "1px solid var(--blue-100)",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      color: "var(--blue-900)",
+                      position: "absolute",
+                      right: "-14px",
+                      bottom: "-14px",
+                      width: "70%",
+                      height: "70%",
+                      borderRadius: "24px",
+                      background: "var(--gold-soft)",
+                      border: "1px solid rgba(231,184,99,0.45)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "relative",
+                      aspectRatio: "5 / 4",
+                      borderRadius: "24px",
+                      overflow: "hidden",
+                      boxShadow: "0 24px 60px -24px rgba(16,31,61,0.35)",
+                      background: "var(--surface-sunken)",
                     }}
                   >
-                    {initials(guide.author.name)}
-                  </span>
-                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    Written by{" "}
-                    <Link href={routes.expert(guide.author.slug)} style={{ fontWeight: "600" }}>
-                      {guide.author.name}
-                    </Link>
-                    , {guide.author.role}
-                  </span>
-                </span>
-              ) : null}
-              {guide.reviewer ? (
-                <span style={META_ITEM}>
-                  <Icon name="shield" size={16} color="#1F9D6B" strokeWidth={1.9} />
-                  Reviewed by{" "}
-                  <Link href={routes.expert(guide.reviewer.slug)} style={{ fontWeight: "600" }}>
-                    {guide.reviewer.name}
-                  </Link>
-                  , {guide.reviewer.role}
-                </span>
-              ) : null}
-              <span style={META_ITEM}>
-                <Icon name="refresh" size={16} color="#2D74D7" strokeWidth={1.9} />
-                Updated {monthYear(guide.reviewedAt ?? guide.updatedAt)}
-              </span>
-              <span style={META_ITEM}>
-                <Icon name="clock" size={16} color="#2D74D7" strokeWidth={1.9} />
-                {guide.readingMinutes} min read
-              </span>
-              {editorialModal}
-            </div>
+                    <picture>
+                      {srcSetFor(hero!, "avif") ? <source type="image/avif" srcSet={srcSetFor(hero!, "avif")!} sizes="(max-width: 980px) 100vw, 590px" /> : null}
+                      {srcSetFor(hero!, "webp") ? <source type="image/webp" srcSet={srcSetFor(hero!, "webp")!} sizes="(max-width: 980px) 100vw, 590px" /> : null}
+                      <img
+                        src={hero!}
+                        alt={coverAlt}
+                        width={describeImage(hero!)?.width}
+                        height={describeImage(hero!)?.height}
+                        decoding="async"
+                        fetchPriority="high"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    </picture>
+                  </div>
+                  {typicalRange ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "-22px",
+                        bottom: "28px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                        padding: "14px 18px",
+                        borderRadius: "16px",
+                        background: "var(--ink)",
+                        color: "#fff",
+                        boxShadow: "var(--shadow-md)",
+                      }}
+                    >
+                      <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "var(--ls-wider)", textTransform: "uppercase", color: "var(--gold-ink)" }}>
+                        Typical project
+                      </span>
+                      <span style={{ fontSize: "20px", fontWeight: "700", fontVariantNumeric: "tabular-nums" }}>{typicalRange}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ maxWidth: "820px" }}>{heroText}</div>
+                <div style={{ marginTop: "26px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px 26px" }}>
+                  {bylineAuthor}
+                  {bylineReviewer}
+                  {bylineUpdated}
+                  {bylineRead}
+                  {editorialModal}
+                </div>
+              </>
+            )}
           </div>
         </div>
+        <span aria-hidden="true" style={{ position: "fixed", left: 0, right: 0, top: 0, height: "3px", zIndex: 300, pointerEvents: "none" }}>
+          <span
+            data-prog=""
+            style={{
+              display: "block",
+              height: "100%",
+              background: "linear-gradient(90deg, var(--gold-ink), var(--color-primary))",
+              transform: "scaleX(0)",
+              transformOrigin: "left",
+            }}
+          />
+        </span>
 
         <div
           data-article-grid=""
           style={{
             ...SHELL,
-            padding: "48px 24px 72px",
+            padding: isCost ? "56px 24px 96px" : "48px 24px 72px",
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr) 300px",
             gap: "56px",
             alignItems: "start",
           }}
         >
-          <div data-prose="" style={{ maxWidth: "760px", display: "grid", gap: "44px" }}>
+          <div data-prose="" style={{ maxWidth: isCost ? "780px" : "760px", display: "grid", gap: isCost ? "80px" : "44px" }}>
             {toc.length > 2 ? (
               <details data-jump="" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "16px", padding: "4px 20px" }}>
                 <summary
@@ -483,9 +601,26 @@ export default async function GuidePage({ params }: Props) {
                   }}
                 >
                   Jump to section
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+                  <span
+                    data-fq-ico=""
+                    aria-hidden="true"
+                    style={{
+                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "34px",
+                      height: "34px",
+                      borderRadius: "50%",
+                      border: "1px solid var(--border-strong)",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                    </svg>
+                  </span>
                 </summary>
                 <ul style={{ padding: "0 0 16px" }}>
                   {toc.map((item) => (
@@ -519,35 +654,32 @@ export default async function GuidePage({ params }: Props) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D74D7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
-                  <h2 id="sa-h2" style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase" }}>
-                    The short answer
+                  <h2 data-reveal="" id="sa-h2" style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase" }}>
+                    {tail("The short answer")}
                   </h2>
                 </div>
                 <div style={{ padding: "22px 24px 24px" }}>
-                  <p style={{ fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)" }}>{guide.shortAnswer}</p>
+                  <p>{guide.shortAnswer}</p>
                 </div>
+              </section>
+            ) : null}
+
+            {isCost ? (
+              <section
+                id="summary"
+                data-cost-summary=""
+                aria-labelledby="sum-h2"
+                style={{ ...GRID_BACKDROP, borderRadius: "24px", border: "1px solid var(--border-subtle)", padding: "36px 32px 32px" }}
+              >
+                <TenOutline width={220} height={156} style={{ right: "-40px", bottom: "-50px", opacity: 0.6 }} />
+                <CostSummary guide={guide} title={guide.title} intro={guide.shortAnswer} />
               </section>
             ) : null}
 
             {takeaways.length > 0 ? (
               <section id="takeaways" aria-labelledby="kt-h2">
-                <h2 id="kt-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "26px", fontWeight: "700", marginBottom: "18px" }}>
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "11px",
-                      background: "var(--amber-50)",
-                      color: "#8A5F0B",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon name="bulb" size={20} strokeWidth={1.9} />
-                  </span>
+                <h2 data-reveal="" id="kt-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "26px", fontWeight: "700", marginBottom: "18px" }}>
+                  <Tile icon="bulb" size={40} iconSize={20} tone="amber" />
                   Key takeaways
                 </h2>
                 <ul
@@ -572,13 +704,6 @@ export default async function GuidePage({ params }: Props) {
               </section>
             ) : null}
 
-            {isCost ? (
-              <section id="summary" aria-labelledby="sum-h2" style={{ ...GRID_BACKDROP, borderRadius: "20px", padding: "26px 24px 24px" }}>
-                <TenOutline style={{ right: "-30px", top: "-40px" }} />
-                <CostSummary guide={guide} title={guide.title} intro={guide.shortAnswer} />
-              </section>
-            ) : null}
-
             {isCost && guide.costs.length > 0 ? <CostTables rows={guide.costs} anchorPrefix="cost" /> : null}
 
             {isCost && guide.unitLow && guide.unitHigh ? (
@@ -590,15 +715,15 @@ export default async function GuidePage({ params }: Props) {
               />
             ) : null}
 
-            <GuideBody blocks={blocks} images={imageMap(illustrations)} />
+            <GuideBody blocks={blocks} images={imageMap(illustrations)} headSize={isCost ? 26 : 28} />
 
             {!isCost && guide.costs.length > 0 ? (
               <section id="cost" aria-labelledby="cost-h2">
-                <h2 id="cost-h2" style={{ fontSize: "28px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
-                  What {service.toLowerCase()} costs
+                <h2 data-reveal="" id="cost-h2" style={{ fontSize: "28px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
+                  {tail(`What ${service.toLowerCase()} costs`)}
                 </h2>
                 {isCost && (guide.typicalLow || guide.typicalHigh) ? (
-                  <p style={{ marginBottom: "20px", fontSize: "17px", lineHeight: "1.75", color: "var(--text-primary)" }}>
+                  <p style={{ marginBottom: "20px" }}>
                     Most projects land between {dollars(guide.typicalLow)} and {dollars(guide.typicalHigh)}
                     {guide.unitLow && guide.unitHigh
                       ? `, or ${dollars(guide.unitLow)} to ${dollars(guide.unitHigh)} ${guide.unitLabel ?? ""}`
@@ -652,21 +777,19 @@ export default async function GuidePage({ params }: Props) {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
                   {priceModal()}
-                  <Link href={routes.guidesIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                    View all cost guides →
-                  </Link>
+                  <ArrowLink href={routes.guidesIndex()}>View all cost guides</ArrowLink>
                 </div>
               </section>
             ) : null}
 
             {faqs.length > 0 ? (
               <section id="faqs" aria-labelledby="faq-h2">
-                <h2 id="faq-h2" style={{ fontSize: "28px", lineHeight: "1.25", fontWeight: "700", marginBottom: "18px" }}>
-                  Frequently asked questions
+                <h2 data-reveal="" id="faq-h2" style={{ fontSize: isCost ? "26px" : "28px", lineHeight: "1.25", fontWeight: "700", marginBottom: "18px" }}>
+                  {tail("Frequently asked questions")}
                 </h2>
-                <ul style={{ display: "grid", gap: "12px" }}>
+                <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
                   {faqs.map((faq) => (
-                    <FaqItem key={faq.id} question={faq.question} answer={faq.answer} />
+                    <GuideFaq key={faq.id} question={faq.question} answer={faq.answer} />
                   ))}
                 </ul>
               </section>
@@ -674,16 +797,16 @@ export default async function GuidePage({ params }: Props) {
 
             {guide.bottomLine ? (
               <section id="bottom-line" aria-labelledby="bl-h2" style={{ background: "var(--blue-900)", borderRadius: "20px", padding: "28px 30px" }}>
-                <h2 id="bl-h2" style={{ fontSize: "24px", fontWeight: "700", color: "#fff", marginBottom: "14px" }}>
-                  Bottom line
+                <h2 data-reveal="" id="bl-h2" style={{ fontSize: "24px", fontWeight: "700", color: "#fff", marginBottom: "14px" }}>
+                  {tail("Bottom line")}
                 </h2>
                 <p style={{ fontSize: "17px", lineHeight: "1.75", color: "rgba(232,237,245,0.9)" }}>{guide.bottomLine}</p>
               </section>
             ) : null}
 
             <section id="next" aria-labelledby="next-h2" style={{ border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "28px 30px" }}>
-              <h2 id="next-h2" style={{ fontSize: "22px", fontWeight: "700", marginBottom: "16px" }}>
-                Ready to compare {service.toLowerCase()} companies?
+              <h2 data-reveal="" id="next-h2" style={{ fontSize: "22px", fontWeight: "700", marginBottom: "16px" }}>
+                {tail(`Ready to compare ${service.toLowerCase()} companies?`)}
               </h2>
               <form
                 action={routes.search()}
@@ -747,6 +870,7 @@ export default async function GuidePage({ params }: Props) {
                   />
                 </div>
                 <button
+                  data-btn=""
                   type="submit"
                   style={{
                     height: "48px",
@@ -765,16 +889,14 @@ export default async function GuidePage({ params }: Props) {
                 </button>
               </form>
               <p style={{ marginTop: "14px" }}>
-                <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                  View {service.toLowerCase()} rankings →
-                </Link>
+                <ArrowLink href={routes.rankingsIndex()}>View {service.toLowerCase()} rankings</ArrowLink>
               </p>
             </section>
 
             {guide.sources.length > 0 ? (
               <section id="sources" aria-labelledby="src-h2">
                 <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "16px" }}>
-                  <h2 id="src-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "24px", fontWeight: "700" }}>
+                  <h2 data-reveal="" id="src-h2" style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "24px", fontWeight: "700" }}>
                     <span
                       aria-hidden="true"
                       style={{
@@ -792,7 +914,7 @@ export default async function GuidePage({ params }: Props) {
                     >
                       <Icon name="doc" size={19} strokeWidth={1.9} />
                     </span>
-                    Sources and references
+                    <span>{tail("Sources and references")}</span>
                   </h2>
                   <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
                     <InfoModal
@@ -823,7 +945,7 @@ export default async function GuidePage({ params }: Props) {
                     </InfoModal>
                   </div>
                 </div>
-                <ol style={{ display: "grid", gap: "12px" }}>
+                <ol data-stagger="" style={{ display: "grid", gap: "12px" }}>
                   {guide.sources.map((source, index) => (
                     <li key={source.id} style={{ display: "flex", gap: "14px", padding: "16px 18px", border: "1px solid var(--border-subtle)", borderRadius: "14px" }}>
                       <span
@@ -844,7 +966,7 @@ export default async function GuidePage({ params }: Props) {
                       >
                         {index + 1}
                       </span>
-                      <span style={{ display: "block" }}>
+                      <span style={{ display: "block", minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: "15px", fontWeight: "600", color: "var(--blue-900)", marginBottom: "3px" }}>
                           {source.url ? (
                             <a href={source.url} rel="nofollow noopener" target="_blank">
@@ -868,10 +990,10 @@ export default async function GuidePage({ params }: Props) {
 
             <section id="about-guide" aria-labelledby="ag-h2" style={{ display: "grid", gap: "16px" }}>
               <div style={{ background: "var(--surface-page)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "26px" }}>
-                <h2 id="ag-h2" style={{ fontSize: "20px", fontWeight: "700", marginBottom: "18px" }}>
-                  About this guide
+                <h2 data-reveal="" id="ag-h2" style={{ fontSize: "20px", fontWeight: "700", marginBottom: "18px" }}>
+                  {tail("About this guide")}
                 </h2>
-                <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px 28px", margin: "0" }}>
+                <dl data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "16px 28px", margin: "0" }}>
                   {meta.map((item) => (
                     <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "11px" }}>
                       <span
@@ -928,8 +1050,8 @@ export default async function GuidePage({ params }: Props) {
                 <div data-split="" style={{ display: "grid", gridTemplateColumns: guide.author && guide.reviewer ? "1fr 1fr" : "1fr", gap: "16px" }}>
                   {guide.author ? (
                     <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "24px" }}>
-                      <h2 style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                        About the author
+                      <h2 data-reveal="" style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "16px" }}>
+                        {tail("About the author")}
                       </h2>
                       <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                         <span
@@ -961,18 +1083,18 @@ export default async function GuidePage({ params }: Props) {
                               {guide.author.bio}
                             </p>
                           ) : null}
-                          <Link href={routes.expert(guide.author.slug)} style={{ fontSize: "14px", fontWeight: "600" }}>
-                            View all articles →
-                          </Link>
+                          <ArrowLink href={routes.expert(guide.author.slug)} size={14}>
+                            View all articles
+                          </ArrowLink>
                         </div>
                       </div>
                     </div>
                   ) : null}
                   {guide.reviewer ? (
                     <div style={{ background: "var(--surface-card)", border: "1px solid var(--green-100)", borderRadius: "20px", padding: "24px" }}>
-                      <h2 style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "#178054", marginBottom: "16px" }}>
+                      <h2 data-reveal="" style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "#178054", marginBottom: "16px" }}>
                         <Icon name="shield" size={16} strokeWidth={2} />
-                        Expert review
+                        <span>{tail("Expert review")}</span>
                       </h2>
                       <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                         <span
@@ -1003,9 +1125,9 @@ export default async function GuidePage({ params }: Props) {
                             Reviewed this guide for technical accuracy. Review does not imply endorsement of any company
                             named on TenBestFind.
                           </p>
-                          <Link href={routes.expert(guide.reviewer.slug)} style={{ fontSize: "14px", fontWeight: "600" }}>
-                            View reviewer profile →
-                          </Link>
+                          <ArrowLink href={routes.expert(guide.reviewer.slug)} size={14}>
+                            View reviewer profile
+                          </ArrowLink>
                         </div>
                       </div>
                     </div>
@@ -1016,11 +1138,22 @@ export default async function GuidePage({ params }: Props) {
           </div>
 
           <aside data-aside="" aria-label="Guide navigation" style={{ position: "sticky", top: "100px", display: "grid", gap: "16px" }}>
+            {isCost && typicalRange ? (
+              <div style={{ background: "var(--blue-900)", borderRadius: "18px", padding: "22px" }}>
+                <p style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "#E8B551", marginBottom: "10px" }}>
+                  Typical project
+                </p>
+                <p style={{ fontSize: "26px", fontWeight: "700", color: "#fff", fontVariantNumeric: "tabular-nums", marginBottom: "4px" }}>{typicalRange}</p>
+                <p style={{ fontSize: "14px", color: "rgba(232,237,245,0.75)" }}>
+                  What most homeowners end up paying once the job is scoped.
+                </p>
+              </div>
+            ) : null}
             <nav data-toc="" aria-labelledby="toc-h2" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "18px", padding: "22px" }}>
-              <h2 id="toc-h2" style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                In this guide
+              <h2 data-reveal="" id="toc-h2" style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                {tail("In this guide")}
               </h2>
-              <ul style={{ display: "grid", gap: "2px" }}>
+              <ul data-stagger="" style={{ display: "grid", gap: "2px" }}>
                 {toc.map((item) => (
                   <li key={item.href}>
                     <a
@@ -1034,11 +1167,14 @@ export default async function GuidePage({ params }: Props) {
               </ul>
             </nav>
             <div style={{ background: "var(--blue-50)", border: "1px solid var(--blue-100)", borderRadius: "18px", padding: "22px" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "8px" }}>Compare local companies</h2>
+              <h2 data-reveal="" style={{ fontSize: "16px", fontWeight: "700", marginBottom: "8px" }}>
+                {tail("Compare local companies")}
+              </h2>
               <p style={{ fontSize: "14px", lineHeight: "1.6", color: "var(--text-secondary)", marginBottom: "14px" }}>
                 Researched top ten rankings for the markets we cover.
               </p>
               <Link
+                data-btn=""
                 href={guide.category ? routes.category(guide.category.slug) : routes.rankingsIndex()}
                 style={{
                   display: "inline-flex",
@@ -1067,32 +1203,15 @@ export default async function GuidePage({ params }: Props) {
         >
           <div style={SECTION}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "24px" }}>
-              <h2 id="rank-h2" style={SECTION_H2}>
-                Compare top {service.toLowerCase()} companies
+              <h2 data-reveal="" id="rank-h2" style={SECTION_H2}>
+                {tail(`Compare top ${service.toLowerCase()} companies`)}
               </h2>
-              <Link href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                All {service.toLowerCase()} rankings →
-              </Link>
+              <ArrowLink href={routes.rankingsIndex()}>All {service.toLowerCase()} rankings</ArrowLink>
             </div>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
               {relatedRankings.map((ranking) => (
-                <li key={ranking.id} data-card="" style={{ ...CARD, display: "flex", gap: "16px" }}>
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      flex: "0 0 44px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "12px",
-                      background: "var(--amber-50)",
-                      color: "#8A5F0B",
-                    }}
-                  >
-                    <Icon name="pin" size={21} strokeWidth={1.75} />
-                  </span>
+                <li key={ranking.id} data-card="" style={{ ...CARD, borderRadius: "22px", display: "flex", gap: "16px" }}>
+                  <Tile icon="pin" size={44} iconSize={21} stroke={1.75} tone="amber" flex />
                   <span style={{ display: "block", minWidth: "0" }}>
                     <h3 style={{ fontSize: "17px", lineHeight: "1.3", fontWeight: "700", marginBottom: "6px" }}>
                       <Link href={rankingUrl(ranking)} style={{ color: "var(--blue-900)" }}>
@@ -1103,9 +1222,9 @@ export default async function GuidePage({ params }: Props) {
                       {ranking.companiesReviewed} evaluated · Reviewed{" "}
                       {shortMonthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
                     </span>
-                    <Link href={rankingUrl(ranking)} style={{ fontSize: "14px", fontWeight: "600" }}>
-                      View top 10 →
-                    </Link>
+                    <ArrowLink href={rankingUrl(ranking)} size={14}>
+                      View top 10
+                    </ArrowLink>
                   </span>
                 </li>
               ))}
@@ -1118,8 +1237,8 @@ export default async function GuidePage({ params }: Props) {
         <section aria-labelledby="biz-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div style={SECTION}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", marginBottom: "8px" }}>
-              <h2 id="biz-h2" style={SECTION_H2}>
-                {service} companies you can research
+              <h2 data-reveal="" id="biz-h2" style={SECTION_H2}>
+                {tail(`${service} companies you can research`)}
               </h2>
               <InfoModal
                 label="About Google reviews"
@@ -1138,9 +1257,9 @@ export default async function GuidePage({ params }: Props) {
             <p style={{ fontSize: "16px", color: "var(--text-secondary)", marginBottom: "24px" }}>
               Companies currently holding a position in one of our {service.toLowerCase()} rankings.
             </p>
-            <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+            <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
               {companies.map((entry) => (
-                <li key={entry.id} data-card="" style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}>
+                <li key={entry.id} data-card="" style={{ ...CARD, borderRadius: "22px", display: "flex", flexDirection: "column", gap: "10px" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <span
                       aria-hidden="true"
@@ -1201,9 +1320,9 @@ export default async function GuidePage({ params }: Props) {
                     #{entry.position}
                     {entry.ranking.city ? ` in ${entry.ranking.city.name}` : ""}
                   </span>
-                  <Link href={routes.business(entry.business.slug)} style={{ marginTop: "auto", paddingTop: "8px", fontSize: "14px", fontWeight: "600" }}>
-                    View profile →
-                  </Link>
+                  <ArrowLink href={routes.business(entry.business.slug)} size={14}>
+                    View profile
+                  </ArrowLink>
                 </li>
               ))}
             </ul>
@@ -1213,10 +1332,10 @@ export default async function GuidePage({ params }: Props) {
 
       <section aria-labelledby="rel-h2" style={{ background: "var(--surface-page)" }}>
         <div style={SECTION}>
-          <h2 id="rel-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
-            Related home services
+          <h2 data-reveal="" id="rel-h2" style={{ ...SECTION_H2, marginBottom: "20px" }}>
+            {tail("Related home services")}
           </h2>
-          <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "12px", marginBottom: "44px" }}>
+          <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "12px", marginBottom: "44px" }}>
             {relatedCategories.map((category) => (
               <li key={category.id}>
                 <Link
@@ -1236,30 +1355,17 @@ export default async function GuidePage({ params }: Props) {
                     textDecoration: "none",
                   }}
                 >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      flex: "0 0 34px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "10px",
-                      background: "var(--blue-50)",
-                      color: "var(--color-primary)",
-                    }}
-                  >
-                    <Icon
-                      name={hasIcon(category.iconKey) ? (category.iconKey as IconName) : "house"}
-                      size={17}
-                      strokeWidth={1.8}
-                    />
-                  </span>
+                  <Tile
+                    icon={hasIcon(category.iconKey) ? (category.iconKey as IconName) : "house"}
+                    size={34}
+                    iconSize={17}
+                    stroke={1.8}
+                    flex
+                  />
                   {category.name}
-                  <span style={{ marginLeft: "auto", display: "inline-flex" }}>
-                    <Chevron />
-                  </span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginLeft: "auto" }}>
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
                 </Link>
               </li>
             ))}
@@ -1267,25 +1373,13 @@ export default async function GuidePage({ params }: Props) {
 
           {relatedGuides.length > 0 ? (
             <>
-              <h2 style={{ fontSize: "clamp(22px, 2.4vw, 30px)", fontWeight: "700", marginBottom: "20px" }}>Related guides</h2>
-              <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
+              <h2 data-reveal="" style={{ fontSize: "clamp(22px, 2.4vw, 30px)", fontWeight: "700", marginBottom: "20px" }}>
+                {tail("Related guides")}
+              </h2>
+              <ul data-stagger="" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "16px" }}>
                 {relatedGuides.map((item) => (
-                  <li key={item.id} data-card="" style={{ ...CARD, display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "11px",
-                        background: "var(--blue-50)",
-                        color: "var(--color-primary)",
-                      }}
-                    >
-                      <Icon name="book" size={19} strokeWidth={1.8} />
-                    </span>
+                  <li key={item.id} data-card="" style={{ ...CARD, borderRadius: "22px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <Tile icon="book" size={40} iconSize={19} stroke={1.8} />
                     <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "var(--ls-wide)", textTransform: "uppercase", color: "var(--text-secondary)" }}>
                       {item.type === "COST" ? "Cost guide" : (item.category?.serviceName ?? "Guide")}
                     </span>
