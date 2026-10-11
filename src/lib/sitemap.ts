@@ -285,6 +285,33 @@ async function pagesChild(g: Awaited<ReturnType<typeof gate>>): Promise<SitemapE
   return out.filter((entry) => g.keep(entry.path));
 }
 
+/**
+ * The pictures of each company's work, the only images on a profile worth
+ * offering, capped at six so one large gallery cannot dominate the file.
+ *
+ * Read in its own query rather than as a nested `photos: { take: 6 }`. A
+ * nested take over more than about a thousand parents makes Prisma's SQLite
+ * engine panic ("no entry found for key"), which took down /sitemap.xml once
+ * the directory passed that size, and then every build, because the index is
+ * rendered at build time.
+ */
+async function photosByBusiness(ids: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const rows = await db.businessPhoto.findMany({
+      where: { businessId: { in: ids.slice(i, i + 500) } },
+      orderBy: [{ businessId: "asc" }, { sortOrder: "asc" }],
+      select: { businessId: true, url: true },
+    });
+    for (const row of rows) {
+      const list = out.get(row.businessId) ?? [];
+      if (list.length < 6) list.push(row.url);
+      out.set(row.businessId, list);
+    }
+  }
+  return out;
+}
+
 /** Everything one kind of page contributes, before it is split into files. */
 async function childEntries(name: string): Promise<SitemapEntry[] | null> {
   const g = await gate();
@@ -295,23 +322,15 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
     const rows = await db.business.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        slug: true,
-        updatedAt: true,
-        logoUrl: true,
-        // The pictures of the company's work, which are the only images on the
-        // page worth offering. Capped so one company with a large gallery
-        // cannot dominate the file.
-        photos: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 6 },
-      },
+      select: { id: true, slug: true, updatedAt: true, logoUrl: true },
     });
+    const photos = await photosByBusiness(rows.map((row) => row.id));
     return rows
       .filter((row) => g.keep(routes.business(row.slug), `business:${row.id}`))
       .map((row) => ({
         path: routes.business(row.slug),
         lastModified: row.updatedAt,
-        images: [row.logoUrl, ...row.photos.map((photo) => photo.url)],
+        images: [row.logoUrl, ...(photos.get(row.id) ?? [])],
       }));
   }
 
@@ -530,7 +549,16 @@ export async function sitemapIndex(): Promise<SitemapIndexEntry[]> {
 
   const out: SitemapIndexEntry[] = [];
   for (const child of SITEMAP_CHILDREN) {
-    const entries = await childEntries(child);
+    // One child failing drops that child from the index rather than failing
+    // the index, and with it the build: a sitemap short one file is a small
+    // problem, a site that will not start is not.
+    let entries: SitemapEntry[] | null;
+    try {
+      entries = await childEntries(child);
+    } catch (error) {
+      console.error(`[sitemap] ${child} skipped:`, error instanceof Error ? error.message : error);
+      continue;
+    }
     if (!entries || entries.length === 0) continue;
 
     const names = shardNames(child, entries.length);
