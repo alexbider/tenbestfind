@@ -128,6 +128,9 @@ const addSchema = z.object({
   website: z.string().trim().max(300).optional().or(z.literal("")),
   addressLine: z.string().trim().max(300).optional().or(z.literal("")),
   description: z.string().trim().min(20, "Give us a couple of sentences").max(2000),
+  serviceArea: z.string().trim().max(300).optional().or(z.literal("")),
+  services: z.string().trim().max(600).optional().or(z.literal("")),
+  licenseNumber: z.string().trim().max(120).optional().or(z.literal("")),
   planKey: z.string().trim().min(1),
 });
 
@@ -166,6 +169,7 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
       phone: data.phone || null,
       website: data.website || null,
       addressLine: data.addressLine || null,
+      licenseNumber: data.licenseNumber || null,
       status: "PENDING",
       submittedAt: new Date(),
     },
@@ -177,7 +181,22 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
       subject: `Add ${data.name}`,
       name: data.contactName,
       email: data.contactEmail,
-      message: data.description,
+      // The service area and the services are what the submitter says; an
+      // editor checks them against the website before any of it is published.
+      message: [
+        data.description,
+        data.serviceArea ? `Service area: ${data.serviceArea}` : "",
+        data.services ? `Services: ${data.services}` : "",
+        data.licenseNumber ? `Licence or registration: ${data.licenseNumber}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      payload: JSON.stringify({
+        businessId: business.id,
+        serviceArea: data.serviceArea || null,
+        services: data.services ? data.services.split(",").map((item) => item.trim()).filter(Boolean) : [],
+        licenseNumber: data.licenseNumber || null,
+      }),
       status: "NEW",
     },
   });

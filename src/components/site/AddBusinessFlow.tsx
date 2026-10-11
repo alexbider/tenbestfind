@@ -1,19 +1,38 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { submitBusiness, type AddState } from "@/app/actions/business";
-import { Check, Icon } from "@/components/ui/Icon";
-import { Badge } from "@/components/ui/primitives";
+import { CentreFlow, FlowDone, type FlowStep, type FlowValues } from "@/components/site/centre/CentreFlow";
 import { money } from "@/lib/format";
 import { routes } from "@/lib/urls";
 
 export type AddOption = { id: string; label: string };
 
-const STEPS = ["Business", "Location", "Contact", "Services", "Plan", "Review"];
+/** The kinds of work a listing can say it takes on. Editors check them against the website. */
+const SERVICES = [
+  "Repairs",
+  "Installation",
+  "Replacement",
+  "Inspections",
+  "Maintenance plans",
+  "Emergency / 24-7",
+  "Free estimates",
+  "Financing",
+  "Commercial work",
+  "Insurance claims",
+  "Warranty work",
+  "New construction",
+];
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const initial: AddState = { status: "idle" };
 
+/**
+ * The add-a-business flow on the October 2026 business centre design. It posts
+ * the same fields to the same server action as before, plus the service area,
+ * the services and the licence number the new design asks for.
+ */
 export function AddBusinessFlow({
   categories,
   cities,
@@ -24,257 +43,218 @@ export function AddBusinessFlow({
   planPriceCents: number;
 }) {
   const [state, action, pending] = useActionState(submitBusiness, initial);
-  const [step, setStep] = useState(0);
+  const price = money(planPriceCents);
 
-  if (state.status === "ok") {
-    return (
-      <div className="card" style={{ padding: "40px 42px", maxWidth: 720 }}>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            background: "var(--green-50)",
-            color: "var(--green-600)",
-            marginBottom: 20,
-          }}
-        >
-          <Check size={28} color="currentColor" />
-        </span>
-        <h2 style={{ fontSize: 26, marginBottom: 12 }}>Submission received</h2>
-        <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 20 }}>
-          {state.message}
-        </p>
-        <dl className="transparency__grid" style={{ marginBottom: 24 }}>
-          <div>
-            <dt>Reference</dt>
-            <dd>{state.reference}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>
-              <Badge tone="warning">In editorial review</Badge>
-            </dd>
-          </div>
-          <div>
-            <dt>Due today</dt>
-            <dd>{money(0)}</dd>
-          </div>
-        </dl>
-        <Link href={routes.forBusinesses()} className="btn btn--secondary btn--sm">
-          Back to the business centre
-        </Link>
-      </div>
-    );
-  }
+  const steps: FlowStep[] = [
+    {
+      label: "Business",
+      title: "The business",
+      sub: "The basics an editor needs to place you in the right research pool.",
+      fields: [
+        {
+          id: "name",
+          kind: "input",
+          type: "text",
+          label: "Business name",
+          ph: "Your company name",
+          required: "Tell us the business name",
+          validate: (value) => (String(value ?? "").trim().length < 2 ? "Tell us the business name" : null),
+          errorKeys: ["name"],
+        },
+        {
+          id: "cat",
+          kind: "select",
+          label: "Primary category",
+          options: [{ id: "", title: "Choose a category" }, ...categories.map((category) => ({ id: category.id, title: category.label }))],
+          required: "Pick a category",
+          errorKeys: ["categorySlug"],
+        },
+        {
+          id: "desc",
+          kind: "textarea",
+          label: "What the business does",
+          ph: "Residential re-roofing, storm repair and gutter work across the metro…",
+          full: true,
+          help: "Plain description of the work you take on. Editors write the editorial summary separately.",
+          required: "Give us a couple of sentences",
+          validate: (value) => (String(value ?? "").trim().length < 20 ? "Give us a couple of sentences" : null),
+          errorKeys: ["description"],
+        },
+      ],
+    },
+    {
+      label: "Location",
+      title: "Where you operate",
+      sub: "A verifiable local address is one of our minimum standards.",
+      fields: [
+        {
+          id: "street",
+          kind: "input",
+          type: "text",
+          label: "Street address",
+          ph: "123 Main Street",
+          full: true,
+          autoComplete: "street-address",
+          help: "Service-area businesses can give a registered address instead.",
+          errorKeys: ["addressLine"],
+        },
+        {
+          id: "city",
+          kind: "select",
+          label: "City",
+          options: [{ id: "", title: "Choose a city" }, ...cities.map((city) => ({ id: city.id, title: city.label }))],
+          required: "Pick a city",
+          errorKeys: ["cityId"],
+        },
+        { id: "area", kind: "input", type: "text", label: "Service area", ph: "Columbus and suburbs within 30 miles", errorKeys: ["serviceArea"] },
+      ],
+    },
+    {
+      label: "Contact",
+      title: "Contact details",
+      sub: "How customers and our editors can reach you.",
+      fields: [
+        {
+          id: "contact",
+          kind: "input",
+          type: "text",
+          label: "Your name",
+          ph: "Jane Smith",
+          autoComplete: "name",
+          required: "Tell us your name",
+          validate: (value) => (String(value ?? "").trim().length < 2 ? "Tell us your name" : null),
+          errorKeys: ["contactName"],
+        },
+        {
+          id: "email",
+          kind: "input",
+          type: "email",
+          label: "Email",
+          ph: "you@yourcompany.com",
+          autoComplete: "email",
+          required: "Enter a valid email address",
+          validate: (value) => (EMAIL.test(String(value ?? "").trim()) ? null : "Enter a valid email address"),
+          errorKeys: ["contactEmail"],
+        },
+        { id: "phone", kind: "input", type: "tel", label: "Phone", ph: "(555) 000-0000", autoComplete: "tel", errorKeys: ["phone"] },
+        { id: "web", kind: "input", type: "url", label: "Website", ph: "https://yourcompany.com", autoComplete: "url", errorKeys: ["website"] },
+      ],
+    },
+    {
+      label: "Services",
+      title: "Credentials and services",
+      sub: "Pick everything you genuinely take on. Editors check this against your website.",
+      fields: [
+        { id: "svc", kind: "chips", label: "Services", full: true, options: SERVICES, errorKeys: ["services"] },
+        {
+          id: "lic",
+          kind: "input",
+          type: "text",
+          label: "Licence or registration number",
+          ph: "If your jurisdiction requires one",
+          full: true,
+          errorKeys: ["licenseNumber"],
+        },
+        {
+          id: "provided",
+          kind: "note",
+          label: "Business provided",
+          full: true,
+          title: "Business provided, not verified.",
+          text: "Licence numbers, insurance and certifications are checked after submission. Until then they appear on the profile labelled as reported.",
+        },
+      ],
+    },
+    {
+      label: "Plan",
+      title: "Choose your plan",
+      sub: `${price} a month per published location. Nothing is charged until the listing publishes.`,
+      fields: [
+        {
+          id: "plan",
+          kind: "choice",
+          label: "Plan",
+          full: true,
+          def: "listing",
+          errorKeys: ["planKey"],
+          options: [
+            {
+              id: "listing",
+              title: `Directory Listing · ${price}/mo`,
+              tag: "$0 today",
+              text: "Full profile management once live, plus the listing performance dashboard. Cancel any time.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Review",
+      title: "Review and continue",
+      sub: "Check the details below. You can edit anything before checkout.",
+      fields: [
+        { id: "review", kind: "review", label: "Review", full: true },
+        {
+          id: "next",
+          kind: "note",
+          label: "What happens next",
+          full: true,
+          title: "What happens next.",
+          text: "An editor reviews the submission against the same minimum standards as everything else: a verifiable presence in the market, current insurance, and licensing where the jurisdiction requires it. Submitting does not buy a place on a ranking.",
+        },
+      ],
+    },
+  ];
+
+  const toForm = (values: FlowValues) => ({
+    name: String(values.name ?? ""),
+    categorySlug: String(values.cat ?? ""),
+    description: String(values.desc ?? ""),
+    addressLine: String(values.street ?? ""),
+    cityId: String(values.city ?? ""),
+    serviceArea: String(values.area ?? ""),
+    contactName: String(values.contact ?? ""),
+    contactEmail: String(values.email ?? ""),
+    phone: String(values.phone ?? ""),
+    website: String(values.web ?? ""),
+    services: Array.isArray(values.svc) ? values.svc.join(", ") : "",
+    licenseNumber: String(values.lic ?? ""),
+    planKey: "listing",
+  });
+
+  const summary = () => ({
+    items: [{ name: "Directory Listing", price: `${price}/mo` }],
+    due: money(0),
+    dueNote: "First charged on the day the listing publishes. Never charged if the submission is declined.",
+  });
 
   return (
-    <div className="split" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 40, alignItems: "start" }}>
-      <form action={action} className="card" style={{ padding: "28px 30px" }}>
-        <ol className="steps-rail" aria-label="Submission progress">
-          {STEPS.map((label, index) => (
-            <li key={label} data-state={index === step ? "current" : index < step ? "done" : "todo"}>
-              <span aria-hidden="true">{index < step ? "✓" : index + 1}</span>
-              {label}
-            </li>
-          ))}
-        </ol>
-
-        {state.status === "error" ? <p className="form-error">{state.message}</p> : null}
-
-        <div hidden={step !== 0}>
-          <h2 style={{ fontSize: 20, marginBottom: 20 }}>The business</h2>
-          <div className="field">
-            <label htmlFor="add-name">Business name</label>
-            <input id="add-name" name="name" type="text" />
-            {state.errors?.name ? <span className="field__error">{state.errors.name}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="add-category">Primary category</label>
-            <select id="add-category" name="categorySlug" defaultValue="">
-              <option value="" disabled>
-                Choose a category
-              </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-            {state.errors?.categorySlug ? (
-              <span className="field__error">{state.errors.categorySlug}</span>
-            ) : null}
-          </div>
-          <div className="field">
-            <label htmlFor="add-description">What the business does</label>
-            <textarea id="add-description" name="description" rows={5} />
-            {state.errors?.description ? (
-              <span className="field__error">{state.errors.description}</span>
-            ) : null}
-            <span className="field__hint">
-              Plain description of the work you take on. Editors write the editorial summary
-              separately.
-            </span>
-          </div>
-        </div>
-
-        <div hidden={step !== 1}>
-          <h2 style={{ fontSize: 20, marginBottom: 20 }}>Location and coverage</h2>
-          <div className="field">
-            <label htmlFor="add-city">Primary city</label>
-            <select id="add-city" name="cityId" defaultValue="">
-              <option value="" disabled>
-                Choose a city
-              </option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.label}
-                </option>
-              ))}
-            </select>
-            {state.errors?.cityId ? <span className="field__error">{state.errors.cityId}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="add-address">Street address</label>
-            <input id="add-address" name="addressLine" type="text" />
-            <span className="field__hint">
-              A verifiable local address is one of the minimum standards. Service-area businesses can
-              give a registered address instead.
-            </span>
-          </div>
-        </div>
-
-        <div hidden={step !== 2}>
-          <h2 style={{ fontSize: 20, marginBottom: 20 }}>Contact</h2>
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="add-contact">Your name</label>
-              <input id="add-contact" name="contactName" type="text" autoComplete="name" />
-              {state.errors?.contactName ? (
-                <span className="field__error">{state.errors.contactName}</span>
-              ) : null}
-            </div>
-            <div className="field">
-              <label htmlFor="add-email">Email</label>
-              <input id="add-email" name="contactEmail" type="email" autoComplete="email" />
-              {state.errors?.contactEmail ? (
-                <span className="field__error">{state.errors.contactEmail}</span>
-              ) : null}
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="add-phone">Phone</label>
-              <input id="add-phone" name="phone" type="tel" autoComplete="tel" />
-            </div>
-            <div className="field">
-              <label htmlFor="add-website">Website</label>
-              <input id="add-website" name="website" type="url" placeholder="https://" />
-            </div>
-          </div>
-        </div>
-
-        <div hidden={step !== 3}>
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Credentials and services</h2>
-          <p style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 20 }}>
-            Anything you enter here publishes as business provided. It becomes verified only once an
-            editor confirms it against the issuing authority.
-          </p>
-          <div className="callout callout--note">
-            <Icon name="info" size={20} color="var(--amber-600)" />
-            <div>
-              <p className="callout__title">Business provided, not verified</p>
-              <p>
-                Licence numbers, insurance and certifications are checked after submission. Until
-                then they appear on the profile labelled as reported.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div hidden={step !== 4}>
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Plan</h2>
-          <p style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 20 }}>
-            {money(planPriceCents)} a month per published location. Nothing is charged until the
-            listing publishes.
-          </p>
-          <input type="hidden" name="planKey" value="listing" />
-          <div className="radio-row" style={{ cursor: "default" }}>
-            <Icon name="check" size={18} color="var(--color-success)" />
-            <span>
-              <strong>Directory Listing — {money(planPriceCents)}/month per published location</strong>
-              <span>
-                Full profile management once live, plus the listing performance dashboard. Cancel any
-                time.
-              </span>
-            </span>
-          </div>
-        </div>
-
-        <div hidden={step !== 5}>
-          <h2 style={{ fontSize: 20, marginBottom: 20 }}>Review and submit</h2>
-          <div className="callout callout--brand" style={{ marginBottom: 16 }}>
-            <Icon name="eye" size={20} color="var(--color-primary)" />
-            <div>
-              <p className="callout__title">What happens next</p>
-              <p>
-                An editor reviews the submission against the same minimum standards as everything
-                else: a verifiable presence in the market, current insurance, and licensing where the
-                jurisdiction requires it. Submitting does not buy a place on a ranking.
-              </p>
-            </div>
-          </div>
-          <div className="callout">
-            <Icon name="card" size={20} color="var(--gray-400)" />
-            <div>
-              <p className="callout__title">$0.00 due today</p>
-              <p>
-                Continuing takes you to Stripe Checkout, which holds your card without charging it.
-                The first charge happens on the day the listing publishes, and never if it is
-                declined. Card details go straight to Stripe and never touch our servers.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flow-nav">
-          {step > 0 ? (
-            <button type="button" className="btn btn--secondary btn--sm" onClick={() => setStep(step - 1)}>
-              Back
-            </button>
-          ) : null}
-          {step < STEPS.length - 1 ? (
-            <button type="button" className="btn btn--primary btn--sm" onClick={() => setStep(step + 1)}>
-              Continue
-            </button>
-          ) : (
-            <button type="submit" className="btn btn--primary btn--sm" disabled={pending}>
-              {pending ? "Redirecting to Stripe…" : "Continue to payment details"}
-            </button>
-          )}
-        </div>
-      </form>
-
-      <aside className="card order-summary">
-        <h2 className="contact-card__title">Order summary</h2>
-        <ul>
-          <li>
-            <span>Directory Listing</span>
-            <span>{money(planPriceCents)}/mo</span>
-          </li>
-        </ul>
-        <p className="order-summary__total">
-          <span>Due today</span>
-          <strong>{money(0)}</strong>
-        </p>
-        <p className="order-summary__note">
-          First charged on the day the listing publishes. Never charged if the submission is
-          declined.
-        </p>
-      </aside>
-    </div>
+    <CentreFlow
+      steps={steps}
+      flowLabel="Submission flow"
+      finalLabel="Continue to secure checkout"
+      pendingLabel="Redirecting to Stripe…"
+      stripeText="Continuing takes you to Stripe Checkout, which holds your card without charging it. The first charge happens on the day the listing publishes, and never if it is declined. Card details go straight to Stripe and never touch our servers."
+      summary={summary}
+      toForm={toForm}
+      action={action}
+      pending={pending}
+      serverMessage={state.status === "error" ? state.message : undefined}
+      serverErrors={state.status === "error" ? state.errors : undefined}
+      done={
+        state.status === "ok" ? (
+          <FlowDone
+            title="Submission received"
+            message={state.message ?? ""}
+            rows={[
+              { label: "Reference", value: state.reference ?? "" },
+              { label: "Status", value: "In editorial review" },
+              { label: "Due today", value: money(0) },
+            ]}
+            links={[{ href: routes.forBusinesses(), label: "Back to the business centre", primary: true }]}
+          />
+        ) : undefined
+      }
+    />
   );
 }
