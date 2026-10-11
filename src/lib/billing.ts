@@ -182,7 +182,7 @@ export async function startCheckout(input: {
       background_color: "#F4F6F9",
       border_style: "rounded",
       font_family: "inter",
-      icon: { type: "url", url: siteUrl("/icon.png") },
+      icon: { type: "url", url: siteUrl("/logo-512.png") },
     },
     custom_text: {
       submit: {
