@@ -75,7 +75,9 @@ export default async function ClaimCompletePage({ searchParams }: Props) {
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 22 }}>
             {confirmed
-              ? "Payment confirmed. Verification usually completes within two business days, and the charge is refunded in full if we cannot confirm ownership."
+              ? claim?.status === "APPROVED"
+                ? "Your listing is verified and your subscription is active. Sign in to your dashboard to manage the profile and see your leads."
+                : "Payment confirmed. Confirm the code we emailed you and your listing is verified straight away. If the email confirmation is already done, check your inbox for a link to create your password."
               : "Stripe is confirming the payment. That normally takes a few seconds; the subscription activates as soon as it lands, and you will get a receipt by email either way."}
           </p>
 
@@ -116,6 +118,11 @@ export default async function ClaimCompletePage({ searchParams }: Props) {
           ) : null}
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {claim?.status === "APPROVED" ? (
+              <Link href="/portal/" className="btn btn--primary btn--sm">
+                Go to your dashboard
+              </Link>
+            ) : null}
             <Link href={routes.forBusinesses()} className="btn btn--secondary btn--sm">
               Back to the business centre
             </Link>

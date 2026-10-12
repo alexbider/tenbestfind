@@ -15,6 +15,7 @@ import {
 import { money } from "./format";
 import { parseJson } from "./json";
 import { sendPaymentFailed } from "./notify";
+import { approveClaimIfReady } from "./client-accounts";
 
 /**
  * The internal billing API. Everything that talks to Stripe goes through here,
@@ -386,6 +387,10 @@ export async function applyStripeEvent(event: Stripe.Event) {
           startedAt: new Date(),
         },
       });
+      // If the owner already confirmed their email, payment is the last step,
+      // so the claim is verified here and the owner gets their sign-in email.
+      const claim = await db.claimRequest.findFirst({ where: { subscriptionId }, select: { id: true } });
+      if (claim) await approveClaimIfReady(claim.id);
       return `activated subscription ${subscriptionId}`;
     }
 

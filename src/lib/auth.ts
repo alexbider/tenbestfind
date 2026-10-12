@@ -7,8 +7,8 @@ import { cache } from "react";
 import { db } from "./db";
 import type { UserRole } from "./enums";
 
-const COOKIE = "tbf_session";
-const MAX_AGE = 60 * 60 * 8; // eight hours
+export const SESSION_COOKIE = "tbf_session";
+export const SESSION_MAX_AGE = 60 * 60 * 8; // eight hours
 
 function secret(): Uint8Array {
   const value = process.env.SESSION_SECRET;
@@ -20,33 +20,41 @@ function secret(): Uint8Array {
 
 export type SessionUser = { id: string; email: string; name: string; role: UserRole };
 
-export async function createSession(user: SessionUser) {
-  const token = await new SignJWT({ email: user.email, name: user.name, role: user.role })
+/** Signs a session token. Route handlers set it on their own response. */
+export async function signSessionToken(user: SessionUser): Promise<string> {
+  return new SignJWT({ email: user.email, name: user.name, role: user.role })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
-    .setExpirationTime(`${MAX_AGE}s`)
+    .setExpirationTime(`${SESSION_MAX_AGE}s`)
     .sign(secret());
+}
 
-  const store = await cookies();
-  store.set(COOKIE, token, {
+export function sessionCookieOptions() {
+  return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: MAX_AGE,
-  });
+    maxAge: SESSION_MAX_AGE,
+  };
+}
+
+export async function createSession(user: SessionUser) {
+  const token = await signSessionToken(user);
+  const store = await cookies();
+  store.set(SESSION_COOKIE, token, sessionCookieOptions());
 }
 
 export async function destroySession() {
   const store = await cookies();
-  store.delete(COOKIE);
+  store.delete(SESSION_COOKIE);
 }
 
 /** Reads and verifies the session cookie. Returns null when signed out. */
 export const getSession = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
-  const token = store.get(COOKIE)?.value;
+  const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
@@ -80,7 +88,7 @@ export async function requireStaff(): Promise<SessionUser> {
  */
 export async function requireOwner(): Promise<SessionUser> {
   const session = await getSession();
-  if (!session) redirect("/admin/login/");
+  if (!session) redirect("/login/");
   return session;
 }
 
@@ -120,7 +128,8 @@ export async function requireAdmin(): Promise<SessionUser> {
 
 export async function verifyCredentials(email: string, password: string) {
   const user = await db.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-  if (!user || !user.active) return null;
+  // Accounts created from a verified claim have no password until the owner sets one.
+  if (!user || !user.active || !user.passwordHash) return null;
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return null;
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

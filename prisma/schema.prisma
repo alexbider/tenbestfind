@@ -1138,8 +1138,25 @@ model User {
   enrichRuns      EnrichRun[]
   oauthCodes      OAuthCode[]
   oauthTokens     OAuthToken[]
+  authTokens      AuthToken[]
 
   @@index([role])
+}
+
+// One-time links for business owners: set a password after a verified claim,
+// or sign in from an emailed link. Only a hash of the token is stored.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  purpose   String // SET_PASSWORD | SIGN_IN
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Setting {

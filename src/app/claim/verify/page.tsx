@@ -34,8 +34,9 @@ export default async function ClaimVerifyPage({ searchParams }: Props) {
   } else if (claim.emailVerifiedAt) {
     body = (
       <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-        Email verified for {claim.businessName}. An editor confirms the match against the listing and
-        approves the claim, usually within two business days.
+        {claim.status === "APPROVED"
+          ? `Email verified and ${claim.businessName} is verified. Sign in to your dashboard from the link in your email.`
+          : `Email verified for ${claim.businessName}. Once your payment clears, the listing is verified automatically and we will email you a link to your dashboard.`}
       </p>
     );
   } else if (claim.status === "APPROVED" || claim.status === "REJECTED") {
