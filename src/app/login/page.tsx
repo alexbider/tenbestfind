@@ -29,6 +29,7 @@ export default async function LoginPage({ searchParams }: Props) {
   if (session) redirect(PORTAL_PATH);
 
   const { error } = await searchParams;
+  const googleEnabled = await googleConfigured();
 
   return (
     <SiteChrome active="business" skin>
@@ -47,7 +48,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 26 }}>
             Choose whichever way suits you. Your listing, leads and billing are all in the dashboard.
           </p>
-          <LoginOptions googleEnabled={googleConfigured()} notice={error ? NOTICES[error] : undefined} />
+          <LoginOptions googleEnabled={googleEnabled} notice={error ? NOTICES[error] : undefined} />
         </div>
       </Section>
     </SiteChrome>

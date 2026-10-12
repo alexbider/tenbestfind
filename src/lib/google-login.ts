@@ -1,21 +1,35 @@
 import "server-only";
+import { getSecret, SECRET_KEYS } from "./secrets";
 import { siteUrl } from "./stripe";
 
 /**
  * Google sign-in for business owners, using the standard authorization-code flow.
- * It stays off until both credentials are set, so the button is only shown when it works.
+ * The client ID and secret are read from the admin's Integrations screen (or the
+ * GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables). It stays off
+ * until both are set, so the button is only shown when it works.
  */
 
 export const GOOGLE_STATE_COOKIE = "tbf_google_state";
 export const GOOGLE_CALLBACK_PATH = "/api/auth/google/callback/";
 
-export function googleConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+export type GoogleCredentials = { clientId: string; clientSecret: string };
+
+export async function googleCredentials(): Promise<GoogleCredentials | null> {
+  const [clientId, clientSecret] = await Promise.all([
+    getSecret(SECRET_KEYS.googleClientId),
+    getSecret(SECRET_KEYS.googleClientSecret),
+  ]);
+  if (!clientId || !clientSecret) return null;
+  return { clientId, clientSecret };
 }
 
-export function googleAuthorizeUrl(state: string): string {
+export async function googleConfigured(): Promise<boolean> {
+  return (await googleCredentials()) !== null;
+}
+
+export function googleAuthorizeUrl(state: string, clientId: string): string {
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID ?? "",
+    client_id: clientId,
     redirect_uri: siteUrl(GOOGLE_CALLBACK_PATH),
     response_type: "code",
     scope: "openid email profile",
@@ -27,13 +41,16 @@ export function googleAuthorizeUrl(state: string): string {
 
 /** Trades the code for the signed-in address. Null when anything about the exchange fails. */
 export async function exchangeGoogleCode(code: string): Promise<{ email: string; emailVerified: boolean } | null> {
+  const credentials = await googleCredentials();
+  if (!credentials) return null;
+
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID ?? "",
-      client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      client_id: credentials.clientId,
+      client_secret: credentials.clientSecret,
       redirect_uri: siteUrl(GOOGLE_CALLBACK_PATH),
       grant_type: "authorization_code",
     }),

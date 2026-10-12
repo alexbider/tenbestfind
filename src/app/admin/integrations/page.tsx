@@ -31,6 +31,10 @@ export default async function AdminIntegrationsPage() {
     "stripe.publishableKey": "Stripe dashboard, Developers, API keys, Publishable key (starts pk_live_). Not secret, kept here so both halves live together.",
     "stripe.webhookSecret":
       "How the site knows a payment notice really came from Stripe. Set when the endpoint https://tenbestfind.com/api/stripe/webhook is created in Stripe, Developers, Webhooks (starts whsec_).",
+    "google.clientId":
+      "Lets business owners sign in with Google on the login page. Google Cloud, APIs and Services, Credentials, OAuth client ID (Web application). Add this redirect URI to the client: https://YOUR-DOMAIN/api/auth/google/callback/ . The button stays hidden until both this and the client secret are set.",
+    "google.clientSecret":
+      "The secret for the same Google OAuth client, shown once when the client is created. Only the owner of a verified business account can sign in with it.",
     "dataforseo.login":
       "Search volume, keyword difficulty and live results, for the guide writer and the topic radar. app.dataforseo.com, API access. This is the API login, which is an email address, not the one you sign in to the dashboard with.",
     "dataforseo.password":

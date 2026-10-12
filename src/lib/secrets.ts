@@ -14,6 +14,8 @@ export const SECRET_KEYS = {
   dataForSeoLogin: "dataforseo.login",
   dataForSeoPassword: "dataforseo.password",
   googleServiceAccount: "google.serviceAccount",
+  googleClientId: "google.clientId",
+  googleClientSecret: "google.clientSecret",
   stripeSecret: "stripe.secretKey",
   stripePublishable: "stripe.publishableKey",
   stripeWebhook: "stripe.webhookSecret",
@@ -28,6 +30,8 @@ export const SECRET_LABEL: Record<SecretKey, string> = {
   "dataforseo.login": "DataForSEO login",
   "dataforseo.password": "DataForSEO password",
   "google.serviceAccount": "Google service account JSON",
+  "google.clientId": "Google sign-in client ID",
+  "google.clientSecret": "Google sign-in client secret",
   "stripe.secretKey": "Stripe secret key",
   "stripe.publishableKey": "Stripe publishable key",
   "stripe.webhookSecret": "Stripe webhook signing secret",
@@ -43,6 +47,8 @@ const ENV_NAME: Record<SecretKey, string> = {
   "dataforseo.login": "DATAFORSEO_LOGIN",
   "dataforseo.password": "DATAFORSEO_PASSWORD",
   "google.serviceAccount": "GOOGLE_SERVICE_ACCOUNT_JSON",
+  "google.clientId": "GOOGLE_CLIENT_ID",
+  "google.clientSecret": "GOOGLE_CLIENT_SECRET",
   "stripe.secretKey": "STRIPE_SECRET_KEY",
   "stripe.publishableKey": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
   "stripe.webhookSecret": "STRIPE_WEBHOOK_SECRET",
@@ -278,7 +284,9 @@ export async function secretStatus(): Promise<SecretReport[]> {
       // last four characters of an email address say nothing. Showing it whole
       // is how you confirm the right account is connected, same as the Google
       // one below it.
-      if (key === SECRET_KEYS.dataForSeoLogin) {
+      // The Google client ID is public by design, so it is shown whole for the
+      // same reason: it is how you confirm the right OAuth client is in use.
+      if (key === SECRET_KEYS.dataForSeoLogin || key === SECRET_KEYS.googleClientId) {
         return {
           ...base,
           state: "connected" as const,
