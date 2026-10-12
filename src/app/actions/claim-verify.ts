@@ -9,11 +9,12 @@ import {
   MAX_ATTEMPTS,
   RESEND_SECONDS,
 } from "@/lib/claim-codes";
+import { approveClaimIfReady, openSession, PORTAL_PATH } from "@/lib/client-accounts";
 import { db } from "@/lib/db";
 import { alertClaimEmailVerified } from "@/lib/notify";
 import { routes } from "@/lib/urls";
 
-export type CodeState = { status: "idle" | "ok" | "error" | "sent"; message?: string };
+export type CodeState = { status: "idle" | "ok" | "error" | "sent"; message?: string; redirectTo?: string };
 
 /** Checks the six-digit code a claimant typed in. */
 export async function verifyClaimCode(_prev: CodeState, formData: FormData): Promise<CodeState> {
@@ -48,10 +49,23 @@ export async function verifyClaimCode(_prev: CodeState, formData: FormData): Pro
       domainMatches: emailMatchesWebsite(claim.ownerEmail, claim.business?.website),
     });
   }
+  // Email is proven. If payment has already cleared, the claim is verified now and
+  // the buyer is signed in and sent to their dashboard. If not, the webhook does
+  // the same thing when the payment lands.
+  const owner = await approveClaimIfReady(claimId);
   revalidatePath(routes.admin("/claims"));
+  if (owner) {
+    await openSession(owner);
+    return {
+      status: "ok",
+      message: "Email confirmed and payment received. Taking you to your dashboard.",
+      redirectTo: PORTAL_PATH,
+    };
+  }
   return {
     status: "ok",
-    message: "Email verified. An editor confirms the match against the listing and approves the claim, usually within two business days.",
+    message:
+      "Email confirmed. Your payment is still clearing, so we will email you a link to your dashboard as soon as it does.",
   };
 }
 

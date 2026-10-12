@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { resendClaimCode, verifyClaimCode, type CodeState } from "@/app/actions/claim-verify";
 
 const initial: CodeState = { status: "idle" };
@@ -21,6 +21,11 @@ const notice = (tone: "error" | "ok") =>
 export function ClaimCodeForm({ claimId, maskedEmail }: { claimId: string; maskedEmail: string }) {
   const [state, verify, verifying] = useActionState(verifyClaimCode, initial);
   const [resent, resend, resending] = useActionState(resendClaimCode, initial);
+
+  // A verified, paid claim signs the buyer in, so send them to their dashboard.
+  useEffect(() => {
+    if (state.redirectTo) window.location.assign(state.redirectTo);
+  }, [state.redirectTo]);
 
   if (state.status === "ok") {
     return (
