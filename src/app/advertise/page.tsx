@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { AdvertiseForm } from "@/components/site/AdvertiseForm";
 import { BILLING_FAQS } from "@/components/site/business-centre";
@@ -11,12 +12,12 @@ import { routes } from "@/lib/urls";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "Advertising",
   description:
     "Labelled featured placements beside the rankings people are reading. Advertising does not buy editorial rankings.",
   alternates: { canonical: "/advertise/" },
-};
+});
 
 const PRODUCTS = [
   {

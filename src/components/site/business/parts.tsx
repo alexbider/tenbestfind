@@ -251,9 +251,7 @@ export function TenMark({ size, right = "-3px", bottom = "-6px", opacity = 0.32 
         color: "var(--gold-ink)",
         opacity,
       }}
-    >
-      10
-    </span>
+    ></span>
   );
 }
 

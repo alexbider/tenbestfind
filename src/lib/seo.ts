@@ -7,6 +7,7 @@ import { loadSeoSettings, renderTemplate, type SeoSettings } from "./seo-setting
 import { absoluteUrl, routes } from "./urls";
 import {
   TITLE_LIMIT,
+  TOP_TEN,
   cityCopy,
   countryCopy,
   rankingCopy,
@@ -105,6 +106,12 @@ export async function seoFor(
      * either way would undo the decision.
      */
     titleIsFinal?: boolean;
+    /**
+     * A typed title this returns true for is ignored in favour of the built
+     * one. Rankings use it: an override saying "10 Best" on a list of seven
+     * was the commonest wrong title on the site.
+     */
+    rejectTypedTitle?: (title: string) => boolean;
   },
 ): Promise<Metadata> {
   const [record, settings] = await Promise.all([
@@ -121,7 +128,8 @@ export async function seoFor(
   // A title written on the page keeps its words, and still gets the brand the
   // template would have given it; otherwise the global template for this
   // entity type builds the whole thing.
-  const typed = record?.title?.trim();
+  const typedRaw = record?.title?.trim();
+  const typed = typedRaw && fallback.rejectTypedTitle?.(typedRaw) ? undefined : typedRaw;
   const title =
     (typed ? withBrand(typed, siteName, sep) : "") ||
     (fallback.titleIsFinal ? fallback.title : "") ||
@@ -345,6 +353,7 @@ function fromCopy(
   entityType: SeoEntityType,
   entityId: string,
   rest: {
+    rejectTypedTitle?: (title: string) => boolean;
     path: string;
     image?: string | null;
     tokens?: Tokens;
@@ -453,6 +462,7 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
         publishedAt: ranking.publishedAt,
         modifiedAt: ranking.lastReviewedAt,
         indexable: copy.indexable,
+        rejectTypedTitle: (typed) => publishedEntries < TOP_TEN && /^\s*10\s+best\b/i.test(typed),
       });
     }
     case "category": {

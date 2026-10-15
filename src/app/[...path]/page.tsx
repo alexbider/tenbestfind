@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { CategoryPage } from "@/templates/CategoryPage";
 import { CityHub } from "@/templates/CityHub";
 import { CmsPage } from "@/templates/CmsPage";
@@ -8,6 +8,7 @@ import { RankingPage } from "@/templates/RankingPage";
 import { RegionHub } from "@/templates/RegionHub";
 import { SubservicePage } from "@/templates/SubservicePage";
 import { redirectIfKnown } from "@/lib/redirects";
+import { legacyTarget } from "@/lib/legacy-urls";
 import { buildMetadata } from "@/lib/seo";
 import { resolvePath } from "@/lib/resolve";
 
@@ -60,8 +61,13 @@ export default async function CatchAllPage({ params }: Props) {
       );
     case "page":
       return <CmsPage slug={resolved.slug} />;
-    default:
+    default: {
+      // A row in the redirect table is an editor's decision and wins. An
+      // address from the first URL scheme with no row still finds its page.
       await redirectIfKnown(`/${path.join("/")}/`);
+      const legacy = await legacyTarget(path);
+      if (legacy) permanentRedirect(legacy);
       notFound();
+    }
   }
 }

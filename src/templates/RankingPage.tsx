@@ -33,6 +33,7 @@ import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { rankingCopy } from "@/lib/seo-copy";
+import { tradeWords } from "@/lib/trade-words";
 import { breadcrumbSchema, rankingCrumbs } from "@/lib/breadcrumbs";
 import { graph, listId, pageEntity, personEntity, personFromRow, personRef, rankingListEntity } from "@/lib/schema";
 import { businessSchemaInput } from "@/lib/schema-entities";
@@ -190,8 +191,18 @@ export async function RankingPage({
       include: { category: true },
       take: 6,
     }),
+    // A guide about one place only belongs on that place's pages. Matching on
+    // trade alone put the Chicago plumber guide on every plumber ranking.
     db.guide.findMany({
-      where: { status: "PUBLISHED", categoryId: category.id },
+      where: {
+        status: "PUBLISHED",
+        categoryId: category.id,
+        AND: [
+          { OR: [{ cityId: null }, { cityId: city.id }] },
+          { OR: [{ regionId: null }, { regionId: region.id }] },
+          { OR: [{ countryId: null }, { countryId: country.id }] },
+        ],
+      },
       orderBy: { publishedAt: "desc" },
       take: 4,
       include: { author: { select: { name: true } } },
@@ -248,7 +259,8 @@ export async function RankingPage({
   ];
 
   const total = ranking.entries.length;
-  const serviceLower = category.serviceName.toLowerCase();
+  const words = tradeWords(category);
+  const serviceLower = words.trade;
   const reviewedOn = ranking.lastReviewedAt ?? ranking.publishedAt;
   const year = reviewedOn ? new Date(reviewedOn).getFullYear() : null;
   // The share of the companies looked at that did not make the list, which is
@@ -400,7 +412,7 @@ export async function RankingPage({
           <div>
             {entry.whyPicked ? (
               <>
-                <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "8px" }}>Why we picked them</h4>
+                <p style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "8px" }}>Why we picked them</p>
                 <p style={{ fontSize: "15.5px", lineHeight: "1.7", color: "var(--text-primary)", marginBottom: "18px", textWrap: "pretty" }}>{entry.whyPicked}</p>
               </>
             ) : null}
@@ -408,7 +420,7 @@ export async function RankingPage({
               <div data-two="" style={{ display: "grid", gridTemplateColumns: likes.length > 0 && concerns.length > 0 ? "1fr 1fr" : "1fr", gap: "12px" }}>
                 {likes.length > 0 ? (
                   <div style={{ padding: "16px", borderRadius: "16px", background: "rgba(31,157,107,0.06)", border: "1px solid rgba(31,157,107,0.18)" }}>
-                    <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "#178054", marginBottom: "10px" }}>What we like</h4>
+                    <p style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "#178054", marginBottom: "10px" }}>What we like</p>
                     <ul style={{ display: "grid", gap: "8px" }}>
                       {likes.map((item) => (
                         <li key={item} style={{ display: "flex", gap: "9px", fontSize: "14px", lineHeight: "1.5", color: "var(--text-primary)" }}>
@@ -423,7 +435,7 @@ export async function RankingPage({
                 ) : null}
                 {concerns.length > 0 ? (
                   <div style={{ padding: "16px", borderRadius: "16px", background: "var(--gold-soft)", border: "1px solid #F0DDB4" }}>
-                    <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "10px" }}>Things to consider</h4>
+                    <p style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "10px" }}>Things to consider</p>
                     <ul style={{ display: "grid", gap: "8px" }}>
                       {concerns.map((item) => (
                         <li key={item} style={{ display: "flex", gap: "9px", fontSize: "14px", lineHeight: "1.5", color: "var(--text-primary)" }}>
@@ -441,7 +453,7 @@ export async function RankingPage({
             ) : null}
             {services.length > 0 ? (
               <>
-                <h4 style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "18px 0 8px" }}>Services</h4>
+                <p style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "18px 0 8px" }}>Services</p>
                 <ul style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                   {services.map((name) => (
                     <li key={name} style={{ padding: "6px 12px", borderRadius: "999px", background: "var(--blue-50)", color: "var(--blue-800)", fontSize: "12.5px", fontWeight: "600" }}>
@@ -855,7 +867,7 @@ export async function RankingPage({
                 <>
                   <Kicker>The Ranking</Kicker>
                   <h2 id="rank-h2" style={{ ...H2S, marginBottom: "10px" }}>
-                    Our <Accent>top {total}</Accent> {serviceLower} companies in {city.name}
+                    Our <Accent>top {total}</Accent> {words.pros} in {city.name}
                   </h2>
                   <p style={{ fontSize: "16px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
                     {ranking.intro ??
@@ -873,7 +885,7 @@ export async function RankingPage({
             <div data-reveal="" style={{ maxWidth: "720px", marginBottom: "22px" }}>
               <Kicker>Side by Side</Kicker>
               <h2 id="cmp-h2" style={{ ...H2S, marginBottom: "10px" }}>
-                Compare the top {serviceLower} companies <Accent>in {city.name}</Accent>
+                Compare the top {words.pros} <Accent>in {city.name}</Accent>
               </h2>
               <p style={{ fontSize: "16px", color: "var(--text-secondary)" }}>Ranking position reflects our editorial review, not customer ratings.</p>
             </div>
@@ -1084,11 +1096,11 @@ export async function RankingPage({
               <div style={{ maxWidth: "760px" }}>
                 <Kicker tone="ink">Methodology</Kicker>
                 <h2 id="method-h2" style={{ ...H2S, color: "#fff", marginBottom: "12px" }}>
-                  How we chose the best {serviceLower} companies <Accent>in {city.name}</Accent>
+                  How we chose the best {words.pros} <Accent>in {city.name}</Accent>
                 </h2>
                 <p style={{ fontSize: "16px", lineHeight: "1.7", color: "rgba(232,237,245,0.78)" }}>
                   {ranking.methodologyNote ??
-                    `We started from ${ranking.companiesReviewed} ${serviceLower} companies serving ${city.name} and narrowed the list against the criteria below. Position reflects our editorial judgment of overall fit for local homeowners, not payment.`}
+                    `We started from ${ranking.companiesReviewed} ${words.pros} serving ${city.name} and narrowed the list against the criteria below. Position reflects our editorial judgment of overall fit for local homeowners, not payment.`}
                 </p>
               </div>
               <Link data-link="" href={routes.howWeRank()} style={{ display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", fontSize: "15px", fontWeight: "700", color: "var(--gold-ink)" }}>
@@ -1260,7 +1272,7 @@ export async function RankingPage({
                 <div data-reveal="">
                   <Kicker>Hiring</Kicker>
                   <h2 id="hire-h2" style={{ ...H2S, marginBottom: "22px" }}>
-                    How to choose a {category.singular.toLowerCase()} <Accent>in {city.name}</Accent>
+                    How to choose {words.aPro} <Accent>in {city.name}</Accent>
                   </h2>
                 </div>
                 <div data-reveal="" style={{ position: "relative" }}>
@@ -1535,13 +1547,13 @@ export async function RankingPage({
         <FinalBand
           heading={
             <>
-              Need a {category.singular.toLowerCase()} <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>in {city.name}?</span>
+              Need {words.aPro} <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>in {city.name}?</span>
             </>
           }
           service={category.serviceName}
           after={
             <a data-link="" href="#compare" style={{ display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", fontSize: "15px", fontWeight: "600", color: "var(--gold-ink)" }}>
-              Or compare the {city.name} {serviceLower} companies again
+              Or compare the {city.name} {words.pros} again
               <ArrowSvg />
             </a>
           }

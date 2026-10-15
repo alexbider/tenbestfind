@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { CoverageMap } from "@/components/site/rankings/CoverageMap";
 import { RankingsArchive } from "@/components/site/rankings/RankingsArchive";
@@ -16,11 +17,11 @@ export const revalidate = 60;
 
 const copy = rankingsArchiveCopy();
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: { absolute: copy.title },
   description: copy.description,
   alternates: { canonical: "/rankings/" },
-};
+});
 
 /** The coverage tiles are 30px wide, so each trade gets a short label. */
 const SHORT: Record<string, string> = {

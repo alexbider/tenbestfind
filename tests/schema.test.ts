@@ -84,8 +84,15 @@ describe("a business entity", () => {
     expect(entity.sameAs).toContain("https://facebook.com/acmehvac");
   });
 
-  it("publishes a rating only when there are reviews behind it", () => {
-    expect(entity.aggregateRating).toMatchObject({ ratingValue: 4.8, reviewCount: 312, bestRating: 5 });
+  it("never publishes a Google-sourced rating as aggregateRating", () => {
+    expect(entity.aggregateRating).toBeUndefined();
+    const fromGoogle = businessEntity({ ...full, ratingSource: "google" }) as Record<string, unknown>;
+    expect(fromGoogle.aggregateRating).toBeUndefined();
+  });
+
+  it("publishes a site-collected rating only when there are reviews behind it", () => {
+    const own = businessEntity({ ...full, ratingSource: "site" }) as Record<string, unknown>;
+    expect(own.aggregateRating).toMatchObject({ ratingValue: 4.8, reviewCount: 312, bestRating: 5 });
 
     const unrated = businessEntity({ ...full, rating: 4.8, reviewCount: 0 }) as Record<string, unknown>;
     expect(unrated.aggregateRating).toBeUndefined();

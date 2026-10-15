@@ -132,10 +132,10 @@ export function placeLabel(city: { name: string }, region: { code: string }): st
 
 export function homeCopy(): PageCopy {
   return {
-    title: brand("10 Best Local Businesses Near You"),
-    h1: "Find the 10 Best Local Service Companies in Your City",
+    title: brand("10 Best Home Service Companies Near You"),
+    h1: "Find the 10 Best Home Service Companies in Your City",
     description:
-      "Find researched local businesses across the U.S. and Canada. Compare TenBestFind rankings, company profiles, reviews, services and trusted local guides.",
+      "Top 10 plumbers, HVAC companies, roofers and electricians in US and Canadian cities, checked by named editors. No paid rankings.",
     indexable: true,
   };
 }
@@ -145,7 +145,7 @@ export function homeServicesCopy(): PageCopy {
     title: brand("Best Home Service Companies Near You"),
     h1: "Find the Best Home Service Companies Near You",
     description:
-      "Find researched home service companies near you. Compare TenBestFind rankings, services, reviews, business profiles and practical homeowner guides.",
+      "Compare top 10 plumbers, HVAC, roofing and electrical companies in US and Canadian cities, checked by named editors and re-checked every 90 days.",
     indexable: true,
   };
 }
@@ -249,21 +249,74 @@ export const SUBSERVICE_MIN_BUSINESSES = 3;
  * searched as "emergency plumbers", so an editor can set the search term and
  * the name is only the fallback.
  */
+/**
+ * The search phrase for a subservice whose filed name leaves out the trade.
+ *
+ * "Opener installation", "Spring replacement" and "Maintenance plans" are
+ * clear inside their trade's menu and meaningless in a search result, where
+ * the title used to read "Opener installation near you". An editor-set search
+ * term still wins; this only fills the gap when there is none.
+ */
+const SEARCH_TERMS: Record<string, string> = {
+  "garage-doors/opener-installation": "Garage door opener installation",
+  "garage-doors/spring-replacement": "Garage door spring replacement",
+  "garage-doors/door-installation": "Garage door installation",
+  "hvac/maintenance-plans": "HVAC maintenance plans",
+  "hvac/duct-cleaning": "Air duct cleaning",
+  "moving-companies/storage": "Moving and storage",
+  "locksmiths/emergency-lockout": "Emergency lockout service",
+  "plumbers/emergency-plumbing": "Emergency plumbers",
+  "plumbers/fixture-installation": "Plumbing fixture installation",
+  "plumbers/gas-line-work": "Gas line repair and installation",
+  "electricians/lighting-installation": "Lighting installation",
+};
+
+export function subserviceTerm(
+  subservice: { name: string; slug?: string | null; searchTerm?: string | null },
+  category?: { slug?: string | null },
+): string {
+  const typed = subservice.searchTerm?.trim();
+  if (typed) return typed;
+  const mapped = category?.slug && subservice.slug ? SEARCH_TERMS[`${category.slug}/${subservice.slug}`] : undefined;
+  return mapped ?? subservice.name;
+}
+
+/** Lowercase for mid-sentence, acronyms kept: "AC repair", not "ac repair". */
+const midSentence = (phrase: string) =>
+  phrase
+    .split(" ")
+    .map((word) => (isAcronym(word) ? word : word.toLowerCase()))
+    .join(" ");
+
 export function subserviceCopy(
-  subservice: { name: string; searchTerm?: string | null; description?: string | null },
-  category: Trade & { serviceName: string },
+  subservice: { name: string; slug?: string | null; searchTerm?: string | null; description?: string | null },
+  category: Trade & { serviceName: string; slug?: string | null },
   counts: { businesses: number; publishedRankings: number },
 ): PageCopy {
-  const term = subservice.searchTerm?.trim() || subservice.name;
+  const term = subserviceTerm(subservice, category);
   const heading = nearYou(term);
   const enough = counts.businesses >= SUBSERVICE_MIN_BUSINESSES;
+  const pros = category.singular ? tradesPhrase({ singular: category.singular }) : midSentence(category.name);
+
+  // The stored description is a one-line label ("Full door and panel
+  // replacement."), 32 to 88 characters. On its own it was the whole meta
+  // description, which gave a searcher no reason to click. It now leads, and
+  // the sentence after it says what the page is.
+  const blurb = subservice.description?.trim();
+  const tail = `Compare ${pros} for ${midSentence(term)}, city by city, with licenses and reviews checked.`;
+  const description =
+    blurb && blurb.length >= 120
+      ? blurb
+      : blurb && blurb.length + 1 + tail.length <= 160
+        ? `${blurb} ${tail}`
+        : tail;
 
   return {
-    title: brand(heading),
+    // "Best" is what people type in front of the job; the plain heading is the
+    // fallback when the longer form would not fit beside the brand.
+    title: brand(`Best ${midSentence(term)} near you`, heading),
     h1: heading,
-    description:
-      subservice.description?.trim() ||
-      `Find ${term.toLowerCase()} near you. Compare local companies, reviews, services and TenBestFind rankings for ${subservice.name.toLowerCase()}.`,
+    description,
     // Every possible keyword permutation is not a page. One earns indexing when
     // there is enough behind it to be worth landing on.
     indexable: enough && counts.publishedRankings > 0,

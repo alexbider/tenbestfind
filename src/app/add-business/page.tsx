@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import { AddBusinessFlow } from "@/components/site/AddBusinessFlow";
 import { BILLING_FAQS } from "@/components/site/business-centre";
 import { CentreFaq, CentreHero, FlowHeroBody, SearchBand } from "@/components/site/centre/parts";
@@ -8,12 +9,12 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "Add a business",
   description:
     "Submit a business we have not covered yet. Editorial review applies the same standards as everything else, and nothing is charged until the listing publishes.",
   alternates: { canonical: "/add-business/" },
-};
+});
 
 export default async function AddBusinessPage() {
   const [categories, cities, plan] = await Promise.all([

@@ -74,9 +74,7 @@ export function Tile({
           color: amber ? "#8A5F0B" : "var(--ink)",
           opacity: amber ? 0.14 : 0.08,
         }}
-      >
-        10
-      </span>
+      ></span>
       <svg
         data-ico=""
         width={iconSize ?? Math.round(size * 0.5)}

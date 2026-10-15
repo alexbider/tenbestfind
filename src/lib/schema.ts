@@ -222,6 +222,8 @@ export type BusinessEntityInput = {
   credentials?: { label: string; authority?: string | null; identifier?: string | null }[];
   priceRange?: string | null;
   rating?: number | null;
+  /** Where the rating came from. Only "site" ratings are published as markup. */
+  ratingSource?: "google" | "site" | null;
   reviewCount?: number | null;
 };
 
@@ -327,9 +329,18 @@ export function businessEntity(input: BusinessEntityInput): Record<string, unkno
 
   if (input.priceRange?.trim()) entity.priceRange = input.priceRange.trim();
 
-  // A rating with nothing behind it is the one piece of markup that gets a
-  // site penalised, so both halves have to be real before either is published.
-  if (typeof input.rating === "number" && input.rating > 0 && (input.reviewCount ?? 0) > 0) {
+  // The rating and count on file are Google's, read from the company's Maps
+  // listing. Google's review snippet rules exclude ratings collected on another
+  // site, so publishing them as aggregateRating earns no stars and risks a
+  // structured-data manual action. They stay visible on the page, attributed to
+  // Google, and leave the markup until there is a rating TenBestFind collected
+  // itself (input.ratingSource === "site").
+  if (
+    input.ratingSource === "site" &&
+    typeof input.rating === "number" &&
+    input.rating > 0 &&
+    (input.reviewCount ?? 0) > 0
+  ) {
     entity.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: input.rating,
@@ -353,12 +364,10 @@ export type ListedBusiness = BusinessEntityInput;
 /**
  * One company inside a ranking.
  *
- * The rating is the reason a reader trusts the position, and leaving it out of
- * the markup means the only machine-readable thing about a ranked company is
- * that it has a name. A validator will call aggregateRating inside a
- * LocalBusiness self-serving; that rule is about a business marking up its own
- * site. This is a third party publishing a rating about somebody else, which is
- * the case the property exists for, so it stays.
+ * The rating shows on the page next to each company, attributed to Google.
+ * It is not repeated as aggregateRating: the numbers were collected by Google,
+ * not by TenBestFind, and review markup must describe ratings the publishing
+ * site gathered itself (see businessEntity).
  */
 export function listedBusinessEntity(business: ListedBusiness): Record<string, unknown> {
   return businessEntity(business);
@@ -437,7 +446,9 @@ export function serviceEntity(input: ServiceInput): Record<string, unknown> {
     "@id": serviceId(input.path),
     name: input.name,
     serviceType: input.serviceType,
-    provider: { "@id": publisherId() },
+    // No provider. TenBestFind researches the trade; it does not do the work,
+    // and naming the publisher as provider said it did. The companies that do
+    // are the ranked businesses, linked from the ItemList on each ranking.
     url: absoluteUrl(input.path),
   };
 

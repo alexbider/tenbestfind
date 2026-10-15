@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { SiteChrome } from "@/components/site/SiteChrome";
@@ -28,13 +29,13 @@ import { homeCopy, rankingCardTitle } from "@/lib/seo-copy";
 
 const copy = homeCopy();
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   // Absolute, because the copy module decides where the brand goes rather than
   // the global title template appending it to everything.
   title: { absolute: copy.title },
   description: copy.description,
   alternates: { canonical: "/" },
-};
+});
 
 /* ------------------------------------------------------------ fragments */
 
@@ -188,7 +189,7 @@ const STEPS = [
   {
     n: "01",
     title: "Research",
-    body: "We list every company that genuinely works the area, then pull licence records, insurance status, years in business and the public complaint history for each one.",
+    body: "We list every company that genuinely works the area, then pull license records, insurance status, years in business and the public complaint history for each one.",
   },
   {
     n: "02",
@@ -242,7 +243,7 @@ const BIZ_POINTS = [
   {
     icon: "card" as IconName,
     title: "A Profile That Answers the Questions",
-    text: "Services, licence, insurance, coverage area and contact details on one page a homeowner can trust.",
+    text: "Services, license, insurance, coverage area and contact details on one page a homeowner can trust.",
   },
   {
     icon: "chart" as IconName,
@@ -307,7 +308,7 @@ export default async function HomePage() {
   const ledger = [
     { value: counts.cities, suffix: "", label: "Cities with published rankings" },
     { value: counts.categories, suffix: "", label: "Trades, each with its own criteria" },
-    { value: counts.businesses, suffix: "", label: "Companies checked against licence registers" },
+    { value: counts.businesses, suffix: "", label: "Companies checked against license registers" },
     { value: 90, suffix: " days", label: "Maximum time between re-checks" },
   ];
 
@@ -528,7 +529,7 @@ export default async function HomePage() {
                       }}
                     />
                   </span>{" "}
-                  Local Service Companies in Your City
+                  Home Service Companies in Your City
                 </h1>
                 <p
                   data-in="3"
@@ -542,7 +543,7 @@ export default async function HomePage() {
                   }}
                 >
                   Most &quot;best of&quot; pages are ads with a headline. Ours are written by editors who pull
-                  licence records, read the complaints and phone the shops. One city, one trade, ten names you
+                  license records, read the complaints and phone the shops. One city, one trade, ten names you
                   can actually call.
                 </p>
 
@@ -999,12 +1000,11 @@ export default async function HomePage() {
               <div style={{ maxWidth: "660px" }}>
                 <Eyebrow>Home Services</Eyebrow>
                 <h2 id="cats-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                  Pick the Trade. We Have Already Done{" "}
-                  <Accent>the Phone Calls.</Accent>
+                  Top 10 Rankings <Accent>by Trade</Accent>
                 </h2>
                 <p style={{ ...LEDE, marginTop: "12px" }}>
                   {counts.categories} trades, from emergency plumbing to full kitchen remodels. Every category
-                  page opens with what a valid licence covers in your state or province, then the ten
+                  page opens with what a valid license covers in your state or province, then the ten
                   companies that cleared our checks.
                 </p>
               </div>
@@ -1124,7 +1124,7 @@ export default async function HomePage() {
                 <div style={{ maxWidth: "660px" }}>
                   <Eyebrow>Rankings</Eyebrow>
                   <h2 id="feat-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                    {accent("The Lists People Open Most", "Open Most")}
+                    {accent("Most Popular Top 10 Lists", "Top 10 Lists")}
                   </h2>
                   <p style={{ ...LEDE, marginTop: "12px" }}>
                     Four rankings that get more traffic than the rest combined. Each one shows the date an
@@ -1386,11 +1386,11 @@ export default async function HomePage() {
             <div data-reveal="" style={{ maxWidth: "720px" }}>
               <Eyebrow>How We Rank</Eyebrow>
               <h2 id="how-h2" data-h2="" style={{ ...H2, marginBottom: "10px", textWrap: "balance" }}>
-                Nobody Buys a Spot. <Accent>Here Is What Earns One.</Accent>
+                How We Rank <Accent>Local Companies</Accent>
               </h2>
               <p style={{ ...LEDE, marginBottom: "12px" }}>
                 TenBestFind is a small editorial team, not a lead-generation company. We check a
-                contractor&apos;s licence against the state or provincial register, count the years it has
+                contractor&apos;s license against the state or provincial register, count the years it has
                 pulled permits locally, look at the range of work it takes on, and read what customers say
                 about it in public.
               </p>
@@ -1431,12 +1431,11 @@ export default async function HomePage() {
             <div data-reveal="" style={{ maxWidth: "720px" }}>
               <Eyebrow>Locations</Eyebrow>
               <h2 id="country-h2" data-h2="" style={{ ...H2, marginBottom: "10px", textWrap: "balance" }}>
-                {countries.length === 2 ? "Two Countries" : `${countries.length} Countries`}
-                {`, ${counts.cities} Cities, `}
-                <Accent>One Standard</Accent>
+                {`Home Service Rankings in ${counts.cities} `}
+                <Accent>{countries.length === 2 ? "US and Canadian Cities" : "Cities"}</Accent>
               </h2>
               <p style={{ ...LEDE, marginBottom: "22px" }}>
-                Rankings are organised by country, then state or province, then city. A roofing licence in
+                Rankings are organized by country, then state or province, then city. A roofing license in
                 Florida means something different from one in Ontario, so the research is done at the level
                 where the rules actually live.
               </p>
@@ -1754,9 +1753,9 @@ export default async function HomePage() {
             <div data-shell="" data-sec="" style={{ padding: "38px var(--gutter) 14px" }}>
               <div data-reveal="" style={HEAD_ROW}>
                 <div style={{ maxWidth: "660px" }}>
-                  <Eyebrow>Recently Reviewed</Eyebrow>
+                  <Eyebrow>Fresh Off the Editor&apos;s Desk</Eyebrow>
                   <h2 id="latest-h2" data-h2="" style={H2}>
-                    Fresh Off the <Accent>Editor&apos;s Desk</Accent>
+                    Recently Reviewed <Accent>Rankings</Accent>
                   </h2>
                   <p style={{ ...LEDE, marginTop: "12px" }}>New lists and re-checked ones, most recent first.</p>
                 </div>
@@ -1880,12 +1879,12 @@ export default async function HomePage() {
             <div data-shell="" data-sec="" style={{ padding: "34px var(--gutter) 18px" }}>
               <div data-reveal="" style={HEAD_ROW}>
                 <div style={{ maxWidth: "660px" }}>
-                  <Eyebrow>Guides</Eyebrow>
+                  <Eyebrow>Know What to Ask</Eyebrow>
                   <h2 id="guides-h2" data-h2="" style={{ ...H2, textWrap: "balance", maxWidth: "640px" }}>
-                    {accentTail("Know What to Ask Before Anyone Quotes You", 4)}
+                    {accentTail("Hiring Guides for Homeowners", 2)}
                   </h2>
                   <p style={{ ...LEDE, marginTop: "12px" }}>
-                    Short, practical reads: how to line up three quotes, what a licence does and does not
+                    Short, practical reads: how to line up three quotes, what a license does and does not
                     cover, and what a fair price looks like in your market this year.
                   </p>
                 </div>
@@ -2041,9 +2040,9 @@ export default async function HomePage() {
                     textWrap: "balance",
                   }}
                 >
-                  Real Names, Public Criteria,{" "}
+                  Our Editorial Standards:{" "}
                   <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>
-                    Published Mistakes
+                    Who Checks the Lists
                   </span>
                 </h2>
                 <p
@@ -2363,7 +2362,7 @@ export default async function HomePage() {
                 <div data-reveal="">
                   <Eyebrow>FAQ</Eyebrow>
                   <h2 id="faq-h2" data-h2="" style={{ ...H2, marginBottom: "14px" }}>
-                    Questions We Get <Accent>Every Week</Accent>
+                    Frequently Asked <Accent>Questions</Accent>
                   </h2>
                   <p style={{ ...LEDE, marginBottom: "10px", maxWidth: "460px" }}>
                     Straight answers about how the lists are built and what they cost, which is nothing.
@@ -2512,7 +2511,7 @@ export default async function HomePage() {
                     textWrap: "pretty",
                   }}
                 >
-                  Claim your profile and keep your licence, hours, service area and photos current. Or take a
+                  Claim your profile and keep your license, hours, service area and photos current. Or take a
                   labelled featured slot on the Top 10 page for your city and trade.
                 </p>
                 <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: "8px" }}>
