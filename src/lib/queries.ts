@@ -29,7 +29,9 @@ export const rankingCardSelect = {
 
 export const getFeaturedCategories = cache(async () =>
   db.category.findMany({
-    where: { published: true, featured: true },
+    // Only trades with a published ranking: the others are noindexed, and the
+    // homepage grid, chips and suggestions all link from here.
+    where: { published: true, featured: true, rankings: { some: { status: "PUBLISHED" } } },
     orderBy: [{ wide: "desc" }, { sortOrder: "asc" }],
   }),
 );
@@ -151,10 +153,11 @@ export const getHeroRanking = cache(async () =>
 
 /** The four figures under the homepage hero. */
 export const getDirectoryCounts = cache(async () => {
-  const [cities, categories, businesses] = await Promise.all([
+  const [cities, categories, liveCategories, businesses] = await Promise.all([
     db.city.count({ where: { published: true, rankings: { some: { status: "PUBLISHED" } } } }),
     db.category.count({ where: { published: true } }),
+    db.category.count({ where: { published: true, rankings: { some: { status: "PUBLISHED" } } } }),
     db.business.count({ where: { status: "PUBLISHED" } }),
   ]);
-  return { cities, categories, businesses };
+  return { cities, categories, liveCategories, businesses };
 });

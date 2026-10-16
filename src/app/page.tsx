@@ -24,7 +24,8 @@ import {
   getPublishedRankings,
   getTrendingSubservices,
 } from "@/lib/queries";
-import { rankingUrl, routes } from "@/lib/urls";
+import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
+import { graph, pageEntity } from "@/lib/schema";
 import { homeCopy, rankingCardTitle } from "@/lib/seo-copy";
 
 const copy = homeCopy();
@@ -302,13 +303,15 @@ export default async function HomePage() {
   // next ones down rather than the same page twice.
   const heroPath = hero ? rankingUrl(hero) : routes.rankingsIndex();
   const rest = rankings.filter((entry) => entry.id !== hero?.id);
-  const featured = rest.slice(0, 4);
+  // Only full lists in the "popular" rail, so the big number on each card is
+  // true; a list of four used to sit there under a "10".
+  const featured = rest.filter((entry) => entry._count.entries >= 10).slice(0, 4);
   const latest = rest.slice(0, 6);
 
   const ledger = [
     { value: counts.cities, suffix: "", label: "Cities with published rankings" },
-    { value: counts.categories, suffix: "", label: "Trades, each with its own criteria" },
-    { value: counts.businesses, suffix: "", label: "Companies checked against license registers" },
+    { value: counts.liveCategories, suffix: "", label: "Trades with published top 10 lists" },
+    { value: counts.businesses, suffix: "", label: "Local companies researched" },
     { value: 90, suffix: " days", label: "Maximum time between re-checks" },
   ];
 
@@ -362,6 +365,28 @@ export default async function HomePage() {
 
   return (
     <SiteChrome active="home">
+      {/* The homepage node and the lists it leads with, so the page is more
+          than an Organization and an FAQ to a machine reading it. */}
+      <JsonLd
+        data={graph(
+          pageEntity({
+            path: "/",
+            name: copy.h1,
+            description: copy.description,
+            dateModified: rankings[0]?.lastReviewedAt ?? null,
+            mainEntity: {
+              "@type": "ItemList",
+              name: "Recently reviewed top 10 lists",
+              itemListElement: rankings.slice(0, 10).map((ranking, index) => ({
+                "@type": "ListItem",
+                position: index + 1,
+                name: rankingCardTitle(ranking),
+                url: absoluteUrl(rankingUrl(ranking)),
+              })),
+            },
+          }),
+        )}
+      />
       {faqs.length > 0 ? (
         <JsonLd
           data={{
@@ -542,9 +567,10 @@ export default async function HomePage() {
                     textWrap: "pretty",
                   }}
                 >
-                  Most &quot;best of&quot; pages are ads with a headline. Ours are written by editors who pull
-                  license records, read the complaints and phone the shops. One city, one trade, ten names you
-                  can actually call.
+                  TenBestFind ranks the top 10 plumbers, HVAC companies, roofers and electricians in{" "}
+                  {counts.cities} cities across the United States and Canada. Every list is checked by a named
+                  editor for Google rating, review count, a working website and a local address, and shows the date it
+                  was last reviewed.
                 </p>
 
                 <div data-searchbox="" data-in="4" style={{ position: "relative", marginTop: "26px", maxWidth: "680px" }}>
@@ -850,7 +876,7 @@ export default async function HomePage() {
                         {hero.category.serviceName}
                         {hero.city ? ` · ${hero.city.name}, ${hero.city.region.code.toUpperCase()}` : ""}
                       </p>
-                      <h2
+                      <p
                         id="hero-preview-h2"
                         style={{
                           fontSize: "22px",
@@ -864,7 +890,7 @@ export default async function HomePage() {
                         <Link href={heroPath} style={{ color: "#fff" }}>
                           {rankingCardTitle(hero)}
                         </Link>
-                      </h2>
+                      </p>
                       <ol data-hero-rows="">
                         {hero.entries.map((entry) => {
                           const meta = [
@@ -1003,9 +1029,8 @@ export default async function HomePage() {
                   Top 10 Rankings <Accent>by Trade</Accent>
                 </h2>
                 <p style={{ ...LEDE, marginTop: "12px" }}>
-                  {counts.categories} trades, from emergency plumbing to full kitchen remodels. Every category
-                  page opens with what a valid license covers in your state or province, then the ten
-                  companies that cleared our checks.
+                  {counts.liveCategories} trades ranked so far, starting with plumbing, HVAC, roofing and electrical work. Pick a trade
+                  to see every city we cover for it, then the companies in each city that cleared our checks.
                 </p>
               </div>
               <HeadLink href={routes.servicesIndex()}>All {counts.categories} services</HeadLink>
@@ -1127,7 +1152,7 @@ export default async function HomePage() {
                     {accent("Most Popular Top 10 Lists", "Top 10 Lists")}
                   </h2>
                   <p style={{ ...LEDE, marginTop: "12px" }}>
-                    Four rankings that get more traffic than the rest combined. Each one shows the date an
+                    Full top 10 lists from our largest markets. Each one shows the date an
                     editor last checked it, not the date the page was made.
                   </p>
                 </div>
