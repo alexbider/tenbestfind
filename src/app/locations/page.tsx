@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { CrumbBar, FinalSearch } from "@/components/site/blocks";
 import { SearchForm } from "@/components/site/SearchForm";
@@ -16,11 +17,11 @@ export const revalidate = 60;
 
 const copy = locationsCopy();
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: { absolute: copy.title },
   description: copy.description,
   alternates: { canonical: "/locations/" },
-};
+});
 
 export default async function LocationsIndexPage() {
   const countries = await db.country.findMany({

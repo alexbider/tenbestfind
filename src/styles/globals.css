@@ -625,3 +625,9 @@ summary:focus-visible,
     margin-bottom: 28px;
   }
 }
+
+/* The faint "10" in the corner of icon tiles is a brand mark, not a number.
+   It is drawn here rather than written into the page, because as text it was
+   read by crawlers as a count: "10 Home Remodeling" on trades with no
+   ranking at all. */
+[data-ten]:empty::after { content: "10"; }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import { FinalSearch } from "@/components/site/blocks";
 import { RelatedContent } from "@/components/site/RelatedContent";
 import { SiteChrome } from "@/components/site/SiteChrome";
@@ -16,11 +17,11 @@ export const revalidate = 60;
 
 const copy = guidesCopy();
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: { absolute: copy.title },
   description: copy.description,
   alternates: { canonical: "/guides/" },
-};
+});
 
 /** How many cards one section shows before it sends the reader to the hub. */
 const PREVIEW = 6;

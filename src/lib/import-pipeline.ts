@@ -24,6 +24,7 @@ import { analyzeSeo } from "./seo";
 import { fullDate, slugify } from "./format";
 import { bylineCandidates, bylineFor } from "./byline";
 import { RANKING_MIN_ENTRIES, rankingTitle } from "./seo-copy";
+import { tradeWords } from "./trade-words";
 import { uniqueCompanySlug } from "./company-slug";
 import { stringify } from "./json";
 import { routes } from "./urls";
@@ -1315,10 +1316,22 @@ async function buildRankings(batchId: string): Promise<void> {
     // that may already rank.
     const title = rankingTitle(batch.category, city, city.region, businesses.length);
     const slug = slugify(`${batch.category.slug}-${city.slug}`);
+    // The opening two sentences are what an AI answer quotes, so they name the
+    // leaders and give the one reason a reader can check. The old line named
+    // only the first company and gave no reason ("leads this list of hvac").
+    const words = tradeWords(batch.category);
+    const leaders = businesses.slice(0, 3).map((business) => business.name);
+    const leaderList =
+      leaders.length > 2 ? `${leaders.slice(0, -1).join(", ")} and ${leaders.at(-1)}` : leaders.join(" and ");
+    const first = businesses[0];
+    const reason =
+      first.googleRating && first.googleReviewCount
+        ? `${first.name} holds ${first.googleRating.toFixed(1)} stars from ${first.googleReviewCount.toLocaleString("en-US")} Google reviews. `
+        : "";
     const summary =
-      `${businesses[0].name} leads this list of ${batch.category.name.toLowerCase()} in ${city.name}. ` +
-      `Positions follow the order these companies appear in Google Maps for this trade and city, read on ${fullDate(new Date())}. ` +
-      `Every profile records where its rating and contact details came from.`;
+      `${leaderList} ${leaders.length > 1 ? "lead" : "leads"} our list of ${words.pros} in ${city.name}. ` +
+      reason +
+      `Positions follow the order these companies appear in Google Maps for this trade and city, read on ${fullDate(new Date())}.`;
 
     const existing = await db.ranking.findUnique({
       where: { categoryId_cityId: { categoryId: batch.categoryId, cityId } },

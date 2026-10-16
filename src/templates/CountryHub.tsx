@@ -1,3 +1,4 @@
+import { licenceWord } from "@/lib/trade-words";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaqJsonLd } from "@/components/site/FaqSection";
@@ -97,9 +98,9 @@ const SUBMIT = {
 const STEPS = [
   {
     n: "01",
-    title: "Verify the licence at source",
+    title: "Verify the license at source",
     body:
-      "Every candidate is checked against the register that issues the licence, for an active licence in the class that covers the job a homeowner is hiring for.",
+      "Every candidate is checked against the register that issues the license, for an active license in the class that covers the job a homeowner is hiring for.",
   },
   {
     n: "02",
@@ -136,7 +137,7 @@ const EEAT = [
   },
   {
     title: "Getting it wrong",
-    body: "When a detail is out of date or a licence has lapsed, tell us and the page gets corrected.",
+    body: "When a detail is out of date or a license has lapsed, tell us and the page gets corrected.",
     cta: "Corrections policy",
     href: routes.corrections(),
   },
@@ -178,6 +179,8 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
     await redirectIfKnown(routes.country(countryCode));
     notFound();
   }
+  const lic = licenceWord(country.code);
+  const long = country.code.toLowerCase() === "us" ? "the United States" : country.name;
 
   const inCountry = { status: "PUBLISHED", city: { region: { countryId: country.id } } } as const;
 
@@ -204,8 +207,16 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
           city: { select: { id: true, slug: true, region: { select: { slug: true } } } },
         },
       }),
+      // Guides about the other country stay on its pages.
       db.guide.findMany({
-        where: { status: "PUBLISHED" },
+        where: {
+          status: "PUBLISHED",
+          AND: [
+            { OR: [{ countryId: null }, { countryId: country.id }] },
+            { OR: [{ regionId: null }, { region: { countryId: country.id } }] },
+            { OR: [{ cityId: null }, { city: { region: { countryId: country.id } } }] },
+          ],
+        },
         orderBy: { publishedAt: "desc" },
         take: 6,
         include: {
@@ -249,7 +260,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
   const isUs = country.code === "us";
   const regionWord = country.regionLabel.replace(/s$/, "");
   const licensingCopy = isUs
-    ? "Licensing in the United States is set state by state, and in some trades city by city. So the research starts with the state board: who holds an active licence for this work, what class it is, and whether it covers the job a homeowner is actually hiring for."
+    ? "Licensing in the United States is set state by state, and in some trades city by city. So the research starts with the state board: who holds an active license for this work, what class it is, and whether it covers the job a homeowner is actually hiring for."
     : "Licensing in Canada is set province by province. Electrical and gas work runs through provincial safety authorities, so the research starts there: who holds an active licence, what it covers, and whether workers compensation coverage is current.";
 
   const faqs = country.faqs.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }));
@@ -615,7 +626,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                   Browse home services in {country.name}
                 </h2>
                 <p style={{ ...SECTION_SUB, textWrap: "pretty" }}>
-                  Pick the trade, then narrow to your {regionWord} and city. Each category page explains what a licence
+                  Pick the trade, then narrow to your {regionWord} and city. Each category page explains what a {lic}
                   covers there and what it does not.
                 </p>
               </div>
@@ -1035,7 +1046,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
         >
           <div>
             <h2 data-reveal="" id="how-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "18px", textWrap: "balance" }}>
-              How a {country.name} ranking gets made
+              How a ranking in {long} gets made
             </h2>
             <p style={{ fontSize: "17px", lineHeight: "1.7", color: "var(--text-secondary)", marginBottom: "18px", textWrap: "pretty" }}>
               {licensingCopy}
@@ -1234,7 +1245,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
                   Know what to ask before you call
                 </h2>
                 <p style={{ ...SECTION_SUB, textWrap: "pretty" }}>
-                  Short guides on comparing quotes, reading a licence properly, and what a fair price looks like.
+                  Short guides on comparing quotes, reading a {lic} properly, and what a fair price looks like.
                 </p>
               </div>
               <Link className="arrow-link" href={routes.guidesIndex()}>
@@ -1361,7 +1372,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
             >
               <div>
                 <h2 data-reveal="" id="switch-h2" style={{ fontSize: "24px", lineHeight: "1.25", fontWeight: "700", marginBottom: "8px" }}>
-                  Looking for a business in {otherCountry.name}?
+                  Looking for a business in {otherCountry.code.toLowerCase() === "us" ? "the United States" : otherCountry.name}?
                 </h2>
                 <p style={{ fontSize: "16px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
                   {otherCountry.name} rankings are researched separately, against {otherCountry.regionLabel.replace(/s$/, "")}
@@ -1390,7 +1401,7 @@ export async function CountryHub({ countryCode }: { countryCode: string }) {
         >
           <div>
             <h2 data-reveal="" id="biz-h2" style={{ ...SECTION_H2, lineHeight: "1.12", marginBottom: "16px", textWrap: "balance" }}>
-              Own a {country.name} business people are comparing?
+              Own a business in {long} that people are comparing?
             </h2>
             <p style={{ fontSize: "18px", lineHeight: "1.65", color: "var(--text-secondary)", marginBottom: "28px", maxWidth: "500px", textWrap: "pretty" }}>
               Get in front of homeowners in the areas you actually serve, at the point where they are shortlisting.

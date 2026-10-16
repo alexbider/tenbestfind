@@ -38,6 +38,7 @@ import { rankingCardSelect } from "@/lib/queries";
 import { countriesOf, groupByCountry, regionNoun, regionNounAcross } from "@/lib/regions";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { serviceCopy, rankingCardTitle } from "@/lib/seo-copy";
+import { capitalise, inSentence, taglineAsList, tradeWords } from "@/lib/trade-words";
 import { breadcrumbSchema, serviceCrumbs } from "@/lib/breadcrumbs";
 import { faqsFor } from "@/lib/faqs";
 import { parseHubBody } from "@/lib/hub-body";
@@ -45,9 +46,9 @@ import { graph, pageEntity, serviceEntity, serviceId } from "@/lib/schema";
 
 /** The checks that separate a company worth calling from one worth avoiding. */
 const CHOOSE_STEPS = [
-  { title: "Check the credential at source", body: "Ask for the licence or registration number, then look it up with the authority that issues it rather than taking the certificate at face value." },
+  { title: "Check the credential at source", body: "Ask for the license or registration number, then look it up with the authority that issues it rather than taking the certificate at face value." },
   { title: "Get the insurance certificate from the insurer", body: "A current certificate sent directly by the insurer, not a photocopy from the company." },
-  { title: "Ask for a written, itemised estimate", body: "Scope, materials, removal, disposal and who pulls the permit, all named on the page before anyone starts." },
+  { title: "Ask for a written, itemized estimate", body: "Scope, materials, removal, disposal and who pulls the permit, all named on the page before anyone starts." },
   { title: "Compare like for like", body: "Two or three bids on the same scope. A number far below the others usually means something has been left out." },
   { title: "Separate the two warranties", body: "The manufacturer covers materials, the company covers the work. Get both in writing, and check whether the second transfers if you sell." },
   { title: "Ask who actually turns up", body: "Employees or subcontractors, and who supervises on the day." },
@@ -195,26 +196,27 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
   const crumbs = serviceCrumbs(category);
   const body = parseHubBody(category.body);
 
-  const singular = category.singular.toLowerCase();
+  const words = tradeWords(category);
+  const jobs = taglineAsList(category.tagline);
   const generatedFaqs = [
     {
-      question: `What does ${/^[aeiou]/i.test(category.singular) ? "an" : "a"} ${singular} do?`,
+      question: `What does ${words.aPro} do?`,
       answer:
         category.description ??
-        `${category.name} handle ${category.tagline?.toLowerCase() ?? "work in this trade"}. Scope varies by company, which is why every ranking lists what each one actually takes on rather than what they advertise.`,
+        `${capitalise(words.pros)} handle ${jobs ?? `${words.trade} work`}. Scope varies by company, which is why every ranking lists what each one actually takes on rather than what they advertise.`,
     },
     {
-      question: `Do ${category.name.toLowerCase()} need a licence?`,
+      question: `Do ${words.pros} need a license?`,
       answer:
         "It depends entirely on where you are. Some trades are licensed everywhere, some in only a few states or provinces, and some nowhere at all. Each ranking names the authority we checked for that market, or says plainly that the trade is not licensed there.",
     },
     {
-      question: `How do you decide which ${category.name.toLowerCase()} make a list?`,
+      question: `How do you decide which ${words.pros} make the list?`,
       answer:
         "We research every company that genuinely serves the market, check credentials with the issuing authority, compare service range, warranty terms and documented local work, then read patterns in public feedback. The criteria are published on every ranking.",
     },
     {
-      question: `How much does ${singular} work cost?`,
+      question: `How much does ${words.trade} work cost?`,
       answer:
         "Cost depends on the job, the market and the material grade. We publish sourced ranges per market rather than a single national average, and where we have no sourced figure we say so rather than inventing one.",
     },
@@ -239,7 +241,6 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
   );
 
   const icon = (key: string | null | undefined): IconName => (key && hasIcon(key) ? (key as IconName) : "house");
-  const article = /^[aeiou]/i.test(category.singular) ? "an" : "a";
   const latest = rankings[0];
 
   const cityChips = rankings.filter((entry) => entry.city).slice(0, 4);
@@ -312,8 +313,8 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                 {heroAccentTail(copy.h1, 2)}
               </h1>
               <p data-in="3" style={{ ...LEAD, marginTop: "20px", fontSize: "18px", maxWidth: "600px", textWrap: "pretty" }}>
-                Compare TenBestFind rankings of local {category.name.toLowerCase()}, explore common{" "}
-                {category.serviceName.toLowerCase()} services, understand typical costs and learn what to look for
+                Compare TenBestFind rankings of local {words.pros}, explore common{" "}
+                {words.trade} services, understand typical costs and learn what to look for
                 before hiring.
               </p>
               <div style={{ marginTop: "22px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px", fontSize: "14px", color: "var(--text-secondary)" }}>
@@ -343,7 +344,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
               }}
             >
               <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "6px" }}>
-                {accentTail(`Find top-rated ${category.name.toLowerCase()} in your area`, 2)}
+                {accentTail(`Find top-rated ${words.pros} in your area`, 2)}
               </h2>
               <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)", marginBottom: "18px" }}>
                 Enter your city or postal code and we will take you to the ranking for that market.
@@ -353,7 +354,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                   action={routes.search()}
                   method="get"
                   role="search"
-                  aria-label={`Find ${category.name.toLowerCase()} by location`}
+                  aria-label={`Find ${words.pros} by location`}
                   data-stack=""
                   style={{ display: "flex", alignItems: "center", gap: "10px" }}
                 >
@@ -506,7 +507,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           style={{ ...SHELL, padding: "72px 24px", display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "56px", alignItems: "start" }}
         >
           <h2 data-reveal="" id="what-h2" style={SPLIT_H2}>
-            {accentTail(`What does ${article} ${singular} do?`, 2)}
+            {accentTail(`What does ${words.aPro} do?`, 2)}
           </h2>
           <div>
             {/* A written body replaces the one-liner rather than joining it. */}
@@ -517,7 +518,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
             ) : (
               <p style={{ ...BODY_P, color: "var(--text-primary)" }}>
                 {category.description ??
-                  `${category.serviceName} covers the work most households need at some point, from routine maintenance to the jobs that cannot wait. What a licence actually permits varies by state or province, which is why every ranking opens with the local rules before it lists a single company.`}
+                  `${capitalise(words.pros)} cover the work most households need at some point, from routine maintenance to the jobs that cannot wait. What a license actually permits varies by state or province, which is why every ranking opens with the local rules before it lists a single company.`}
               </p>
             )}
             {category.subservices.length > 0 ? (
@@ -541,7 +542,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           <div style={{ ...SHELL, padding: "80px 24px" }}>
             <Kicker>Explore services</Kicker>
             <h2 data-reveal="" id="services-h2" style={{ ...SECTION_H2, marginBottom: "32px" }}>
-              {accentTail(`Popular ${category.serviceName.toLowerCase()} services`, 1)}
+              {accentTail(`Popular ${words.trade} services`, 1)}
             </h2>
             <ul data-stagger="" data-ag="" data-facts="" style={autoGrid(270, "16px")}>
               {category.subservices.map((sub) => (
@@ -568,7 +569,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                     href={routes.subservice(category.slug, sub.slug)}
                     style={{ marginTop: "auto", paddingTop: "8px", fontSize: "14px", fontWeight: "600" }}
                   >
-                    About {sub.name.toLowerCase()}
+                    About {inSentence(sub.name)}
                   </ArrowLink>
                 </li>
               ))}
@@ -584,7 +585,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
             <Kicker>Popular locations</Kicker>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "12px" }}>
               <h2 data-reveal="" id="cities-h2" style={SECTION_H2}>
-                {accentTail(`Find the best ${category.name.toLowerCase()} by city`, 2)}
+                {accentTail(`Find the best ${words.pros} by city`, 2)}
               </h2>
               <ArrowLink href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
                 All rankings
@@ -648,7 +649,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           <div style={{ ...SHELL, padding: "80px 24px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "28px" }}>
               <h2 data-reveal="" id="states-h2" style={SECTION_H2}>
-                Browse {category.name.toLowerCase()} <span className="serif-accent">by {regionWord}</span>
+                Browse {words.pros} <span className="serif-accent">by {regionWord}</span>
               </h2>
               <ArrowLink href={routes.locationsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
                 Every location
@@ -797,7 +798,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           >
             <div>
               <h2 data-reveal="" id="costs-h2" style={{ ...SPLIT_H2, marginBottom: "18px" }}>
-                {accentTail(`How much does ${article} ${singular} cost?`, 2)}
+                {accentTail(`How much does ${words.aPro} cost?`, 2)}
               </h2>
               <p style={{ ...LEAD, lineHeight: "1.75" }}>
                 Cost depends on the job, the market and the grade of material. We publish sourced ranges per market
@@ -862,7 +863,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
                 id="choose-h2"
                 style={{ ...SECTION_H2, lineHeight: "1.15", marginBottom: "20px", textWrap: "balance" }}
               >
-                {accentTail(`How to choose a reliable ${singular}`, 2)}
+                {accentTail(`How to choose a reliable ${words.pro}`, 2)}
               </h2>
               <p style={{ ...LEAD, lineHeight: "1.8", textWrap: "pretty" }}>
                 The same handful of checks separates a company worth calling from one worth avoiding, whatever the
@@ -918,7 +919,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           </h2>
           <div>
             <p style={{ ...BODY_P, color: "var(--text-secondary)", marginBottom: "16px" }}>
-              What a licence covers, who pulls the permit and what insurance is required are all set locally. A company
+              What a license covers, who pulls the permit and what insurance is required are all set locally. A company
               that is properly credentialled in one state may not be in the next one over.
             </p>
             <p style={{ ...BODY_P, color: "var(--text-secondary)" }}>
@@ -939,7 +940,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
         <div style={{ ...SHELL, position: "relative", padding: "80px 24px" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "16px" }}>
             <h2 data-reveal="" id="method-h2" style={{ ...SECTION_H2, color: "#fff" }}>
-              {accentTail(`How we evaluate ${category.serviceName.toLowerCase()} companies`, 2)}
+              {accentTail(`How we evaluate ${words.pros}`, 2)}
             </h2>
             <ArrowLink dark href={routes.howWeRank()} style={{ fontSize: "15px", fontWeight: "600", color: "#E8B551" }}>
               Full methodology
@@ -981,7 +982,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
         >
           <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "20px", padding: "28px", boxShadow: "var(--shadow-sm)" }}>
             <h2 data-reveal="" id="authors-h2" style={{ fontSize: "24px", fontWeight: "700", marginBottom: "20px" }}>
-              {accentTail(`About our ${category.serviceName.toLowerCase()} research`, 2)}
+              {accentTail(`About our ${words.trade} research`, 2)}
             </h2>
             <p style={{ fontSize: "16px", lineHeight: "1.75", color: "var(--text-secondary)", marginBottom: "18px" }}>
               Every list carries the name of the editor who researched it and the date they last checked it. Where we
@@ -1124,7 +1125,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           style={{ ...SHELL, padding: "80px 24px", display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: "56px", alignItems: "start" }}
         >
           <h2 data-reveal="" id="faqs-h2" style={SPLIT_H2}>
-            {accentTail(`Common questions about hiring ${article} ${singular}`, 2)}
+            {accentTail(`Common questions about hiring ${words.aPro}`, 2)}
           </h2>
           <ul data-stagger="" style={{ display: "grid", gap: "12px" }}>
             {faqs.map((faq) => (
@@ -1141,12 +1142,12 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
           style={{ ...SHELL, padding: "72px 24px", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "48px", alignItems: "center" }}
         >
           <div>
-            <Kicker>For {category.name.toLowerCase()}</Kicker>
+            <Kicker>For {words.pros}</Kicker>
             <h2 data-reveal="" id="biz-h2" style={{ ...SPLIT_H2, marginBottom: "14px" }}>
-              {accentTail(`Reach homeowners researching ${category.name.toLowerCase()}`, 2)}
+              {accentTail(`Reach homeowners looking for ${words.pros}`, 2)}
             </h2>
             <p style={{ ...LEAD, maxWidth: "520px" }}>
-              Claim your profile to keep your licence, hours, service area and photos current, or take a labelled
+              Claim your profile to keep your license, hours, service area and photos current, or take a labelled
               featured slot. Neither buys a ranked position.
             </p>
           </div>
@@ -1192,7 +1193,7 @@ export async function CategoryPage({ categorySlug }: { categorySlug: string }) {
 
       {/* ------------------------------------------------------------ final */}
       <FinalBand
-        heading={accentTail(`Find the best ${category.name.toLowerCase()} near you`, 2)}
+        heading={accentTail(`Find the best ${words.pros} near you`, 2)}
         service={category.serviceName}
       />
       </div>

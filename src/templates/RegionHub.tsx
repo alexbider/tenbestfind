@@ -1,3 +1,4 @@
+import { licenceWord } from "@/lib/trade-words";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GuideBody } from "@/components/site/blocks";
@@ -81,6 +82,7 @@ export async function RegionHub({
     await redirectIfKnown(path);
     notFound();
   }
+  const lic = licenceWord(country.code);
 
   const region = await db.region.findUnique({
     where: { countryId_slug: { countryId: country.id, slug: regionSlug } },
@@ -116,8 +118,16 @@ export async function RegionHub({
       orderBy: { sortOrder: "asc" },
       take: 6,
     }),
+    // Guides about another place stay on that place's pages.
     db.guide.findMany({
-      where: { status: "PUBLISHED" },
+      where: {
+        status: "PUBLISHED",
+        AND: [
+          { OR: [{ regionId: null }, { regionId: region.id }] },
+          { OR: [{ countryId: null }, { countryId: country.id }] },
+          { OR: [{ cityId: null }, { city: { regionId: region.id } }] },
+        ],
+      },
       orderBy: { publishedAt: "desc" },
       take: 4,
       include: { category: { select: { serviceName: true } }, author: { select: { name: true } } },
@@ -184,7 +194,7 @@ export async function RegionHub({
                     .join(", ")} ${licensing.filter((row) => !row.licensed).length === 1 ? "is" : "are"} not licensed at ${unitLabel} level, so insurance certificates and manufacturer certification do that work instead.`
                 : ""
             }`
-          : `Licensing in ${region.name} varies by trade. Every ranking page lists which authority we checked for that trade, and what the licence actually covers.`,
+          : `Licensing in ${region.name} varies by trade. Every ranking page lists which authority we checked for that trade, and what the ${lic} actually covers.`,
     },
     {
       id: "cities",
@@ -220,7 +230,7 @@ export async function RegionHub({
       points={[
         "Business details come from the company's own listings and public registers",
         "Review counts and ratings are read from Google at the time of the last check",
-        "Licence numbers are confirmed with the issuing authority where a register exists",
+        `${lic === "licence" ? "Licence" : "License"} numbers are confirmed with the issuing authority where a register exists`,
         "Anything we could not confirm is labelled as reported by the business",
       ]}
       link={{ href: routes.howWeRank(), label: "How we rank" }}
@@ -299,7 +309,7 @@ export async function RegionHub({
                 }}
               >
                 {region.blurb ??
-                  `Independently researched top ten rankings across ${region.name} metros, with ${unitLabel} licensing context, local cost research and hiring guidance for homeowners.`}
+                  `Independently researched top ten rankings across ${region.name}, with the ${unitLabel}'s licensing rules, local cost research and hiring guidance for homeowners.`}
               </p>
               <form
                 action={routes.search()}
@@ -764,7 +774,7 @@ export async function RegionHub({
               </h2>
               <p style={{ fontSize: "17px", lineHeight: "1.75", color: "rgba(232,237,245,0.82)", marginBottom: "18px" }}>
                 {region.name} licenses some trades at {unitLabel} level and leaves others to
-                municipalities or to no formal register at all. That changes how much weight a licence
+                municipalities or to no formal register at all. That changes how much weight a {lic}
                 claim carries, and how hard you should verify it yourself.
               </p>
               <p style={{ fontSize: "15px", lineHeight: "1.7", color: "rgba(232,237,245,0.7)" }}>
@@ -773,8 +783,8 @@ export async function RegionHub({
               </p>
               <div style={{ marginTop: "8px" }}>
                 <InfoModal
-                  label="How we verify licences"
-                  title="How we verify licences"
+                  label={`How we verify ${lic}s`}
+                  title={`How we verify ${lic}s`}
                   points={[
                     "Where a trade is licensed we check the number against the issuing register",
                     "Where no register exists we verify insurance and voluntary certifications instead",
@@ -784,7 +794,7 @@ export async function RegionHub({
                   link={{ href: `${routes.howWeRank()}#verification`, label: "How we verify" }}
                 >
                   Where a trade is licensed we check the number against the issuing agency and record
-                  the date. Where no register exists we say so rather than implying a licence.
+                  the date. Where no register exists we say so rather than implying a {lic}.
                 </InfoModal>
               </div>
             </div>
@@ -853,7 +863,7 @@ export async function RegionHub({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {row.licensed ? `${unitLabel} licensed` : `No ${unitLabel} licence`}
+                          {row.licensed ? `${unitLabel} licensed` : `No ${unitLabel} ${lic}`}
                         </span>
                       </td>
                     </tr>

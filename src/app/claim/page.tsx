@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import { BILLING_FAQS } from "@/components/site/business-centre";
 import { CentreFaq, CentreHero, FlowHeroBody, SearchBand } from "@/components/site/centre/parts";
 import { ClaimFlow } from "@/components/site/ClaimFlow";
@@ -8,12 +9,12 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "Claim your business",
   description:
     "Verify ownership and manage your listing details for $29 a month per location. Claiming never affects ranking position.",
   alternates: { canonical: "/claim/" },
-};
+});
 
 export default async function ClaimPage() {
   const [businesses, plans] = await Promise.all([

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { PROJECT_GROUPS, CATEGORY_BANDS } from "../../../prisma/data/taxonomy";
 import { FaqJsonLd } from "@/components/site/FaqSection";
@@ -21,7 +22,9 @@ import { JsonLd } from "@/components/ui/primitives";
 import { monthYear, shortMonthYear } from "@/lib/format";
 import { hasIcon } from "@/lib/icon-paths";
 import { db } from "@/lib/db";
-import { getGlobalFaqs, rankingCardSelect } from "@/lib/queries";
+import { rankingCardSelect } from "@/lib/queries";
+import { faqsFor, type FaqView } from "@/lib/faqs";
+import { graph, pageEntity } from "@/lib/schema";
 import { countriesOf, groupByCountry, regionNounAcross } from "@/lib/regions";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
 import { homeServicesCopy } from "@/lib/seo-copy";
@@ -30,11 +33,11 @@ export const revalidate = 60;
 
 const copy = homeServicesCopy();
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: { absolute: copy.title },
   description: copy.description,
   alternates: { canonical: "/home-services/" },
-};
+});
 
 const SECTION = { ...SHELL, padding: "80px 24px" };
 const SECTION_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", fontWeight: "700" };
@@ -207,6 +210,50 @@ const EEAT = [
   },
 ];
 
+/**
+ * The pillar's own questions. It used to repeat the homepage's six brand
+ * questions word for word, so two pages published the same FAQPage. These are
+ * the questions homeowners ask before they know which trade they need.
+ */
+const PILLAR_FAQS: FaqView[] = [
+  {
+    id: "what-counts",
+    question: "What counts as a home service?",
+    answer:
+      "Any trade you hire to repair, maintain or improve a house. That covers plumbing, heating and cooling, electrical work and roofing, remodeling and exterior work, and upkeep like cleaning, landscaping and moving. Each trade on this page links to its own rankings by city.",
+  },
+  {
+    id: "which-licensed",
+    question: "Which home service trades need a license?",
+    answer:
+      "Electrical, plumbing, gas and HVAC work need a license almost everywhere in the United States and Canada. Roofing and general contracting are licensed in some states and provinces and not in others, and cleaning or handyman work usually needs none. Every ranking names the authority we checked for that city.",
+  },
+  {
+    id: "what-it-costs",
+    question: "How much do common home services cost?",
+    answer:
+      "It depends on the job, the market and the materials, so we do not publish one national number. Our cost guides explain what moves the price for each trade, and a ranking quotes local ranges only where an editor could source them.",
+  },
+  {
+    id: "find-reliable",
+    question: "How do I find a reliable contractor near me?",
+    answer:
+      "Start from a shortlist, then check the license with the authority that issues it, ask the insurer for the insurance certificate, and get two or three itemized written quotes on the same scope. A TenBestFind ranking has already done the shortlist and the license check.",
+  },
+  {
+    id: "emergencies",
+    question: "Who do I call first for a burst pipe, no heat or a roof leak?",
+    answer:
+      "Make it safe first: shut off the main water valve or the furnace, and keep away from wet wiring. Then call a plumber, HVAC company or roofer that runs emergency service. Not every company answers after hours, so check before you need one.",
+  },
+  {
+    id: "vs-google-maps",
+    question: "How is a top 10 list different from Google Maps results?",
+    answer:
+      "Our lists start from the companies Google Maps shows for that trade and city, then keep only those with strong ratings, enough reviews, a working website and a real local address, and explain why each one is there. Sponsored placements are labelled and never change the order.",
+  },
+];
+
 const BIZ_POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: "pin",
@@ -230,7 +277,7 @@ export default async function ServicesIndexPage() {
     db.category.findMany({
       where: { published: true },
       orderBy: { sortOrder: "asc" },
-      include: { _count: { select: { rankings: true } } },
+      include: { _count: { select: { rankings: { where: { status: "PUBLISHED" } } } } },
     }),
     db.ranking.findMany({
       where: { status: "PUBLISHED" },
@@ -244,7 +291,7 @@ export default async function ServicesIndexPage() {
       take: 8,
       include: { category: { select: { serviceName: true, slug: true } }, author: { select: { name: true } } },
     }),
-    getGlobalFaqs(),
+    faqsFor("PAGE", "home-services", PILLAR_FAQS),
     db.subservice.findMany({
       where: { trending: true },
       orderBy: { sortOrder: "asc" },
@@ -269,7 +316,11 @@ export default async function ServicesIndexPage() {
     }),
     // The emergency subservices we actually publish, rather than a fixed list.
     db.subservice.findMany({
-      where: { OR: [{ name: { contains: "Emergency" } }, { slug: { contains: "emergency" } }] },
+      where: {
+        OR: [{ name: { contains: "Emergency" } }, { slug: { contains: "emergency" } }],
+        // Only trades with a published ranking; the others are noindexed.
+        category: { rankings: { some: { status: "PUBLISHED" } } },
+      },
       orderBy: { sortOrder: "asc" },
       include: { category: { select: { slug: true } } },
     }),
@@ -282,6 +333,13 @@ export default async function ServicesIndexPage() {
 
   const icon = (key: string | null | undefined): IconName =>
     key && hasIcon(key) ? (key as IconName) : "house";
+
+  // A trade with no published ranking is noindexed, so linking to it sends
+  // readers and crawlers to a page with nothing on it. Those trades stay on
+  // the page as names, marked as coming, without the link.
+  const liveSlugs = new Set(categories.filter((category) => category._count.rankings > 0).map((category) => category.slug));
+  const isLive = (href: string) => liveSlugs.has(href.split("/").filter(Boolean)[0] ?? "");
+  const liveTrending = trending.filter((sub) => liveSlugs.has(sub.category.slug));
 
   const costRows = categories
     .filter((category) => COST_DRIVERS[category.slug])
@@ -296,13 +354,37 @@ export default async function ServicesIndexPage() {
   return (
     <SiteChrome active="services" skin>
       <div className="v2-svc" style={{ display: "contents" }}>
+      {/* The page node now says what the page is and lists the trades that have
+          rankings, and the visible breadcrumb is published as BreadcrumbList. */}
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "CollectionPage",
-          name: "Home services",
-          url: absoluteUrl(routes.servicesIndex()),
-        }}
+        data={graph(
+          pageEntity({
+            path: routes.servicesIndex(),
+            type: "CollectionPage",
+            name: copy.h1,
+            description: copy.description,
+            dateModified: rankings[0]?.lastReviewedAt ?? null,
+            mainEntity: {
+              "@type": "ItemList",
+              name: "Home service trades with published rankings",
+              itemListElement: categories
+                .filter((category) => liveSlugs.has(category.slug))
+                .map((category, index) => ({
+                  "@type": "ListItem",
+                  position: index + 1,
+                  name: category.name,
+                  url: absoluteUrl(routes.category(category.slug)),
+                })),
+            },
+          }),
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+              { "@type": "ListItem", position: 2, name: "Home Services", item: absoluteUrl(routes.servicesIndex()) },
+            ],
+          },
+        )}
       />
       <FaqJsonLd faqs={faqs} />
 
@@ -423,10 +505,11 @@ export default async function ServicesIndexPage() {
                   ))}
                 </ul>
               </div>
+              {liveTrending.length > 0 ? (
               <div>
                 <p style={SUGGEST_LABEL}>Subservices</p>
                 <ul>
-                  {trending.slice(0, 4).map((sub) => (
+                  {liveTrending.slice(0, 4).map((sub) => (
                     <li key={sub.id}>
                       <Link href={routes.subservice(sub.category.slug, sub.slug)} style={SUGGEST_LINK}>
                         {sub.name}
@@ -435,6 +518,7 @@ export default async function ServicesIndexPage() {
                   ))}
                 </ul>
               </div>
+              ) : null}
               <div>
                 <p style={SUGGEST_LABEL}>Locations</p>
                 <ul>
@@ -600,12 +684,17 @@ export default async function ServicesIndexPage() {
                     <Tile icon={icon(category.iconKey)} flex />
                     <span style={{ display: "block", minWidth: "0" }}>
                       <h4 style={{ fontSize: "16px", fontWeight: "700", lineHeight: "1.3", marginBottom: "4px" }}>
-                        <Link href={routes.category(category.slug)} style={{ color: "var(--blue-900)" }}>
-                          {category.name}
-                        </Link>
+                        {liveSlugs.has(category.slug) ? (
+                          <Link href={routes.category(category.slug)} style={{ color: "var(--blue-900)" }}>
+                            {category.name}
+                          </Link>
+                        ) : (
+                          <span style={{ color: "var(--text-secondary)" }}>{category.name}</span>
+                        )}
                       </h4>
                       <p style={{ fontSize: "13px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
                         {category.tagline}
+                        {liveSlugs.has(category.slug) ? null : " · Rankings coming soon"}
                       </p>
                     </span>
                   </li>
@@ -648,10 +737,14 @@ export default async function ServicesIndexPage() {
                 <ul>
                   {group.links.map(([label, href]) => (
                     <li key={href}>
-                      <Link data-row="proj" href={href} style={{ ...ROW, padding: "8px 10px" }}>
-                        {label}
-                        <Chevron />
-                      </Link>
+                      {isLive(href) ? (
+                        <Link data-row="proj" href={href} style={{ ...ROW, padding: "8px 10px" }}>
+                          {label}
+                          <Chevron />
+                        </Link>
+                      ) : (
+                        <span style={{ ...ROW, padding: "8px 10px", color: "var(--text-secondary)" }}>{label}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -659,7 +752,7 @@ export default async function ServicesIndexPage() {
             ))}
           </div>
 
-          {trending.length > 0 ? (
+          {liveTrending.length > 0 ? (
             <div
               style={{
                 marginTop: "36px",
@@ -692,7 +785,7 @@ export default async function ServicesIndexPage() {
                 </svg>
                 Trending now
               </span>
-              {trending.map((sub) => (
+              {liveTrending.map((sub) => (
                 <Link
                   key={sub.id}
                   href={routes.subservice(sub.category.slug, sub.slug)}
@@ -927,7 +1020,7 @@ export default async function ServicesIndexPage() {
                 of the risk in the relationship.
               </p>
               <p style={{ marginTop: "20px" }}>
-                <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
+                <ArrowLink href="/guides/how-to-choose/" style={{ fontSize: "16px", fontWeight: "600" }}>
                   Read the full hiring guide
                 </ArrowLink>
               </p>
@@ -985,7 +1078,7 @@ export default async function ServicesIndexPage() {
                 number.
               </p>
               <p style={{ marginTop: "20px" }}>
-                <ArrowLink href={routes.guidesIndex()} style={{ fontSize: "16px", fontWeight: "600" }}>
+                <ArrowLink href="/guides/cost/" style={{ fontSize: "16px", fontWeight: "600" }}>
                   Explore home service cost guides
                 </ArrowLink>
               </p>

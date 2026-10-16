@@ -42,8 +42,11 @@ function icon(key: string | null | undefined, fallback: IconName = "house"): Ico
  */
 export const getSiteNav = cache(async (): Promise<SiteNav> => {
   const [categories, countries, guides, trending, cityCount] = await Promise.all([
+    // The menu and footer are on every page, so a trade in them gets a link
+    // from every page. Only trades with a published ranking are indexable, so
+    // only those are linked site-wide; the rest are listed on /home-services/.
     db.category.findMany({
-      where: { published: true },
+      where: { published: true, rankings: { some: { status: "PUBLISHED" } } },
       orderBy: [{ navOrder: "asc" }, { sortOrder: "asc" }],
     }),
     db.country.findMany({
@@ -57,7 +60,7 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
             cities: {
               where: { published: true },
               orderBy: { sortOrder: "asc" },
-              include: { _count: { select: { rankings: true } } },
+              include: { _count: { select: { rankings: { where: { status: "PUBLISHED" } } } } },
             },
           },
         },
@@ -70,7 +73,7 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
       include: { category: true },
     }),
     db.subservice.findMany({
-      where: { trending: true },
+      where: { trending: true, category: { rankings: { some: { status: "PUBLISHED" } } } },
       orderBy: { sortOrder: "asc" },
       take: 4,
       include: { category: true },
@@ -116,14 +119,21 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
       }
     }
 
-    const cityCount = country.regions.reduce((total, region) => total + region.cities.length, 0);
+    // Counted the way the header counts: a city with no published ranking is a
+    // page with a search box on it, and counting it made the menu say 41 while
+    // the header said 38. A region counts when one of its cities does.
+    const liveRegions = country.regions.filter((region) => region.cities.some((city) => city._count.rankings > 0));
+    const cityCount = liveRegions.reduce(
+      (total, region) => total + region.cities.filter((city) => city._count.rankings > 0).length,
+      0,
+    );
     const unit = country.regionLabel === "provinces" ? "province" : "state";
 
     return {
       code: country.code,
       name: country.name,
       href: routes.country(country.code),
-      meta: `${country.regions.length} ${country.regionLabel} · ${cityCount} cities`,
+      meta: `${liveRegions.length} ${liveRegions.length === 1 ? unit : country.regionLabel} · ${cityCount} ${cityCount === 1 ? "city" : "cities"}`,
       unit,
       hubLabel: `${country.name} hub`,
       groups: [...regionGroups.entries()].map(([title, items]) => ({ title, items })),
@@ -147,7 +157,8 @@ export const getSiteNav = cache(async (): Promise<SiteNav> => {
 
   return {
     cityCount,
-    serviceCount: categories.length,
+    // Every published trade, linked or not, since the copy says how many we cover.
+    serviceCount: await db.category.count({ where: { published: true } }),
     serviceGroups,
     mostSearched: trending.map((sub) => ({
       name: sub.name,

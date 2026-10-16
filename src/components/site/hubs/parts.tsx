@@ -270,9 +270,7 @@ export function Tile({
           color: "var(--ink)",
           opacity: 0.08,
         }}
-      >
-        10
-      </span>
+      ></span>
       <svg
         data-ico=""
         width={glyph}

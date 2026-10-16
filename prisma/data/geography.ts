@@ -225,7 +225,7 @@ export const COUNTRIES: SeedCountry[] = [
     currency: "USD",
     regionLabel: "states",
     blurb:
-      "City lists across all 50 states, from the big metros down to regional markets. Licensing is set state by state, so every list is checked against the board that actually issues the licence.",
+      "City lists across the United States, from the big metros down to regional markets. Licensing is set state by state, so every list is checked against the board that actually issues the license.",
     regions: [
       {
         code: "ny",

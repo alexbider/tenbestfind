@@ -1,3 +1,4 @@
+import { licenceWord } from "@/lib/trade-words";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
@@ -106,7 +107,7 @@ export async function CityHub({
     notFound();
   }
 
-  const [rankings, businesses, costRows, categories, guides, nearbyCities, placements] =
+  const [rankings, businesses, costRows, categories, guides, nearbyPool, placements] =
     await Promise.all([
       db.ranking.findMany({
         where: { status: "PUBLISHED", cityId: city.id },
@@ -133,16 +134,32 @@ export async function CityHub({
       }),
       db.costRow.findMany({ where: { cityId: city.id }, orderBy: { sortOrder: "asc" } }),
       db.category.findMany({ where: { published: true, featured: true }, orderBy: { sortOrder: "asc" } }),
+      // Guides about another place stay on that place's pages.
       db.guide.findMany({
-        where: { status: "PUBLISHED" },
+        where: {
+          status: "PUBLISHED",
+          AND: [
+            { OR: [{ cityId: null }, { cityId: city.id }] },
+            { OR: [{ regionId: null }, { regionId: region.id }] },
+            { OR: [{ countryId: null }, { countryId: country.id }] },
+          ],
+        },
         orderBy: { publishedAt: "desc" },
         take: 6,
         include: { category: { select: { serviceName: true } }, author: { select: { name: true } } },
       }),
+      // Nearby means nearby, not "in the same state": 19 cities sat alone in
+      // their state and linked to no other city at all, and Newark never
+      // linked New York. Only cities with a published list are candidates.
       db.city.findMany({
-        where: { published: true, regionId: region.id, NOT: { id: city.id } },
+        where: {
+          published: true,
+          NOT: { id: city.id },
+          region: { countryId: country.id },
+          rankings: { some: { status: "PUBLISHED" } },
+        },
         orderBy: { population: "desc" },
-        take: 6,
+        include: { region: { select: { slug: true, id: true } } },
       }),
       db.sponsoredPlacement.findMany({
         where: { status: "ACTIVE", cityId: city.id },
@@ -188,7 +205,7 @@ export async function CityHub({
     },
     {
       question: "How often is this page updated?",
-      answer: `Rankings for ${city.name} are re-checked on a schedule, and sooner when something significant changes such as a licence lapsing or a company closing. Each ranking shows the date an editor last reviewed it.`,
+      answer: `Rankings for ${city.name} are re-checked on a schedule, and sooner when something significant changes such as a ${licenceWord(country.code)} lapsing or a company closing. Each ranking shows the date an editor last reviewed it.`,
     },
   ];
 
@@ -273,6 +290,16 @@ export async function CityHub({
     }
     group.items.push(entry);
   }
+
+  // Closest first by straight-line distance when both cities have coordinates;
+  // otherwise same-region cities first, then by population (the query order).
+  const distanceTo = (near: (typeof nearbyPool)[number]) =>
+    city.latitude !== null && city.longitude !== null && near.latitude !== null && near.longitude !== null
+      ? Math.hypot(near.latitude - city.latitude, (near.longitude - city.longitude) * Math.cos((city.latitude * Math.PI) / 180))
+      : near.region.id === region.id
+        ? 1000
+        : 2000;
+  const nearbyCities = [...nearbyPool].sort((a, b) => distanceTo(a) - distanceTo(b)).slice(0, 6);
 
   const pins: CoveragePin[] = [];
   if (city.latitude !== null && city.longitude !== null) {
@@ -1074,13 +1101,13 @@ export async function CityHub({
                 ) : null}
                 {nearbyCities.length > 0 ? (
                   <>
-                    <h3 style={h3Style(11, { ...SMALL_CAPS, marginBottom: "12px" })}>Across the metro</h3>
+                    <h3 style={h3Style(11, { ...SMALL_CAPS, marginBottom: "12px" })}>Nearby cities we cover</h3>
                     <ul data-stagger="" style={gridOf(170, 8)}>
                       {nearbyCities.map((near) => (
                         <li key={near.id}>
                           <Link
                             data-rowlink=""
-                            href={routes.city(country.code, region.slug, near.slug)}
+                            href={routes.city(country.code, near.region.slug, near.slug)}
                             style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", minHeight: "48px", padding: "0 14px", border: "1px solid var(--border-subtle)", borderRadius: "14px", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}
                           >
                             {near.name}
@@ -1301,7 +1328,7 @@ export async function CityHub({
                   <li key={near.id}>
                     <Link
                       data-card=""
-                      href={routes.city(country.code, region.slug, near.slug)}
+                      href={routes.city(country.code, near.region.slug, near.slug)}
                       style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", borderRadius: "18px", background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}
                     >
                       <Tile d={ICO.pin} size={42} radius={12} icon={19} tone="blue" ten={false} stroke={1.75} />
@@ -1340,7 +1367,7 @@ export async function CityHub({
                     <li key={near.id}>
                       <Link
                         data-btn=""
-                        href={routes.city(country.code, region.slug, near.slug)}
+                        href={routes.city(country.code, near.region.slug, near.slug)}
                         style={{ display: "inline-flex", alignItems: "center", minHeight: "40px", padding: "0 15px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.2)", fontSize: "14px", color: "#fff" }}
                       >
                         {near.name}

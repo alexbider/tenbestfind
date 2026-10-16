@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CrumbBar, FinalSearch } from "@/components/site/blocks";
@@ -16,12 +17,12 @@ import { absoluteUrl, routes } from "@/lib/urls";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "Who writes and reviews our rankings",
   description:
     "The people who research, write and review what gets published here, with their credentials and the limits of what each one covers.",
   alternates: { canonical: "/experts/" },
-};
+});
 
 export default async function ExpertsIndexPage() {
   const people = await db.person.findMany({

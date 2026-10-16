@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
@@ -25,12 +26,12 @@ import { absoluteUrl, routes } from "@/lib/urls";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "How we rank: the full methodology",
   description:
     "The criteria behind every TenBestFind ranking, what we verify and what we cannot, how sponsorship works, and why a high rating does not automatically rank higher.",
   alternates: { canonical: "/how-we-rank/" },
-};
+});
 
 /* ------------------------------------------------------------ the content */
 
@@ -273,7 +274,7 @@ const WALKTHROUGH = [
   { factor: "Insurance", finding: "Current liability certificate on file, expiry recorded.", verdict: "Verified" },
   { factor: "Service breadth", finding: "Repair through full replacement, plus storm response.", verdict: "Confirmed" },
   { factor: "Warranty", finding: "Written ten-year workmanship terms, separate from the material warranty.", verdict: "Confirmed" },
-  { factor: "Pricing", finding: "Quotes above the local median, itemised and consistent.", verdict: "Noted" },
+  { factor: "Pricing", finding: "Quotes above the local median, itemized and consistent.", verdict: "Noted" },
   { factor: "Scheduling", finding: "Slower response in storm season, acknowledged by the company.", verdict: "Noted" },
 ];
 

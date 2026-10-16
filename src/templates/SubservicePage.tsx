@@ -33,7 +33,8 @@ import { parseSubserviceDetail, priceScale, toneColor } from "@/lib/subservice-d
 import { redirectIfKnown } from "@/lib/redirects";
 import { rankingCardSelect } from "@/lib/queries";
 import { absoluteUrl, rankingUrl, routes } from "@/lib/urls";
-import { subserviceCopy, rankingCardTitle, tradesPhrase } from "@/lib/seo-copy";
+import { subserviceCopy, subserviceTerm, rankingCardTitle, tradesPhrase } from "@/lib/seo-copy";
+import { capitalise, inSentence, tradeWords } from "@/lib/trade-words";
 import { breadcrumbSchema, subserviceCrumbs } from "@/lib/breadcrumbs";
 import { graph, pageEntity, serviceEntity, serviceId } from "@/lib/schema";
 
@@ -64,8 +65,8 @@ const CHECKS: { title: string; body: string }[] = [
     body: "Ask whether the crew doing this specific work is on their payroll. Plenty of companies list a service and hand it straight to somebody else, which is not wrong, but it changes who is answerable when something goes back.",
   },
   {
-    title: "The licence for the parent trade",
-    body: "Look the number up with the authority that issues it rather than reading the certificate they send you. What a licence covers, and whether one is needed at all, changes by state and province.",
+    title: "The license for the parent trade",
+    body: "Look the number up with the authority that issues it rather than reading the certificate they send you. What a license covers, and whether one is needed at all, changes by state and province.",
   },
   {
     title: "Insurance, confirmed with the insurer",
@@ -197,9 +198,9 @@ export async function SubservicePage({
   const body = parseHubBody(subservice.body);
   const detail = parseSubserviceDetail(subservice.detail);
   const trade = tradesPhrase(category);
-  const term = (subservice.searchTerm?.trim() || subservice.name).toLowerCase();
+  const term = inSentence(subserviceTerm(subservice, category));
   const siblings = category.subservices.filter((item) => item.id !== subservice.id);
-  const tradeName = category.serviceName.toLowerCase();
+  const tradeName = tradeWords(category).trade;
 
   const cities = [
     ...new Set(
@@ -246,7 +247,7 @@ export async function SubservicePage({
   const generatedFaqs = [
     {
       question: `Who handles ${term}?`,
-      answer: `${subservice.name} is handled by ${trade}. Not every company in the trade takes this work on, so each ranking lists the services a company genuinely performs rather than everything it advertises.`,
+      answer: `${capitalise(trade)} handle ${term}. Not every company in the trade takes this work on, so each ranking lists the services a company genuinely performs rather than everything it advertises.`,
     },
     {
       question: `What should I ask before booking ${term}?`,
@@ -259,9 +260,9 @@ export async function SubservicePage({
         "Put them on one sheet line by line. Differences in price almost always turn out to be differences in scope, material grade or warranty length rather than margin.",
     },
     {
-      question: `Is ${term} priced separately from the rest of the job?`,
+      question: `How is ${term} usually priced?`,
       answer:
-        "Usually it is a line inside a larger quote rather than its own invoice, which is exactly why the exclusions matter. Ask for it itemised so you can compare that line between companies instead of comparing two totals.",
+        "Usually it is a line inside a larger quote rather than its own invoice, which is exactly why the exclusions matter. Ask for it itemized so you can compare that line between companies instead of comparing two totals.",
     },
   ];
 
@@ -483,7 +484,7 @@ export async function SubservicePage({
               <div data-rail-col="" style={{ position: "sticky", top: "130px" }}>
                 <Kicker gap="16px">The work</Kicker>
                 <h2 data-reveal="" id="involves-h2" style={{ fontSize: "30px", lineHeight: "1.12", fontWeight: "800" }}>
-                  {accentTail(`What ${term} actually involves`, 2)}
+                  {accentTail(`What goes into ${term}`, 2)}
                 </h2>
               </div>
 
@@ -516,7 +517,7 @@ export async function SubservicePage({
                   <div style={{ display: "grid", gap: "16px" }}>
                     <p style={{ fontSize: "18px", lineHeight: "1.75", color: "var(--text-primary)", maxWidth: "66ch", textWrap: "pretty" }}>
                       {subservice.description ??
-                        `${subservice.name} sits inside the ${tradeName} trade, so the licensing, insurance and permit rules that apply to it are the trade's rules rather than its own.`}
+                        `${capitalise(term)} sits inside the ${tradeName} trade, so the licensing, insurance and permit rules that apply to it are the trade's rules rather than its own.`}
                     </p>
                     <p style={{ fontSize: "18px", lineHeight: "1.75", color: "var(--text-primary)", maxWidth: "66ch", textWrap: "pretty" }}>
                       That is the part worth knowing before you call anybody: a company can list this work without doing it
@@ -933,7 +934,7 @@ export async function SubservicePage({
               <Kicker gap="16px">Where we cover it</Kicker>
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", marginBottom: "24px" }}>
                 <h2 data-reveal="" id="rank-h2" style={{ fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.12", fontWeight: "800", textWrap: "balance" }}>
-                  {accentTail(`${category.name} shortlists by city`, 2)}
+                  {accentTail(`Shortlists of ${trade} by city`, 2)}
                 </h2>
                 <ArrowLink href={routes.rankingsIndex()} style={{ fontSize: "15px", fontWeight: "600" }}>
                   Every shortlist
@@ -1110,7 +1111,7 @@ export async function SubservicePage({
                 </h2>
                 <p style={{ fontSize: "16.5px", lineHeight: "1.7", color: "var(--text-secondary)", maxWidth: "54ch" }}>
                   Claim your profile so the services you actually perform are the ones recorded here, alongside your
-                  licence, hours and coverage. Neither claiming nor advertising buys a ranked position.
+                  license, hours and coverage. Neither claiming nor advertising buys a ranked position.
                 </p>
               </div>
               <div data-stack="" data-biz-actions="" style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end" }}>

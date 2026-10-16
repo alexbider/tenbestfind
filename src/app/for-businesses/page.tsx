@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSocial } from "@/lib/static-meta";
 import Link from "next/link";
 import { FaqJsonLd } from "@/components/site/FaqSection";
 import { InfoModal } from "@/components/site/InfoModal";
@@ -25,12 +26,12 @@ import { BILLING_FAQS, BusinessCentreNav, EDITORIAL_FIELDS, OWNER_FIELDS } from 
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withSocial({
   title: "For businesses: claim, add or advertise",
   description:
     "Claim your listing or add a business for $29 a month per location. Top 10 featured placement is $199 a month per city and trade. None of it buys a ranking position.",
   alternates: { canonical: "/for-businesses/" },
-};
+});
 
 const SECTION = { ...SHELL, padding: "60px 24px" };
 const SECTION_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };

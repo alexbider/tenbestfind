@@ -154,9 +154,7 @@ export function Tile({
             color: tenColor,
             opacity: tenAlpha,
           }}
-        >
-          10
-        </span>
+        ></span>
       ) : null}
       <svg data-ico="" width={icon} height={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ position: "relative" }}>
         <path pathLength={1} d={d} />

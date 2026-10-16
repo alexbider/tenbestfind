@@ -37,7 +37,7 @@ const FIELD = {
 function Column({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <nav aria-label={label}>
-      <h2 style={COL_HEAD}>{label}</h2>
+      <p style={COL_HEAD}>{label}</p>
       <ul style={{ display: "grid", gap: "11px" }}>{children}</ul>
     </nav>
   );
@@ -140,7 +140,9 @@ export async function SiteFooter() {
               <span aria-hidden="true" style={{ display: "inline-block", width: "28px", height: "2px", background: "var(--gold-ink)" }} />
               Forty Tabs or Ten Names
             </p>
-            <h2
+            {/* A paragraph, not a heading: the footer is on every page, and a heading
+                here put the same sentence into every page's outline. */}
+            <p
               style={{
                 fontSize: "clamp(26px, 2.8vw, 36px)",
                 lineHeight: "1.08",
@@ -151,7 +153,7 @@ export async function SiteFooter() {
               }}
             >
               Tell Us the Job and the City. We Will Hand You the Ten Worth Calling.
-            </h2>
+            </p>
           </div>
           <form
             data-fsearch=""
@@ -320,13 +322,13 @@ export async function SiteFooter() {
           </Column>
 
           <nav aria-label="For businesses and legal">
-            <h2 style={COL_HEAD}>For Businesses</h2>
+            <p style={COL_HEAD}>For Businesses</p>
             <ul style={{ display: "grid", gap: "11px", marginBottom: "28px" }}>
               <Row href={routes.claim()}>Claim Your Profile</Row>
               <Row href="/add-business/">Add a Business</Row>
               <Row href={routes.forBusinesses()}>Top 10 Listing</Row>
             </ul>
-            <h2 style={COL_HEAD}>Legal</h2>
+            <p style={COL_HEAD}>Legal</p>
             <ul style={{ display: "grid", gap: "11px" }}>
               <Row href="/privacy/">Privacy</Row>
               <Row href="/terms/">Terms</Row>

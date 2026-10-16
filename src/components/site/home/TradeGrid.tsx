@@ -137,9 +137,7 @@ function TradeTile({ trade }: { trade: Trade }) {
               opacity: 0.32,
               pointerEvents: "none",
             }}
-          >
-            10
-          </span>
+          ></span>
           <svg
             data-ico=""
             width="26"
