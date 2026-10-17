@@ -40,6 +40,12 @@ const config: NextConfig = {
   skipTrailingSlashRedirect: true,
   images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
   eslint: { ignoreDuringBuilds: true },
+  // The on-box deploy builds from source on a memory-constrained VPS. next build's
+  // full-project type-check is the heaviest phase and was OOM-killing the build
+  // there, crash-looping the container (502s). Type safety is still enforced out
+  // of band by `tsc --noEmit` (npm run typecheck) and CI; skipping it here only
+  // removes the build-time pass, so a deploy no longer dies on it.
+  typescript: { ignoreBuildErrors: true },
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
