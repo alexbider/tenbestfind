@@ -1843,3 +1843,48 @@ model KeywordMetric {
   @@unique([keyword, market])
   @@index([pricedAt])
 }
+
+/// One outbound provider HTTP call (Apify, DataForSEO, Anthropic, ...). Written
+/// best-effort by src/lib/provider-usage.ts so request volume and, above all,
+/// WHY a call failed can be read from data. No secrets are stored: endpoints
+/// carry no tokens and `connectionRef` is a short one-way hash of the credential.
+model ProviderRequest {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+
+  provider  String /// apify | dataforseo | anthropic | resend | google-indexing | stripe
+  endpoint  String /// normalized path, no secrets
+  operation String /// the calling function, e.g. startPlacesRun
+  method    String   @default("GET")
+
+  /// OK | AVOIDED | RATE_LIMITED | QUOTA_EXHAUSTED | BILLING | AUTH | INVALID | SERVER | TIMEOUT | NETWORK
+  outcome      String
+  httpStatus   Int? /// transport status when there was one
+  providerCode String? /// provider-specific code (e.g. DataForSEO status_code)
+  latencyMs    Int?
+  retryAttempt Int     @default(0)
+  retryAfterMs Int? /// from Retry-After when supplied
+
+  quotaMetric    String?
+  quotaLimit     Int?
+  quotaRemaining Int?
+  quotaResetAt   DateTime? /// null = unknown; never fabricated
+
+  billableUnits Float?
+  estCostUsd    Float?
+  avoided       Boolean @default(false) /// true = call skipped via permitted reuse
+
+  initiator     String? /// worker tick / mcp action / admin action that caused it
+  runId         String? /// ImportBatch / EnrichRun / ReviewRefresh id
+  jobId         String?
+  businessId    String?
+  connectionRef String? /// redacted credential tag, to tell accounts/keys apart
+  fingerprint   String? /// hash of (provider, operation, key params)
+  note          String?
+
+  @@index([provider, at])
+  @@index([outcome, at])
+  @@index([runId])
+  @@index([businessId])
+  @@index([at])
+}

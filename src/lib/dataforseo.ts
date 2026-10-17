@@ -12,6 +12,13 @@
 // failing over a research step.
 
 import { getSecret, SECRET_KEYS } from "./secrets";
+import {
+  recordProviderRequest,
+  classifyHttpStatus,
+  classifyDataForSeoCode,
+  classifyThrown,
+  connectionRef,
+} from "./provider-usage";
 
 const BASE = "https://api.dataforseo.com/v3";
 
@@ -114,6 +121,15 @@ async function call(path: string, payload: Record<string, unknown>): Promise<unk
   const auth = await authorization();
   if (!auth) throw new ResearchError("DataForSEO credentials are not set.");
 
+  const meta = {
+    provider: "dataforseo" as const,
+    endpoint: path,
+    operation: path.replace(/^\//, ""),
+    method: "POST",
+    connectionRef: connectionRef(auth),
+  };
+  const started = Date.now();
+
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
@@ -123,24 +139,46 @@ async function call(path: string, payload: Record<string, unknown>): Promise<unk
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
+    await recordProviderRequest({ ...meta, outcome: classifyThrown(error).outcome, latencyMs: Date.now() - started });
     throw new ResearchError(`DataForSEO did not answer (${String(error)})`);
   }
+  const latencyMs = Date.now() - started;
 
   if (response.status === 401 || response.status === 403) {
+    await recordProviderRequest({ ...meta, outcome: "AUTH", httpStatus: response.status, latencyMs });
     throw new ResearchError("DataForSEO rejected the credentials.");
   }
   if (!response.ok) {
+    await recordProviderRequest({ ...meta, outcome: classifyHttpStatus(response.status).outcome, httpStatus: response.status, latencyMs });
     throw new ResearchError(`DataForSEO returned HTTP ${response.status}.`);
   }
 
   const body = (await response.json()) as { tasks?: TaskResult[] };
   const task = body.tasks?.[0];
-  if (!task) throw new ResearchError("DataForSEO returned no task.");
+  if (!task) {
+    await recordProviderRequest({ ...meta, outcome: "SERVER", httpStatus: response.status, latencyMs, note: "no task in body" });
+    throw new ResearchError("DataForSEO returned no task.");
+  }
   // 20000 and 20100 are both success; anything else is the task telling you
   // why it did nothing, which is worth reporting rather than treating as empty.
   if (task.status_code && task.status_code >= 40000) {
+    await recordProviderRequest({
+      ...meta,
+      outcome: classifyDataForSeoCode(task.status_code).outcome,
+      httpStatus: response.status,
+      providerCode: String(task.status_code),
+      latencyMs,
+      note: task.status_message?.slice(0, 200) ?? null,
+    });
     throw new ResearchError(`DataForSEO: ${task.status_message ?? task.status_code}`);
   }
+  await recordProviderRequest({
+    ...meta,
+    outcome: "OK",
+    httpStatus: response.status,
+    providerCode: task.status_code ? String(task.status_code) : null,
+    latencyMs,
+  });
   return Array.isArray(task.result) ? task.result : [];
 }
 

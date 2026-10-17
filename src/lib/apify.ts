@@ -1,4 +1,21 @@
 import { getSecret } from "./secrets";
+import {
+  recordProviderRequest,
+  classifyHttpStatus,
+  classifyThrown,
+  connectionRef,
+  parseRetryAfterMs,
+} from "./provider-usage";
+
+/** Group an Apify path into a stable operation + a secret-free endpoint label. */
+function apifyOp(path: string, method: string): { operation: string; endpoint: string } {
+  const p = path.split("?")[0];
+  if (/^\/acts\/.+\/runs$/.test(p)) return { operation: "startRun", endpoint: "/acts/{actor}/runs" };
+  if (/^\/actor-runs\/[^/]+\/abort$/.test(p)) return { operation: "abortRun", endpoint: "/actor-runs/{runId}/abort" };
+  if (/^\/actor-runs\/[^/]+$/.test(p)) return { operation: "runState", endpoint: "/actor-runs/{runId}" };
+  if (/^\/datasets\/[^/]+\/items/.test(p)) return { operation: "readDataset", endpoint: "/datasets/{datasetId}/items" };
+  return { operation: `${method} ${p}`, endpoint: p };
+}
 
 // Google Maps scraping goes through Apify's Google Maps Scraper. The actor id
 // is configurable so a swap does not need a deploy, but this is the one the
@@ -64,15 +81,35 @@ export class ApifyPermanentError extends ApifyError {
 }
 
 async function call(path: string, token: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  });
+  const method = init?.method ?? "GET";
+  const { operation, endpoint } = apifyOp(path, method);
+  const meta = { provider: "apify" as const, endpoint, operation, method, connectionRef: connectionRef(token) };
+  const started = Date.now();
+
+  let response: Response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    await recordProviderRequest({ ...meta, outcome: classifyThrown(error).outcome, latencyMs: Date.now() - started });
+    throw error;
+  }
+  const latencyMs = Date.now() - started;
+
   if (!response.ok) {
+    await recordProviderRequest({
+      ...meta,
+      outcome: classifyHttpStatus(response.status).outcome,
+      httpStatus: response.status,
+      latencyMs,
+      retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),
+    });
     const body = await response.text().catch(() => "");
 
     if (response.status === 401 || response.status === 403) {
@@ -98,6 +135,8 @@ async function call(path: string, token: string, init?: RequestInit): Promise<Re
       `Apify ${init?.method ?? "GET"} ${path} returned ${response.status}. ${body.slice(0, 300)}`,
     );
   }
+
+  await recordProviderRequest({ ...meta, outcome: "OK", httpStatus: response.status, latencyMs });
   return response;
 }
 
