@@ -21,6 +21,7 @@ import { db } from "./db";
 import { getSecret, readServiceAccount, SECRET_KEYS, type ServiceAccount } from "./secrets";
 import { absoluteUrl } from "./urls";
 import { loadSeoSettings } from "./seo-settings";
+import { recordProviderRequest, classifyHttpStatus, classifyThrown } from "./provider-usage";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const PUBLISH_URL = "https://indexing.googleapis.com/v3/urlNotifications:publish";
@@ -184,6 +185,7 @@ export async function flushIndexQueue(limit = DAILY_QUOTA): Promise<FlushResult>
   let note = "";
 
   for (const row of queued) {
+    const started = Date.now();
     try {
       const response = await fetch(PUBLISH_URL, {
         method: "POST",
@@ -192,6 +194,20 @@ export async function flushIndexQueue(limit = DAILY_QUOTA): Promise<FlushResult>
         signal: AbortSignal.timeout(20_000),
       });
       const text = (await response.text()).slice(0, 500);
+
+      // A 429 here is the 200/day Indexing quota, not a per-minute throttle.
+      void recordProviderRequest({
+        provider: "google-indexing",
+        endpoint: "/v3/urlNotifications:publish",
+        operation: "publish",
+        method: "POST",
+        outcome: response.status === 429 ? "QUOTA_EXHAUSTED" : classifyHttpStatus(response.status).outcome,
+        httpStatus: response.status,
+        latencyMs: Date.now() - started,
+        quotaMetric: "urls/day",
+        quotaLimit: DAILY_QUOTA,
+        billableUnits: response.ok ? 1 : null,
+      });
 
       if (response.status === 429) {
         // Out of quota for the day. Stop rather than fail the rest.
@@ -241,6 +257,14 @@ export async function flushIndexQueue(limit = DAILY_QUOTA): Promise<FlushResult>
         failed += 1;
       }
     } catch (error) {
+      void recordProviderRequest({
+        provider: "google-indexing",
+        endpoint: "/v3/urlNotifications:publish",
+        operation: "publish",
+        method: "POST",
+        outcome: classifyThrown(error).outcome,
+        latencyMs: Date.now() - started,
+      });
       await db.indexRequest.update({
         where: { id: row.id },
         data: {

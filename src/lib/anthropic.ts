@@ -2,6 +2,47 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import type { z } from "zod";
 import { getSecret } from "./secrets";
+import {
+  recordProviderRequest,
+  classifyHttpStatus,
+  classifyThrown,
+  type ProviderOutcome,
+} from "./provider-usage";
+
+/** Outcome of a thrown Anthropic SDK error (its APIError carries an HTTP status). */
+function anthropicOutcome(error: unknown): ProviderOutcome {
+  if (
+    error instanceof Anthropic.BadRequestError &&
+    /credit balance is too low|insufficient.*credit|billing/i.test(error.message ?? "")
+  ) {
+    return "BILLING";
+  }
+  const status = (error as { status?: number })?.status;
+  if (typeof status === "number") return classifyHttpStatus(status).outcome;
+  return classifyThrown(error).outcome;
+}
+
+/** Record one Anthropic call (best effort). Tokens, when known, are the billable unit. */
+function recordAnthropic(
+  operation: string,
+  endpoint: string,
+  outcome: ProviderOutcome,
+  startedMs: number,
+  extra: { tokens?: number | null; httpStatus?: number | null; note?: string | null } = {},
+): void {
+  void recordProviderRequest({
+    provider: "anthropic",
+    endpoint,
+    operation,
+    method: "POST",
+    outcome,
+    latencyMs: Date.now() - startedMs,
+    httpStatus: extra.httpStatus ?? null,
+    billableUnits: extra.tokens ?? null,
+    quotaMetric: extra.tokens != null ? "tokens" : null,
+    note: extra.note ?? null,
+  });
+}
 
 // Claude writes the listing copy. Opus 5 is the default because the copy is the
 // product here; the model and the effort are settings so a large backfill can
@@ -258,15 +299,23 @@ export async function askForJson<T extends z.ZodType>({
 }: JsonAsk & { schema: T }): Promise<z.infer<T>> {
   const client = await anthropic();
 
+  const started = Date.now();
   let response;
   try {
     response = await client.messages.parse(jsonRequest(ask));
   } catch (error) {
+    recordAnthropic("messages.parse", "/v1/messages", anthropicOutcome(error), started, {
+      httpStatus: (error as { status?: number })?.status ?? null,
+    });
     // Rate limits and 5xx have already been retried by the SDK, so anything
     // arriving here is either permanent or worth reporting as it stands.
     throw classify(error);
   }
 
+  const usage = (response as { usage?: { input_tokens?: number; output_tokens?: number } }).usage;
+  recordAnthropic("messages.parse", "/v1/messages", "OK", started, {
+    tokens: usage ? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) : null,
+  });
   return readMessage(response, response.parsed_output, schema);
 }
 
@@ -286,6 +335,7 @@ export type BatchAsk = JsonAsk & { customId: string };
 /** Queues a wave and returns the batch id to store. */
 export async function submitJsonBatch(asks: BatchAsk[]): Promise<string> {
   const client = await anthropic();
+  const started = Date.now();
   try {
     const batch = await client.messages.batches.create({
       requests: asks.map(({ customId, ...ask }) => ({
@@ -293,8 +343,12 @@ export async function submitJsonBatch(asks: BatchAsk[]): Promise<string> {
         params: jsonRequest(ask),
       })),
     });
+    recordAnthropic("batches.create", "/v1/messages/batches", "OK", started, { note: `batch of ${asks.length}` });
     return batch.id;
   } catch (error) {
+    recordAnthropic("batches.create", "/v1/messages/batches", anthropicOutcome(error), started, {
+      httpStatus: (error as { status?: number })?.status ?? null,
+    });
     throw classify(error);
   }
 }
@@ -316,12 +370,17 @@ export async function jsonBatchReady(batchId: string): Promise<boolean> {
   lastPolled.set(batchId, Date.now());
 
   const client = await anthropic();
+  const started = Date.now();
   try {
     const batch = await client.messages.batches.retrieve(batchId);
+    recordAnthropic("batches.retrieve", "/v1/messages/batches", "OK", started, { note: "poll" });
     if (batch.processing_status !== "ended") return false;
     lastPolled.delete(batchId);
     return true;
   } catch (error) {
+    recordAnthropic("batches.retrieve", "/v1/messages/batches", anthropicOutcome(error), started, {
+      httpStatus: (error as { status?: number })?.status ?? null,
+    });
     throw classify(error);
   }
 }
@@ -377,17 +436,27 @@ export async function readJsonBatch<T extends z.ZodType>(
 ): Promise<BatchOutcome<z.infer<T>>[]> {
   const client = await anthropic();
   const out: BatchOutcome<z.infer<T>>[] = [];
+  const started = Date.now();
 
   let results;
   try {
     results = await client.messages.batches.results(batchId);
   } catch (error) {
+    recordAnthropic("batches.results", "/v1/messages/batches", anthropicOutcome(error), started, {
+      httpStatus: (error as { status?: number })?.status ?? null,
+    });
     throw classify(error);
   }
 
+  let tokens = 0;
   for await (const entry of results) {
     const customId = entry.custom_id;
     const result = entry.result;
+
+    if (result.type === "succeeded") {
+      const u = (result.message as { usage?: { input_tokens?: number; output_tokens?: number } }).usage;
+      if (u) tokens += (u.input_tokens ?? 0) + (u.output_tokens ?? 0);
+    }
 
     if (result.type !== "succeeded") {
       const detail =
@@ -409,6 +478,10 @@ export async function readJsonBatch<T extends z.ZodType>(
     }
   }
 
+  recordAnthropic("batches.results", "/v1/messages/batches", "OK", started, {
+    tokens: tokens || null,
+    note: `batch tier, ${out.length} results`,
+  });
   return out;
 }
 
@@ -420,13 +493,18 @@ export async function readJsonBatch<T extends z.ZodType>(
  */
 export async function preflight(model = DEFAULT_MODEL): Promise<void> {
   const client = await anthropic();
+  const started = Date.now();
   try {
     await client.messages.create({
       model,
       max_tokens: 1,
       messages: [{ role: "user", content: "ok" }],
     });
+    recordAnthropic("preflight", "/v1/messages", "OK", started, { note: "1-token account check" });
   } catch (error) {
+    recordAnthropic("preflight", "/v1/messages", anthropicOutcome(error), started, {
+      httpStatus: (error as { status?: number })?.status ?? null,
+    });
     throw classify(error);
   }
 }

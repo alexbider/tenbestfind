@@ -1,6 +1,7 @@
 import { getSecret } from "./secrets";
 import { db } from "./db";
 import { parseJson } from "./json";
+import { recordProviderRequest, classifyHttpStatus } from "./provider-usage";
 
 // Outbound email goes through Resend's HTTP API. There is no SDK here on
 // purpose: one POST with a JSON body is the whole integration, and a dependency
@@ -61,6 +62,7 @@ export async function sendMail(message: Message): Promise<{ id: string }> {
     );
   }
 
+  const started = Date.now();
   const response = await fetch(API, {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
@@ -72,6 +74,17 @@ export async function sendMail(message: Message): Promise<{ id: string }> {
       text: message.text,
       ...(message.replyTo ? { reply_to: message.replyTo } : {}),
     }),
+  });
+  void recordProviderRequest({
+    provider: "resend",
+    endpoint: "/emails",
+    operation: "sendMail",
+    method: "POST",
+    outcome: classifyHttpStatus(response.status).outcome,
+    httpStatus: response.status,
+    latencyMs: Date.now() - started,
+    billableUnits: response.ok ? 1 : null,
+    quotaMetric: response.ok ? "emails" : null,
   });
 
   if (!response.ok) {
