@@ -19,6 +19,7 @@ import {
   classifyThrown,
   connectionRef,
 } from "./provider-usage";
+import { activeCooldown } from "./provider-cooldown";
 
 const BASE = "https://api.dataforseo.com/v3";
 
@@ -128,6 +129,15 @@ async function call(path: string, payload: Record<string, unknown>): Promise<unk
     method: "POST",
     connectionRef: connectionRef(auth),
   };
+
+  // Circuit breaker: skip the spend while DataForSEO is parked. Research is not
+  // load-bearing, so this surfaces as an empty brief rather than a failed run.
+  const cd = await activeCooldown("dataforseo");
+  if (cd) {
+    await recordProviderRequest({ ...meta, outcome: "AVOIDED", avoided: true, note: `cooling down until ${cd.until.toISOString()} (${cd.reason})` });
+    throw new ResearchError(`DataForSEO is paused until ${cd.until.toISOString()} after a ${cd.reason}.`);
+  }
+
   const started = Date.now();
 
   let response: Response;

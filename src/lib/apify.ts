@@ -6,6 +6,7 @@ import {
   connectionRef,
   parseRetryAfterMs,
 } from "./provider-usage";
+import { activeCooldown } from "./provider-cooldown";
 
 /** Group an Apify path into a stable operation + a secret-free endpoint label. */
 function apifyOp(path: string, method: string): { operation: string; endpoint: string } {
@@ -84,6 +85,18 @@ async function call(path: string, token: string, init?: RequestInit): Promise<Re
   const method = init?.method ?? "GET";
   const { operation, endpoint } = apifyOp(path, method);
   const meta = { provider: "apify" as const, endpoint, operation, method, connectionRef: connectionRef(token) };
+
+  // Circuit breaker: if Apify is parked after a quota/billing/auth failure, do
+  // not spend. Record the avoided call and stop the batch cleanly until it clears.
+  const cd = await activeCooldown("apify");
+  if (cd) {
+    await recordProviderRequest({ ...meta, outcome: "AVOIDED", avoided: true, note: `cooling down until ${cd.until.toISOString()} (${cd.reason})` });
+    throw new ApifyPermanentError(
+      `Apify is paused until ${cd.until.toISOString()} after a ${cd.reason}.`,
+      "The circuit breaker opened after a quota, billing or auth failure. It clears on its own; resume the batch after the time shown, or fix the credit/key under Admin, Integrations.",
+    );
+  }
+
   const started = Date.now();
 
   let response: Response;

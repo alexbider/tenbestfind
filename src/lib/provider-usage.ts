@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { db } from "./db";
+import { tripCooldown, clearCooldown, isCooldownOutcome } from "./provider-cooldown";
 
 /**
  * Provider request accounting.
@@ -194,6 +195,19 @@ export async function recordProviderRequest(input: ProviderRequestInput): Promis
     });
   } catch (error) {
     console.warn("[provider-usage] could not record request:", (error as Error).message);
+  }
+
+  // Drive the circuit breaker off the same signal. A real blocking outcome parks
+  // the provider; a success proves it healthy and clears any park. AVOIDED and
+  // the transient outcomes (SERVER/TIMEOUT/NETWORK — handled by retry) do neither.
+  if (input.outcome === "OK") {
+    void clearCooldown(input.provider);
+  } else if (!input.avoided && isCooldownOutcome(input.outcome)) {
+    void tripCooldown(input.provider, input.outcome, {
+      retryAfterMs: input.retryAfterMs ?? null,
+      resetAt: input.quotaResetAt ?? null,
+      note: input.note ?? null,
+    });
   }
 }
 

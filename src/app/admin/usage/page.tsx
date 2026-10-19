@@ -8,6 +8,7 @@ import {
   knownQuotaResets,
   connectionsSeen,
 } from "@/lib/provider-usage-report";
+import { activeCooldowns } from "@/lib/provider-cooldown";
 
 export const metadata = { title: "Provider usage" };
 export const dynamic = "force-dynamic";
@@ -28,11 +29,12 @@ const OUTCOME_TONE: Record<string, "neutral" | "positive" | "warning" | "danger"
 export default async function AdminUsagePage() {
   await requireAdmin();
 
-  const [day, errors, resets, connections] = await Promise.all([
+  const [day, errors, resets, connections, cooldowns] = await Promise.all([
     providerUsage(24),
     recentProviderErrors(40),
     knownQuotaResets(),
     connectionsSeen(168),
+    activeCooldowns(),
   ]);
 
   const sharedAccount = connections.find((c) => c.connections > 1);
@@ -52,6 +54,27 @@ export default async function AdminUsagePage() {
           { label: "Avoided (reuse)", value: day.totals.avoided, hint: "calls skipped via cache or dedup" },
         ]}
       />
+
+      {cooldowns.length > 0 ? (
+        <Panel title="Provider paused (circuit breaker open)" description="These providers are not being called until the time shown; other providers keep working.">
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr><th>Provider</th><th>Reason</th><th>Until</th></tr>
+              </thead>
+              <tbody>
+                {cooldowns.map((c) => (
+                  <tr key={c.provider}>
+                    <td className="admin-table__primary">{c.provider}</td>
+                    <td><Badge tone={OUTCOME_TONE[c.reason] ?? "warning"}>{c.reason}</Badge></td>
+                    <td className="admin-table__meta">{fullDate(c.until)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      ) : null}
 
       {day.totals.total === 0 ? (
         <Panel>

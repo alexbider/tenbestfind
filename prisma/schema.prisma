@@ -1888,3 +1888,18 @@ model ProviderRequest {
   @@index([businessId])
   @@index([at])
 }
+
+/// Circuit breaker, one row per provider. When accounting records a blocking
+/// outcome (daily quota spent, no credit, bad key, or a rate limit with a
+/// Retry-After), the provider is parked until `until` so the pipeline stops
+/// spending on a wall instead of retrying into it. A successful call clears it.
+model ProviderCooldown {
+  provider  String   @id /// apify | dataforseo | anthropic | resend | google-indexing
+  until     DateTime /// do not call this provider before this time
+  reason    String /// the outcome that tripped it (QUOTA_EXHAUSTED | BILLING | AUTH | RATE_LIMITED)
+  note      String?
+  trippedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([until])
+}
