@@ -1,3 +1,8 @@
+// Must stay the first import. Site modules guard themselves with
+// `import "server-only"`, which throws outside Next.js; the stub turns it into a
+// no-op so this worker can load them. Without it the importer container crashes
+// on start and restarts forever.
+import "./_server-only-stub.cjs";
 import { db } from "../src/lib/db";
 import { advanceBatch } from "../src/lib/import-pipeline";
 import { advanceRefresh } from "../src/lib/reviews";
