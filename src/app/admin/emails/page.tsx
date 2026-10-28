@@ -76,7 +76,7 @@ export default async function AdminEmailsPage() {
                   return (
                     <tr key={email.id}>
                       <td className="admin-table__meta">
-                        {new Date(email.createdAt).toLocaleString("en-CA", { timeZone: "America/Toronto", dateStyle: "medium", timeStyle: "short" })}
+                        {when(email.createdAt)}
                       </td>
                       <td>{email.to.join(", ")}</td>
                       <td className="admin-table__primary">{email.subject}</td>
@@ -93,4 +93,12 @@ export default async function AdminEmailsPage() {
       </Panel>
     </>
   );
+}
+
+/** Resend writes "2026-10-28 18:28:00.123+00"; normalise it before parsing. */
+function when(raw: string): string {
+  const iso = raw.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleString("en-CA", { timeZone: "America/Toronto", dateStyle: "medium", timeStyle: "short" });
 }
