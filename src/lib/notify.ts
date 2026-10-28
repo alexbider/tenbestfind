@@ -25,12 +25,17 @@ export async function teamInbox(): Promise<string> {
   return typeof stored === "string" && stored.trim() ? stored.trim() : DEFAULT_TEAM;
 }
 
+/** The reason the most recent best-effort send failed, for screens that test sending. */
+export let lastDeliveryError: string | null = null;
+
 async function deliver(message: Message, what: string): Promise<boolean> {
   try {
     await sendMail(message);
+    lastDeliveryError = null;
     return true;
   } catch (error) {
-    console.error(`[notify] ${what} not sent:`, error instanceof Error ? error.message : error);
+    lastDeliveryError = error instanceof Error ? error.message : String(error);
+    console.error(`[notify] ${what} not sent:`, lastDeliveryError);
     return false;
   }
 }
@@ -581,4 +586,82 @@ export function alertLeadNotDelivered(input: { businessName: string; leadId: str
     ],
     `/admin/leads#${input.leadId}`,
   );
+}
+
+/* ----------------------------------------------------------- test sends */
+
+export const TEST_TEMPLATES = {
+  plain: "Plain test",
+  quote_confirmation: "Homeowner quote confirmation",
+  claim_code: "Claim verification code",
+  claim_approved: "Claim approved",
+  claim_declined: "Claim declined",
+  contact_received: "Contact reply",
+  password_changed: "Password changed",
+  payment_failed: "Payment failed",
+  plan_ended: "Plan ended",
+  listing_declined: "Submission declined",
+  team_alert: "Team alert",
+} as const;
+export type TestTemplate = keyof typeof TEST_TEMPLATES;
+
+/**
+ * Sends one template filled with sample data, so the design can be checked in
+ * a real inbox. Only the team inbox or a tenbestfind.com address can receive
+ * one; the caller enforces that.
+ */
+export async function sendTemplateTest(template: TestTemplate, to: string): Promise<boolean> {
+  const site = siteUrl("/").replace(/\/$/, "");
+  const sample = { business: "Sample Locksmiths (test)", person: "Alex Sample" };
+  switch (template) {
+    case "plain":
+      return deliver(
+        {
+          to,
+          subject: "TenBestFind test email",
+          html: emailLayout({
+            heading: "Sending works",
+            eyebrow: "Test",
+            preheader: "A test from the TenBestFind site.",
+            body: ui.p(`This is a test from the TenBestFind site, sent through Resend on ${esc(new Date().toUTCString())}.`),
+          }),
+          text: `This is a test from the TenBestFind site, sent through Resend on ${new Date().toUTCString()}.`,
+        },
+        "test email",
+      );
+    case "quote_confirmation":
+      return sendQuoteConfirmation({ to, name: sample.person, businessName: sample.business, businessPhone: "+1 416-555-0100", businessWebsite: "https://example.com/", profileUrl: `${site}/`, job: "Rekey 3 locks after moving in", urgency: "Within the week", postalCode: "M4M", delivered: true });
+    case "claim_code":
+      return sendClaimReceived({ to, ownerName: sample.person, businessName: sample.business, reference: "TBF-TEST-0001", method: "Email", code: "483920", verifyUrl: `${site}/claim/` });
+    case "claim_approved":
+      return sendClaimApproved({ to, ownerName: sample.person, businessName: sample.business, accessUrl: `${site}/login/`, needsPassword: true });
+    case "claim_declined":
+      return sendClaimDeclined({ to, ownerName: sample.person, businessName: sample.business, refunded: true });
+    case "contact_received":
+      return sendContactReceived({ to, name: sample.person, topic: "General question", message: "This is a sample message." });
+    case "password_changed":
+      return sendPasswordChanged({ to, name: sample.person });
+    case "payment_failed":
+      return sendPaymentFailed({ to, businessName: sample.business, planName: "Claim & Manage", amount: "$29.00", payUrl: `${site}/portal/` });
+    case "plan_ended":
+      return sendPlanEnded({ to, businessName: sample.business, planName: "Claim & Manage", profileUrl: `${site}/` });
+    case "listing_declined":
+      return sendListingDeclined({ to, contactName: sample.person, businessName: sample.business });
+    case "team_alert":
+      return deliver(
+        {
+          to,
+          subject: "[Test] Team alert sample",
+          html: emailLayout({
+            heading: "New ownership claim",
+            eyebrow: "Team alert",
+            preheader: "A sample team alert.",
+            signoff: false,
+            body: `${ui.details([["Business", sample.business], ["Requester", sample.person], ["Email", "owner@example.com"], ["Verification", "Email"], ["Plans", "Claim & Manage"]])}${ui.button(`${site}/admin/claims`, "Open in admin")}`,
+          }),
+          text: "A sample team alert.",
+        },
+        "test team alert",
+      );
+  }
 }

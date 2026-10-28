@@ -320,3 +320,47 @@ ${input.footer ? `<p style="margin:0 0 8px;">${input.footer}</p>` : ""}
 </table>
 </body></html>`;
 }
+
+/* --------------------------------------------------------- delivery log */
+
+export type SentEmail = {
+  id: string;
+  to: string[];
+  subject: string;
+  createdAt: string;
+  status: string;
+};
+
+/**
+ * The most recent emails this API key sent, with Resend's latest event for
+ * each (delivered, bounced, complained, delayed, opened...). This is what tells
+ * a mail the site sent apart from a mail that actually arrived.
+ */
+export async function recentEmails(limit = 50): Promise<{ emails: SentEmail[]; error?: string }> {
+  const key = await getSecret("resend.apiKey");
+  if (!key) return { emails: [], error: "No Resend API key is set." };
+  try {
+    const response = await fetch(`${API}?limit=${Math.min(Math.max(limit, 1), 100)}`, {
+      headers: { authorization: `Bearer ${key}` },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      return { emails: [], error: `Resend answered ${response.status}. ${body.slice(0, 200)}` };
+    }
+    const json = (await response.json()) as {
+      data?: { id: string; to: string[] | string; subject: string; created_at: string; last_event?: string | null }[];
+    };
+    return {
+      emails: (json.data ?? []).map((row) => ({
+        id: row.id,
+        to: Array.isArray(row.to) ? row.to : [row.to],
+        subject: row.subject,
+        createdAt: row.created_at,
+        status: row.last_event ?? "queued",
+      })),
+    };
+  } catch (error) {
+    return { emails: [], error: error instanceof Error ? error.message : "Could not reach Resend." };
+  }
+}

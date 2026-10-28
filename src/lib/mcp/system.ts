@@ -506,12 +506,12 @@ export const SYSTEM_TOOLS: Tool[] = [
     admin: true,
     schema: object({
       template: str(
-        "plain (default), quote_confirmation, claim_approved, claim_declined, contact_received, password_changed, plan_ended or listing_declined.",
+        "plain (default), quote_confirmation, claim_code, claim_approved, claim_declined, contact_received, password_changed, payment_failed, plan_ended, listing_declined or team_alert.",
       ),
       to: str("Optional. An address on tenbestfind.com. Defaults to the team inbox."),
     }),
     handler: async (args, ctx) => {
-      const { sendMail, emailLayout, mailConfigured, senderAddress } = await import("../mail");
+      const { mailConfigured, senderAddress } = await import("../mail");
       const notify = await import("../notify");
       const team = await notify.teamInbox();
       const to = optStr(args, "to")?.trim().toLowerCase() || team;
@@ -520,60 +520,13 @@ export const SYSTEM_TOOLS: Tool[] = [
       }
       if (!(await mailConfigured())) throw new ToolError("No Resend API key is set.");
       const template = (optStr(args, "template") ?? "plain").trim();
-      const site = "https://tenbestfind.com";
-      const sample = { businessName: "Sample Plumbing Co. (test)", ownerName: "Alex Sample" };
-
-      let sent: boolean | { id: string } = false;
-      switch (template) {
-        case "plain":
-          sent = await sendMail({
-            to,
-            subject: "TenBestFind test email",
-            html: emailLayout({
-              heading: "Sending works",
-              body: `<p style="margin:0 0 14px;">This is a test from the TenBestFind site, sent through Resend on ${new Date().toISOString()}.</p>`,
-            }),
-            text: `This is a test from the TenBestFind site, sent through Resend on ${new Date().toISOString()}.`,
-          });
-          break;
-        case "quote_confirmation":
-          sent = await notify.sendQuoteConfirmation({
-            to,
-            name: sample.ownerName,
-            businessName: sample.businessName,
-            businessPhone: "+1 416-555-0100",
-            businessWebsite: "https://example.com",
-            profileUrl: `${site}/`,
-            job: "Leaking kitchen tap",
-            urgency: "Within the week",
-            postalCode: "M4M",
-            delivered: false,
-          });
-          break;
-        case "claim_approved":
-          sent = await notify.sendClaimApproved({ to, ownerName: sample.ownerName, businessName: sample.businessName, accessUrl: `${site}/login/`, needsPassword: true });
-          break;
-        case "claim_declined":
-          sent = await notify.sendClaimDeclined({ to, ownerName: sample.ownerName, businessName: sample.businessName, refunded: true });
-          break;
-        case "contact_received":
-          sent = await notify.sendContactReceived({ to, name: sample.ownerName, topic: "General question", message: "This is a sample message." });
-          break;
-        case "password_changed":
-          sent = await notify.sendPasswordChanged({ to, name: sample.ownerName });
-          break;
-        case "plan_ended":
-          sent = await notify.sendPlanEnded({ to, businessName: sample.businessName, planName: "Claim & Manage", profileUrl: `${site}/` });
-          break;
-        case "listing_declined":
-          sent = await notify.sendListingDeclined({ to, contactName: sample.ownerName, businessName: sample.businessName });
-          break;
-        default:
-          throw new ToolError(`Unknown template "${template}".`);
+      if (!(template in notify.TEST_TEMPLATES)) {
+        throw new ToolError(`template must be one of ${Object.keys(notify.TEST_TEMPLATES).join(", ")}.`);
       }
-      if (!sent) throw new ToolError("Resend did not accept the message. The server log has the reason.");
+      const sent = await notify.sendTemplateTest(template as keyof typeof notify.TEST_TEMPLATES, to);
+      if (!sent) throw new ToolError(`Resend did not accept the message. ${notify.lastDeliveryError ?? ""}`.trim());
       await recordWrite(ctx, { action: "create", entityType: "email", summary: `test email (${template}) to ${to}`, paths: [] });
-      return { sent: true, template, to, from: await senderAddress(), ...(typeof sent === "object" ? { resendId: sent.id } : {}) };
+      return { sent: true, template, to, from: await senderAddress() };
     },
   },
 
