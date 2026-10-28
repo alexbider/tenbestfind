@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { parseJson } from "./json";
-import { emailLayout, esc, sendMail, type Message } from "./mail";
+import { emailLayout, esc, sendMail, ui, type Message } from "./mail";
 import { siteUrl } from "./stripe";
 
 /**
@@ -35,19 +35,9 @@ async function deliver(message: Message, what: string): Promise<boolean> {
   }
 }
 
-const p = (text: string) => `<p style="margin:0 0 14px;">${text}</p>`;
-
-const button = (href: string, label: string) =>
-  `<p style="margin:22px 0 6px;"><a href="${esc(href)}" style="display:inline-block;background:#2D74D7;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">${esc(label)}</a></p>`;
-
-const rows = (items: [string, string | null | undefined][]) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:6px 0 16px;border-collapse:collapse;">${items
-    .filter(([, value]) => value)
-    .map(
-      ([label, value]) =>
-        `<tr><td style="padding:7px 0;border-bottom:1px solid #eef1f5;width:38%;color:#7b8798;font-size:13.5px;vertical-align:top;">${esc(label)}</td><td style="padding:7px 0;border-bottom:1px solid #eef1f5;font-size:14.5px;color:#16202e;">${esc(String(value))}</td></tr>`,
-    )
-    .join("")}</table>`;
+const p = ui.p;
+const button = (href: string, label: string) => ui.button(href, label);
+const rows = (items: [string, string | null | undefined][]) => ui.details(items);
 
 const textRows = (items: [string, string | null | undefined][]) =>
   items
@@ -71,9 +61,9 @@ export async function sendClaimReceived(input: {
 }) {
   const first = input.ownerName.split(" ")[0] || input.ownerName;
   const codeBlock = input.code
-    ? `${p("Here is your verification code. Enter it on the claim page to confirm you control this address.")}
-<p style="margin:6px 0 8px;font-size:30px;letter-spacing:8px;font-weight:700;color:#16202e;font-family:ui-monospace,Menlo,Consolas,monospace;">${esc(input.code)}</p>
-${p('<span style="font-size:13.5px;color:#7b8798;">It works for 30 minutes. If it runs out you can ask for a new one on the same page.</span>')}
+    ? `${p("Enter this code on the claim page to confirm you control this address.")}
+${ui.code(input.code)}
+${ui.muted("It works for 30 minutes. If it runs out you can ask for a new one on the same page.")}
 ${input.verifyUrl ? button(input.verifyUrl, "Enter the code") : ""}`
     : p(
         "An editor will be in touch about verification using the method you picked. That usually happens within two business days.",
@@ -86,7 +76,7 @@ ${rows([
   ["Reference", input.reference],
   ["Verification", input.method],
 ])}
-${p("If the payment goes through but we cannot confirm ownership, the charge is refunded in full.")}`;
+${ui.callout("Your payment is protected", "If we cannot confirm that you own the business, the charge is refunded in full.", "success")}`;
 
   const text = [
     `Hi ${first},`,
@@ -107,7 +97,7 @@ ${p("If the payment goes through but we cannot confirm ownership, the charge is 
       subject: input.code
         ? `${input.code} is your TenBestFind verification code`
         : `We have your claim for ${input.businessName}`,
-      html: emailLayout({ heading: input.code ? "Confirm your claim" : "Claim received", body, footer: FOOTER }),
+      html: emailLayout({ heading: input.code ? "Confirm your claim" : "Claim received", body, footer: FOOTER, eyebrow: "Claim your listing", preheader: input.code ? `Your code is ${input.code}. It works for 30 minutes.` : `We have your claim for ${input.businessName}.` }),
       text,
     },
     "claim received",
@@ -134,7 +124,7 @@ ${p("Your card is held, not charged. The first charge happens on the day the lis
     {
       to: input.to,
       subject: `We have your listing for ${input.businessName}`,
-      html: emailLayout({ heading: "Listing submitted", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Listing submitted", body, footer: FOOTER, eyebrow: "Add a business", preheader: "Nothing has been charged. An editor will review it and email you either way." }),
       text: [
         `Hi ${first},`,
         `Thanks for submitting ${input.businessName}. An editor will review it against the same minimum standards as every other listing.`,
@@ -166,7 +156,7 @@ ${button(input.url, "See your listing")}`;
     {
       to: input.to,
       subject: `${input.businessName} is live on TenBestFind`,
-      html: emailLayout({ heading: "Your listing is live", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Your listing is live", body, footer: FOOTER, eyebrow: "Published", preheader: `${input.businessName} is now live on TenBestFind.` }),
       text: [
         `Hi ${first},`,
         `${input.businessName} is now live on TenBestFind: ${input.url}`,
@@ -196,7 +186,7 @@ ${input.payUrl ? button(input.payUrl, "Update payment") : ""}`;
     {
       to: input.to,
       subject: `Payment failed for ${input.businessName}`,
-      html: emailLayout({ heading: "Your payment did not go through", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Your payment did not go through", body, footer: FOOTER, eyebrow: "Billing", preheader: "Update your card to keep the listing running without interruption." }),
       text: [
         `We could not take the payment for ${input.businessName}.`,
         textRows([
@@ -221,7 +211,7 @@ async function alertTeam(subject: string, heading: string, items: [string, strin
     {
       to: await teamInbox(),
       subject,
-      html: emailLayout({ heading, body: `${rows(items)}${button(link, "Open in admin")}` }),
+      html: emailLayout({ heading, eyebrow: "Team alert", preheader: subject, signoff: false, body: `${rows(items)}${button(link, "Open in admin")}` }),
       text: `${textRows(items)}\n\n${link}`,
       replyTo,
     },
@@ -321,17 +311,17 @@ export async function sendClaimApproved(input: {
   const first = input.ownerName.split(" ")[0] || "there";
   const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
   const body = `${p(`Hi ${esc(first)},`)}
-${p(`Your claim is verified. You now manage <strong>${esc(input.businessName)}</strong> on TenBestFind, and the profile shows as claimed.`)}
+${ui.lead(`You now manage <strong>${esc(input.businessName)}</strong> on TenBestFind, and the profile shows as claimed.`)}
 ${p("Changes to hours, services, coverage, photos and contact details go live as soon as you save them. A change to the description goes to an editor first. Ranking position and the editorial summary stay with our editors.")}
-${p("Three things worth doing this week: add at least three photos, confirm your service area, and check the phone number homeowners will call.")}
+${ui.callout("Three things worth doing this week", "Add at least three photos, confirm your service area, and check the phone number homeowners will call.", "gold")}
 ${button(input.accessUrl, cta)}
-${p('<span style="font-size:13px;color:#7b8798;">The button works once. After that, sign in at tenbestfind.com/login/ with this email address.</span>')}`;
+${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/ with this email address.")}`;
 
   return deliver(
     {
       to: input.to,
       subject: `You now manage ${input.businessName} on TenBestFind`,
-      html: emailLayout({ heading: "Your claim is verified", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Your claim is verified", body, footer: FOOTER, eyebrow: "Welcome aboard", preheader: `You now manage ${input.businessName}. Here is how to sign in.` }),
       text: [
         `Hi ${first},`,
         `Your claim is verified. You now manage ${input.businessName} on TenBestFind.`,
@@ -362,7 +352,7 @@ ${p("If you do run this business, reply to this email with a registration docume
     {
       to: input.to,
       subject: `We couldn't verify your claim on ${input.businessName}`,
-      html: emailLayout({ heading: "Claim not verified", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Claim not verified", body, footer: FOOTER, eyebrow: "Claim your listing", preheader: "We could not confirm ownership. Here is what happens next." }),
       text: [
         `Hi ${first},`,
         `We weren't able to confirm that you own or manage ${input.businessName}, so the claim has been closed.${reason ? ` ${reason}` : ""}`,
@@ -389,7 +379,7 @@ ${p("You are welcome to submit again once the details can be checked, for exampl
     {
       to: input.to,
       subject: `About your submission for ${input.businessName}`,
-      html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER, eyebrow: "Add a business", preheader: "Your card was not charged, and the hold has been released." }),
       text: [
         `Hi ${first},`,
         `An editor reviewed ${input.businessName} and we are not publishing it right now.${reason ? ` ${reason}` : ""}`,
@@ -413,7 +403,7 @@ ${button(input.profileUrl, "See your listing")}`;
     {
       to: input.to,
       subject: `Your ${input.planName} plan for ${input.businessName} has ended`,
-      html: emailLayout({ heading: "Your plan has ended", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Your plan has ended", body, footer: FOOTER, eyebrow: "Billing", preheader: "Your listing stays published. You can restart any time." }),
       text: [
         `Your ${input.planName} plan for ${input.businessName} has ended.`,
         "The listing stays published as an editorial profile. It is not removed, and its ranking position does not change.",
@@ -439,7 +429,7 @@ ${button(resetUrl, "Go to sign in")}`;
     {
       to: input.to,
       subject: "Your TenBestFind password was changed",
-      html: emailLayout({ heading: "Password changed", body, footer: FOOTER }),
+      html: emailLayout({ heading: "Password changed", body, footer: FOOTER, eyebrow: "Account security", preheader: "If this was you, there is nothing to do." }),
       text: [
         `Hi ${first},`,
         `The password for ${input.to} was changed on ${when} (Toronto time).`,
@@ -472,22 +462,26 @@ export async function sendQuoteConfirmation(input: {
     : `We've let ${esc(input.businessName)} know someone is asking. Their listing isn't managed on TenBestFind yet, so the quickest way to book is to call them yourself.`;
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`We sent your request to <strong>${esc(input.businessName)}</strong>.`)}
-${rows([
+${ui.details([
   ["What you asked for", input.job],
   ["How soon", input.urgency],
   ["Area", input.postalCode],
-  ["Their phone", input.businessPhone],
-  ["Their website", input.businessWebsite],
+  ...(input.businessPhone
+    ? [{ label: "Their phone", html: `<a href="tel:${esc(input.businessPhone.replace(/[^+\d]/g, ""))}" style="color:#1E5FBF;">${esc(input.businessPhone)}</a>` }]
+    : []),
+  ...(input.businessWebsite
+    ? [{ label: "Their website", html: `<a href="${esc(input.businessWebsite)}" style="color:#1E5FBF;">${esc(input.businessWebsite.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>` }]
+    : []),
 ])}
 ${p(next)}
 ${button(input.profileUrl, "See their profile")}
-${p('<span style="font-size:13px;color:#7b8798;">We only use your details for this request. We don\'t sell them or pass them to anyone else.</span>')}`;
+`;
 
   return deliver(
     {
       to: input.to,
       subject: `Your request to ${input.businessName}`,
-      html: emailLayout({ heading: "Your request is on its way", body }),
+      html: emailLayout({ heading: "Your request is on its way", body, eyebrow: "Quote request", preheader: `We sent your request to ${input.businessName}. Their phone number is inside.`, footer: "You are getting this because you asked for a quote on TenBestFind. We do not sell or share your details." }),
       text: [
         `Hi ${first},`,
         `We sent your request to ${input.businessName}.`,
@@ -514,13 +508,13 @@ export async function sendContactReceived(input: { to: string; name: string; top
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`Thanks for writing. Your message reached the team that handles <strong>${esc(input.topic.toLowerCase())}</strong>, and someone will reply to this address within two business days.`)}
 ${p("Here is a copy of what you sent:")}
-<blockquote style="margin:0 0 14px;padding:12px 16px;background:#f4f6f9;border-left:3px solid #d5dce6;border-radius:6px;color:#3d4a5c;">${esc(input.message).replace(/\n/g, "<br>")}</blockquote>`;
+${ui.quote(input.message)}`;
 
   return deliver(
     {
       to: input.to,
       subject: "We got your message",
-      html: emailLayout({ heading: "Message received", body }),
+      html: emailLayout({ heading: "Message received", body, eyebrow: "Contact", preheader: "Thanks for writing. We reply within two business days.", footer: "You are getting this because you sent us a message on TenBestFind." }),
       text: [
         `Hi ${first},`,
         `Thanks for writing. Your message reached the team that handles ${input.topic.toLowerCase()}, and someone will reply within two business days.`,

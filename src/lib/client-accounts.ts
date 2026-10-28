@@ -3,7 +3,7 @@ import { audit, createSession, type SessionUser } from "./auth";
 import { expiresFor, hashToken, newToken, type TokenPurpose } from "./auth-tokens";
 import { db } from "./db";
 import type { UserRole } from "./enums";
-import { emailLayout, esc, sendMail } from "./mail";
+import { emailLayout, esc, sendMail, ui } from "./mail";
 import { sendClaimApproved, sendClaimDeclined } from "./notify";
 import { siteUrl } from "./stripe";
 
@@ -87,10 +87,12 @@ export async function sendAccessEmail(
 
   const html = emailLayout({
     heading: isReset ? "Reset your password" : isSetup ? "Create your password" : "Sign in to TenBestFind",
-    body: `<p style="margin:0 0 14px;">Hi ${esc(first)},</p>
-<p style="margin:0 0 14px;">${esc(intro)}</p>
-<p style="margin:22px 0 6px;"><a href="${esc(link)}" style="display:inline-block;background:#2D74D7;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">${esc(cta)}</a></p>
-<p style="margin:14px 0 0;font-size:13px;color:#7b8798;">If you did not ask for this, you can ignore it.</p>`,
+    eyebrow: isReset ? "Account security" : "Your dashboard",
+    preheader: isSetup ? "This link works once." : "This link works once and expires in 15 minutes.",
+    body: `${ui.p(`Hi ${esc(first)},`)}
+${ui.p(esc(intro))}
+${ui.button(link, cta)}
+${ui.muted("If you did not ask for this, you can ignore it. Nobody can get into your account without this link.")}`,
     footer: FOOTER,
   });
   const text = `Hi ${first},\n\n${intro}\n\n${link}\n\nIf you did not ask for this, you can ignore it.`;
