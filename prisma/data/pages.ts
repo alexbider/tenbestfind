@@ -334,7 +334,7 @@ export const SETTINGS: { key: string; value: unknown; groupName: string; label: 
     label: "Tagline",
   },
   { key: "site.url", value: "https://tenbestfind.com", groupName: "general", label: "Site URL" },
-  { key: "site.contactEmail", value: "hello@tenbestfind.com", groupName: "general", label: "Contact email" },
+  { key: "site.contactEmail", value: "admin@tenbestfind.com", groupName: "general", label: "Contact email" },
   // Everything under `seo.` is owned by the Global SEO screen at /admin/seo:
   // src/lib/seo-settings.ts holds the field list and the defaults, and the rows
   // are written on first save. Seeding them here would fork that definition.
@@ -350,7 +350,7 @@ export const SETTINGS: { key: string; value: unknown; groupName: string; label: 
   // Resend or the send is refused, so this is a setting rather than a constant.
   {
     key: "mail.from",
-    value: "TenBestFind <leads@tenbestfind.com>",
+    value: "TenBestFind <admin@tenbestfind.com>",
     groupName: "mail",
     label: "Lead notification sender",
   },

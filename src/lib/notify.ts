@@ -14,7 +14,7 @@ import { siteUrl } from "./stripe";
  */
 
 export const TEAM_SETTING = "mail.team";
-const DEFAULT_TEAM = "hello@tenbestfind.com";
+const DEFAULT_TEAM = "admin@tenbestfind.com";
 
 /** Where team alerts go. A setting, so it can change without a deploy. */
 export async function teamInbox(): Promise<string> {

@@ -40,7 +40,7 @@ export async function senderAddress(): Promise<string> {
   return (
     process.env.MAIL_FROM?.trim() ||
     (typeof stored === "string" && stored.trim()) ||
-    "TenBestFind <hello@tenbestfind.com>"
+    "TenBestFind <admin@tenbestfind.com>"
   );
 }
 
