@@ -4,6 +4,7 @@ import { expiresFor, hashToken, newToken, type TokenPurpose } from "./auth-token
 import { db } from "./db";
 import type { UserRole } from "./enums";
 import { emailLayout, esc, sendMail } from "./mail";
+import { sendClaimApproved, sendClaimDeclined } from "./notify";
 import { siteUrl } from "./stripe";
 
 /**
@@ -58,33 +59,34 @@ export async function approveClaimIfReady(claimId: string) {
     summary: `${claim.businessName} verified automatically after payment and email confirmation`,
   });
 
-  if (!owner.passwordHash) {
-    try {
-      await sendAccessEmail(owner, "SET_PASSWORD");
-    } catch (error) {
-      console.error("[client-accounts] password email not sent:", error instanceof Error ? error.message : error);
-    }
-  }
+  await completeClaimApproval(claim.id);
   return owner;
 }
 
 /** Emails a one-time link. The token lives only in the email and as a hash in the database. */
-export async function sendAccessEmail(user: { id: string; email: string; name: string }, purpose: TokenPurpose) {
+export async function sendAccessEmail(
+  user: { id: string; email: string; name: string },
+  purpose: TokenPurpose,
+  variant: "setup" | "reset" = "setup",
+) {
   const token = newToken();
   await db.authToken.create({
     data: { userId: user.id, purpose, tokenHash: hashToken(token), expiresAt: expiresFor(purpose) },
   });
 
   const isSetup = purpose === "SET_PASSWORD";
+  const isReset = isSetup && variant === "reset";
   const link = siteUrl(isSetup ? `/account/set-password/?token=${token}` : `/account/sign-in/?token=${token}`);
   const first = user.name.split(" ")[0] || "there";
-  const intro = isSetup
-    ? "Your claim is verified and your TenBestFind account is ready. Choose a password to sign in to your dashboard whenever you need it."
-    : "Use this link to sign in to your TenBestFind dashboard. It works once and expires in 15 minutes.";
-  const cta = isSetup ? "Create my password" : "Sign me in";
+  const intro = isReset
+    ? `Someone asked to reset the password for ${user.email}. If that was you, choose a new one with the button below. If it wasn't, ignore this email and your password stays the same.`
+    : isSetup
+      ? "Your claim is verified and your TenBestFind account is ready. Choose a password to sign in to your dashboard whenever you need it."
+      : "Use this link to sign in to your TenBestFind dashboard. It works once and expires in 15 minutes.";
+  const cta = isReset ? "Set a new password" : isSetup ? "Create my password" : "Sign me in";
 
   const html = emailLayout({
-    heading: isSetup ? "Create your password" : "Sign in to TenBestFind",
+    heading: isReset ? "Reset your password" : isSetup ? "Create your password" : "Sign in to TenBestFind",
     body: `<p style="margin:0 0 14px;">Hi ${esc(first)},</p>
 <p style="margin:0 0 14px;">${esc(intro)}</p>
 <p style="margin:22px 0 6px;"><a href="${esc(link)}" style="display:inline-block;background:#2D74D7;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">${esc(cta)}</a></p>
@@ -95,7 +97,11 @@ export async function sendAccessEmail(user: { id: string; email: string; name: s
 
   await sendMail({
     to: user.email,
-    subject: isSetup ? "Create your TenBestFind password" : "Your TenBestFind sign-in link",
+    subject: isReset
+      ? "Set a new password for TenBestFind"
+      : isSetup
+        ? "Create your TenBestFind password"
+        : "Your TenBestFind sign-in link",
     html,
     text,
   });
@@ -127,4 +133,74 @@ export async function openSession(user: { id: string; email: string; name: strin
   await createSession(session);
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await audit({ userId: user.id, action: "login", entityType: "user", entityId: user.id, summary: "owner sign-in" });
+}
+
+
+/** A one-time link that lets the owner in: set a password if they have none, otherwise sign in. */
+async function accessLink(user: { id: string; passwordHash: string | null }) {
+  const purpose: TokenPurpose = user.passwordHash ? "SIGN_IN" : "SET_PASSWORD";
+  const token = newToken();
+  await db.authToken.create({
+    data: { userId: user.id, purpose, tokenHash: hashToken(token), expiresAt: expiresFor(purpose) },
+  });
+  return {
+    url: siteUrl(purpose === "SET_PASSWORD" ? `/account/set-password/?token=${token}` : `/account/sign-in/?token=${token}`),
+    needsPassword: purpose === "SET_PASSWORD",
+  };
+}
+
+/**
+ * What an approval has to do however it happens (automatically after payment,
+ * by an editor in the admin, or through the connector): link the owner account
+ * to the claim and the listing, mark the listing claimed, and email the owner a
+ * way in. Without this a hand-approved owner had a claimed listing and no login.
+ */
+export async function completeClaimApproval(claimId: string) {
+  const claim = await db.claimRequest.findUnique({ where: { id: claimId } });
+  if (!claim || !claim.businessId) return null;
+
+  const owner = await ownerAccountFor(claim.ownerEmail, claim.ownerName);
+  await db.claimRequest.update({ where: { id: claim.id }, data: { userId: owner.id } });
+  await db.business.update({ where: { id: claim.businessId }, data: { claimed: true, ownerId: owner.id } });
+
+  try {
+    const link = await accessLink(owner);
+    await sendClaimApproved({
+      to: owner.email,
+      ownerName: claim.ownerName,
+      businessName: claim.businessName,
+      accessUrl: link.url,
+      needsPassword: link.needsPassword,
+    });
+  } catch (error) {
+    console.error("[client-accounts] approval email not sent:", error instanceof Error ? error.message : error);
+  }
+  return owner;
+}
+
+/**
+ * A rejected claim leaves the listing as it was before anyone claimed it,
+ * unless a different claim on the same listing is still approved, and tells
+ * the claimant why.
+ */
+export async function completeClaimRejection(claimId: string, input: { reason?: string | null; refunded: boolean }) {
+  const claim = await db.claimRequest.findUnique({ where: { id: claimId } });
+  if (!claim) return;
+
+  if (claim.businessId) {
+    const stillApproved = await db.claimRequest.count({
+      where: { businessId: claim.businessId, status: "APPROVED", id: { not: claim.id } },
+    });
+    if (stillApproved === 0) {
+      await db.business.update({ where: { id: claim.businessId }, data: { claimed: false, ownerId: null } });
+    }
+  }
+
+  await sendClaimDeclined({
+    to: claim.ownerEmail,
+    ownerName: claim.ownerName,
+    businessName: claim.businessName,
+    reason: input.reason,
+    refunded: input.refunded,
+  });
 }

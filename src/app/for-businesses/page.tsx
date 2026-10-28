@@ -33,6 +33,25 @@ export const metadata: Metadata = withSocial({
   alternates: { canonical: "/for-businesses/" },
 });
 
+/**
+ * What each plan's card says and where its button goes, keyed on the plan
+ * rather than on the editorial flag, which describes something else entirely.
+ */
+function planCard(key: string): { badge: string; cta: string; href: string; featured: boolean } {
+  switch (key) {
+    case "claim":
+      return { badge: "Standard", cta: "Claim your profile", href: routes.claim(), featured: false };
+    case "listing":
+      return { badge: "Standard", cta: "Submit a business", href: routes.addBusiness(), featured: false };
+    case "top10":
+      return { badge: "Featured", cta: "Add a Top 10 slot", href: routes.claim(), featured: true };
+    case "advertising":
+      return { badge: "Advertising", cta: "Talk to us", href: routes.advertise(), featured: true };
+    default:
+      return { badge: "Standard", cta: "Get started", href: routes.claim(), featured: false };
+  }
+}
+
 const SECTION = { ...SHELL, padding: "60px 24px" };
 const SECTION_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
 const CARD = {
@@ -285,7 +304,9 @@ export default async function ForBusinessesPage() {
               <ul data-stagger="" data-ag="auto" style={autoGrid(280, "16px")}>
                 {plans.map((plan) => {
                   const features = parseList(plan.features);
-                  const featured = !plan.editorial;
+                  const card = planCard(plan.key);
+                  const featured = card.featured;
+                  const isQuote = plan.interval === "quote";
                   return (
                     <li
                       key={plan.id}
@@ -313,14 +334,16 @@ export default async function ForBusinessesPage() {
                             color: featured ? "#8A5F0B" : "var(--blue-800)",
                           }}
                         >
-                          {featured ? "Advertising" : "Standard"}
+                          {card.badge}
                         </span>
                       </div>
                       <p style={{ display: "flex", alignItems: "baseline", gap: "7px", marginBottom: "6px" }}>
-                        <span style={{ fontSize: "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
-                          {money(plan.priceCents, plan.currency)}
+                        <span style={{ fontSize: isQuote ? "28px" : "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
+                          {isQuote ? "Custom quote" : money(plan.priceCents, plan.currency)}
                         </span>
-                        <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
+                        {isQuote ? null : (
+                          <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
+                        )}
                       </p>
                       <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>
                       {features.length > 0 ? (
@@ -336,7 +359,7 @@ export default async function ForBusinessesPage() {
                         </ul>
                       ) : null}
                       <Link
-                        href={featured ? routes.advertise() : routes.claim()}
+                        href={card.href}
                         style={{
                           ...BTN,
                           marginTop: "auto",
@@ -345,7 +368,7 @@ export default async function ForBusinessesPage() {
                           color: featured ? "var(--blue-900)" : "#fff",
                         }}
                       >
-                        {featured ? "Talk to us" : "Get started"}
+                        {card.cta}
                       </Link>
                     </li>
                   );

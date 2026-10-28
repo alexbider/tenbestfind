@@ -12,6 +12,7 @@ import {
   alertNewListing,
   sendClaimReceived,
   sendListingSubmitted,
+  sendContactReceived,
 } from "@/lib/notify";
 import { stripeConfigured } from "@/lib/stripe";
 import { routes } from "@/lib/urls";
@@ -325,6 +326,12 @@ export async function submitAdvertising(
     email: parsed.data.email,
     markets: parsed.data.markets,
     message: parsed.data.message || null,
+  });
+  await sendContactReceived({
+    to: parsed.data.email,
+    name: "",
+    topic: "advertising",
+    message: `Markets: ${parsed.data.markets}${parsed.data.message ? `\n\n${parsed.data.message}` : ""}`,
   });
   revalidatePath(routes.admin("/submissions"));
   return {

@@ -3,6 +3,7 @@ import type { NavKey } from "@/lib/navigation";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 import { V2Motion } from "./V2Motion";
+import { TrackPageViews } from "./Track";
 
 /**
  * Header, main and footer wrapper shared by every public template.
@@ -40,6 +41,7 @@ export function SiteChrome({
       </main>
       <SiteFooter />
       <V2Motion />
+      <TrackPageViews />
     </div>
   );
 }

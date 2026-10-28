@@ -102,10 +102,10 @@ export function QuoteDialog({
 
         {state === "sent" ? (
           <div className="quote-dialog__done">
-            <h2 id="quote-title">Sent to {businessName}</h2>
+            <h2 id="quote-title">Request sent to {businessName}</h2>
             <p>
-              They have your details and usually reply directly. We keep a copy so we can follow up
-              if they do not.
+              We have let them know and emailed you a confirmation with their phone number, so you
+              can call them directly if you would rather not wait.
             </p>
             <button
               type="button"
@@ -119,8 +119,8 @@ export function QuoteDialog({
           <form onSubmit={submit} className="quote-dialog__form">
             <h2 id="quote-title">Request a quote from {businessName}</h2>
             <p className="quote-dialog__lead">
-              This goes straight to the company. We do not sell it on, and we do not send it to
-              anyone else.
+              We pass this to {businessName} and email you a copy with their contact details. We do
+              not sell it on or send it to anyone else.
             </p>
 
             <div className="field-row">

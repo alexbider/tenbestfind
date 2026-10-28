@@ -1,7 +1,7 @@
 import "server-only";
 import { chargeOnPublish } from "./billing";
 import { db } from "./db";
-import { sendListingPublished } from "./notify";
+import { sendListingDeclined, sendListingPublished } from "./notify";
 import { siteUrl } from "./stripe";
 import { routes } from "./urls";
 
@@ -40,4 +40,32 @@ export async function onListingPublished(businessId: string): Promise<{ charged:
   }
 
   return { charged, emailed, error };
+}
+
+/**
+ * A submitted listing an editor declined. The submitter is told, and the plan
+ * that was waiting on publication is closed so it can never be charged later.
+ * Imported or editor-made listings have no submitter and nothing happens.
+ */
+export async function onListingRejected(businessId: string): Promise<{ emailed: boolean }> {
+  const business = await db.business.findUnique({ where: { id: businessId } });
+  if (!business) return { emailed: false };
+
+  const submission = await db.submission.findFirst({
+    where: { kind: "BUSINESS", payload: { contains: `"businessId":"${business.id}"` } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!submission?.email) return { emailed: false };
+
+  await db.subscription.updateMany({
+    where: { businessId, status: "PENDING" },
+    data: { status: "CANCELED", canceledAt: new Date() },
+  });
+
+  const emailed = await sendListingDeclined({
+    to: submission.email,
+    contactName: submission.name,
+    businessName: business.name,
+  });
+  return { emailed };
 }

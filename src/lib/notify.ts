@@ -307,3 +307,284 @@ export function alertAdvertisingQuote(input: { company: string; email: string; m
     input.email,
   );
 }
+
+/* ------------------------------------------------------- claim decisions */
+
+export async function sendClaimApproved(input: {
+  to: string;
+  ownerName: string;
+  businessName: string;
+  /** A one-time link: set a password for a new owner, or sign in for a returning one. */
+  accessUrl: string;
+  needsPassword: boolean;
+}) {
+  const first = input.ownerName.split(" ")[0] || "there";
+  const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`Your claim is verified. You now manage <strong>${esc(input.businessName)}</strong> on TenBestFind, and the profile shows as claimed.`)}
+${p("Changes to hours, services, coverage, photos and contact details go live as soon as you save them. A change to the description goes to an editor first. Ranking position and the editorial summary stay with our editors.")}
+${p("Three things worth doing this week: add at least three photos, confirm your service area, and check the phone number homeowners will call.")}
+${button(input.accessUrl, cta)}
+${p('<span style="font-size:13px;color:#7b8798;">The button works once. After that, sign in at tenbestfind.com/login/ with this email address.</span>')}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `You now manage ${input.businessName} on TenBestFind`,
+      html: emailLayout({ heading: "Your claim is verified", body, footer: FOOTER }),
+      text: [
+        `Hi ${first},`,
+        `Your claim is verified. You now manage ${input.businessName} on TenBestFind.`,
+        "Changes to hours, services, coverage, photos and contact details go live as soon as you save them. A change to the description goes to an editor first.",
+        `${cta}: ${input.accessUrl}`,
+        "The link works once. After that, sign in at https://tenbestfind.com/login/ with this email address.",
+      ].join("\n\n"),
+    },
+    "claim approved",
+  );
+}
+
+export async function sendClaimDeclined(input: {
+  to: string;
+  ownerName: string;
+  businessName: string;
+  reason?: string | null;
+  refunded: boolean;
+}) {
+  const first = input.ownerName.split(" ")[0] || "there";
+  const reason = input.reason?.trim();
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`We weren't able to confirm that you own or manage <strong>${esc(input.businessName)}</strong>, so the claim has been closed.${reason ? ` ${esc(reason)}` : ""}`)}
+${input.refunded ? p("Anything you paid for this claim has been refunded to the card you used. It usually shows within 5 to 10 business days.") : ""}
+${p("If you do run this business, reply to this email with a registration document or a recent utility bill in the company name and we will look at it again.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `We couldn't verify your claim on ${input.businessName}`,
+      html: emailLayout({ heading: "Claim not verified", body, footer: FOOTER }),
+      text: [
+        `Hi ${first},`,
+        `We weren't able to confirm that you own or manage ${input.businessName}, so the claim has been closed.${reason ? ` ${reason}` : ""}`,
+        input.refunded ? "Anything you paid for this claim has been refunded to the card you used. It usually shows within 5 to 10 business days." : "",
+        "If you do run this business, reply to this email with a registration document or a recent utility bill in the company name and we will look at it again.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      replyTo: await teamInbox(),
+    },
+    "claim declined",
+  );
+}
+
+export async function sendListingDeclined(input: { to: string; contactName?: string | null; businessName: string; reason?: string | null }) {
+  const first = input.contactName?.split(" ")[0] || "there";
+  const reason = input.reason?.trim();
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`An editor reviewed <strong>${esc(input.businessName)}</strong> and we are not publishing it right now.${reason ? ` ${esc(reason)}` : ""}`)}
+${p("Your card was not charged, and the hold on it has been released.")}
+${p("You are welcome to submit again once the details can be checked, for example a licence number we can look up or a street address in the area you serve.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `About your submission for ${input.businessName}`,
+      html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER }),
+      text: [
+        `Hi ${first},`,
+        `An editor reviewed ${input.businessName} and we are not publishing it right now.${reason ? ` ${reason}` : ""}`,
+        "Your card was not charged, and the hold on it has been released.",
+      ].join("\n\n"),
+      replyTo: await teamInbox(),
+    },
+    "listing declined",
+  );
+}
+
+/* ---------------------------------------------------------------- billing */
+
+export async function sendPlanEnded(input: { to: string; businessName: string; planName: string; profileUrl: string }) {
+  const body = `${p(`Your <strong>${esc(input.planName)}</strong> plan for <strong>${esc(input.businessName)}</strong> has ended.`)}
+${p("The listing stays published as an editorial profile. It is not removed, and its ranking position does not change. New quote requests are still saved for you, with the contact details held until a plan is active again.")}
+${p("You can restart at any time from the dashboard.")}
+${button(input.profileUrl, "See your listing")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Your ${input.planName} plan for ${input.businessName} has ended`,
+      html: emailLayout({ heading: "Your plan has ended", body, footer: FOOTER }),
+      text: [
+        `Your ${input.planName} plan for ${input.businessName} has ended.`,
+        "The listing stays published as an editorial profile. It is not removed, and its ranking position does not change.",
+        `See your listing: ${input.profileUrl}`,
+      ].join("\n\n"),
+    },
+    "plan ended",
+  );
+}
+
+/* --------------------------------------------------------------- accounts */
+
+export async function sendPasswordChanged(input: { to: string; name: string }) {
+  const first = input.name.split(" ")[0] || "there";
+  const when = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short", timeZone: "America/Toronto" });
+  const resetUrl = siteUrl("/login/");
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`The password for <strong>${esc(input.to)}</strong> was changed on ${esc(when)} (Toronto time).`)}
+${p("If that was you, there is nothing to do. If it wasn't, reset it now from the sign-in page and reply to this email so we can lock the account.")}
+${button(resetUrl, "Go to sign in")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: "Your TenBestFind password was changed",
+      html: emailLayout({ heading: "Password changed", body, footer: FOOTER }),
+      text: [
+        `Hi ${first},`,
+        `The password for ${input.to} was changed on ${when} (Toronto time).`,
+        `If that wasn't you, reset it now at ${resetUrl} and reply to this email so we can lock the account.`,
+      ].join("\n\n"),
+      replyTo: await teamInbox(),
+    },
+    "password changed",
+  );
+}
+
+/* -------------------------------------------------------------- homeowners */
+
+export async function sendQuoteConfirmation(input: {
+  to: string;
+  name: string;
+  businessName: string;
+  businessPhone?: string | null;
+  businessWebsite?: string | null;
+  profileUrl: string;
+  job: string;
+  urgency: string;
+  postalCode?: string | null;
+  /** True when the company can already see the homeowner's contact details. */
+  delivered: boolean;
+}) {
+  const first = input.name.split(" ")[0] || "there";
+  const next = input.delivered
+    ? `${esc(input.businessName)} has your details and usually replies directly. If you haven't heard back by tomorrow, give them a call.`
+    : `We've let ${esc(input.businessName)} know someone is asking. Their listing isn't managed on TenBestFind yet, so the quickest way to book is to call them yourself.`;
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`We sent your request to <strong>${esc(input.businessName)}</strong>.`)}
+${rows([
+  ["What you asked for", input.job],
+  ["How soon", input.urgency],
+  ["Area", input.postalCode],
+  ["Their phone", input.businessPhone],
+  ["Their website", input.businessWebsite],
+])}
+${p(next)}
+${button(input.profileUrl, "See their profile")}
+${p('<span style="font-size:13px;color:#7b8798;">We only use your details for this request. We don\'t sell them or pass them to anyone else.</span>')}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Your request to ${input.businessName}`,
+      html: emailLayout({ heading: "Your request is on its way", body }),
+      text: [
+        `Hi ${first},`,
+        `We sent your request to ${input.businessName}.`,
+        textRows([
+          ["What you asked for", input.job],
+          ["How soon", input.urgency],
+          ["Area", input.postalCode],
+          ["Their phone", input.businessPhone],
+          ["Their website", input.businessWebsite],
+        ]),
+        input.delivered
+          ? `${input.businessName} has your details and usually replies directly. If you haven't heard back by tomorrow, give them a call.`
+          : `We've let ${input.businessName} know someone is asking. The quickest way to book is to call them yourself.`,
+        `Their profile: ${input.profileUrl}`,
+      ].join("\n\n"),
+      replyTo: await teamInbox(),
+    },
+    "quote confirmation",
+  );
+}
+
+export async function sendContactReceived(input: { to: string; name: string; topic: string; message: string }) {
+  const first = input.name.split(" ")[0] || "there";
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`Thanks for writing. Your message reached the team that handles <strong>${esc(input.topic.toLowerCase())}</strong>, and someone will reply to this address within two business days.`)}
+${p("Here is a copy of what you sent:")}
+<blockquote style="margin:0 0 14px;padding:12px 16px;background:#f4f6f9;border-left:3px solid #d5dce6;border-radius:6px;color:#3d4a5c;">${esc(input.message).replace(/\n/g, "<br>")}</blockquote>`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: "We got your message",
+      html: emailLayout({ heading: "Message received", body }),
+      text: [
+        `Hi ${first},`,
+        `Thanks for writing. Your message reached the team that handles ${input.topic.toLowerCase()}, and someone will reply within two business days.`,
+        "Here is a copy of what you sent:",
+        input.message,
+      ].join("\n\n"),
+      replyTo: await teamInbox(),
+    },
+    "contact received",
+  );
+}
+
+/* ---------------------------------------------------------- more team alerts */
+
+export function alertContactMessage(input: { kind: string; topic: string; name: string; email: string; message: string; page?: string | null }) {
+  return alertTeam(
+    `[${input.kind}] ${input.topic}: ${input.email}`,
+    `New ${input.kind.toLowerCase()} message`,
+    [
+      ["Topic", input.topic],
+      ["From", input.name],
+      ["Email", input.email],
+      ["Page", input.page],
+      ["Message", input.message],
+    ],
+    "/admin/submissions",
+    input.email,
+  );
+}
+
+export function alertNewSubscription(input: { businessName: string; planName: string; amount: string; businessId: string }) {
+  return alertTeam(
+    `[Sale] ${input.planName}, ${input.amount}: ${input.businessName}`,
+    "New paid plan",
+    [
+      ["Business", input.businessName],
+      ["Plan", input.planName],
+      ["Amount", input.amount],
+    ],
+    `/admin/businesses/${input.businessId}`,
+  );
+}
+
+export function alertPaymentFailed(input: { businessName: string; planName: string; amount: string; businessId: string }) {
+  return alertTeam(
+    `[Billing] Payment failed: ${input.businessName}`,
+    "A payment failed",
+    [
+      ["Business", input.businessName],
+      ["Plan", input.planName],
+      ["Amount", input.amount],
+    ],
+    `/admin/businesses/${input.businessId}`,
+  );
+}
+
+export function alertLeadNotDelivered(input: { businessName: string; leadId: string; error: string }) {
+  return alertTeam(
+    `[Lead] Not delivered: ${input.businessName}`,
+    "A quote request could not be emailed",
+    [
+      ["Business", input.businessName],
+      ["Reason", input.error],
+    ],
+    `/admin/leads#${input.leadId}`,
+  );
+}

@@ -975,7 +975,7 @@ export default async function HomePage() {
                           fontWeight: "700",
                         }}
                       >
-                        See all ten
+                        {hero._count.entries >= 10 ? "See all ten" : `See all ${hero._count.entries}`}
                         <Arrow size={15} width={2.4} />
                       </Link>
                     </div>

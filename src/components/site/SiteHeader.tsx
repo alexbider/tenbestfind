@@ -229,6 +229,11 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
               </Link>
             </li>
             <li>
+              <Link data-ulink="" href="/login/" style={{ color: "rgba(232,237,245,0.72)", fontWeight: "500" }}>
+                Business Sign In
+              </Link>
+            </li>
+            <li>
               <Link
                 data-ulink=""
                 href={routes.forBusinesses()}
@@ -685,8 +690,13 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
                   </Link>
                 </li>
                 <li>
-                  <Link href={routes.forBusinesses()} style={{ ...MOBILE_ROW, color: "var(--text-secondary)", borderBottom: undefined }}>
+                  <Link href={routes.forBusinesses()} style={{ ...MOBILE_ROW, color: "var(--text-secondary)" }}>
                     For Businesses
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login/" style={{ ...MOBILE_ROW, color: "var(--text-secondary)", borderBottom: undefined }}>
+                    Business Sign In
                   </Link>
                 </li>
               </ul>

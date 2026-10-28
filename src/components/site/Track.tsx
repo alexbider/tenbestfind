@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { AnalyticsEventType } from "@/lib/enums";
 
 function send(type: AnalyticsEventType, businessId?: string, rankingId?: string) {
@@ -53,4 +54,20 @@ export function TrackClick({
       {children}
     </span>
   );
+}
+
+/**
+ * One PAGE_VIEW per public page, including client-side navigations, so the
+ * analytics can say which guides and hubs actually bring people in. Rankings
+ * and profiles keep their own, more specific events on top of this one.
+ */
+export function TrackPageViews() {
+  const pathname = usePathname();
+  const last = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pathname || last.current === pathname) return;
+    last.current = pathname;
+    send("PAGE_VIEW");
+  }, [pathname]);
+  return null;
 }

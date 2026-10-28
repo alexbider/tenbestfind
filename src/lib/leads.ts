@@ -4,6 +4,7 @@ import { leadAccessFor, firstNameOf } from "./entitlements";
 import { emailLayout, esc, sendMail, MailError } from "./mail";
 import { fullDate } from "./format";
 import { absoluteUrl, routes } from "./urls";
+import { alertLeadNotDelivered, sendQuoteConfirmation } from "./notify";
 
 // A lead arrives, is stored, and is emailed to the company. All three happen
 // whatever the company pays. What the plan decides is how much of it the
@@ -104,13 +105,39 @@ export async function createLead(input: NewLead): Promise<{ id: string; emailed:
   });
 
   let emailed = false;
+  let failure: string | null = null;
   try {
     await notifyBusiness(lead.id);
-    emailed = true;
+    const after = await db.lead.findUnique({ where: { id: lead.id }, select: { emailedAt: true, emailError: true } });
+    emailed = Boolean(after?.emailedAt);
+    failure = emailed ? null : after?.emailError ?? null;
   } catch (error) {
-    const message =
-      error instanceof MailError ? error.message : error instanceof Error ? error.message : String(error);
-    await db.lead.update({ where: { id: lead.id }, data: { emailError: message.slice(0, 400) } });
+    failure = error instanceof MailError ? error.message : error instanceof Error ? error.message : String(error);
+    await db.lead.update({ where: { id: lead.id }, data: { emailError: failure.slice(0, 400) } });
+  }
+
+  const business = await db.business.findUnique({
+    where: { id: input.businessId },
+    select: { name: true, slug: true, phone: true, website: true },
+  });
+  if (business) {
+    // The homeowner always hears back, with the company's number, so a request
+    // to an unmanaged listing never leaves them waiting on a reply that cannot come.
+    await sendQuoteConfirmation({
+      to: input.email,
+      name: input.name,
+      businessName: business.name,
+      businessPhone: business.phone,
+      businessWebsite: business.website,
+      profileUrl: absoluteUrl(routes.business(business.slug)),
+      job: input.jobType?.trim() || "A quote",
+      urgency: URGENCY_LABEL[input.urgency] ?? input.urgency,
+      postalCode: input.postalCode,
+      delivered: emailed && access.unlocked,
+    });
+    if (failure) {
+      await alertLeadNotDelivered({ businessName: business.name, leadId: lead.id, error: failure.slice(0, 300) });
+    }
   }
 
   return { id: lead.id, emailed };
