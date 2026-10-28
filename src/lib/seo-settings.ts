@@ -308,7 +308,7 @@ export const SEO_FIELDS: SeoField[] = [
   // The square mark that ships with the site. Google wants a real image on the
   // Organization, and an empty setting meant the property was dropped entirely.
   { key: "seo.schema.logo", label: "Logo", type: "media", group: "schema", default: "/logo-512.png" },
-  { key: "seo.schema.email", label: "Contact email", type: "text", group: "schema", default: "admin@tenbestfind.com", half: true },
+  { key: "seo.schema.email", label: "Contact email", type: "text", group: "schema", default: "hello@tenbestfind.com", half: true },
   { key: "seo.schema.phone", label: "Contact phone", type: "text", group: "schema", default: "", half: true },
   { key: "seo.schema.streetAddress", label: "Street address", type: "text", group: "schema", default: "" },
   { key: "seo.schema.locality", label: "City", type: "text", group: "schema", default: "", half: true },
