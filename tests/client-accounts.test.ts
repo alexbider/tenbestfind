@@ -11,7 +11,9 @@ vi.mock("@/lib/mail", async (importOriginal) => ({
 }));
 
 const { db } = await import("@/lib/db");
-const { approveClaimIfReady, consumeAuthToken, sendAccessEmail } = await import("@/lib/client-accounts");
+const { approveClaimIfReady, completeClaimRejection, consumeAuthToken, sendAccessEmail } = await import(
+  "@/lib/client-accounts"
+);
 
 const OWNER_EMAIL = "owner.flow.test@example.test";
 let businessId = "";
@@ -64,8 +66,10 @@ describe("claim verification and owner accounts", () => {
     expect(business?.claimed).toBe(true);
     expect(business?.ownerId).toBe(owner?.id);
 
-    const email = sent.find((m) => m.to === OWNER_EMAIL && m.subject.includes("password"));
+    // One approval email, carrying the one-time link to create a password.
+    const email = sent.find((m) => m.to === OWNER_EMAIL && m.subject.includes("You now manage"));
     expect(email).toBeTruthy();
+    expect(email?.text).toContain("/account/set-password/?token=");
   });
 
   it("does nothing a second time", async () => {
@@ -83,5 +87,25 @@ describe("claim verification and owner accounts", () => {
     expect(await consumeAuthToken(token, "SET_PASSWORD")).toBeNull();
     expect((await consumeAuthToken(token, "SIGN_IN"))?.email).toBe(OWNER_EMAIL);
     expect(await consumeAuthToken(token, "SIGN_IN")).toBeNull();
+  });
+
+  it("reset links say reset, not that a claim was verified", async () => {
+    const owner = await db.user.findUnique({ where: { email: OWNER_EMAIL } });
+    await sendAccessEmail(owner!, "SET_PASSWORD", "reset");
+    const message = sent.at(-1)!;
+    expect(message.subject).toBe("Set a new password for TenBestFind");
+    expect(message.text).not.toContain("claim is verified");
+  });
+
+  it("a rejected claim with no other approval clears the listing and tells the claimant", async () => {
+    await db.claimRequest.update({ where: { id: claimId }, data: { status: "REJECTED" } });
+    await completeClaimRejection(claimId, { reason: null, refunded: true });
+
+    const business = await db.business.findUnique({ where: { id: businessId } });
+    expect(business?.claimed).toBe(false);
+    expect(business?.ownerId).toBeNull();
+    const email = sent.at(-1)!;
+    expect(email.to).toBe(OWNER_EMAIL);
+    expect(email.subject).toContain("couldn't verify");
   });
 });

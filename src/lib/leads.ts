@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { db } from "./db";
 import { leadAccessFor, firstNameOf } from "./entitlements";
-import { emailLayout, esc, sendMail, MailError } from "./mail";
+import { emailLayout, esc, sendMail, MailError, ui } from "./mail";
 import { fullDate } from "./format";
 import { absoluteUrl, routes } from "./urls";
+import { alertLeadNotDelivered, sendQuoteConfirmation } from "./notify";
 
 // A lead arrives, is stored, and is emailed to the company. All three happen
 // whatever the company pays. What the plan decides is how much of it the
@@ -104,13 +105,39 @@ export async function createLead(input: NewLead): Promise<{ id: string; emailed:
   });
 
   let emailed = false;
+  let failure: string | null = null;
   try {
     await notifyBusiness(lead.id);
-    emailed = true;
+    const after = await db.lead.findUnique({ where: { id: lead.id }, select: { emailedAt: true, emailError: true } });
+    emailed = Boolean(after?.emailedAt);
+    failure = emailed ? null : after?.emailError ?? null;
   } catch (error) {
-    const message =
-      error instanceof MailError ? error.message : error instanceof Error ? error.message : String(error);
-    await db.lead.update({ where: { id: lead.id }, data: { emailError: message.slice(0, 400) } });
+    failure = error instanceof MailError ? error.message : error instanceof Error ? error.message : String(error);
+    await db.lead.update({ where: { id: lead.id }, data: { emailError: failure.slice(0, 400) } });
+  }
+
+  const business = await db.business.findUnique({
+    where: { id: input.businessId },
+    select: { name: true, slug: true, phone: true, website: true },
+  });
+  if (business) {
+    // The homeowner always hears back, with the company's number, so a request
+    // to an unmanaged listing never leaves them waiting on a reply that cannot come.
+    await sendQuoteConfirmation({
+      to: input.email,
+      name: input.name,
+      businessName: business.name,
+      businessPhone: business.phone,
+      businessWebsite: business.website,
+      profileUrl: absoluteUrl(routes.business(business.slug)),
+      job: input.jobType?.trim() || "A quote",
+      urgency: URGENCY_LABEL[input.urgency] ?? input.urgency,
+      postalCode: input.postalCode,
+      delivered: emailed && access.unlocked,
+    });
+    if (failure) {
+      await alertLeadNotDelivered({ businessName: business.name, leadId: lead.id, error: failure.slice(0, 300) });
+    }
   }
 
   return { id: lead.id, emailed };
@@ -149,38 +176,26 @@ export async function notifyBusiness(leadId: string): Promise<void> {
     ? `New enquiry from ${lead.name}: ${job}`
     : `New enquiry${where}: ${job}`;
 
-  const rows: string[] = [
-    row("Name", access.unlocked ? lead.name : `${firstNameOf(lead.name)} (full name hidden)`),
-    row("What they need", job),
-    row("How soon", URGENCY_LABEL[lead.urgency] ?? lead.urgency),
+  const details: ({ label: string; html: string })[] = [
+    { label: "Name", html: esc(access.unlocked ? lead.name : `${firstNameOf(lead.name)} (full name hidden)`) },
+    { label: "What they need", html: esc(job) },
+    { label: "How soon", html: esc(URGENCY_LABEL[lead.urgency] ?? lead.urgency) },
   ];
-
   if (access.unlocked) {
-    rows.push(row("Email", `<a href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>`, true));
-    if (lead.phone) rows.push(row("Phone", `<a href="tel:${esc(lead.phone)}">${esc(lead.phone)}</a>`, true));
-    if (lead.postalCode) rows.push(row("Postal code", lead.postalCode));
-    rows.push(row("Message", esc(lead.message).replace(/\n/g, "<br>"), true));
+    details.push({ label: "Email", html: `<a href="mailto:${esc(lead.email)}" style="color:#1E5FBF;">${esc(lead.email)}</a>` });
+    if (lead.phone) details.push({ label: "Phone", html: `<a href="tel:${esc(lead.phone)}" style="color:#1E5FBF;">${esc(lead.phone)}</a>` });
+    if (lead.postalCode) details.push({ label: "Postal code", html: esc(lead.postalCode) });
   } else {
-    rows.push(row("Email", "Hidden", false, true));
-    rows.push(row("Phone", lead.phone ? "Hidden" : "Not given", false, Boolean(lead.phone)));
-    rows.push(row("Message", "Hidden", false, true));
+    details.push({ label: "Email", html: ui.hidden() });
+    details.push({ label: "Phone", html: lead.phone ? ui.hidden() : "Not given" });
+    details.push({ label: "Message", html: ui.hidden() });
   }
 
   const claimUrl = absoluteUrl(routes.claim());
   const body = `
-<p style="margin:0 0 18px;">Someone asked for a quote through your profile on TenBestFind${where ? ` ${esc(where.trim())}` : ""}, on ${esc(fullDate(lead.createdAt))}.</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px;">
-${rows.join("\n")}
-</table>
-${
-  access.unlocked
-    ? `<p style="margin:0;"><a href="${esc(absoluteUrl("/portal/leads/"))}" style="display:inline-block;background:#1a63d8;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">Open it in your dashboard</a></p>`
-    : `<div style="background:#f4f6f9;border:1px solid #e3e8ef;border-radius:10px;padding:16px 18px;">
-<p style="margin:0 0 12px;font-weight:600;color:#16202e;">The contact details are waiting for you.</p>
-<p style="margin:0 0 14px;">This enquiry is saved against your listing in full. Claim the listing and it opens, along with every earlier enquiry we are holding for you.</p>
-<p style="margin:0;"><a href="${esc(claimUrl)}" style="display:inline-block;background:#1a63d8;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">Claim ${esc(lead.business.name)}</a></p>
-</div>`
-}`;
+${ui.lead(`Someone asked <strong>${esc(lead.business.name)}</strong> for a quote through your profile on TenBestFind${where ? ` ${esc(where.trim())}` : ""}, on ${esc(fullDate(lead.createdAt))}.`)}
+${ui.details(details)}
+${access.unlocked ? `${ui.quote(lead.message)}${ui.p("Hit Reply to answer them directly. People who hear back quickly are far more likely to book.")}${ui.button(absoluteUrl("/portal/leads/"), "Open it in your dashboard")}` : `${ui.callout("The contact details are waiting for you", "This enquiry is saved against your listing in full. Claim the listing and it opens, along with every earlier enquiry we are holding for you.", "gold")}${ui.button(claimUrl, `Claim ${lead.business.name}`)}`}`;
 
   const text = [
     `Someone asked for a quote through your profile on TenBestFind on ${fullDate(lead.createdAt)}.`,
@@ -204,9 +219,11 @@ ${
     to,
     subject,
     html: emailLayout({
-      heading: subject,
+      heading: access.unlocked ? `New quote request from ${lead.name}` : `New quote request${where}`,
+      eyebrow: "New lead",
+      preheader: `${job}, ${(URGENCY_LABEL[lead.urgency] ?? lead.urgency).toLowerCase()}.`,
       body,
-      footer: `Sent by TenBestFind because ${esc(lead.business.name)} is listed at ${esc(absoluteUrl(routes.business(lead.business.slug)))}.`,
+      footer: `Sent by TenBestFind because ${esc(lead.business.name)} is listed at <a href="${esc(absoluteUrl(routes.business(lead.business.slug)))}" style="color:#6B7280;">${esc(absoluteUrl(routes.business(lead.business.slug)))}</a>.`,
     }),
     text,
     // Replying reaches the customer directly, but only when the company is
@@ -218,16 +235,4 @@ ${
     where: { id: leadId },
     data: { emailedAt: new Date(), emailError: null },
   });
-}
-
-function row(label: string, value: string, isHtml = false, hidden = false): string {
-  const cell = hidden
-    ? `<span style="display:inline-block;background:#e7ebf1;color:#8b95a5;border-radius:5px;padding:2px 10px;letter-spacing:0.08em;">hidden</span>`
-    : isHtml
-      ? value
-      : esc(value);
-  return `<tr>
-<td style="padding:7px 12px 7px 0;vertical-align:top;font-size:13.5px;color:#7b8798;white-space:nowrap;">${esc(label)}</td>
-<td style="padding:7px 0;vertical-align:top;font-size:15px;color:#16202e;">${cell}</td>
-</tr>`;
 }

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { alertContactMessage, sendContactReceived } from "@/lib/notify";
 
 const contactSchema = z.object({
   topic: z.enum(["general", "correction", "business", "advertising", "accessibility"]),
@@ -59,6 +60,21 @@ export async function submitContact(_prev: FormState, formData: FormData): Promi
     },
   });
 
+  // The message is saved either way. These two only make sure a person sees it
+  // and the sender knows it arrived.
+  const topic = TOPIC_SUBJECT[data.topic] ?? "General question";
+  await Promise.all([
+    alertContactMessage({
+      kind: data.topic === "correction" ? "Correction" : "Contact",
+      topic,
+      name: data.name,
+      email: data.email,
+      message: data.message,
+      page: data.pageUrl || null,
+    }),
+    sendContactReceived({ to: data.email, name: data.name, topic, message: data.message }),
+  ]);
+
   return {
     status: "ok",
     message:
@@ -88,5 +104,20 @@ export async function requestRanking(_prev: FormState, formData: FormData): Prom
       status: "NEW",
     },
   });
+  await Promise.all([
+    alertContactMessage({
+      kind: "Coverage",
+      topic: "Ranking request",
+      name: "Reader",
+      email: parsed.data.email,
+      message: parsed.data.message,
+    }),
+    sendContactReceived({
+      to: parsed.data.email,
+      name: "",
+      topic: "coverage requests",
+      message: parsed.data.message,
+    }),
+  ]);
   return { status: "ok", message: "Noted. We work outward from the largest metros, and this goes on the list." };
 }

@@ -314,3 +314,29 @@ export async function deleteRedirect(formData: FormData) {
   await db.redirect.delete({ where: { id: String(formData.get("id")) } });
   revalidatePath("/admin/seo");
 }
+
+/* ------------------------------------------------------------ test emails */
+
+export async function sendTestEmailAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireAdmin();
+  const { TEST_TEMPLATES, sendTemplateTest, teamInbox } = await import("@/lib/notify");
+  const notify = await import("@/lib/notify");
+
+  const template = String(formData.get("template") ?? "plain");
+  if (!(template in TEST_TEMPLATES)) return { status: "error", message: "Pick a template." };
+
+  const team = (await teamInbox()).toLowerCase();
+  const to = String(formData.get("to") ?? "").trim().toLowerCase() || team;
+  // Tests only ever go to the team, an address on the site's own domain, or
+  // the signed-in admin, so this screen can never mail a customer.
+  if (to !== team && !to.endsWith("@tenbestfind.com") && to !== user.email.toLowerCase()) {
+    return { status: "error", message: "Tests go to the team inbox, a tenbestfind.com address or your own login email." };
+  }
+
+  const sent = await sendTemplateTest(template as keyof typeof TEST_TEMPLATES, to);
+  if (!sent) return { status: "error", message: `Resend did not accept it. ${notify.lastDeliveryError ?? ""}`.trim() };
+
+  await audit({ userId: user.id, action: "create", entityType: "email", summary: `test email (${template}) to ${to}` });
+  revalidatePath("/admin/emails");
+  return { status: "ok", message: `Sent "${TEST_TEMPLATES[template as keyof typeof TEST_TEMPLATES]}" to ${to}. It appears in the list below within a few seconds.` };
+}

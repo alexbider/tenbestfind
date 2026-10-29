@@ -498,6 +498,39 @@ export const SYSTEM_TOOLS: Tool[] = [
   },
 
   {
+    name: "send_test_email",
+    title: "Send a test email",
+    description:
+      "Sends one email through Resend to prove sending works, either a plain test or a sample of one of the site's templates filled with example data. It only ever goes to the team inbox (mail.team) or an address on tenbestfind.com, never to a customer. Returns the Resend message id, or the exact refusal.",
+    write: true,
+    admin: true,
+    schema: object({
+      template: str(
+        "plain (default), quote_confirmation, claim_code, claim_approved, claim_declined, contact_received, password_changed, payment_failed, plan_ended, listing_declined or team_alert.",
+      ),
+      to: str("Optional. An address on tenbestfind.com. Defaults to the team inbox."),
+    }),
+    handler: async (args, ctx) => {
+      const { mailConfigured, senderAddress } = await import("../mail");
+      const notify = await import("../notify");
+      const team = await notify.teamInbox();
+      const to = optStr(args, "to")?.trim().toLowerCase() || team;
+      if (to !== team.toLowerCase() && !to.endsWith("@tenbestfind.com")) {
+        throw new ToolError("Test emails only go to the team inbox or an address on tenbestfind.com.");
+      }
+      if (!(await mailConfigured())) throw new ToolError("No Resend API key is set.");
+      const template = (optStr(args, "template") ?? "plain").trim();
+      if (!(template in notify.TEST_TEMPLATES)) {
+        throw new ToolError(`template must be one of ${Object.keys(notify.TEST_TEMPLATES).join(", ")}.`);
+      }
+      const sent = await notify.sendTemplateTest(template as keyof typeof notify.TEST_TEMPLATES, to);
+      if (!sent) throw new ToolError(`Resend did not accept the message. ${notify.lastDeliveryError ?? ""}`.trim());
+      await recordWrite(ctx, { action: "create", entityType: "email", summary: `test email (${template}) to ${to}`, paths: [] });
+      return { sent: true, template, to, from: await senderAddress() };
+    },
+  },
+
+  {
     name: "upload_media",
     title: "Store an image on this site",
     description:

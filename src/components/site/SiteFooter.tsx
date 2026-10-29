@@ -327,6 +327,7 @@ export async function SiteFooter() {
               <Row href={routes.claim()}>Claim Your Profile</Row>
               <Row href="/add-business/">Add a Business</Row>
               <Row href={routes.forBusinesses()}>Top 10 Listing</Row>
+              <Row href="/login/">Business Sign In</Row>
             </ul>
             <p style={COL_HEAD}>Legal</p>
             <ul style={{ display: "grid", gap: "11px" }}>

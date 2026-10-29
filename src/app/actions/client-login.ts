@@ -5,6 +5,7 @@ import { hashPassword, verifyCredentials } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth-tokens";
 import { consumeAuthToken, openSession, PORTAL_PATH, sendAccessEmail } from "@/lib/client-accounts";
 import { db } from "@/lib/db";
+import { sendPasswordChanged } from "@/lib/notify";
 
 export type AccountState = { status: "idle" | "error" | "sent"; message?: string };
 
@@ -50,7 +51,7 @@ export async function requestPasswordLink(_prev: AccountState, formData: FormDat
   const user = await db.user.findUnique({ where: { email } });
   if (user && user.active && user.role === "BUSINESS_OWNER") {
     try {
-      await sendAccessEmail(user, "SET_PASSWORD");
+      await sendAccessEmail(user, "SET_PASSWORD", "reset");
     } catch (error) {
       console.error("[client-login] password link not sent:", error instanceof Error ? error.message : error);
     }
@@ -77,7 +78,10 @@ export async function setPassword(_prev: AccountState, formData: FormData): Prom
     };
   }
 
+  const hadPassword = Boolean(user.passwordHash);
   await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password) } });
+  // A first password needs no warning; a changed one does, in case it was not the owner.
+  if (hadPassword) await sendPasswordChanged({ to: user.email, name: user.name });
   await openSession(user);
   redirect(PORTAL_PATH);
 }

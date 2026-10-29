@@ -380,7 +380,7 @@ export const SETTINGS: { key: string; value: unknown; groupName: string; label: 
   // Resend or the send is refused, so this is a setting rather than a constant.
   {
     key: "mail.from",
-    value: "TenBestFind <leads@tenbestfind.com>",
+    value: "TenBestFind <hello@tenbestfind.com>",
     groupName: "mail",
     label: "Lead notification sender",
   },

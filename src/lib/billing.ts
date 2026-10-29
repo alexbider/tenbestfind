@@ -16,7 +16,7 @@ import { money } from "./format";
 import { parseJson } from "./json";
 import { parseOrderPayload } from "./guest-post";
 import { FEATURED_PARTNER_KIND, TOP10_PLAN_KEY } from "./top10";
-import { sendPaymentFailed } from "./notify";
+import { alertNewSubscription, alertPaymentFailed, sendPaymentFailed, sendPlanEnded } from "./notify";
 import { approveClaimIfReady } from "./client-accounts";
 
 /**
@@ -544,6 +544,21 @@ export async function applyStripeEvent(event: Stripe.Event) {
       const claim = await db.claimRequest.findFirst({ where: { subscriptionId }, select: { id: true } });
       if (claim) await approveClaimIfReady(claim.id);
       const top10 = await syncTop10Placement(subscriptionId, true);
+
+      if (ours.status !== "ACTIVE") {
+        const sold = await db.subscription.findUnique({
+          where: { id: subscriptionId },
+          include: { plan: true, business: { select: { name: true } } },
+        });
+        if (sold) {
+          await alertNewSubscription({
+            businessName: sold.business.name,
+            planName: sold.plan.name,
+            amount: `${money(sold.plan.priceCents, sold.plan.currency)}/${sold.plan.interval}`,
+            businessId: sold.businessId,
+          });
+        }
+      }
       return top10 ?? `activated subscription ${subscriptionId}`;
     }
 
@@ -574,9 +589,16 @@ export async function applyStripeEvent(event: Stripe.Event) {
           startedAt: local.startedAt ?? fromUnix(remote.start_date),
         },
       });
-      const mapped = mapSubscriptionStatus(remote.status);
-      if (mapped === "ACTIVE" || mapped === "CANCELED") {
-        await syncTop10Placement(local.id, mapped === "ACTIVE");
+      const nowStatus = mapSubscriptionStatus(remote.status);
+      if (nowStatus === "ACTIVE" || nowStatus === "CANCELED") {
+        await syncTop10Placement(local.id, nowStatus === "ACTIVE");
+      }
+
+      // A plan that has just ended: tell the owner, and if nothing else is
+      // still paid for, the listing goes back to an unclaimed editorial
+      // profile, as the pricing page promises. The owner keeps their login.
+      if (nowStatus === "CANCELED" && local.status !== "CANCELED") {
+        await onPlanEnded(local.id);
       }
       return `synced subscription ${local.id} to ${remote.status}`;
     }
@@ -637,6 +659,14 @@ export async function applyStripeEvent(event: Stripe.Event) {
             payUrl: invoice.hosted_invoice_url,
           });
         }
+        if (business) {
+          await alertPaymentFailed({
+            businessName: business.name,
+            planName: local.plan.name,
+            amount: money(invoice.amount_due, invoice.currency.toUpperCase()),
+            businessId: business.id,
+          });
+        }
       }
 
       return `recorded invoice ${invoice.id} as ${status}`;
@@ -644,5 +674,35 @@ export async function applyStripeEvent(event: Stripe.Event) {
 
     default:
       return null; // not a type we act on
+  }
+}
+
+
+/** Follow-through when a subscription ends, whichever way it ended. */
+async function onPlanEnded(subscriptionId: string) {
+  const ended = await db.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: {
+      plan: true,
+      business: { select: { id: true, name: true, slug: true, email: true, owner: { select: { email: true } } } },
+    },
+  });
+  if (!ended) return;
+
+  const stillPaid = await db.subscription.count({
+    where: { businessId: ended.businessId, status: { in: ["ACTIVE", "PAST_DUE"] }, id: { not: ended.id } },
+  });
+  if (stillPaid === 0 && (ended.plan.key === "claim" || ended.plan.key === "listing")) {
+    await db.business.update({ where: { id: ended.businessId }, data: { claimed: false } });
+  }
+
+  const to = ended.business.owner?.email ?? ended.business.email;
+  if (to) {
+    await sendPlanEnded({
+      to,
+      businessName: ended.business.name,
+      planName: ended.plan.name,
+      profileUrl: siteUrl(`/companies/${ended.business.slug}/`),
+    });
   }
 }

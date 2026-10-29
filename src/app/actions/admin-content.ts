@@ -6,7 +6,7 @@ import { z } from "zod";
 import { audit, requireStaff } from "@/lib/auth";
 import { claimSubscriptions, refundAndCancel } from "@/lib/billing";
 import { db } from "@/lib/db";
-import { onListingPublished } from "@/lib/listing-lifecycle";
+import { onListingPublished, onListingRejected } from "@/lib/listing-lifecycle";
 import { stripeConfigured } from "@/lib/stripe";
 import { announce } from "@/lib/announce";
 import { recordMove } from "@/lib/redirects";
@@ -16,6 +16,7 @@ import { rankingUrl, routes } from "@/lib/urls";
 import { DEFAULT_RADIUS_KM, fillServiceAreas } from "@/lib/geo";
 import { queueRefresh } from "@/lib/reviews";
 import { LEAD_STATUSES, notifyBusiness } from "@/lib/leads";
+import { completeClaimApproval, completeClaimRejection } from "@/lib/client-accounts";
 import { queueEnrichment } from "@/lib/enrich-run";
 import { recomputeCompleteness } from "@/lib/completeness";
 import { parseFilter, orderFor, whereFor } from "@/lib/enrich-filter";
@@ -988,6 +989,11 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     ? await db.business.update({ where: { id: data.id }, data: payload })
     : await db.business.create({ data: payload });
 
+  // Declining a submitted listing tells the submitter and closes its waiting plan.
+  if (previous && previous.status !== "REJECTED" && data.status === "REJECTED") {
+    await onListingRejected(business.id);
+  }
+
   // Publishing from the edit form starts billing and emails the submitter, the
   // same as the publish button does.
   if (previous && previous.status !== "PUBLISHED" && data.status === "PUBLISHED") {
@@ -1188,6 +1194,9 @@ export async function setBusinessStatus(formData: FormData) {
       publishedAt: parsed.data === "PUBLISHED" ? new Date() : undefined,
     },
   });
+  if (parsed.data === "REJECTED" && previous?.status !== "REJECTED") {
+    await onListingRejected(id);
+  }
   if (parsed.data === "PUBLISHED" && previous?.status !== "PUBLISHED") {
     const outcome = await onListingPublished(id);
     if (outcome.error) {
@@ -1658,7 +1667,8 @@ export async function decideClaim(formData: FormData) {
   // Approving a claim marks the listing claimed and activates the subscription
   // that was opened when the claim was submitted.
   if (status === "APPROVED" && claim.businessId) {
-    await db.business.update({ where: { id: claim.businessId }, data: { claimed: true } });
+    // Links the owner account, marks the listing claimed and emails the owner a way in.
+    await completeClaimApproval(claim.id);
     // With Stripe live, the webhook activates what was actually paid for; an
     // abandoned checkout must not turn into an active subscription here. Without
     // Stripe, the recorded intent is activated by hand as before.
@@ -1676,10 +1686,13 @@ export async function decideClaim(formData: FormData) {
   if (status === "REJECTED" && claim.businessId) {
     // The claim may have opened two subscriptions (profile plus Top 10), so
     // every one it opened is refunded and cancelled, and nothing else.
-    for (const open of await claimSubscriptions(claim)) {
+    const opened = await claimSubscriptions(claim);
+    let refundFailed = false;
+    for (const open of opened) {
       try {
         await refundAndCancel(open.id, "Ownership could not be verified");
       } catch (error) {
+        refundFailed = true;
         await audit({
           userId: user.id,
           action: "error",
@@ -1689,6 +1702,10 @@ export async function decideClaim(formData: FormData) {
         });
       }
     }
+    await completeClaimRejection(claim.id, {
+      reason: String(formData.get("reason") ?? "") || null,
+      refunded: opened.length > 0 && !refundFailed,
+    });
   }
 
   await audit({

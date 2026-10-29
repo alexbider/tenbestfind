@@ -33,6 +33,27 @@ export const metadata: Metadata = withSocial({
   alternates: { canonical: "/for-businesses/" },
 });
 
+/**
+ * What each plan's card says and where its button goes, keyed on the plan
+ * rather than on the editorial flag, which describes something else entirely.
+ */
+function planCard(key: string): { badge: string; cta: string; href: string; featured: boolean } {
+  switch (key) {
+    case "claim":
+      return { badge: "Standard", cta: "Claim your profile", href: routes.claim(), featured: false };
+    case "listing":
+      return { badge: "Standard", cta: "Submit a business", href: routes.addBusiness(), featured: false };
+    case "top10":
+      return { badge: "Featured", cta: "Buy a Top 10 placement", href: routes.top10(), featured: true };
+    case "guestpost":
+      return { badge: "Sponsored", cta: "Order a guest post", href: routes.guestPost(), featured: false };
+    case "advertising":
+      return { badge: "Advertising", cta: "Talk to us", href: routes.advertise(), featured: true };
+    default:
+      return { badge: "Standard", cta: "Get started", href: routes.claim(), featured: false };
+  }
+}
+
 const SECTION = { ...SHELL, padding: "60px 24px" };
 const SECTION_H2 = { fontSize: "clamp(28px, 3.2vw, 40px)", lineHeight: "1.06", fontWeight: "800", letterSpacing: "-0.04em" };
 const CARD = {
@@ -113,15 +134,6 @@ const PRODUCTS_SHORT: { title: string; text: string; icon: IconName }[] = [
   { title: "Top 10 featured placement", text: "A labelled slot beneath the editorial list for a city and trade.", icon: "award" },
   { title: "Category sponsorship", text: "A labelled presence across a trade you actually serve.", icon: "layers" },
 ];
-
-/** Where each plan's button goes. The Top 10 and guest post buttons open their own checkout. */
-const PLAN_CTA: Record<string, { href: string; label: string }> = {
-  claim: { href: routes.claim(), label: "Get started" },
-  listing: { href: routes.addBusiness(), label: "Submit a business" },
-  top10: { href: routes.top10(), label: "Buy a Top 10 placement" },
-  guestpost: { href: routes.guestPost(), label: "Order a guest post" },
-  advertising: { href: `${routes.advertise()}#quote`, label: "Request a quote" },
-};
 
 export default async function ForBusinessesPage() {
   const plans = await db.plan.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
@@ -294,7 +306,9 @@ export default async function ForBusinessesPage() {
               <ul data-stagger="" data-ag="auto" style={autoGrid(280, "16px")}>
                 {plans.map((plan) => {
                   const features = parseList(plan.features);
-                  const featured = !plan.editorial;
+                  const card = planCard(plan.key);
+                  const featured = card.featured;
+                  const isQuote = plan.interval === "quote";
                   return (
                     <li
                       key={plan.id}
@@ -322,16 +336,18 @@ export default async function ForBusinessesPage() {
                             color: featured ? "#8A5F0B" : "var(--blue-800)",
                           }}
                         >
-                          {featured ? "Advertising" : "Standard"}
+                          {card.badge}
                         </span>
                       </div>
                       <p style={{ display: "flex", alignItems: "baseline", gap: "7px", marginBottom: "6px" }}>
-                        <span style={{ fontSize: "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
-                          {plan.interval === "quote" ? "Quoted" : money(plan.priceCents, plan.currency)}
+                        <span style={{ fontSize: isQuote ? "28px" : "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
+                          {isQuote ? "Custom quote" : money(plan.priceCents, plan.currency)}
                         </span>
-                        <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>
-                          {plan.interval === "quote" ? "" : plan.interval === "once" ? "once" : "/month"}
-                        </span>
+                        {isQuote ? null : (
+                          <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                            {plan.interval === "once" ? "once" : "/month"}
+                          </span>
+                        )}
                       </p>
                       <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>
                       {features.length > 0 ? (
@@ -347,7 +363,7 @@ export default async function ForBusinessesPage() {
                         </ul>
                       ) : null}
                       <Link
-                        href={PLAN_CTA[plan.key]?.href ?? (featured ? routes.advertise() : routes.claim())}
+                        href={card.href}
                         style={{
                           ...BTN,
                           marginTop: "auto",
@@ -356,7 +372,7 @@ export default async function ForBusinessesPage() {
                           color: featured ? "var(--blue-900)" : "#fff",
                         }}
                       >
-                        {PLAN_CTA[plan.key]?.label ?? (featured ? "Talk to us" : "Get started")}
+                        {card.cta}
                       </Link>
                     </li>
                   );

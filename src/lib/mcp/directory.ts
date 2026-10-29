@@ -7,7 +7,7 @@ import { fullDate, slugify } from "../format";
 import { parseList } from "../json";
 import { isRealProfile } from "../schema";
 import { refundClaim } from "../billing";
-import { onListingPublished } from "../listing-lifecycle";
+import { onListingPublished, onListingRejected } from "../listing-lifecycle";
 import { routes } from "../urls";
 import {
   arr,
@@ -324,6 +324,8 @@ export const DIRECTORY_TOOLS: Tool[] = [
       // Going live starts billing for a submitted listing and tells the submitter.
       const published =
         status === "PUBLISHED" && existing.status !== "PUBLISHED" ? await onListingPublished(business.id) : null;
+      // Declining a submitted listing tells the submitter and closes its waiting plan.
+      if (status === "REJECTED" && existing.status !== "REJECTED") await onListingRejected(business.id);
       return {
         id: business.id,
         status,
@@ -1268,11 +1270,19 @@ export const DIRECTORY_TOOLS: Tool[] = [
           where: { id },
           data: { status, ...(note ? { notes: note } : {}), reviewedAt: new Date() },
         });
-        if (status === "APPROVED" && claim.businessId) {
-          await db.business.update({ where: { id: claim.businessId }, data: { claimed: true } });
+        // Approval links the owner's login and emails them a way in, as the admin does.
+        if (status === "APPROVED" && claim.businessId && claim.status !== "APPROVED") {
+          const { completeClaimApproval } = await import("../client-accounts");
+          await completeClaimApproval(claim.id);
         }
-        // Rejecting refunds and cancels what the claim opened, as the admin does.
+        // Rejecting refunds and cancels what the claim opened, clears the claimed
+        // flag and tells the claimant, as the admin does.
         const refundFailures = status === "REJECTED" ? await refundClaim(claim) : [];
+        if (status === "REJECTED" && claim.status !== "REJECTED") {
+          const { completeClaimRejection } = await import("../client-accounts");
+          // The note is internal, so it never goes to the claimant.
+          await completeClaimRejection(claim.id, { reason: null, refunded: refundFailures.length === 0 });
+        }
         await recordWrite(ctx, {
           action: "update",
           entityType: "claim",

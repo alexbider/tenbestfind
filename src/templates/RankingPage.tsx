@@ -38,6 +38,7 @@ import { breadcrumbSchema, rankingCrumbs } from "@/lib/breadcrumbs";
 import { graph, listId, pageEntity, personEntity, personFromRow, personRef, rankingListEntity } from "@/lib/schema";
 import { businessSchemaInput } from "@/lib/schema-entities";
 import { relatedForRanking } from "@/lib/related";
+import { hiringGuidanceFor } from "@/lib/hiring-guidance";
 import { RelatedContent } from "@/components/site/RelatedContent";
 import { sponsoredLinkProps } from "@/lib/sponsored-links";
 
@@ -134,6 +135,7 @@ export async function RankingPage({
     notFound();
   }
   const category = await db.category.findUnique({ where: { slug: categorySlug } });
+  const hiring = hiringGuidanceFor(categorySlug) ?? { steps: HIRING_STEPS, questions: QUESTIONS, redFlags: RED_FLAGS };
   if (!category) {
     await redirectIfKnown(path);
     notFound();
@@ -1285,7 +1287,7 @@ export async function RankingPage({
                 <div data-reveal="" style={{ position: "relative" }}>
                   <span data-tl="" aria-hidden="true" style={{ position: "absolute", left: "19px", top: "20px", bottom: "20px", width: "2px", background: "linear-gradient(180deg, var(--gold-ink), var(--color-primary))" }} />
                   <ol style={{ position: "relative", display: "grid", gap: "4px" }}>
-                    {HIRING_STEPS.map((step, index) => (
+                    {hiring.steps.map((step, index) => (
                       <li key={step.title} style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", gap: "16px", alignItems: "start", padding: "10px 0" }}>
                         <span
                           aria-hidden="true"
@@ -1319,7 +1321,7 @@ export async function RankingPage({
               <div style={{ display: "grid", gap: "14px", position: "sticky", top: "150px" }}>
                 <div data-reveal="" style={{ border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px", background: "var(--paper)" }}>
                   <h2 data-minih="" data-sm="" style={{ fontSize: "19px", fontWeight: "700", marginBottom: "6px" }}>Questions to ask before hiring</h2>
-                  <Checklist questions={QUESTIONS} />
+                  <Checklist questions={hiring.questions} />
                 </div>
                 <div data-reveal="" style={{ border: "1px solid rgba(195,38,32,0.22)", borderRadius: "22px", padding: "22px", background: "rgba(195,38,32,0.03)" }}>
                   <h2 data-minih="" data-sm="" style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "19px", fontWeight: "700", marginBottom: "12px" }}>
@@ -1333,7 +1335,7 @@ export async function RankingPage({
                     Red flags
                   </h2>
                   <ul data-stagger="" style={{ display: "grid", gap: "8px" }}>
-                    {RED_FLAGS.map((flag) => (
+                    {hiring.redFlags.map((flag) => (
                       <li key={flag} style={{ display: "flex", gap: "10px", fontSize: "14.5px", lineHeight: "1.55", color: "var(--text-primary)" }}>
                         <span aria-hidden="true" style={{ flexShrink: 0, width: "6px", height: "6px", marginTop: "8px", borderRadius: "50%", background: "#C32620" }} />
                         {flag}
