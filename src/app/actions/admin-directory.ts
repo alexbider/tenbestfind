@@ -226,7 +226,7 @@ const planSchema = z.object({
   description: z.string().max(1000).optional(),
   priceCents: z.string().optional(),
   currency: z.string().trim().min(3).max(3),
-  interval: z.enum(["month", "year", "quote"]),
+  interval: z.enum(["month", "year", "quote", "once"]),
   unitLabel: z.string().max(80).optional(),
   features: z.string().optional(),
   sortOrder: z.string().optional(),

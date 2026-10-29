@@ -44,7 +44,9 @@ function planCard(key: string): { badge: string; cta: string; href: string; feat
     case "listing":
       return { badge: "Standard", cta: "Submit a business", href: routes.addBusiness(), featured: false };
     case "top10":
-      return { badge: "Featured", cta: "Add a Top 10 slot", href: routes.claim(), featured: true };
+      return { badge: "Featured", cta: "Buy a Top 10 placement", href: routes.top10(), featured: true };
+    case "guestpost":
+      return { badge: "Sponsored", cta: "Order a guest post", href: routes.guestPost(), featured: false };
     case "advertising":
       return { badge: "Advertising", cta: "Talk to us", href: routes.advertise(), featured: true };
     default:
@@ -342,7 +344,9 @@ export default async function ForBusinessesPage() {
                           {isQuote ? "Custom quote" : money(plan.priceCents, plan.currency)}
                         </span>
                         {isQuote ? null : (
-                          <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
+                          <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                            {plan.interval === "once" ? "once" : "/month"}
+                          </span>
                         )}
                       </p>
                       <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>

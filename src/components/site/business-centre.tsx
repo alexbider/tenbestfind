@@ -24,29 +24,29 @@ export const EDITORIAL_FIELDS = [
 
 export const BILLING_FAQS = [
   {
-    question: "What does a subscription actually buy?",
+    question: "What does each option buy?",
     answer:
-      "Profile management and listing maintenance: your details, your hours, your services, your coverage, plus a dashboard showing what the listing does. It does not buy a ranking position, and it never will.",
+      "Claim & Manage ($29 a month per location) lets you verify ownership and keep your listing details current. Directory Listing ($29 a month per published location) adds a business we do not cover yet, once it passes editorial review. A Top 10 featured placement ($199 a month per city and trade) adds a labelled box beside one ranking. A sponsored guest post ($99 once) is one article with two paid links. Advertising across several markets is quoted.",
   },
   {
-    question: "How much is it?",
+    question: "Does paying change a ranking?",
     answer:
-      "Claiming and adding are both $29 a month per location. A Top 10 featured placement is $199 a month per city and trade. Advertising across multiple markets is quoted against coverage.",
+      "Never. Payment cannot add, remove, move or protect a company in any ranked list. Paid placements sit beside the list and carry a Sponsored label wherever they appear.",
   },
   {
     question: "When am I charged?",
     answer:
-      "A claim is charged at submission and refunded in full if we cannot verify your ownership. A new listing holds the card and charges only on the day the listing publishes, never if it is declined.",
+      "A claim is charged at checkout and refunded in full if we cannot verify your ownership. A new listing holds the card and charges only on the day it publishes, never if it is declined. A Top 10 placement is charged at checkout and then monthly. A guest post is charged once at checkout, before an editor reviews it.",
   },
   {
-    question: "Can I cancel?",
+    question: "How do I cancel?",
     answer:
-      "Any time. Cancellation takes effect at the end of the current period, and your listing reverts to an unclaimed editorial profile rather than being removed.",
+      "Any time, from your billing portal or by writing to hello@tenbestfind.com. Cancellation takes effect at the end of the current period. A Top 10 box stops showing when its subscription ends, and a claimed profile reverts to an unclaimed editorial listing rather than being removed.",
   },
   {
-    question: "Does paying more move me up a list?",
+    question: "How is a guest post reviewed?",
     answer:
-      "No. There is no price at which an editorial position is for sale. A Top 10 featured placement is a labelled slot outside the ranked ten, and it says Sponsored wherever it appears.",
+      "After payment, an editor checks the topic against our editorial standards and checks both links. We may ask you to change the topic or a link before publishing. The published post carries a Sponsored label in the article and the byline, and both links are marked rel=\"sponsored\". If an editor declines the post, we tell you why.",
   },
   {
     question: "Will people know I am a subscriber?",

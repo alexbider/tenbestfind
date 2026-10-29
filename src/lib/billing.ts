@@ -14,6 +14,8 @@ import {
 } from "./stripe";
 import { money } from "./format";
 import { parseJson } from "./json";
+import { parseOrderPayload } from "./guest-post";
+import { FEATURED_PARTNER_KIND, TOP10_PLAN_KEY } from "./top10";
 import { alertNewSubscription, alertPaymentFailed, sendPaymentFailed, sendPlanEnded } from "./notify";
 import { approveClaimIfReady } from "./client-accounts";
 
@@ -51,7 +53,8 @@ export async function syncPlanToStripe(planId: string) {
     ? await stripe.products.update(plan.stripeProductId, productFields)
     : await stripe.products.create(productFields);
 
-  // Reuse the existing price when the amount and currency still match.
+  // Reuse the existing price when the amount, currency and billing shape still match.
+  const recurring = plan.interval !== "once";
   let priceId = plan.stripePriceId;
   if (priceId) {
     const existing = await stripe.prices.retrieve(priceId).catch(() => null);
@@ -59,7 +62,8 @@ export async function syncPlanToStripe(planId: string) {
       existing &&
       existing.active &&
       existing.unit_amount === plan.priceCents &&
-      existing.currency === plan.currency.toLowerCase();
+      existing.currency === plan.currency.toLowerCase() &&
+      Boolean(existing.recurring) === recurring;
     if (!matches) priceId = null;
   }
 
@@ -68,7 +72,8 @@ export async function syncPlanToStripe(planId: string) {
       product: product.id,
       unit_amount: plan.priceCents,
       currency: plan.currency.toLowerCase(),
-      recurring: { interval: plan.interval === "year" ? "year" : "month" },
+      // A one-time plan (a guest post) has no recurring interval at all.
+      ...(recurring ? { recurring: { interval: plan.interval === "year" ? "year" : "month" } } : {}),
       nickname: `${PRODUCT_PREFIX} ${plan.name}`,
       metadata: { ...STRIPE_METADATA, planKey: plan.key },
     });
@@ -199,6 +204,58 @@ export async function startCheckout(input: {
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return { mode: "stripe", url: session.url, subscriptionId: subscription.id };
+}
+
+/**
+ * Opens a one-time Checkout session (payment mode) for a plan with no
+ * recurring interval, such as a guest post. The order id travels in the
+ * metadata, and the webhook marks the order paid, never the browser return.
+ */
+export async function startOneTimeCheckout(input: {
+  planKey: string;
+  orderId: string;
+  email: string;
+  name?: string;
+  successPath: string;
+  cancelPath: string;
+}): Promise<string | null> {
+  const plan = await db.plan.findUnique({ where: { key: input.planKey } });
+  if (!plan) throw new Error(`Unknown plan: ${input.planKey}`);
+  if (plan.interval !== "once") throw new Error(`${plan.key} is not a one-time plan`);
+  if (!(await stripeConfigured()) || !plan.stripePriceId) return null;
+
+  const stripe = await getStripe();
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: input.email,
+    line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+    success_url: siteUrl(`${input.successPath}?session={CHECKOUT_SESSION_ID}`),
+    cancel_url: siteUrl(input.cancelPath),
+    client_reference_id: input.orderId,
+    metadata: { ...STRIPE_METADATA, guestPostId: input.orderId, planKey: plan.key },
+    payment_intent_data: {
+      description: `${PRODUCT_PREFIX} ${plan.name}`,
+      statement_descriptor_suffix: "GUEST POST",
+      metadata: { ...STRIPE_METADATA, guestPostId: input.orderId, planKey: plan.key },
+    },
+    adaptive_pricing: { enabled: false },
+    branding_settings: {
+      display_name: "TenBestFind",
+      button_color: "#2D74D7",
+      background_color: "#F4F6F9",
+      border_style: "rounded",
+      font_family: "inter",
+      icon: { type: "url", url: siteUrl("/logo-512.png") },
+    },
+    custom_text: {
+      submit: {
+        message: "TenBestFind is billed through Bidernet. Your card statement shows TENBESTFIND and your receipt comes from Bidernet.",
+      },
+    },
+  });
+
+  if (!session.url) throw new Error("Stripe did not return a checkout URL");
+  return session.url;
 }
 
 /* ---------------------------------------------------------- billing portal */
@@ -360,6 +417,80 @@ export async function refundClaim(claim: { businessId: string | null; subscripti
   return failures;
 }
 
+/* ------------------------------------------------------ top 10 placement */
+
+/**
+ * Shows or ends the Featured Partner box for a Top 10 subscription. It writes
+ * only to the placement table, never to a ranking, so payment cannot move a
+ * business up or down an editorial list.
+ */
+async function syncTop10Placement(subscriptionId: string, active: boolean): Promise<string | null> {
+  const subscription = await db.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { plan: true },
+  });
+  if (!subscription || subscription.plan.key !== TOP10_PLAN_KEY) return null;
+  const { businessId, scopeCityId: cityId, scopeCategoryId: categoryId } = subscription;
+  if (!cityId || !categoryId) return null;
+
+  if (active) {
+    const existing = await db.sponsoredPlacement.findFirst({
+      where: { businessId, cityId, categoryId, status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (existing) return null;
+
+    // One Featured Partner per city and trade. If another business already holds
+    // the slot, this subscription is refused and any money it took is returned.
+    const holder = await db.sponsoredPlacement.findFirst({
+      where: { cityId, categoryId, status: "ACTIVE", NOT: { businessId } },
+      select: { id: true },
+    });
+    if (holder) {
+      await refuseTop10(subscriptionId, subscription.stripeSubscriptionId);
+      return `refused a second Top 10 for ${cityId}/${categoryId}; payment returned`;
+    }
+
+    await db.sponsoredPlacement.create({
+      data: { businessId, cityId, categoryId, kind: FEATURED_PARTNER_KIND, label: "Sponsored", status: "ACTIVE" },
+    });
+    return null;
+  }
+
+  await db.sponsoredPlacement.updateMany({
+    where: { businessId, cityId, categoryId, status: "ACTIVE" },
+    data: { status: "ENDED", endsAt: new Date() },
+  });
+  return null;
+}
+
+/**
+ * Cancels a Top 10 subscription that lost the slot race and refunds every paid
+ * invoice on it. Without Stripe keys only the local row is cancelled, and the
+ * refund is left for an editor to make by hand.
+ */
+async function refuseTop10(subscriptionId: string, stripeSubscriptionId: string | null) {
+  await cancelSubscription(subscriptionId, true);
+  if (!stripeSubscriptionId || !(await stripeConfigured())) return;
+
+  const stripe = await getStripe();
+  const paid = await stripe.invoices.list({ subscription: stripeSubscriptionId, status: "paid", limit: 20 });
+  for (const invoice of paid.data) {
+    const paymentIntent =
+      typeof invoice.payments?.data[0]?.payment?.payment_intent === "string"
+        ? invoice.payments.data[0].payment.payment_intent
+        : null;
+    if (paymentIntent) {
+      await stripe.refunds.create({
+        payment_intent: paymentIntent,
+        reason: "requested_by_customer",
+        metadata: { ...STRIPE_METADATA, reason: "Featured placement slot already taken" },
+      });
+    }
+    await db.invoice.updateMany({ where: { stripeInvoiceId: invoice.id }, data: { status: "REFUNDED" } });
+  }
+}
+
 /* ---------------------------------------------------------------- webhooks */
 
 /** Applies one Stripe event. Callers guarantee it has not been applied before. */
@@ -367,6 +498,27 @@ export async function applyStripeEvent(event: Stripe.Event) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
+
+      // A one-time guest post order. Only a paid session marks the order paid.
+      if (session.mode === "payment") {
+        const orderId = session.metadata?.guestPostId;
+        if (!orderId) return null;
+        const order = await db.submission.findUnique({ where: { id: orderId } });
+        if (!order) return null;
+        if (session.payment_status !== "paid") return `guest post ${orderId} not paid yet`;
+        const payload = parseOrderPayload(order.payload);
+        await db.submission.update({
+          where: { id: orderId },
+          data: {
+            payload: JSON.stringify({
+              ...payload,
+              payment: { state: "paid", sessionId: session.id, paidAt: new Date().toISOString() },
+            }),
+          },
+        });
+        return `marked guest post ${orderId} paid`;
+      }
+
       // The account is shared with other businesses, whose sessions arrive
       // here too. Anything that does not point at one of our rows is ignored.
       const subscriptionId = session.metadata?.subscriptionId ?? session.client_reference_id;
@@ -391,6 +543,7 @@ export async function applyStripeEvent(event: Stripe.Event) {
       // so the claim is verified here and the owner gets their sign-in email.
       const claim = await db.claimRequest.findFirst({ where: { subscriptionId }, select: { id: true } });
       if (claim) await approveClaimIfReady(claim.id);
+      const top10 = await syncTop10Placement(subscriptionId, true);
 
       if (ours.status !== "ACTIVE") {
         const sold = await db.subscription.findUnique({
@@ -406,7 +559,7 @@ export async function applyStripeEvent(event: Stripe.Event) {
           });
         }
       }
-      return `activated subscription ${subscriptionId}`;
+      return top10 ?? `activated subscription ${subscriptionId}`;
     }
 
     case "customer.subscription.created":
@@ -436,11 +589,14 @@ export async function applyStripeEvent(event: Stripe.Event) {
           startedAt: local.startedAt ?? fromUnix(remote.start_date),
         },
       });
+      const nowStatus = mapSubscriptionStatus(remote.status);
+      if (nowStatus === "ACTIVE" || nowStatus === "CANCELED") {
+        await syncTop10Placement(local.id, nowStatus === "ACTIVE");
+      }
 
       // A plan that has just ended: tell the owner, and if nothing else is
       // still paid for, the listing goes back to an unclaimed editorial
       // profile, as the pricing page promises. The owner keeps their login.
-      const nowStatus = mapSubscriptionStatus(remote.status);
       if (nowStatus === "CANCELED" && local.status !== "CANCELED") {
         await onPlanEnded(local.id);
       }

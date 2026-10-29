@@ -150,6 +150,18 @@ export default async function AdvertisePage() {
               >
                 See how placements look
               </a>
+              <a
+                href={routes.top10()}
+                style={{ display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", flexShrink: 0, height: "52px", padding: "0 24px", borderRadius: "14px", border: "1.5px solid var(--border-strong)", background: "var(--surface-card)", color: "var(--blue-900)", fontSize: "16px", fontWeight: "600" }}
+              >
+                Buy a Top 10 placement
+              </a>
+              <a
+                href={routes.guestPost()}
+                style={{ display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", flexShrink: 0, height: "52px", padding: "0 24px", borderRadius: "14px", border: "1.5px solid var(--border-strong)", background: "var(--surface-card)", color: "var(--blue-900)", fontSize: "16px", fontWeight: "600" }}
+              >
+                Order a guest post
+              </a>
             </div>
           </div>
 
