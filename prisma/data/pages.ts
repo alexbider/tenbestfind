@@ -119,9 +119,9 @@ export const PAGES: SeedPage[] = [
       l([
         "Claim & Manage, $29 a month per location: verify ownership and keep your listing details current.",
         "Directory Listing, $29 a month per published location: submit a business we do not cover yet. Charged only when it publishes.",
-        "Top 10 featured placement, $199 a month per city and trade: a Featured Partner box beside one ranking, labelled Sponsored.",
+        "Top 10 featured placement, $199 a month per city and trade: a labelled slot below the ranked ten for one city and trade. The ten positions stay editorial.",
         "Sponsored guest post, $99 once per post: one article with two paid links, reviewed by an editor before it is published.",
-        "Advertising across several markets: quoted against coverage and availability.",
+        "Advertising across several markets: priced on request, against coverage and availability.",
       ]),
       h("What sponsors get", "what"),
       l([
