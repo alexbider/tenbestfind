@@ -303,6 +303,7 @@ export function PlanEditor({ plan }: { plan: PlanDraft }) {
           >
             <option value="month">Monthly</option>
             <option value="year">Yearly</option>
+            <option value="once">One-time payment</option>
             <option value="quote">Quoted, no fixed price</option>
           </select>
         </div>
