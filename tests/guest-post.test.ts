@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guestPostLinks, guestPostSchema } from "@/lib/guest-post";
+import { guestPostBrief, guestPostLinks, guestPostSchema } from "@/lib/guest-post";
 import { SPONSORED_REL, sponsoredLinkProps } from "@/lib/sponsored-links";
 
 const valid = {
@@ -11,7 +11,12 @@ const valid = {
   anchor1: "roof replacement in San Antonio",
   url2: "https://lonestarroofing.com/guides/storm-damage",
   anchor2: "storm damage guide",
+  keyPoints: "Cover the signs of hail damage, what insurers look for, and when to replace instead of repair.",
+  audience: "Homeowners in Texas planning a roof replacement",
+  wordCount: "1200",
+  sourceUrl: "",
   notes: "",
+  understands: "on",
 };
 
 describe("guest post order", () => {
@@ -28,6 +33,27 @@ describe("guest post order", () => {
   it("rejects a link that is not a URL at all", () => {
     const parsed = guestPostSchema.safeParse({ ...valid, url2: "not a link" });
     expect(parsed.success).toBe(false);
+  });
+
+  it("requires the sponsored terms to be confirmed", () => {
+    const parsed = guestPostSchema.safeParse({ ...valid, understands: undefined });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("requires the points the post should cover", () => {
+    const parsed = guestPostSchema.safeParse({ ...valid, keyPoints: "too short" });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("keeps the brief an editor needs to write the post", () => {
+    const parsed = guestPostSchema.parse(valid);
+    expect(guestPostBrief(parsed)).toEqual({
+      keyPoints: valid.keyPoints,
+      audience: valid.audience,
+      wordCount: 1200,
+      sourceUrl: null,
+      notes: null,
+    });
   });
 
   it("requires anchor text for both links", () => {

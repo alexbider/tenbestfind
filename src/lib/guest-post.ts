@@ -31,7 +31,12 @@ export const guestPostSchema = z.object({
   anchor1: z.string().trim().min(2, "Give the anchor text for link one").max(80),
   url2: https,
   anchor2: z.string().trim().min(2, "Give the anchor text for link two").max(80),
+  keyPoints: z.string().trim().min(40, "Tell us the points the post should cover, at least a few sentences").max(3000),
+  audience: z.string().trim().max(500).optional().or(z.literal("")),
+  wordCount: z.enum(["800", "1200", "1500"], { message: "Choose a length" }),
+  sourceUrl: https.optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  understands: z.literal("on", { message: "Confirm the Sponsored label and rel=sponsored terms" }),
 });
 
 export type GuestPostInput = z.infer<typeof guestPostSchema>;
@@ -42,6 +47,17 @@ export function guestPostLinks(input: GuestPostInput) {
     { url: input.url1, anchor: input.anchor1 },
     { url: input.url2, anchor: input.anchor2 },
   ];
+}
+
+/** The onboarding answers an editor needs to write the post and place the links. */
+export function guestPostBrief(input: GuestPostInput) {
+  return {
+    keyPoints: input.keyPoints,
+    audience: input.audience || null,
+    wordCount: Number(input.wordCount),
+    sourceUrl: input.sourceUrl || null,
+    notes: input.notes || null,
+  };
 }
 
 /** Reads a stored order payload. A corrupt payload reads as empty, never throws. */

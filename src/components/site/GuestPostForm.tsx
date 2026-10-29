@@ -93,9 +93,48 @@ export function GuestPostForm() {
           </label>
         </fieldset>
         <label style={{ gridColumn: "1 / -1", display: "grid", gap: "8px" }}>
+          <span style={LABEL}>What the post should cover</span>
+          <span style={HINT}>The points, facts or angles you want in the article. Name any services, areas or offers to mention.</span>
+          <textarea required name="keyPoints" rows={4} style={{ ...INPUT, height: "auto", padding: "14px 16px", resize: "vertical" }} />
+          <FieldError errors={state.errors} name="keyPoints" />
+        </label>
+        <label style={{ gridColumn: "1 / -1", display: "grid", gap: "8px" }}>
+          <span style={LABEL}>Who the post is for</span>
+          <input name="audience" type="text" placeholder="e.g. Homeowners in Texas planning a roof replacement" style={INPUT} />
+          <FieldError errors={state.errors} name="audience" />
+        </label>
+        <label style={{ display: "grid", gap: "8px" }}>
+          <span style={LABEL}>Length</span>
+          <select required name="wordCount" defaultValue="" style={INPUT}>
+            <option value="" disabled>Choose a length</option>
+            <option value="800">About 800 words</option>
+            <option value="1200">About 1,200 words</option>
+            <option value="1500">About 1,500 words</option>
+          </select>
+          <FieldError errors={state.errors} name="wordCount" />
+        </label>
+        <label style={{ display: "grid", gap: "8px" }}>
+          <span style={LABEL}>A page to base it on (optional)</span>
+          <input name="sourceUrl" type="url" placeholder="https://" style={INPUT} />
+          <FieldError errors={state.errors} name="sourceUrl" />
+        </label>
+        <label style={{ gridColumn: "1 / -1", display: "grid", gap: "8px" }}>
           <span style={LABEL}>Anything else for the editor</span>
           <textarea name="notes" rows={3} style={{ ...INPUT, height: "auto", padding: "14px 16px", resize: "vertical" }} />
         </label>
+        <label style={{ gridColumn: "1 / -1", display: "flex", gap: "12px", alignItems: "flex-start", fontSize: "14.5px", lineHeight: "1.6", color: "var(--ink)" }}>
+          <input required name="understands" type="checkbox" value="on" style={{ marginTop: "5px", width: "18px", height: "18px", flexShrink: 0 }} />
+          <span>
+            I understand the post is labelled Sponsored in the article and the byline, that both links are marked rel="sponsored", and that an editor must approve it before it is published.
+          </span>
+        </label>
+        <FieldError errors={state.errors} name="understands" />
+        <ol style={{ gridColumn: "1 / -1", display: "grid", gap: "8px", padding: "16px 18px", borderRadius: "14px", background: "var(--blue-50)", fontSize: "14.5px", lineHeight: "1.6", color: "var(--ink)", listStylePosition: "inside" }}>
+          <li>You pay once, at secure checkout.</li>
+          <li>An editor checks your points, the two links and the anchor text, and may write to you with questions.</li>
+          <li>You receive the draft to approve before anything is published.</li>
+          <li>The approved post goes live with the Sponsored label and both links marked rel="sponsored".</li>
+        </ol>
         <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
           <button
             type="submit"

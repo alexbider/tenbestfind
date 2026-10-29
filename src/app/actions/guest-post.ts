@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { startOneTimeCheckout } from "@/lib/billing";
 import { db } from "@/lib/db";
-import { GUEST_POST_KIND, GUEST_POST_PLAN_KEY, guestPostLinks, guestPostSchema } from "@/lib/guest-post";
+import { GUEST_POST_KIND, GUEST_POST_PLAN_KEY, guestPostBrief, guestPostLinks, guestPostSchema } from "@/lib/guest-post";
 import { stripeConfigured } from "@/lib/stripe";
 import { routes } from "@/lib/urls";
 
@@ -40,7 +40,7 @@ export async function submitGuestPost(_prev: GuestPostState, formData: FormData)
         business: data.business,
         topic: data.topic,
         links: guestPostLinks(data),
-        notes: data.notes || null,
+        brief: guestPostBrief(data),
         payment: { state: "awaiting_payment" },
       }),
       status: "NEW",
@@ -74,7 +74,7 @@ export async function submitGuestPost(_prev: GuestPostState, formData: FormData)
         business: data.business,
         topic: data.topic,
         links: guestPostLinks(data),
-        notes: data.notes || null,
+        brief: guestPostBrief(data),
         payment: { state: "recorded" },
       }),
     },
