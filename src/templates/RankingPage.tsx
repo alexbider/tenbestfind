@@ -39,6 +39,7 @@ import { graph, listId, pageEntity, personEntity, personFromRow, personRef, rank
 import { businessSchemaInput } from "@/lib/schema-entities";
 import { relatedForRanking } from "@/lib/related";
 import { RelatedContent } from "@/components/site/RelatedContent";
+import { sponsoredLinkProps } from "@/lib/sponsored-links";
 
 const HIRING_STEPS = [
   {
@@ -222,6 +223,12 @@ export async function RankingPage({
   const faqs = ranking.faqs.map((faq) => ({ id: faq.id, question: faq.question, answer: faq.answer }));
   const cityLabel = `${city.name}, ${region.code.toUpperCase()}`;
   const path4 = routes.ranking(country.code, region.slug, city.slug, category.slug);
+
+  // Counts one impression each time this box is rendered. The page is cached,
+  // so this is a render count, not a reader count, and the dashboard says so.
+  if (placement) {
+    await db.sponsoredPlacement.update({ where: { id: placement.id }, data: { impressions: { increment: 1 } } }).catch(() => null);
+  }
 
   /** Every distinct area the ranked companies say they cover. */
   const areas = [
@@ -815,7 +822,8 @@ export async function RankingPage({
                           </span>
                           <Link
                             data-btn=""
-                            href={routes.business(placement.business.slug)}
+                            href={routes.placementClick(placement.id)}
+                            {...sponsoredLinkProps()}
                             style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", height: "42px", padding: "0 16px", borderRadius: "12px", background: "var(--color-primary)", color: "#fff", fontSize: "14px", fontWeight: "700" }}
                           >
                             Visit Partner
@@ -836,9 +844,8 @@ export async function RankingPage({
                           </ul>
                           <Pop ariaLabel="About sponsored placements" label="Why am I seeing this?">
                             <p style={{ fontSize: "13px", lineHeight: "1.6", color: "rgba(232,237,245,0.88)" }}>
-                              This is a sponsored placement. Sponsorship does not determine TenBestFind editorial rankings,
-                              and paid partners hold no position in the Top {total} unless they earned it
-                              independently.
+                              This is a sponsored placement. Payment never changes a ranking, and a paid partner is
+                              never added to the Top {total}. The ranked order is set by editorial research alone.
                             </p>
                             <p style={{ marginTop: "10px" }}>
                               <Link href={routes.advertisingDisclosure()} style={{ fontSize: "13px", fontWeight: "600", color: "var(--gold-ink)" }}>

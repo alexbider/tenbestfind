@@ -890,7 +890,7 @@ model Plan {
   description String?
   priceCents  Int     @default(0)
   currency    String  @default("USD")
-  interval    String  @default("month") // month | year | quote
+  interval    String  @default("month") // month | year | quote | once
   unitLabel   String  @default("per location")
   // JSON array of strings
   features    String?

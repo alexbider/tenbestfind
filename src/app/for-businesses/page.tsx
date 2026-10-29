@@ -114,6 +114,15 @@ const PRODUCTS_SHORT: { title: string; text: string; icon: IconName }[] = [
   { title: "Category sponsorship", text: "A labelled presence across a trade you actually serve.", icon: "layers" },
 ];
 
+/** Where each plan's button goes. The Top 10 and guest post buttons open their own checkout. */
+const PLAN_CTA: Record<string, { href: string; label: string }> = {
+  claim: { href: routes.claim(), label: "Get started" },
+  listing: { href: routes.addBusiness(), label: "Submit a business" },
+  top10: { href: routes.top10(), label: "Buy a Top 10 placement" },
+  guestpost: { href: routes.guestPost(), label: "Order a guest post" },
+  advertising: { href: `${routes.advertise()}#quote`, label: "Request a quote" },
+};
+
 export default async function ForBusinessesPage() {
   const plans = await db.plan.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
 
@@ -318,9 +327,11 @@ export default async function ForBusinessesPage() {
                       </div>
                       <p style={{ display: "flex", alignItems: "baseline", gap: "7px", marginBottom: "6px" }}>
                         <span style={{ fontSize: "34px", fontWeight: "700", color: "var(--blue-900)", letterSpacing: "var(--ls-tighter)" }}>
-                          {money(plan.priceCents, plan.currency)}
+                          {plan.interval === "quote" ? "Quoted" : money(plan.priceCents, plan.currency)}
                         </span>
-                        <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>/month</span>
+                        <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                          {plan.interval === "quote" ? "" : plan.interval === "once" ? "once" : "/month"}
+                        </span>
                       </p>
                       <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "18px" }}>{plan.unitLabel}</p>
                       {features.length > 0 ? (
@@ -336,7 +347,7 @@ export default async function ForBusinessesPage() {
                         </ul>
                       ) : null}
                       <Link
-                        href={featured ? routes.advertise() : routes.claim()}
+                        href={PLAN_CTA[plan.key]?.href ?? (featured ? routes.advertise() : routes.claim())}
                         style={{
                           ...BTN,
                           marginTop: "auto",
@@ -345,7 +356,7 @@ export default async function ForBusinessesPage() {
                           color: featured ? "var(--blue-900)" : "#fff",
                         }}
                       >
-                        {featured ? "Talk to us" : "Get started"}
+                        {PLAN_CTA[plan.key]?.label ?? (featured ? "Talk to us" : "Get started")}
                       </Link>
                     </li>
                   );

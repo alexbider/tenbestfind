@@ -58,6 +58,9 @@ export const routes = {
   claim: () => "/claim/",
   addBusiness: () => "/add-business/",
   advertise: () => "/advertise/",
+  guestPost: () => "/advertise/guest-post/",
+  top10: () => "/advertise/top10/",
+  placementClick: (id: string) => `/api/placements/${id}/click/`,
 
   admin: (path = "") => `/admin${path}`,
 } as const;

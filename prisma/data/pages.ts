@@ -113,8 +113,16 @@ export const PAGES: SeedPage[] = [
     excerpt: "What sponsorship buys, what it never buys, and how labelled placements appear on the site.",
     noticeTitle: "The short version",
     noticeBody:
-      "Sponsorship buys visibility in a labelled slot. It does not buy a position in an editorial ranking, and it never changes the order of one.",
+      "Payment never changes an editorial ranking. Paid placements sit beside the lists, carry a Sponsored label, and never change the order of one.",
     body: [
+      h("The paid options", "options"),
+      l([
+        "Claim & Manage, $29 a month per location: verify ownership and keep your listing details current.",
+        "Directory Listing, $29 a month per published location: submit a business we do not cover yet. Charged only when it publishes.",
+        "Top 10 featured placement, $199 a month per city and trade: a Featured Partner box beside one ranking, labelled Sponsored.",
+        "Sponsored guest post, $99 once per post: one article with two paid links, reviewed by an editor before it is published.",
+        "Advertising across several markets: quoted against coverage and availability.",
+      ]),
       h("What sponsors get", "what"),
       l([
         "A labelled Featured Partner box, visually separated from the ranked list",
@@ -123,15 +131,20 @@ export const PAGES: SeedPage[] = [
       ]),
       h("What sponsors never get", "never"),
       l([
-        "A position in the ten ranked companies",
+        "A position in the ten ranked companies, at any price",
         "Advance sight of a ranking before it publishes",
         "Influence over how criteria are set or applied",
         "Removal of a competitor from a list",
       ]),
+      h("Guest posts and paid links", "links"),
+      p(
+        "A sponsored guest post is labelled Sponsored in the article and in the byline, and it carries a disclosure. Every paid link is marked rel=\"sponsored\", which tells search engines the link is paid. We do not publish a paid link without that mark.",
+      ),
       h("How placements are labelled", "labels"),
       p(
-        "Every paid placement carries a Sponsored label and a disclosure explaining what it is. The label is plain text rather than a badge, because the point is that you can tell the difference, not that it should shout.",
+        "Every paid placement carries a Sponsored label and a disclosure explaining what it is. The label is plain text, so you can tell the difference at a glance.",
       ),
+      p("Questions about any paid option go to hello@tenbestfind.com."),
     ],
   },
   {
@@ -320,6 +333,23 @@ export const PLANS = [
     ],
     editorial: true,
     sortOrder: 4,
+  },
+  {
+    key: "guestpost",
+    name: "Sponsored Guest Post",
+    description:
+      "One guest post with two paid links, labelled Sponsored and reviewed by an editor before it is published. Paid links carry rel=\"sponsored\".",
+    priceCents: 9900,
+    interval: "once",
+    unitLabel: "per post",
+    features: [
+      "One post on a topic the editor approves",
+      "Two links, each marked rel=\"sponsored\"",
+      "Labelled Sponsored in the article and the byline",
+      "Reviewed before publishing",
+    ],
+    editorial: false,
+    sortOrder: 5,
   },
 ];
 

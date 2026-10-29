@@ -53,6 +53,13 @@ export default async function PortalAnalytics({ searchParams }: Props) {
     }),
   ]);
 
+  const featured = await db.sponsoredPlacement.aggregate({
+    where: { businessId: business.id },
+    _sum: { impressions: true, clicks: true },
+  });
+  const featuredImpressions = featured._sum.impressions ?? 0;
+  const featuredClicks = featured._sum.clicks ?? 0;
+
   const contacts = totals.phoneClicks + totals.websiteClicks + totals.quoteClicks;
   const previousContacts = previous.phoneClicks + previous.websiteClicks + previous.quoteClicks;
   const conversion = totals.profileViews > 0 ? (contacts / totals.profileViews) * 100 : 0;
@@ -99,6 +106,21 @@ export default async function PortalAnalytics({ searchParams }: Props) {
             label: "Quote requests",
             value: totals.leads,
             delta: delta(totals.leads, previous.leads),
+          },
+        ]}
+      />
+
+      <StatRow
+        stats={[
+          {
+            label: "Featured placement shown",
+            value: featuredImpressions,
+            hint: "Times the Featured Partner box was rendered on a ranking page. Pages are cached, so this is a render count.",
+          },
+          {
+            label: "Featured placement clicks",
+            value: featuredClicks,
+            hint: "Clicks on Visit Partner. Only a live placement counts.",
           },
         ]}
       />
