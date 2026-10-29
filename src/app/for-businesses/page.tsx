@@ -29,7 +29,7 @@ export const revalidate = 60;
 export const metadata: Metadata = withSocial({
   title: "For businesses: claim, add or advertise",
   description:
-    "Claim your listing or add a business for $29 a month per location. Top 10 featured placement is $199 a month per city and trade. None of it buys a ranking position.",
+    "Claim your listing for $29 a month per location. A Top 10 featured placement is $199 a month per city and trade, and a sponsored guest post is $99 once. None of it buys a ranking position.",
   alternates: { canonical: "/for-businesses/" },
 });
 
@@ -105,9 +105,9 @@ const PATHS: { title: string; price: string; priceNote: string; text: string; ct
   },
   {
     title: "Advertise with us",
-    price: "Quoted",
-    priceNote: "per market and category",
-    text: "Clearly labelled placements, sold separately from editorial research and never mixed into a ranked list.",
+    price: "$199",
+    priceNote: "/month per city and trade",
+    text: "Top 10 featured placements and sponsored guest posts. Each one is labelled and sold apart from the rankings.",
     cta: "View advertising options",
     href: routes.advertise(),
     icon: "megaphone",
@@ -129,10 +129,31 @@ const CLAIM_STEPS: { n: string; title: string; text: string; icon: IconName }[] 
   { n: "04", title: "Manage your details", text: "Factual fields update immediately. Anything editorial goes to review first.", icon: "pencil" },
 ];
 
-const PRODUCTS_SHORT: { title: string; text: string; icon: IconName }[] = [
-  { title: "Featured partner", text: "Labelled visibility in eligible areas of the site.", icon: "megaphone" },
-  { title: "Top 10 featured placement", text: "A labelled slot beneath the editorial list for a city and trade.", icon: "award" },
-  { title: "Category sponsorship", text: "A labelled presence across a trade you actually serve.", icon: "layers" },
+const PRODUCTS_SHORT: { title: string; price: string; text: string; cta: string; href: string; icon: IconName }[] = [
+  {
+    title: "Top 10 featured placement",
+    price: "$199 a month per city and trade",
+    text: "A labelled slot below the ranked ten for one city and trade. The ten positions stay editorial.",
+    cta: "Buy a Top 10 placement",
+    href: routes.top10(),
+    icon: "award",
+  },
+  {
+    title: "Sponsored guest post",
+    price: "$99 once per post",
+    text: "An article written around your topic, with two links marked rel=\"sponsored\". An editor approves it before it goes live.",
+    cta: "Order a guest post",
+    href: routes.guestPost(),
+    icon: "pencil",
+  },
+  {
+    title: "Featured partner and category placement",
+    price: "Priced per market",
+    text: "Labelled placements beside the editorial lists, in the markets you actually serve.",
+    cta: "View advertising options",
+    href: routes.advertise(),
+    icon: "layers",
+  },
 ];
 
 export default async function ForBusinessesPage() {
@@ -177,9 +198,8 @@ export default async function ForBusinessesPage() {
                 {heroAccentTail("Homeowners are already comparing you. Get the facts right.", 2)}
               </h1>
               <p data-in="3" style={{ marginTop: "18px", fontSize: "18px", lineHeight: "1.75", color: "var(--text-secondary)", textWrap: "pretty" }}>
-                Claim and update your business profile, submit a company that is missing, or explore
-                clearly labelled advertising. Editorial rankings stay independent of every commercial
-                option here.
+                Claim and update your business profile, submit a company we do not cover yet, or buy
+                labelled advertising. Editorial rankings stay independent of every commercial option.
               </p>
             </div>
 
@@ -461,15 +481,21 @@ export default async function ForBusinessesPage() {
                 {accentTail("Advertising opportunities", 1)}
               </h2>
               <ArrowLink href={routes.advertise()} style={{ fontSize: "15px", fontWeight: "600" }}>
-                View advertising options
+                All advertising options
               </ArrowLink>
             </div>
             <ul data-stagger="" data-ag="auto" style={autoGrid(250, "16px")}>
               {PRODUCTS_SHORT.map((product) => (
-                <li key={product.title} data-card="" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px" }}>
+                <li key={product.title} data-card="" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", borderRadius: "22px", padding: "22px", display: "flex", flexDirection: "column" }}>
                   <Tile icon={product.icon} size={42} iconSize={20} tone="amber" style={{ marginBottom: "12px" }} />
                   <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "6px" }}>{product.title}</h3>
-                  <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>{product.text}</p>
+                  <p style={{ fontSize: "15px", fontWeight: "700", color: "var(--blue-900)", marginBottom: "10px" }}>{product.price}</p>
+                  <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)", marginBottom: "16px" }}>{product.text}</p>
+                  <div style={{ marginTop: "auto" }}>
+                    <ArrowLink href={product.href} style={{ fontSize: "15px", fontWeight: "600" }}>
+                      {product.cta}
+                    </ArrowLink>
+                  </div>
                 </li>
               ))}
             </ul>
