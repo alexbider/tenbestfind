@@ -522,40 +522,39 @@ export function rankingCardTitle(ranking: {
  * promise about the page and a broken one costs more than a vague one.
  */
 export function companyCopy(
-  business: { name: string },
+  business: { name: string; googleRating?: number | null; googleReviewCount?: number | null },
   city: { name: string } | null,
   region: { code: string; name: string } | null,
-  category: { serviceName: string },
+  category: { serviceName: string; singular?: string | null },
   facts: { hasReviews: boolean; thin: boolean },
 ): PageCopy {
   const service = category.serviceName;
   const place = city && region ? placeLabel(city, region) : null;
   const at = place ? ` in ${place}` : "";
 
-  // A company name can be any length, so the suffix shortens before the place
-  // does, and the place before the name. The name is the thing somebody
-  // searched for and is the last part to go.
-  const title = facts.hasReviews
-    ? fittedTitle(
-        `${business.name}${at} | Reviews & Services`,
-        `${business.name}${at} | Reviews`,
-        `${business.name} | Reviews & Services`,
-        `${business.name}${at}`,
-        business.name,
-      )
-    : fittedTitle(
-        `${business.name}${at} | Services & Information`,
-        `${business.name}${at} | Services`,
-        `${business.name} | Services & Information`,
-        `${business.name}${at}`,
-        business.name,
-      );
+  // "[Company] in [City], [ST] | TenBestFind". The brand goes first when the
+  // line runs long, then the place; the name is what somebody searched for.
+  const title = fittedTitle(`${business.name}${at} | TenBestFind`, `${business.name}${at}`, business.name);
 
-  const description = facts.thin
-    ? `View available information for ${business.name}${at}, including services, location, contact details and TenBestFind research status.`
-    : facts.hasReviews
-      ? `Research ${business.name}${at}. See ${service.toLowerCase()} services, review data, service areas, company details and its TenBestFind profile.`
-      : `Learn about ${business.name}${at}. See ${service.toLowerCase()} services, service areas, contact details and TenBestFind company information.`;
+  // The name first, then the trade and the place, then the rating when we hold
+  // one. Nothing here that the profile does not show.
+  const trade = (category.singular ?? service)
+    .split(" ")
+    .map((word) => (/^[A-Z]{2,}$/.test(word) ? word : word.toLowerCase()))
+    .join(" ");
+  const rated =
+    business.googleRating && business.googleReviewCount
+      ? ` Rated ${business.googleRating.toFixed(1)} from ${business.googleReviewCount.toLocaleString("en-US")} Google reviews.`
+      : "";
+  const base = `${business.name} is ${/^[aeiou]/i.test(trade) ? "an" : "a"} ${trade}${at}.${rated}`;
+  const tails = [
+    " See services, service area, contact details and what TenBestFind checked.",
+    " See services, service area and what we checked.",
+    " See services and what we checked.",
+    "",
+  ];
+  const description = tails.map((tail) => base + tail).find((text) => text.length <= 160) ?? base;
+  void facts;
 
   return {
     title,
