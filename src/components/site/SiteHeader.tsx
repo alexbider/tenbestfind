@@ -210,7 +210,7 @@ export async function SiteHeader({ active = "none" }: { active?: NavKey }) {
             <strong style={{ color: "#fff", fontWeight: "600" }}>
               {nav.cityCount} {nav.cityCount === 1 ? "city" : "cities"}
             </strong>{" "}
-            across the United States and Canada. Re-checked every 90 days.
+            across the United States and Canada, each with a last-reviewed date.
           </p>
           <ul style={{ display: "flex", alignItems: "center", gap: "22px" }}>
             <li>
