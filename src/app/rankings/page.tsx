@@ -480,12 +480,12 @@ export default async function RankingsIndexPage() {
           />
           <div style={{ position: "relative", maxWidth: "900px", margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
             <p style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold-ink)", marginBottom: "14px" }}>
-              Forty tabs or ten names
+              One city, one trade
             </p>
             <h2 id="final-h2" style={{ fontSize: "clamp(28px, 3.6vw, 44px)", lineHeight: "1.08", color: "#fff", textWrap: "balance" }}>
-              Tell us the job and the city. We will hand you{" "}
+              Tell us the job and the city. We will show you{" "}
               <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>
-                the ten worth calling.
+                the companies worth calling.
               </span>
             </h2>
             <div style={{ marginTop: "28px", display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>

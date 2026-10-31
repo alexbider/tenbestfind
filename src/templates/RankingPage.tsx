@@ -529,6 +529,8 @@ export async function RankingPage({
               mainEntity: { "@id": listId(path4) },
               author: ranking.author ? personRef(ranking.author.slug) : null,
               reviewedBy: ranking.reviewer ? personRef(ranking.reviewer.slug) : null,
+              // Also an Article, so the byline and review date read as authorship.
+              extra: { "@type": ["CollectionPage", "Article"], headline: copy.h1 },
             }),
             rankingListEntity({
               path: path4,

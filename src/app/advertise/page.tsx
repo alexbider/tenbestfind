@@ -261,7 +261,7 @@ export default async function AdvertisePage() {
                 </div>
                 <div>
                   <h3 style={{ fontSize: "17px", fontWeight: "700", marginBottom: "4px" }}>Top ten featured placement</h3>
-                  <p style={{ fontSize: "14.5px", lineHeight: "1.6", color: "var(--text-secondary)" }}>Sits below the ten ranked positions, separated by a rule and carrying its own disclosure.</p>
+                  <p style={{ fontSize: "14.5px", lineHeight: "1.6", color: "var(--text-secondary)" }}>Sits below the ranked positions, separated by a rule and carrying its own disclosure.</p>
                 </div>
               </li>
               <li style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

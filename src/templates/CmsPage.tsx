@@ -19,6 +19,7 @@ import {
 import { accentTail } from "@/components/ui/Accent";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/ui/primitives";
+import { breadcrumbSchema } from "@/lib/breadcrumbs";
 import { fullDate } from "@/lib/format";
 import { parseJson } from "@/lib/json";
 import { db } from "@/lib/db";
@@ -105,6 +106,15 @@ export async function CmsPage({ slug }: { slug: string }) {
           url: absoluteUrl(routes.page(page.slug)),
           dateModified: page.updatedAt.toISOString(),
         }}
+      />
+      <JsonLd
+        data={breadcrumbSchema(
+          [
+            { label: "Home", href: "/" },
+            { label: page.title, href: routes.page(page.slug) },
+          ],
+          absoluteUrl,
+        )}
       />
       <FaqJsonLd faqs={faqs} />
 

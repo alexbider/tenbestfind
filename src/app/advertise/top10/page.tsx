@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = withSocial({
   title: "Top 10 featured placement",
   description:
-    "A labelled Featured Partner placement beside one city and trade ranking for $199 a month. It never changes the ten ranked positions.",
+    "A labelled Featured Partner placement beside one city and trade ranking for $199 a month. It never changes the ranked positions.",
   alternates: { canonical: "/advertise/top10/" },
 });
 
@@ -49,7 +49,7 @@ export default async function Top10Page() {
               A labelled slot beside <span style={{ fontFamily: "var(--serif)", fontStyle: "italic", fontWeight: "400" }}>one</span> ranking
             </h1>
             <p style={{ marginTop: "18px", fontSize: "18px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
-              Choose the city and trade. Payment never changes the ten ranked positions on that page.
+              Choose the city and trade. Payment never changes the ranked positions on that page.
             </p>
           </div>
         </CentreHero>

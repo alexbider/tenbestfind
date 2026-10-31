@@ -352,7 +352,7 @@ export function ResultsFilter({
               fontWeight: "700",
             }}
           >
-            {rankingLabel ?? "See the ten best"}
+            {rankingLabel ?? "See the best"}
           </a>
         </div>
       ) : null}

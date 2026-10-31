@@ -25,7 +25,7 @@ export function SponsoredDisclosure() {
         This is a paid placement. The company bought a labelled Featured Partner slot on this page.
       </p>
       <p>
-        Sponsorship does not determine TenBestFind editorial rankings. The ten ranked positions are
+        Sponsorship does not determine TenBestFind editorial rankings. Ranked positions are
         set by the editorial team against published criteria, and sponsors do not see a ranking
         before it publishes or influence how criteria are applied.
       </p>

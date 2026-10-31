@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Instrument_Serif } from "next/font/google";
 import { JsonLd } from "@/components/ui/primitives";
 import { globalMetadata, publisherSchema } from "@/lib/seo";
 import "@/styles/globals.css";
+
+// Self-hosted at build time, so no stylesheet from Google blocks the first paint.
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], display: "swap", variable: "--font-inter" });
+const instrumentSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], display: "swap", variable: "--font-instrument-serif" });
 
 // Read from the database rather than hard-coded, so the Global SEO screen in
 // the admin controls the site title, the social defaults, the verification
@@ -24,17 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const schema = await publisherSchema();
 
   return (
-    <html lang="en">
-      <head>
-        {/* Inter for everything, Instrument Serif for the italic accents in
-            headings. Loaded from the Google Fonts CDN. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap"
-        />
-      </head>
+    <html lang="en" className={`${inter.variable} ${instrumentSerif.variable}`}>
       <body>
         {/* One graph, one @context, so the two entities are related to each
             other rather than sitting beside each other as two islands. */}

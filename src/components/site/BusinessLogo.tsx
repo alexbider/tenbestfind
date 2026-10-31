@@ -63,6 +63,7 @@ export function BusinessLogo({
       <img
         src={url}
         alt={`${name} logo`}
+        title={`${name} logo`}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"

@@ -138,7 +138,7 @@ export async function SiteFooter() {
               }}
             >
               <span aria-hidden="true" style={{ display: "inline-block", width: "28px", height: "2px", background: "var(--gold-ink)" }} />
-              Forty Tabs or Ten Names
+              One City, One Trade
             </p>
             {/* A paragraph, not a heading: the footer is on every page, and a heading
                 here put the same sentence into every page's outline. */}
@@ -152,7 +152,7 @@ export async function SiteFooter() {
                 textWrap: "balance",
               }}
             >
-              Tell Us the Job and the City. We Will Hand You the Ten Worth Calling.
+              Tell Us the Job and the City. We Will Show You the Companies Worth Calling.
             </p>
           </div>
           <form
@@ -245,8 +245,8 @@ export async function SiteFooter() {
                 textWrap: "pretty",
               }}
             >
-              A small editorial team that researches local service companies one city at a time, then publishes ten
-              names and the reasons behind each one.
+              A small editorial team that researches local service companies one city at a time, then publishes up to
+              ten names and the reasons behind each one.
             </p>
             <p
               style={{
@@ -368,7 +368,7 @@ export async function SiteFooter() {
             >
               <path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z" />
             </svg>
-            The ten ranked positions are never for sale. Featured placements are always labelled.
+            Ranked positions are never for sale. Sponsored placements are always labelled.
           </p>
         </div>
       </div>

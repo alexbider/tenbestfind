@@ -312,6 +312,7 @@ export function Media({
           <img
             src={src}
             alt={alt}
+            title={alt || undefined}
             width={info.width}
             height={info.height}
             sizes={sizes}
@@ -331,6 +332,7 @@ export function Media({
       <img
         src={src}
         alt={alt}
+        title={alt || undefined}
         loading={priority ? "eager" : "lazy"}
         decoding={priority ? "sync" : "async"}
         style={style}
