@@ -146,7 +146,7 @@ export function homeServicesCopy(): PageCopy {
     title: brand("Best Home Service Companies Near You"),
     h1: "Find the Best Home Service Companies Near You",
     description:
-      "Compare the best plumbers, HVAC, roofing and electrical companies in US and Canadian cities, checked by named editors and re-checked every 90 days.",
+      "Compare the best plumbers, HVAC, roofing and electrical companies in US and Canadian cities, checked by named editors, with a last-reviewed date on every list.",
     indexable: true,
   };
 }
@@ -452,7 +452,7 @@ export function rankingCopy(
   category: Trade,
   city: { name: string },
   region: { code: string },
-  counts: { publishedEntries: number },
+  counts: { publishedEntries: number; ratingFloor?: number | null },
 ): PageCopy {
   const service = tradePlural(category);
   const place = placeLabel(city, region);
@@ -469,9 +469,11 @@ export function rankingCopy(
 
   const h1 = complete ? `${TOP_TEN} Best ${service} in ${place}` : `Best ${service} in ${place}`;
 
-  const description = complete
-    ? `Compare the ${TOP_TEN} best ${service.toLowerCase()} in ${place}, researched by TenBestFind. See reviews, services, company profiles and how each business was evaluated.`
-    : `Compare researched ${service.toLowerCase()} in ${place}. See local business profiles, reviews, services and TenBestFind evaluation information.`;
+  // Used only when an editor has not typed a description: the focus phrase
+  // first, then the count and the lowest rating on the list.
+  const n = counts.publishedEntries;
+  const floor = counts.ratingFloor ? ` rated ${counts.ratingFloor.toFixed(1)} stars or higher on Google` : "";
+  const description = `Best ${service.toLowerCase()} in ${place}: ${n} ${n === 1 ? "company" : "companies"}${floor}, each checked against published criteria and dated by a named editor.`;
 
   return {
     title,

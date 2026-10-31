@@ -453,7 +453,11 @@ export async function buildMetadata(resolved: Resolved, segments: string[]): Pro
       const publishedEntries = await db.rankingEntry.count({
         where: { rankingId: ranking.id, business: { status: "PUBLISHED" } },
       });
-      const copy = rankingCopy(ranking, category, city, region, { publishedEntries });
+      const floor = await db.business.aggregate({
+        where: { status: "PUBLISHED", entries: { some: { rankingId: ranking.id } } },
+        _min: { googleRating: true },
+      });
+      const copy = rankingCopy(ranking, category, city, region, { publishedEntries, ratingFloor: floor._min?.googleRating ?? null });
       return fromCopy(copy, "ranking", ranking.id, {
         path,
         image: city.heroImage,

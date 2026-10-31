@@ -184,6 +184,18 @@ export async function RankingPage({
   });
   const crumbs = rankingCrumbs(country, region, city, category);
 
+  // The heading repeats the title the editors set, so the tab and the page say
+  // the same thing. A title whose number disagrees with the list is skipped.
+  const typed = await db.seoMeta.findFirst({ where: { entityType: "ranking", entityId: ranking.id }, select: { title: true } });
+  const countAgrees = (text: string) => {
+    const match = /^\s*(\d+)\s+best\b/i.exec(text);
+    return !match || Number(match[1]) === ranking.entries.length;
+  };
+  const heading =
+    [typed?.title?.replace(/\s*\|\s*TenBestFind\s*$/i, "").trim(), ranking.title.trim()].find(
+      (text): text is string => Boolean(text) && countAgrees(text as string),
+    ) ?? copy.h1;
+
   const [placement, relatedRankings, guides, nearbyRankings] = await Promise.all([
     db.sponsoredPlacement.findFirst({
       where: { status: "ACTIVE", cityId: city.id, categoryId: category.id },
@@ -207,7 +219,7 @@ export async function RankingPage({
         ],
       },
       orderBy: { publishedAt: "desc" },
-      take: 4,
+      take: 3,
       include: { author: { select: { name: true } } },
     }),
     db.ranking.findMany({
@@ -279,6 +291,32 @@ export async function RankingPage({
   const reviewer = ranking.reviewer;
   const author = ranking.author;
   const podium = total >= 3 ? ranking.entries.slice(0, 3) : [];
+
+  // The answer first: who is ranked, how many, the bar they cleared, and when it
+  // was last checked. Built from the list's own method note, never invented.
+  const note = ranking.methodologyNote ?? "";
+  // The first sentence that states the bar, in any of the ways the notes phrase it.
+  // A sentence ends at a full stop followed by a space, so "4.5" does not cut it short.
+  const criteriaLine = /(?:^|\.\s)((?:Each company (?:had to|needed)|A company (?:had to|needed)|To be (?:listed|included),? a|To qualify,? a company)[\s\S]*?\.)(?=\s|$)/.exec(note)?.[1];
+  const googleOrder = /Google['’]s order/.test(note);
+  const reviewedDay = reviewedOn
+    ? new Date(reviewedOn).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+    : null;
+  const openingAnswer = [
+    `TenBestFind ranks ${total} ${total === 1 ? words.pro : words.pros} in ${cityLabel}${
+      googleOrder ? ", listed in Google's order among the companies that passed our checks" : ""
+    }.`,
+    criteriaLine && criteriaLine.split(/\s+/).length <= 34
+      ? criteriaLine
+      : `Each company was checked against the criteria set out under How we chose.${
+          total < 10
+            ? ` Lists name up to ten companies, and this one stops at ${total} because only ${total} met them.`
+            : " Each entry below says why the company was picked and what to weigh before hiring."
+        }`,
+    reviewedDay ? `${reviewer ? `${reviewer.name} last reviewed the list` : "The list was last reviewed"} on ${reviewedDay}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const hasSide = podium.length > 0 || Boolean(placement);
 
   const coveragePlaces = [
@@ -521,7 +559,7 @@ export async function RankingPage({
           data={graph(
             pageEntity({
               path: path4,
-              name: copy.h1,
+              name: heading,
               description: copy.description,
               type: "CollectionPage",
               datePublished: ranking.publishedAt,
@@ -532,7 +570,7 @@ export async function RankingPage({
             }),
             rankingListEntity({
               path: path4,
-              name: copy.h1,
+              name: heading,
               description: copy.description,
               datePublished: ranking.publishedAt,
               dateModified: ranking.lastReviewedAt ?? ranking.updatedAt,
@@ -609,8 +647,11 @@ export async function RankingPage({
                     textWrap: "balance",
                   }}
                 >
-                  <LeadAccent text={copy.h1} />
+                  <LeadAccent text={heading} />
                 </h1>
+                <p data-in="3" data-answer="" style={{ marginTop: "18px", fontSize: "17px", lineHeight: "1.65", color: "var(--ink)", maxWidth: "640px", textWrap: "pretty" }}>
+                  {openingAnswer}
+                </p>
                 {ranking.summary ? (
                   <p data-in="3" style={{ marginTop: "18px", fontSize: "17px", lineHeight: "1.65", color: "var(--text-secondary)", maxWidth: "640px", textWrap: "pretty" }}>
                     {ranking.summary}
