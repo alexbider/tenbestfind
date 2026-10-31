@@ -190,9 +190,10 @@ export async function RankingPage({
       include: { business: { include: { category: true } } },
     }),
     db.ranking.findMany({
+      // Every other trade ranked in this city, so each list links to all of them.
       where: { status: "PUBLISHED", cityId: city.id, NOT: { id: ranking.id } },
       include: { category: true },
-      take: 6,
+      orderBy: { category: { sortOrder: "asc" } },
     }),
     // A guide about one place only belongs on that place's pages. Matching on
     // trade alone put the Chicago plumber guide on every plumber ranking.
