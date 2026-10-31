@@ -112,6 +112,8 @@ export async function seoFor(
      * was the commonest wrong title on the site.
      */
     rejectTypedTitle?: (title: string) => boolean;
+    /** The same, for a typed description. */
+    rejectTypedDescription?: (description: string) => boolean;
   },
 ): Promise<Metadata> {
   const [record, settings] = await Promise.all([
@@ -123,7 +125,11 @@ export async function seoFor(
   const sep = settings.text("seo.titleSeparator") || "|";
   const template = settings.text(`seo.template.${entityType}`) || "%title% %sep% %sitename%";
 
-  const description = record?.description?.trim() || fallback.description || undefined;
+  const typedDescription = record?.description?.trim();
+  const description =
+    (typedDescription && !fallback.rejectTypedDescription?.(typedDescription) ? typedDescription : "") ||
+    fallback.description ||
+    undefined;
 
   // A title written on the page keeps its words, and still gets the brand the
   // template would have given it; otherwise the global template for this

@@ -14,6 +14,7 @@ import { JsonLd, Media } from "@/components/ui/primitives";
 import { businessEntity } from "@/lib/schema";
 import { businessSchemaInput } from "@/lib/schema-entities";
 import { fullDate, monthYear, priceRange } from "@/lib/format";
+import { licenceWord } from "@/lib/trade-words";
 import { parseJson, parseList, parseRows, type HoursRow } from "@/lib/json";
 import { db } from "@/lib/db";
 import { redirectIfKnown } from "@/lib/redirects";
@@ -317,6 +318,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: copy.title,
     titleIsFinal: true,
     description: copy.description,
+    // An override is kept only when it leads with the company name the way the
+    // built ones do: "[Company] in [City], [ST]" and a description that opens
+    // with the name.
+    rejectTypedTitle: (typed) => !typed.startsWith(`${business.name} in `),
+    rejectTypedDescription: (typed) => !typed.startsWith(business.name),
     path: routes.business(business.slug),
     image: business.logoUrl,
     indexable: copy.indexable && gate.ok,
@@ -521,7 +527,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         items: [
           placeLabel ? { label: "Headquarters", value: placeLabel } : null,
           coverage ? { label: "Service area", value: coverage } : null,
-          { label: "Emergency service", value: business.emergency ? "Yes, 24/7" : "Business hours only" },
+          { label: "Emergency service", value: business.emergency ? "Yes, 24/7" : "Not advertised" },
         ].filter(Boolean) as { label: string; value: string }[],
       },
       {
@@ -546,6 +552,62 @@ export default async function BusinessProfilePage({ params }: Props) {
     ];
     factGroups.push(...derived.filter((group) => group.items.length > 0));
   }
+
+  // The licence, always: the number, who issued it and when we checked, or a
+  // plain "Not published" when the company has not given one.
+  const licence =
+    business.credentials.find((row) => /licen[cs]e|registration|permit/i.test(row.label)) ?? business.credentials[0] ?? null;
+  const licenceNoun = licenceWord(country?.code);
+  const licenceValue = !licence
+    ? "Not published"
+    : licence.status === "VERIFIED"
+      ? [licence.identifier, licence.authority].filter(Boolean).join(" · ") +
+        (licence.checkedAt ? `, checked ${fullDate(licence.checkedAt)}` : "")
+      : licence.status === "EXPIRED"
+        ? `${licence.identifier ?? licence.label}, expired`
+        : `${licence.identifier ?? licence.label} (reported by the company, not verified)`;
+  if (!factGroups.some((group) => group.items.some((item) => /licen[cs]e/i.test(item.label)))) factGroups.push({
+    title: "Credentials",
+    iconKey: "shield",
+    items: [{ label: licence ? licence.label : `${licenceNoun.replace(/^./, (c) => c.toUpperCase())} number`, value: licenceValue }],
+  });
+
+  // Two or three sentences a reader can act on: what the company does, where,
+  // and the first thing to check. Built from the record and nothing else.
+  const openingSummary = (() => {
+    const trade = business.category.singular
+      .split(" ")
+      .map((word) => (/^[A-Z]{2,}$/.test(word) ? word : word.toLowerCase()))
+      .join(" ");
+    const elsewhere = business.areas.map((area) => area.city.name).filter((name) => name !== city?.name);
+    const first = `${business.name} is ${/^[aeiou]/i.test(trade) ? "an" : "a"} ${trade}${placeLabel ? ` based in ${placeLabel}` : ""}${
+      elsewhere.length > 0 ? `, also working in ${elsewhere.slice(0, 3).join(", ")}` : ""
+    }.`;
+    const work = business.services.map((row) => row.subservice.name.toLowerCase()).slice(0, 4);
+    const second =
+      work.length > 1
+        ? `Its listed services include ${work.slice(0, -1).join(", ")} and ${work[work.length - 1]}.`
+        : work.length === 1
+          ? `Its listed service is ${work[0]}.`
+          : "";
+    const third = !licence
+      ? `It has not published a ${licenceNoun} number, so ask for one and check it before any work starts.`
+      : licence.status === "VERIFIED"
+        ? `Its ${licence.label} was checked${licence.authority ? ` with ${licence.authority}` : ""}${
+            licence.checkedAt ? ` on ${fullDate(licence.checkedAt)}` : ""
+          }, so confirm it is still active before work starts.`
+        : `Its ${licence.label} is reported by the company and not yet verified, so check it${
+            licence.authority ? ` with ${licence.authority}` : ""
+          } before work starts.`;
+    return [first, second, third].filter(Boolean).join(" ");
+  })();
+
+  // What the profile could not confirm, said plainly rather than left out.
+  const unverified = [
+    !licence ? `${licenceNoun} (none published)` : licence.status !== "VERIFIED" ? `${licence.label} (reported only)` : null,
+    business.credentials.some((row) => /insur/i.test(row.label)) ? null : "insurance",
+    business.yearFounded ? null : "founding year",
+  ].filter(Boolean) as string[];
 
   // The three numbers on the dark card. Each is dropped rather than shown as a
   // dash when we do not hold it.
@@ -1004,9 +1066,12 @@ export default async function BusinessProfilePage({ params }: Props) {
                                 .slice(0, 2)
                                 .map((entry) => entry.name)
                                 .join(", ")} and surrounding areas.`
-                            : " and surrounding areas."}
+                            : "."}
                         </>
                       ) : null}
+                    </p>
+                    <p data-in="3" data-answer="" style={{ marginTop: "10px", fontSize: "16px", lineHeight: "1.6", color: "var(--ink)", maxWidth: "640px", textWrap: "pretty" }}>
+                      {openingSummary}
                     </p>
                   </div>
 
@@ -4373,6 +4438,16 @@ export default async function BusinessProfilePage({ params }: Props) {
                         .join(", ") || "Company website"}
                     </dd>
                   </div>
+                  {unverified.length > 0 ? (
+                    <div>
+                      <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
+                        Could not verify
+                      </dt>
+                      <dd style={{ margin: "0", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
+                        {unverified.join(", ").replace(/^./, (c) => c.toUpperCase())}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "2px" }}>
                       Sponsorship status
