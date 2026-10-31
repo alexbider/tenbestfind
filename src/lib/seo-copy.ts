@@ -397,7 +397,7 @@ export function cityCopy(
       `Home Services in ${place}`,
     ),
     h1: `Best Home Service Companies in ${place}`,
-    description: `Find researched home service companies in ${place}. Explore local rankings, reviews, business profiles and service guides from TenBestFind.`,
+    description: `Best home service companies in ${place}: researched lists by trade, each with its criteria, a named editor and a last-reviewed date.`,
     indexable: counts.publishedRankings > 0,
     reason: counts.publishedRankings > 0 ? undefined : "no published ranking for this city yet",
   };
