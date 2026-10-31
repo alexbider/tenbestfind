@@ -80,6 +80,9 @@ export function companyCrumbs(
   city: CityRef,
   category: CategoryRef,
   business: { name: string },
+  // Only a published ranking answers 200. Without one the trade crumb is plain
+  // text, the same rule the area chips on the profile follow.
+  hasRanking = true,
 ): Crumb[] {
   return [
     home,
@@ -88,7 +91,7 @@ export function companyCrumbs(
     { label: city.name, href: routes.city(country.code, region.slug, city.slug) },
     {
       label: category.name,
-      href: routes.ranking(country.code, region.slug, city.slug, category.slug),
+      href: hasRanking ? routes.ranking(country.code, region.slug, city.slug, category.slug) : undefined,
     },
     { label: business.name },
   ];
