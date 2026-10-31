@@ -151,7 +151,7 @@ html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
   [data-divider] { display: none !important; }
   [data-ten-outline] { width: 170px !important; height: 120px !important; right: -60px !important; top: -10px !important; opacity: 0.7; }
   [data-blob] { width: 380px !important; height: 380px !important; }
-  [data-toc] { top: 64px !important; }
+  [data-toc] { top: 0 !important; }
   [data-rail-col], [data-aside] { position: static !important; grid-column: auto !important; }
   .site-page a, .site-page button, .site-page summary { touch-action: manipulation; }
   [data-card]:active, [data-rowlink]:active { transform: scale(0.98) !important; }
