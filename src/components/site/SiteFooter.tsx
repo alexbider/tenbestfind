@@ -196,7 +196,7 @@ export async function SiteFooter() {
                 whiteSpace: "nowrap",
               }}
             >
-              Show Me the Ten
+              Show Me the List
             </button>
           </form>
         </div>
