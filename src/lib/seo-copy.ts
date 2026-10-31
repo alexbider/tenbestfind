@@ -133,10 +133,10 @@ export function placeLabel(city: { name: string }, region: { code: string }): st
 export function homeCopy(): PageCopy {
   return {
     // Most lists hold fewer than ten companies, so the home page never promises ten.
-    title: brand("The Best Home Service Companies by City", "Best Home Service Companies by City"),
-    h1: "Find the Best Home Service Companies by City",
+    title: brand("Best Home Service Companies by City"),
+    h1: "Best Home Service Companies by City",
     description:
-      "Best home service companies by city: researched lists of plumbers, roofers, HVAC companies and electricians in the US and Canada, with no paid rankings.",
+      "Best home service companies by city: plumbers, HVAC companies, roofers, electricians and locksmiths in US and Canadian cities, ranked by named editors.",
     indexable: true,
   };
 }

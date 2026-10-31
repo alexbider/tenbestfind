@@ -63,7 +63,7 @@
   --header-h: 74px;
   /* The October 2026 design sets one or two words of most headings in a
      light italic serif. */
-  --serif: "Instrument Serif", Georgia, serif;
+  --serif: var(--font-instrument-serif, "Instrument Serif"), Georgia, serif;
   --spring: cubic-bezier(.2, .8, .2, 1);
 }
 

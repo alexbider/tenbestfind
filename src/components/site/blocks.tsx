@@ -96,6 +96,7 @@ export function GuideFigure({
           <img
             src={image}
             alt={alt}
+            title={alt || undefined}
             width={size?.width}
             height={size?.height}
             loading="lazy"
@@ -886,7 +887,7 @@ export function GuideBody({ blocks, images = {} }: { blocks: GuideBlock[]; image
 
 export function FinalSearch({
   title = "Start with the shortlist",
-  lead = "Tell us the job and where you are. We will point you at the ten worth calling.",
+  lead = "Tell us the job and where you are. We will point you at the companies worth calling.",
   lockedLocation,
   lockedService,
 }: {

@@ -112,7 +112,7 @@ const STEPS = [
     n: "03",
     title: "Publish the criteria with the list",
     body:
-      "Ten names go up with the checks behind them, the editor who wrote it, and the date it was last looked at. Anything we could not confirm is left off.",
+      "Up to ten names go up with the checks behind them, the editor who wrote the list, and the date it was last reviewed.",
   },
 ];
 

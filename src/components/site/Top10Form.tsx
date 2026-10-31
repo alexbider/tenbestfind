@@ -43,7 +43,7 @@ export function Top10Form({
       <div style={{ padding: "26px 28px 0" }}>
         <h3 style={{ fontSize: "24px", fontWeight: "800", letterSpacing: "-0.03em", marginBottom: "6px" }}>Buy a Top 10 featured placement</h3>
         <p style={{ fontSize: "15px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
-          $199 a month for one city and trade. The Featured Partner box sits beside that ranking, labelled Sponsored. It never changes the ten ranked positions.
+          $199 a month for one city and trade. The Featured Partner box sits beside that ranking, labelled Sponsored. It never changes the ranked positions.
         </p>
       </div>
       <form action={action} data-top10="" style={{ padding: "24px 28px 28px", display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: "18px" }}>

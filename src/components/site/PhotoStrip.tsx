@@ -25,6 +25,7 @@ export function PhotoStrip({ photos, name }: { photos: Photo[]; name: string }) 
           <img
             src={photo.url}
             alt={photo.alt?.trim() || `Work by ${name}`}
+            title={photo.alt?.trim() || `Work by ${name}`}
             loading={index < 2 ? "eager" : "lazy"}
             decoding="async"
             referrerPolicy="no-referrer"

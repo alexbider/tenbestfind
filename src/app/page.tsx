@@ -5,7 +5,6 @@ import type { CSSProperties, ReactNode } from "react";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { CountUp, InView } from "@/components/site/InView";
 import { CityMap, type MapCountry } from "@/components/site/home/CityMap";
-import { HowSteps } from "@/components/site/home/HowSteps";
 import { TradeGrid } from "@/components/site/home/TradeGrid";
 import { Accent, accent, accentTail } from "@/components/ui/Accent";
 import { JsonLd, Media } from "@/components/ui/primitives";
@@ -185,23 +184,55 @@ function placeLine(ranking: {
   }`;
 }
 
-const STEPS = [
+/** The approved home page questions. The visible list and the FAQPage schema both read this. */
+const HOME_FAQS = [
   {
-    n: "01",
-    title: "Research",
-    body: "We list every company that genuinely works the area, then pull license records, insurance status, years in business and the public complaint history for each one.",
+    question: "How are companies chosen for a list?",
+    answer:
+      "Companies are chosen against published criteria. Editors check licence numbers against the issuing register where one exists, read recent reviews, look at how long a company has been in business, and check every list before it is published.",
   },
   {
-    n: "02",
-    title: "Evaluate",
-    body: "Companies are compared on what decides a job: who is licensed for that exact work, who answers after hours, who puts warranty terms in writing before the deposit.",
+    question: "How many companies are on each list?",
+    answer: "Up to ten. A list shows fewer when fewer companies meet its criteria, and the title states the number.",
   },
   {
-    n: "03",
-    title: "Publish and Re-check",
-    body: "Up to ten names go live with the criteria, the sources and the review date. If we could not verify something we say so. Every list is re-checked inside 90 days.",
+    question: "Do companies pay to be listed or to move up?",
+    answer:
+      "Some companies buy a sponsored placement, and we label it. A sponsored placement never changes where a company ranks.",
+  },
+  {
+    question: "How current are the rankings?",
+    answer: "Each ranking shows the date it was last reviewed. Check that date before you choose a company.",
+  },
+  {
+    question: "Who writes the rankings?",
+    answer: "Named editors write and review each ranking. Their names appear on the list they worked on.",
+  },
+  {
+    question: "How do I report a mistake or ask for a correction?",
+    answer:
+      "Email hello@tenbestfind.com. Our corrections page explains how we check a claim and update a list.",
   },
 ];
+
+/** Cities named on the home page. Add new cities here as they publish. */
+const HOME_CITIES = [
+  { name: "Austin, TX", href: "/us/tx/austin/" },
+  { name: "Chicago, IL", href: "/us/il/chicago/" },
+  { name: "Dallas, TX", href: "/us/tx/dallas/" },
+  { name: "Houston, TX", href: "/us/tx/houston/" },
+  { name: "Los Angeles, CA", href: "/us/ca/los-angeles/" },
+  { name: "Montreal, QC", href: "/ca/qc/montreal/" },
+  { name: "New York, NY", href: "/us/ny/new-york/" },
+  { name: "San Diego, CA", href: "/us/ca/san-diego/" },
+  { name: "Toronto, ON", href: "/ca/on/toronto/" },
+];
+
+/** "October 31, 2026". */
+function formatDay(date: Date): string {
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
 
 const EEAT = [
   {
@@ -228,7 +259,7 @@ const EEAT = [
   {
     icon: "history" as IconName,
     title: "Fixing Mistakes",
-    text: "Lists are re-checked on a schedule, anyone can flag an error, and changes are noted on the page with a date.",
+    text: "Anyone can report an error. The corrections page explains how we check a claim and update a list.",
     cta: "Corrections policy",
     href: routes.corrections(),
   },
@@ -300,6 +331,9 @@ export default async function HomePage() {
 
   // The hero card takes the freshest list, so the cards that follow are the
   // next ones down rather than the same page twice.
+  // The most recent review date of any published list.
+  const lastUpdated = rankings[0]?.lastReviewedAt ?? rankings[0]?.publishedAt ?? null;
+
   const heroPath = hero ? rankingUrl(hero) : routes.rankingsIndex();
   const rest = rankings.filter((entry) => entry.id !== hero?.id);
   const featured = rest.slice(0, 4);
@@ -362,12 +396,12 @@ export default async function HomePage() {
 
   return (
     <SiteChrome active="home">
-      {faqs.length > 0 ? (
+      {HOME_FAQS.length > 0 ? (
         <JsonLd
           data={{
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
+            mainEntity: HOME_FAQS.map((faq) => ({
               "@type": "Question",
               name: faq.question,
               acceptedAnswer: { "@type": "Answer", text: faq.answer },
@@ -503,8 +537,7 @@ export default async function HomePage() {
                     maxWidth: "760px",
                   }}
                 >
-                  Find the{" "}
-                  <span
+                    <span
                     className="serif-accent"
                     style={{
                       position: "relative",
@@ -542,10 +575,19 @@ export default async function HomePage() {
                     textWrap: "pretty",
                   }}
                 >
-                  Most &quot;best of&quot; pages are ads with a headline. Ours are written by editors who pull
-                  license records, read the complaints and phone the shops. One city, one trade, and up to ten
-                  names you can actually call.
+                  TenBestFind ranks home service companies one city and one trade at a time. Each list names
+                up to ten companies, and the title always shows the number. Our editors check licence
+                numbers against the issuing register where one exists, read recent Google reviews,
+                including the complaints, and look at how long each company has been in business. Every
+                ranking states its criteria and shows when it was last reviewed. Payment never changes a
+                company&apos;s position.
+              </p>
+              {lastUpdated ? (
+                <p style={{ marginTop: "10px", fontSize: "13px", fontWeight: "600", color: "var(--text-muted)" }}>
+                  Last updated <time dateTime={lastUpdated.toISOString()}>{formatDay(lastUpdated)}</time>
                 </p>
+              ) : null}
+              
 
                 <div data-searchbox="" data-in="4" style={{ position: "relative", marginTop: "26px", maxWidth: "680px" }}>
                   <form
@@ -850,7 +892,7 @@ export default async function HomePage() {
                         {hero.category.serviceName}
                         {hero.city ? ` · ${hero.city.name}, ${hero.city.region.code.toUpperCase()}` : ""}
                       </p>
-                      <h2
+                      <p
                         id="hero-preview-h2"
                         style={{
                           fontSize: "22px",
@@ -864,7 +906,7 @@ export default async function HomePage() {
                         <Link href={heroPath} style={{ color: "#fff" }}>
                           {rankingCardTitle(hero)}
                         </Link>
-                      </h2>
+                      </p>
                       <ol data-hero-rows="">
                         {hero.entries.map((entry) => {
                           const meta = [
@@ -986,6 +1028,53 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ----------------------------------------------------------- cities */}
+        <section
+          aria-labelledby="geo-h2"
+          style={{ background: "var(--surface-card)", borderTop: "1px solid var(--border-subtle)", marginTop: "18px" }}
+        >
+          <div data-shell="" data-sec="" style={{ padding: "40px var(--gutter) 34px" }}>
+            <div data-reveal="" style={{ ...HEAD_ROW, flexWrap: "wrap" }}>
+              <div style={{ maxWidth: "660px" }}>
+                <Eyebrow>Cities</Eyebrow>
+                <h2 id="geo-h2" data-h2="" style={H2}>
+                  Cities we <Accent>cover</Accent>
+                </h2>
+                <p style={{ ...LEDE, marginTop: "12px" }}>
+                  Our lists cover cities across the US and Canada. Current examples:
+                </p>
+              </div>
+              <HeadLink href={routes.locationsIndex()} size={16}>
+                Every city
+              </HeadLink>
+            </div>
+            <ul style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "18px" }}>
+              {HOME_CITIES.map((city) => (
+                <li key={city.href}>
+                  <Link
+                    data-chip=""
+                    href={city.href}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      height: "40px",
+                      padding: "0 16px",
+                      borderRadius: "999px",
+                      background: "var(--paper)",
+                      border: "1px solid var(--border-subtle)",
+                      fontSize: "15px",
+                      fontWeight: "600",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    {city.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* ------------------------------------------------------ categories */}
         <section
           aria-labelledby="cats-h2"
@@ -1000,12 +1089,11 @@ export default async function HomePage() {
               <div style={{ maxWidth: "660px" }}>
                 <Eyebrow>Home Services</Eyebrow>
                 <h2 id="cats-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                  Home Service Rankings <Accent>by Trade</Accent>
+                  Pick a <Accent>trade</Accent>
                 </h2>
                 <p style={{ ...LEDE, marginTop: "12px" }}>
-                  {counts.categories} trades, from emergency plumbing to full kitchen remodels. Every category
-                  page opens with what a valid license covers in your state or province, then the ten
-                  companies that cleared our checks.
+                  We rank plumbers, HVAC companies, roofers, electricians, locksmiths and remodeling
+                  contractors. Open the trade you need in your city, then compare the companies on that list.
                 </p>
               </div>
               <HeadLink href={routes.servicesIndex()}>All {counts.categories} services</HeadLink>
@@ -1116,291 +1204,20 @@ export default async function HomePage() {
           ) : null}
         </section>
 
-        {/* ------------------------------------------------- featured rankings */}
-        {featured.length > 0 ? (
-          <section aria-labelledby="feat-h2" style={{ background: "var(--paper)" }}>
-            <div data-shell="" data-sec="" style={{ padding: "38px var(--gutter) 18px" }}>
-              <div data-reveal="" style={HEAD_ROW}>
-                <div style={{ maxWidth: "660px" }}>
-                  <Eyebrow>Rankings</Eyebrow>
-                  <h2 id="feat-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                    {accent("Most Popular City Rankings", "City Rankings")}
-                  </h2>
-                  <p style={{ ...LEDE, marginTop: "12px" }}>
-                    Four rankings that get more traffic than the rest combined. Each one shows the date an
-                    editor last checked it, not the date the page was made.
-                  </p>
-                </div>
-                <HeadLink href={routes.rankingsIndex()}>Every ranking</HeadLink>
-              </div>
-              <ul data-rail="" data-stagger="">
-                {featured.map((ranking) => {
-                  const photo = ranking.city?.heroImage;
-                  return (
-                    <li
-                      key={ranking.id}
-                      data-card=""
-                      style={{
-                        width: "min(78vw, 300px)",
-                        background: "var(--surface-card)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: "22px",
-                        overflow: "hidden",
-                        boxShadow: "var(--shadow-xs)",
-                      }}
-                    >
-                      <Link href={rankingUrl(ranking)} style={{ display: "block", color: "inherit" }}>
-                        <span
-                          style={{
-                            position: "relative",
-                            display: "block",
-                            height: "176px",
-                            background: photo
-                              ? "var(--surface-sunken)"
-                              : "linear-gradient(135deg, var(--ink-2), var(--ink))",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <Media
-                            src={photo}
-                            tone="dark"
-                            alt={
-                              ranking.city
-                                ? `${ranking.category.name} in ${ranking.city.name}`
-                                : ranking.category.name
-                            }
-                            sizes="(max-width: 760px) 80vw, 300px"
-                          />
-                          <span
-                            aria-hidden="true"
-                            style={{
-                              position: "absolute",
-                              inset: "0",
-                              background: "linear-gradient(180deg, transparent 50%, rgba(16,31,61,0.55))",
-                              pointerEvents: "none",
-                            }}
-                          />
-                          <span
-                            style={{
-                              position: "absolute",
-                              top: "12px",
-                              left: "12px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              padding: "5px 10px",
-                              borderRadius: "999px",
-                              background: "rgba(16,31,61,0.75)",
-                              backdropFilter: "blur(8px)",
-                              fontSize: "10.5px",
-                              fontWeight: "700",
-                              letterSpacing: "0.08em",
-                              textTransform: "uppercase",
-                              color: "#fff",
-                            }}
-                          >
-                            <span
-                              data-live-dot=""
-                              style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--gold-ink)" }}
-                            />
-                            Live
-                          </span>
-                          <span
-                            aria-hidden="true"
-                            style={{
-                              position: "absolute",
-                              right: "14px",
-                              bottom: "10px",
-                              fontFamily: "var(--serif)",
-                              fontStyle: "italic",
-                              fontSize: "56px",
-                              lineHeight: "1",
-                              color: "#fff",
-                              letterSpacing: "-0.03em",
-                              textShadow: "0 6px 20px rgba(0,0,0,0.3)",
-                            }}
-                          >
-                            10
-                          </span>
-                        </span>
-                        <span style={{ display: "block", padding: "16px 18px 18px" }}>
-                          <span
-                            style={{
-                              display: "block",
-                              fontSize: "11px",
-                              fontWeight: "700",
-                              letterSpacing: "0.1em",
-                              textTransform: "uppercase",
-                              color: "var(--color-primary)",
-                              marginBottom: "6px",
-                            }}
-                          >
-                            {placeLine(ranking)}
-                          </span>
-                          <h3
-                            style={{
-                              fontSize: "18px",
-                              lineHeight: "1.22",
-                              fontWeight: "700",
-                              letterSpacing: "-0.022em",
-                              marginBottom: "12px",
-                            }}
-                          >
-                            {rankingCardTitle(ranking)}
-                          </h3>
-                          <span
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              paddingTop: "12px",
-                              borderTop: "1px dashed var(--border-subtle)",
-                              fontSize: "12.5px",
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {ranking.author ? (
-                              <span
-                                aria-hidden="true"
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: "26px",
-                                  height: "26px",
-                                  borderRadius: "50%",
-                                  background: "var(--ink)",
-                                  color: "var(--gold-ink)",
-                                  fontSize: "10px",
-                                  fontWeight: "700",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {initials(ranking.author.name)}
-                              </span>
-                            ) : null}
-                            <span>
-                              {ranking.author ? (
-                                <>
-                                  <span style={{ fontWeight: "600", color: "var(--ink)" }}>{ranking.author.name}</span>
-                                  {" · "}
-                                </>
-                              ) : null}
-                              Reviewed {shortMonthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
-                            </span>
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </section>
-        ) : null}
-
-        {/* ---------------------------------------------------------- ledger */}
-        <section
-          aria-label="What we have checked"
-          style={{ position: "relative", overflow: "hidden", background: "var(--ink)", marginTop: "22px" }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: "0",
-              backgroundImage: "radial-gradient(rgba(255,255,255,0.09) 1px, transparent 1px)",
-              backgroundSize: "22px 22px",
-              WebkitMaskImage: "linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent)",
-              maskImage: "linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent)",
-              pointerEvents: "none",
-            }}
-          />
-          <InView
-            as="ul"
-            data-shell=""
-            data-ledger=""
-            style={{
-              position: "relative",
-              padding: "0 var(--gutter)",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-            }}
-          >
-            {ledger.map((row) => (
-              <li key={row.label} style={{ position: "relative", padding: "26px 14px 24px 0" }}>
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "0",
-                    left: "0",
-                    right: "14px",
-                    height: "2px",
-                    background: "rgba(255,255,255,0.1)",
-                  }}
-                />
-                <span
-                  data-ledger-bar=""
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "0",
-                    left: "0",
-                    right: "14px",
-                    height: "2px",
-                    background: "var(--gold-ink)",
-                  }}
-                />
-                <p
-                  style={{
-                    fontSize: "clamp(34px, 9vw, 60px)",
-                    fontWeight: "800",
-                    letterSpacing: "-0.05em",
-                    color: "#fff",
-                    fontVariantNumeric: "tabular-nums",
-                    lineHeight: "1",
-                  }}
-                >
-                  <CountUp value={row.value} suffix={row.suffix} />
-                </p>
-                <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "13px",
-                    lineHeight: "1.45",
-                    color: "rgba(232,237,245,0.72)",
-                    maxWidth: "220px",
-                  }}
-                >
-                  {row.label}
-                </p>
-              </li>
-            ))}
-          </InView>
-        </section>
-
         {/* --------------------------------------------------- how we rank */}
         <section aria-labelledby="how-h2" style={{ position: "relative", background: "var(--paper)" }}>
           <div data-shell="" data-sec="" style={{ padding: "44px var(--gutter) 24px" }}>
             <div data-reveal="" style={{ maxWidth: "720px" }}>
               <Eyebrow>How We Rank</Eyebrow>
               <h2 id="how-h2" data-h2="" style={{ ...H2, marginBottom: "10px", textWrap: "balance" }}>
-                How We Rank <Accent>Local Companies</Accent>
+                How the lists are <Accent>built</Accent>
               </h2>
               <p style={{ ...LEDE, marginBottom: "12px" }}>
-                TenBestFind is a small editorial team, not a lead-generation company. We check a
-                contractor&apos;s license against the state or provincial register, count the years it has
-                pulled permits locally, look at the range of work it takes on, and read what customers say
-                about it in public.
-              </p>
-              <p style={{ ...LEDE, marginBottom: "24px" }}>
-                Up to ten names make the page, with the reasoning next to each one. When fewer companies
-                meet the criteria, the list is shorter. The steps never change. The criteria do, because a
-                good mover and a good electrician are not measured the same way.
+                Each list follows published criteria. Where a licence register exists, we check the licence
+                number against it. We read recent Google reviews, including the critical ones, and we look at
+                how long a company has been in business. An editor checks every list before it is published.
               </p>
             </div>
-            <HowSteps steps={STEPS} />
             <Link
               data-btn=""
               href={routes.howWeRank()}
@@ -1425,579 +1242,6 @@ export default async function HomePage() {
             </Link>
           </div>
         </section>
-
-        {/* ------------------------------------------------------- countries */}
-        <section aria-labelledby="country-h2" style={{ background: "var(--paper)" }}>
-          <div data-shell="" data-sec="" style={{ padding: "40px var(--gutter) 22px" }}>
-            <div data-reveal="" style={{ maxWidth: "720px" }}>
-              <Eyebrow>Locations</Eyebrow>
-              <h2 id="country-h2" data-h2="" style={{ ...H2, marginBottom: "10px", textWrap: "balance" }}>
-                {`Home Service Rankings in ${counts.cities} `}
-                <Accent>{countries.length === 2 ? "US and Canadian Cities" : "Cities"}</Accent>
-              </h2>
-              <p style={{ ...LEDE, marginBottom: "22px" }}>
-                Rankings are organized by country, then state or province, then city. A roofing license in
-                Florida means something different from one in Ontario, so the research is done at the level
-                where the rules actually live.
-              </p>
-            </div>
-            {tiers.length === 3 ? (
-              <div
-                data-reveal=""
-                style={{
-                  position: "relative",
-                  marginBottom: "18px",
-                  padding: "20px 8px 18px",
-                  borderRadius: "22px",
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--border-subtle)",
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    left: "16.6%",
-                    right: "16.6%",
-                    top: "42px",
-                    height: "2px",
-                    background: "var(--border-subtle)",
-                  }}
-                />
-                <span
-                  data-tier-line=""
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    left: "16.6%",
-                    right: "16.6%",
-                    top: "42px",
-                    height: "2px",
-                    background: "linear-gradient(90deg, var(--gold-ink), var(--color-primary))",
-                  }}
-                />
-                <ol
-                  style={{
-                    position: "relative",
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                    gap: "8px",
-                  }}
-                >
-                  {tiers.map((tier, i) => (
-                    <li
-                      key={tier.label}
-                      data-tier=""
-                      style={vars({
-                        "--d": i,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        textAlign: "center",
-                        gap: "8px",
-                      })}
-                    >
-                      <span
-                        data-tile=""
-                        aria-hidden="true"
-                        style={{
-                          position: "relative",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "46px",
-                          height: "46px",
-                          borderRadius: "50%",
-                          background: "var(--ink)",
-                          color: "var(--gold-ink)",
-                          boxShadow: "0 0 0 6px var(--surface-card)",
-                        }}
-                      >
-                        <svg
-                          data-ico=""
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path pathLength="1" d={TIER_ICONS[i]} />
-                        </svg>
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "10.5px",
-                          fontWeight: "800",
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                          color: "var(--gold)",
-                        }}
-                      >
-                        {tier.label}
-                      </span>
-                      <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--ink)" }}>{tier.value}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ) : null}
-            <ul
-              data-two=""
-              data-stagger=""
-              style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "14px" }}
-            >
-              {countries.map((country) => (
-                <li
-                  key={country.code}
-                  data-card=""
-                  data-country=""
-                  style={{
-                    position: "relative",
-                    borderRadius: "26px",
-                    overflow: "hidden",
-                    background: "var(--ink)",
-                    color: "#fff",
-                    padding: "24px 22px 20px",
-                    display: "flex",
-                    flexDirection: "column",
-                    border: "1px solid var(--ink)",
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      inset: "0",
-                      background: "radial-gradient(460px 260px at 100% 0%, rgba(45,116,215,0.42), transparent 70%)",
-                      pointerEvents: "none",
-                    }}
-                  />
-                  <span
-                    data-ghost=""
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      right: "-8px",
-                      top: "-30px",
-                      fontSize: "200px",
-                      fontWeight: "800",
-                      letterSpacing: "-0.08em",
-                      lineHeight: "1",
-                      color: "rgba(255,255,255,0.06)",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {country.code.toUpperCase()}
-                  </span>
-                  <span
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "18px",
-                    }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        height: "28px",
-                        padding: "0 11px",
-                        borderRadius: "999px",
-                        background: "rgba(231,184,99,0.14)",
-                        border: "1px solid rgba(231,184,99,0.35)",
-                        fontSize: "11px",
-                        fontWeight: "800",
-                        letterSpacing: "0.1em",
-                        color: "var(--gold-ink)",
-                      }}
-                    >
-                      {country.code.toUpperCase()}
-                    </span>
-                  </span>
-                  <h3
-                    style={{
-                      position: "relative",
-                      fontSize: "32px",
-                      fontWeight: "800",
-                      letterSpacing: "-0.04em",
-                      color: "#fff",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <Link href={routes.country(country.code)} style={{ color: "#fff" }}>
-                      {country.name}
-                    </Link>
-                  </h3>
-                  <p
-                    style={{
-                      position: "relative",
-                      fontSize: "14.5px",
-                      lineHeight: "1.6",
-                      color: "rgba(232,237,245,0.78)",
-                      marginBottom: "20px",
-                      maxWidth: "460px",
-                      textWrap: "pretty",
-                    }}
-                  >
-                    {country.blurb}
-                  </p>
-                  <ul
-                    style={{
-                      position: "relative",
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "8px",
-                      marginBottom: "14px",
-                      marginTop: "auto",
-                    }}
-                  >
-                    {country.regions.slice(0, 4).map((region) => (
-                      <li key={region.id}>
-                        <Link
-                          data-region=""
-                          href={routes.region(country.code, region.slug)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "8px",
-                            minHeight: "48px",
-                            padding: "0 14px",
-                            borderRadius: "14px",
-                            border: "1px solid rgba(255,255,255,0.14)",
-                            background: "rgba(255,255,255,0.06)",
-                            fontSize: "13.5px",
-                            fontWeight: "600",
-                            color: "#fff",
-                            transition: "background 220ms ease, color 220ms ease, border-color 220ms ease",
-                          }}
-                        >
-                          {region.name}
-                          <svg
-                            data-arrow=""
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            style={{ flexShrink: 0 }}
-                          >
-                            <path d="M7 17 17 7" />
-                            <path d="M7 7h10v10" />
-                          </svg>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    data-link=""
-                    href={routes.country(country.code)}
-                    style={{
-                      position: "relative",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      minHeight: "44px",
-                      fontSize: "14.5px",
-                      fontWeight: "700",
-                      color: "var(--gold-ink)",
-                    }}
-                  >
-                    Browse {country.name}
-                    <Arrow size={16} width={2.2} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* ----------------------------------------------------------- cities */}
-        <section
-          aria-labelledby="geo-h2"
-          style={{ background: "var(--surface-card)", borderTop: "1px solid var(--border-subtle)", marginTop: "18px" }}
-        >
-          <div data-shell="" data-sec="" style={{ padding: "40px var(--gutter) 34px" }}>
-            <div data-reveal="" style={{ ...HEAD_ROW, flexWrap: "wrap" }}>
-              <div style={{ maxWidth: "660px" }}>
-                <Eyebrow>Cities</Eyebrow>
-                <h2 id="geo-h2" data-h2="" style={H2}>
-                  {accent("Start With Your City", "Your City")}
-                </h2>
-                <p style={{ ...LEDE, marginTop: "12px" }}>
-                  The metros with the most published rankings. The number is how many trades we have already
-                  covered there.
-                </p>
-              </div>
-              <HeadLink href={routes.locationsIndex()} size={16}>
-                Every city
-              </HeadLink>
-            </div>
-            <CityMap countries={mapCountries} />
-          </div>
-        </section>
-
-        {/* ---------------------------------------------------------- latest */}
-        {latest.length > 0 ? (
-          <section aria-labelledby="latest-h2" style={{ background: "var(--paper)" }}>
-            <div data-shell="" data-sec="" style={{ padding: "38px var(--gutter) 14px" }}>
-              <div data-reveal="" style={HEAD_ROW}>
-                <div style={{ maxWidth: "660px" }}>
-                  <Eyebrow>Fresh Off the Editor&apos;s Desk</Eyebrow>
-                  <h2 id="latest-h2" data-h2="" style={H2}>
-                    Recently Reviewed <Accent>Rankings</Accent>
-                  </h2>
-                  <p style={{ ...LEDE, marginTop: "12px" }}>New lists and re-checked ones, most recent first.</p>
-                </div>
-                <HeadLink href={routes.rankingsIndex()}>The full archive</HeadLink>
-              </div>
-              <ol
-                data-list-two=""
-                data-stagger=""
-                style={{ display: "grid", gridTemplateColumns: "1fr", borderTop: "2px solid var(--ink)" }}
-              >
-                {latest.map((ranking, index) => (
-                  <li key={ranking.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <Link
-                      data-row=""
-                      href={rankingUrl(ranking)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        padding: "18px 8px",
-                        color: "var(--text-primary)",
-                        borderRadius: "12px",
-                      }}
-                    >
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          flexShrink: 0,
-                          width: "34px",
-                          fontFamily: "var(--serif)",
-                          fontStyle: "italic",
-                          fontSize: "30px",
-                          lineHeight: "1",
-                          color: "var(--gold)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
-                      >
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span style={{ flex: "1", minWidth: "0" }}>
-                        <span
-                          style={{
-                            display: "block",
-                            fontSize: "16px",
-                            lineHeight: "1.3",
-                            fontWeight: "700",
-                            letterSpacing: "-0.018em",
-                            color: "var(--ink)",
-                          }}
-                        >
-                          {rankingCardTitle(ranking)}
-                        </span>
-                        <span
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            marginTop: "4px",
-                            fontSize: "12.5px",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          <svg
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            style={{ flexShrink: 0 }}
-                          >
-                            <path d={ICON_PATHS[ranking.category.iconKey as IconName] ?? ICON_PATHS.wrench} />
-                          </svg>
-                          {ranking.category.name} · {ranking.lastReviewedAt ? "Reviewed " : "Published "}
-                          {shortMonthYear(ranking.lastReviewedAt ?? ranking.publishedAt)}
-                        </span>
-                      </span>
-                      <span
-                        data-arrow=""
-                        aria-hidden="true"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "50%",
-                          border: "1px solid var(--border-subtle)",
-                          color: "var(--gray-400)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M7 17 17 7" />
-                          <path d="M7 7h10v10" />
-                        </svg>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </section>
-        ) : null}
-
-        {/* ---------------------------------------------------------- guides */}
-        {guides.length > 0 ? (
-          <section aria-labelledby="guides-h2" style={{ background: "var(--paper)" }}>
-            <div data-shell="" data-sec="" style={{ padding: "34px var(--gutter) 18px" }}>
-              <div data-reveal="" style={HEAD_ROW}>
-                <div style={{ maxWidth: "660px" }}>
-                  <Eyebrow>Know What to Ask</Eyebrow>
-                  <h2 id="guides-h2" data-h2="" style={{ ...H2, textWrap: "balance", maxWidth: "640px" }}>
-                    {accentTail("Hiring Guides for Homeowners", 2)}
-                  </h2>
-                  <p style={{ ...LEDE, marginTop: "12px" }}>
-                    Short, practical reads: how to line up three quotes, what a license does and does not
-                    cover, and what a fair price looks like in your market this year.
-                  </p>
-                </div>
-                <HeadLink href={routes.guidesIndex()}>All guides</HeadLink>
-              </div>
-              <ul
-                data-rail=""
-                data-stagger=""
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
-              >
-                {guides.map((guide) => (
-                  <li
-                    key={guide.id}
-                    data-card=""
-                    style={{
-                      width: "min(70vw, 260px)",
-                      background: "var(--surface-card)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "20px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Link
-                      href={routes.guide(guide.slug)}
-                      style={{ display: "flex", flexDirection: "column", alignItems: "stretch", height: "100%", color: "inherit" }}
-                    >
-                      <span
-                        style={{
-                          position: "relative",
-                          display: "block",
-                          height: "150px",
-                          background: guide.heroImage ? "var(--surface-sunken)" : "var(--gold-soft)",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Media src={guide.heroImage} tone="dark" alt={guide.title} sizes="(max-width: 760px) 70vw, 260px" />
-                        {guide.heroImage ? null : (
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 240 170"
-                            width="150"
-                            height="106"
-                            style={{
-                              position: "absolute",
-                              right: "-10px",
-                              bottom: "-14px",
-                              pointerEvents: "none",
-                            }}
-                          >
-                            <path
-                              d="M18 40 L52 16 L52 158"
-                              fill="none"
-                              stroke="rgba(138,95,11,0.22)"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M150 16 C 196 16, 226 46, 226 87 C 226 128, 196 158, 150 158 C 104 158, 74 128, 74 87 C 74 46, 104 16, 150 16 Z"
-                              fill="none"
-                              stroke="rgba(138,95,11,0.22)"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </span>
-                      <span style={{ display: "flex", flexDirection: "column", flex: "1", padding: "16px 18px 18px" }}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignSelf: "flex-start",
-                            alignItems: "center",
-                            height: "24px",
-                            padding: "0 9px",
-                            borderRadius: "999px",
-                            background: "var(--gold-soft)",
-                            fontSize: "10.5px",
-                            fontWeight: "700",
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                            color: "var(--gold)",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          {guide.category?.name ?? "Guide"} · {guide.readingMinutes} min read
-                        </span>
-                        <h3
-                          style={{
-                            fontSize: "17px",
-                            lineHeight: "1.28",
-                            fontWeight: "700",
-                            letterSpacing: "-0.02em",
-                            marginBottom: "12px",
-                            textWrap: "pretty",
-                          }}
-                        >
-                          {guide.title}
-                        </h3>
-                        <span style={{ display: "block", marginTop: "auto", fontSize: "12.5px", color: "var(--text-muted)" }}>
-                          {guide.author ? `${guide.author.name} · ` : ""}
-                          Updated {shortMonthYear(guide.reviewedAt ?? guide.publishedAt)}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        ) : null}
 
         {/* ------------------------------------------------------------ eeat */}
         <section
@@ -2041,9 +1285,9 @@ export default async function HomePage() {
                     textWrap: "balance",
                   }}
                 >
-                  Our Editorial Standards:{" "}
+                  Who checks the{" "}
                   <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>
-                    Who Checks the Lists
+                    lists
                   </span>
                 </h2>
                 <p
@@ -2055,8 +1299,8 @@ export default async function HomePage() {
                     maxWidth: "460px",
                   }}
                 >
-                  You should be able to see who wrote a list, what they checked, how the site makes money and
-                  what happens when we get something wrong. All four are one click away on every page.
+                  Our named editors, including Marcus Reed, Dana Whitfield and Priya Nathan, write and review the
+                  rankings. Each ranking shows its editor and the date it was last reviewed.
                 </p>
               </div>
               <div style={{ display: "grid", gap: "30px", minWidth: "0" }}>
@@ -2353,7 +1597,7 @@ export default async function HomePage() {
         </section>
 
         {/* ------------------------------------------------------------- faq */}
-        {faqs.length > 0 ? (
+        {HOME_FAQS.length > 0 ? (
           <section aria-labelledby="faq-h2" style={{ background: "var(--surface-card)" }}>
             <div data-shell="" data-sec="" style={{ padding: "40px var(--gutter) 30px" }}>
               <div
@@ -2363,10 +1607,10 @@ export default async function HomePage() {
                 <div data-reveal="">
                   <Eyebrow>FAQ</Eyebrow>
                   <h2 id="faq-h2" data-h2="" style={{ ...H2, marginBottom: "14px" }}>
-                    Frequently Asked <Accent>Questions</Accent>
+                    Questions people <Accent>ask</Accent>
                   </h2>
                   <p style={{ ...LEDE, marginBottom: "10px", maxWidth: "460px" }}>
-                    Straight answers about how the lists are built and what they cost, which is nothing.
+                    How the lists are built, how many companies they name, and how to report a mistake.
                   </p>
                   <Link
                     data-link=""
@@ -2386,8 +1630,8 @@ export default async function HomePage() {
                   </Link>
                 </div>
                 <div data-reveal="" style={{ borderTop: "2px solid var(--ink)" }}>
-                  {faqs.map((faq) => (
-                    <details key={faq.id} data-faq="" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  {HOME_FAQS.map((faq) => (
+                    <details key={faq.question} data-faq="" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                       <summary
                         style={{
                           display: "flex",
@@ -2453,220 +1697,6 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        {/* -------------------------------------------------- for businesses */}
-        <section
-          aria-labelledby="biz-h2"
-          style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}
-        >
-          <div data-shell="" data-sec="" style={{ padding: "34px var(--gutter) 40px" }}>
-            <div data-biz="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "12px" }}>
-              <div
-                data-reveal=""
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "26px",
-                  padding: "28px 22px 24px",
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    right: "-40px",
-                    top: "-40px",
-                    width: "200px",
-                    height: "200px",
-                    borderRadius: "50%",
-                    background: "radial-gradient(closest-side, rgba(231,184,99,0.25), transparent)",
-                    pointerEvents: "none",
-                  }}
-                />
-                <div style={{ position: "relative" }}>
-                  <Eyebrow mb="10px">For Businesses</Eyebrow>
-                </div>
-                <h2
-                  id="biz-h2"
-                  data-h2=""
-                  style={{
-                    position: "relative",
-                    fontSize: "26px",
-                    lineHeight: "1.05",
-                    fontWeight: "800",
-                    letterSpacing: "-0.035em",
-                    marginBottom: "12px",
-                    textWrap: "balance",
-                  }}
-                >
-                  Homeowners Are Already Comparing You. <Accent>Make Sure the Facts Are Right.</Accent>
-                </h2>
-                <p
-                  style={{
-                    position: "relative",
-                    fontSize: "15.5px",
-                    lineHeight: "1.6",
-                    color: "var(--text-secondary)",
-                    marginBottom: "22px",
-                    textWrap: "pretty",
-                  }}
-                >
-                  Claim your profile and keep your license, hours, service area and photos current. Or take a
-                  labelled featured slot on the ranking page for your city and trade.
-                </p>
-                <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  <Link
-                    data-btn=""
-                    data-btn-dark=""
-                    href={routes.claim()}
-                    style={{
-                      flex: "1 1 200px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      height: "52px",
-                      borderRadius: "14px",
-                      background: "var(--ink)",
-                      color: "#fff",
-                      fontSize: "16px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Claim Your Profile
-                    <Arrow size={16} width={2.2} stroke="var(--gold-ink)" />
-                  </Link>
-                  <Link
-                    data-press=""
-                    href={routes.forBusinesses()}
-                    style={{
-                      flex: "1 1 200px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "52px",
-                      borderRadius: "14px",
-                      border: "1.5px solid var(--border-strong)",
-                      background: "var(--surface-card)",
-                      color: "var(--ink)",
-                      fontSize: "16px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    See Business Plans
-                  </Link>
-                </div>
-                <p
-                  style={{
-                    position: "relative",
-                    marginTop: "18px",
-                    paddingTop: "16px",
-                    borderTop: "1px dashed var(--border-subtle)",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                    fontSize: "13px",
-                    lineHeight: "1.5",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: "3px 7px",
-                      borderRadius: "6px",
-                      background: "var(--ink)",
-                      color: "var(--gold-ink)",
-                      fontSize: "10px",
-                      fontWeight: "800",
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Featured
-                  </span>
-                  A subscription buys visibility and a managed profile. It cannot buy, move or protect a
-                  ranked position.
-                </p>
-              </div>
-              <ul data-stagger="" style={{ display: "grid", gap: "10px", alignContent: "stretch" }}>
-                {BIZ_POINTS.map((point) => (
-                  <li
-                    key={point.title}
-                    data-card=""
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "16px",
-                      background: "var(--surface-card)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "20px",
-                      padding: "20px",
-                    }}
-                  >
-                    <span
-                      data-eico=""
-                      aria-hidden="true"
-                      style={{
-                        position: "relative",
-                        flexShrink: 0,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "48px",
-                        height: "48px",
-                        borderRadius: "15px",
-                        background: "var(--ink)",
-                        color: "var(--gold-ink)",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <span
-                        data-duo=""
-                        style={{
-                          position: "absolute",
-                          right: "7px",
-                          top: "7px",
-                          width: "14px",
-                          height: "14px",
-                          borderRadius: "50%",
-                          background: "var(--gold-ink)",
-                          opacity: 0.3,
-                        }}
-                      />
-                      <svg
-                        data-ico=""
-                        width="21"
-                        height="21"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{ position: "relative" }}
-                      >
-                        <path pathLength="1" d={ICON_PATHS[point.icon]} />
-                      </svg>
-                    </span>
-                    <span style={{ display: "block", minWidth: "0" }}>
-                      <h3 style={{ fontSize: "16.5px", fontWeight: "700", letterSpacing: "-0.018em", marginBottom: "4px" }}>
-                        {point.title}
-                      </h3>
-                      <p style={{ fontSize: "14px", lineHeight: "1.55", color: "var(--text-secondary)" }}>
-                        {point.text}
-                      </p>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
         {/* ------------------------------------------------------ final call */}
         <section
           aria-labelledby="final-h2"
@@ -2720,7 +1750,7 @@ export default async function HomePage() {
               }}
             >
               <span aria-hidden="true" style={{ width: "22px", height: "2px", background: "var(--gold-ink)" }} />
-              Forty Tabs or One Short List
+              Hiring This Week
               <span aria-hidden="true" style={{ width: "22px", height: "2px", background: "var(--gold-ink)" }} />
             </p>
             <h2
@@ -2736,9 +1766,9 @@ export default async function HomePage() {
                 textWrap: "balance",
               }}
             >
-              Tell Us the Job and{" "}
+              Need a company{" "}
               <span className="serif-accent" style={{ color: "var(--gold-ink)" }}>
-                the City
+                this week?
               </span>
             </h2>
             <p
@@ -2750,7 +1780,8 @@ export default async function HomePage() {
                 maxWidth: "520px",
               }}
             >
-              We will hand you the companies worth a phone call, with the reasons next to each name.
+              Open the ranking for your city and trade, then call at least two companies on it. Ask for a
+              written quote and check the licence before any work starts.
             </p>
             <div data-searchbox="">
               <form
@@ -2847,6 +1878,150 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+        {/* -------------------------------------------------- for businesses */}
+        <section
+          aria-labelledby="biz-h2"
+          style={{ background: "var(--paper)", borderTop: "1px solid var(--border-subtle)" }}
+        >
+          <div data-shell="" data-sec="" style={{ padding: "34px var(--gutter) 40px" }}>
+            <div data-biz="" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "12px" }}>
+              <div
+                data-reveal=""
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  background: "var(--surface-card)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "26px",
+                  padding: "28px 22px 24px",
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    right: "-40px",
+                    top: "-40px",
+                    width: "200px",
+                    height: "200px",
+                    borderRadius: "50%",
+                    background: "radial-gradient(closest-side, rgba(231,184,99,0.25), transparent)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <div style={{ position: "relative" }}>
+                  <Eyebrow mb="10px">For Businesses</Eyebrow>
+                </div>
+                <h2
+                  id="biz-h2"
+                  data-h2=""
+                  style={{
+                    position: "relative",
+                    fontSize: "26px",
+                    lineHeight: "1.05",
+                    fontWeight: "800",
+                    letterSpacing: "-0.035em",
+                    marginBottom: "12px",
+                    textWrap: "balance",
+                  }}
+                >
+                  For <Accent>businesses</Accent>
+                </h2>
+                <p
+                  style={{
+                    position: "relative",
+                    fontSize: "15.5px",
+                    lineHeight: "1.6",
+                    color: "var(--text-secondary)",
+                    marginBottom: "22px",
+                    textWrap: "pretty",
+                  }}
+                >
+                  If you run one of the companies we rank, check your profile. If something is wrong, tell us,
+                  and we will show you how we verified the detail.
+                </p>
+                <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <Link
+                    data-btn=""
+                    data-btn-dark=""
+                    href={routes.claim()}
+                    style={{
+                      flex: "1 1 200px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      height: "52px",
+                      borderRadius: "14px",
+                      background: "var(--ink)",
+                      color: "#fff",
+                      fontSize: "16px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    Claim Your Profile
+                    <Arrow size={16} width={2.2} stroke="var(--gold-ink)" />
+                  </Link>
+                  <Link
+                    data-press=""
+                    href={routes.forBusinesses()}
+                    style={{
+                      flex: "1 1 200px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "52px",
+                      borderRadius: "14px",
+                      border: "1.5px solid var(--border-strong)",
+                      background: "var(--surface-card)",
+                      color: "var(--ink)",
+                      fontSize: "16px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    See Business Plans
+                  </Link>
+                </div>
+                <p
+                  style={{
+                    position: "relative",
+                    marginTop: "18px",
+                    paddingTop: "16px",
+                    borderTop: "1px dashed var(--border-subtle)",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "3px 7px",
+                      borderRadius: "6px",
+                      background: "var(--ink)",
+                      color: "var(--gold-ink)",
+                      fontSize: "10px",
+                      fontWeight: "800",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Featured
+                  </span>
+                  A subscription buys visibility and a managed profile. It cannot buy, move or protect a
+                  ranked position.
+                </p>
+              </div>
+              
+            </div>
+          </div>
+        </section>
+
       </div>
     </SiteChrome>
   );

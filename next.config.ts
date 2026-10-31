@@ -33,6 +33,8 @@ const SECURITY_HEADERS = [
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Puts the stylesheets in the page head so no CSS request blocks the first paint.
+  experimental: { inlineCss: true },
   // The design's URL model uses trailing slashes throughout. The automatic
   // redirect is disabled so middleware can apply it to pages while letting API
   // routes answer either spelling; Stripe does not follow redirects.

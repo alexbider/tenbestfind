@@ -464,7 +464,7 @@ export default async function SearchPage({ searchParams }: Props) {
               }}
               activeCount={chips.length}
               rankingHref={leadRanking ? rankingUrl(leadRanking) : undefined}
-              rankingLabel={leadRanking?.city ? `See the ten best in ${leadRanking.city.name}` : "See the ten best"}
+              rankingLabel={leadRanking?.city ? `See the best in ${leadRanking.city.name}` : "See the best"}
               evaluated={leadRanking?.companiesReviewed}
             />
           </aside>
