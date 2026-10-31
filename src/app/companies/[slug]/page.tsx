@@ -348,9 +348,14 @@ export default async function BusinessProfilePage({ params }: Props) {
   const copy = companyCopy(business, city, region ?? null, business.category, profileFacts(business));
   // The full trail, rather than Home > City > Company: a profile sits inside a
   // country, a region, a city and a trade, and the schema has to say the same.
+  const homeRankingPublished =
+    city != null &&
+    (await db.ranking.count({
+      where: { status: "PUBLISHED", categoryId: business.categoryId, cityId: city.id },
+    })) > 0;
   const crumbs =
     country && region && city
-      ? companyCrumbs(country, region, city, business.category, business)
+      ? companyCrumbs(country, region, city, business.category, business, homeRankingPublished)
       : [{ label: "Home", href: "/" }, { label: business.name }];
 
   const hours = parseJson<HoursRow[]>(business.hours, []);

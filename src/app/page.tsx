@@ -199,7 +199,7 @@ const STEPS = [
   {
     n: "03",
     title: "Publish and Re-check",
-    body: "Ten names go live with the criteria, the sources and the review date. If we could not verify something we say so. Every list is re-checked inside 90 days.",
+    body: "Up to ten names go live with the criteria, the sources and the review date. If we could not verify something we say so. Every list is re-checked inside 90 days.",
   },
 ];
 
@@ -513,7 +513,7 @@ export default async function HomePage() {
                       paddingRight: "0.06em",
                     }}
                   >
-                    10 Best
+                    Best
                     <span
                       data-uline=""
                       aria-hidden="true"
@@ -529,7 +529,7 @@ export default async function HomePage() {
                       }}
                     />
                   </span>{" "}
-                  Home Service Companies in Your City
+                  Home Service Companies by City
                 </h1>
                 <p
                   data-in="3"
@@ -543,8 +543,8 @@ export default async function HomePage() {
                   }}
                 >
                   Most &quot;best of&quot; pages are ads with a headline. Ours are written by editors who pull
-                  license records, read the complaints and phone the shops. One city, one trade, ten names you
-                  can actually call.
+                  license records, read the complaints and phone the shops. One city, one trade, and up to ten
+                  names you can actually call.
                 </p>
 
                 <div data-searchbox="" data-in="4" style={{ position: "relative", marginTop: "26px", maxWidth: "680px" }}>
@@ -650,7 +650,7 @@ export default async function HomePage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      Show Me the Ten
+                      Show Me the List
                       <Arrow size={17} width={2.4} stroke="var(--gold-ink)" />
                     </button>
                   </form>
@@ -1000,7 +1000,7 @@ export default async function HomePage() {
               <div style={{ maxWidth: "660px" }}>
                 <Eyebrow>Home Services</Eyebrow>
                 <h2 id="cats-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                  Top 10 Rankings <Accent>by Trade</Accent>
+                  Home Service Rankings <Accent>by Trade</Accent>
                 </h2>
                 <p style={{ ...LEDE, marginTop: "12px" }}>
                   {counts.categories} trades, from emergency plumbing to full kitchen remodels. Every category
@@ -1124,7 +1124,7 @@ export default async function HomePage() {
                 <div style={{ maxWidth: "660px" }}>
                   <Eyebrow>Rankings</Eyebrow>
                   <h2 id="feat-h2" data-h2="" style={{ ...H2, textWrap: "balance" }}>
-                    {accent("Most Popular Top 10 Lists", "Top 10 Lists")}
+                    {accent("Most Popular City Rankings", "City Rankings")}
                   </h2>
                   <p style={{ ...LEDE, marginTop: "12px" }}>
                     Four rankings that get more traffic than the rest combined. Each one shows the date an
@@ -1395,8 +1395,9 @@ export default async function HomePage() {
                 about it in public.
               </p>
               <p style={{ ...LEDE, marginBottom: "24px" }}>
-                Ten names make the page, with the reasoning next to each one. The steps never change. The
-                criteria do, because a good mover and a good electrician are not measured the same way.
+                Up to ten names make the page, with the reasoning next to each one. When fewer companies
+                meet the criteria, the list is shorter. The steps never change. The criteria do, because a
+                good mover and a good electrician are not measured the same way.
               </p>
             </div>
             <HowSteps steps={STEPS} />
@@ -2512,7 +2513,7 @@ export default async function HomePage() {
                   }}
                 >
                   Claim your profile and keep your license, hours, service area and photos current. Or take a
-                  labelled featured slot on the Top 10 page for your city and trade.
+                  labelled featured slot on the ranking page for your city and trade.
                 </p>
                 <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   <Link
@@ -2587,8 +2588,8 @@ export default async function HomePage() {
                   >
                     Featured
                   </span>
-                  A subscription buys visibility and a managed profile. It cannot buy, move or protect one of
-                  the ten ranked positions.
+                  A subscription buys visibility and a managed profile. It cannot buy, move or protect a
+                  ranked position.
                 </p>
               </div>
               <ul data-stagger="" style={{ display: "grid", gap: "10px", alignContent: "stretch" }}>
@@ -2719,7 +2720,7 @@ export default async function HomePage() {
               }}
             >
               <span aria-hidden="true" style={{ width: "22px", height: "2px", background: "var(--gold-ink)" }} />
-              Forty Tabs or Ten Names
+              Forty Tabs or One Short List
               <span aria-hidden="true" style={{ width: "22px", height: "2px", background: "var(--gold-ink)" }} />
             </p>
             <h2
@@ -2749,7 +2750,7 @@ export default async function HomePage() {
                 maxWidth: "520px",
               }}
             >
-              We will hand you the ten companies worth a phone call, with the reasons next to each name.
+              We will hand you the companies worth a phone call, with the reasons next to each name.
             </p>
             <div data-searchbox="">
               <form
@@ -2839,7 +2840,7 @@ export default async function HomePage() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Show Me the Ten
+                  Show Me the List
                   <Arrow size={17} width={2.4} />
                 </button>
               </form>

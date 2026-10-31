@@ -132,10 +132,11 @@ export function placeLabel(city: { name: string }, region: { code: string }): st
 
 export function homeCopy(): PageCopy {
   return {
-    title: brand("10 Best Home Service Companies Near You"),
-    h1: "Find the 10 Best Home Service Companies in Your City",
+    // Most lists hold fewer than ten companies, so the home page never promises ten.
+    title: brand("The Best Home Service Companies by City", "Best Home Service Companies by City"),
+    h1: "Find the Best Home Service Companies by City",
     description:
-      "Top 10 plumbers, HVAC companies, roofers and electricians in US and Canadian cities, checked by named editors. No paid rankings.",
+      "Best home service companies by city: researched lists of plumbers, roofers, HVAC companies and electricians in the US and Canada, with no paid rankings.",
     indexable: true,
   };
 }
@@ -145,7 +146,7 @@ export function homeServicesCopy(): PageCopy {
     title: brand("Best Home Service Companies Near You"),
     h1: "Find the Best Home Service Companies Near You",
     description:
-      "Compare top 10 plumbers, HVAC, roofing and electrical companies in US and Canadian cities, checked by named editors and re-checked every 90 days.",
+      "Compare the best plumbers, HVAC, roofing and electrical companies in US and Canadian cities, checked by named editors and re-checked every 90 days.",
     indexable: true,
   };
 }
