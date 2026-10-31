@@ -42,6 +42,10 @@
 @import "./v2-rankings.css";
 @import "./v2-centre.css";
 
+/* Leaflet gives its panes and controls z-index 400 to 1000. Isolating the map
+   keeps them inside it, so sticky bars (z-index 150) stay above a map scrolling under them. */
+.leaflet-container { isolation: isolate; }
+
 /* ------------------------------------------------------------------
    TenBestFind additions on top of the base system.
    Gold is reserved for the "10" ranking numeral and ranking marks.
