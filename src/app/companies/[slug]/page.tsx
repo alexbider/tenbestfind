@@ -268,6 +268,8 @@ async function loadBusiness(slug: string) {
       // page really exists, and that answer needs the country code.
       areas: { include: { city: { include: { region: { include: { country: true } } } } } },
       entries: {
+        // A draft ranking answers 404, so the profile only mentions published ones.
+        where: { ranking: { status: "PUBLISHED" } },
         orderBy: { position: "asc" },
         include: {
           ranking: {
