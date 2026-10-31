@@ -54,6 +54,7 @@
 // offered, and a canonical pointing somewhere else takes the page out, because
 // offering a URL that names another URL as the real one wastes the crawl.
 
+import { companyGate } from "./seo-report";
 import { db } from "./db";
 import { getGuideHubs, guidesForHub } from "./guide-hubs";
 import { loadSeoSettings } from "./seo-settings";
@@ -322,10 +323,28 @@ async function childEntries(name: string): Promise<SitemapEntry[] | null> {
     const rows = await db.business.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { createdAt: "asc" },
-      select: { id: true, slug: true, updatedAt: true, logoUrl: true },
+      select: {
+        id: true,
+        slug: true,
+        updatedAt: true,
+        logoUrl: true,
+        // What the profile page's own index gate reads, so a profile it marks
+        // noindex is not offered to search engines here either.
+        name: true,
+        cityId: true,
+        categoryId: true,
+        overview: true,
+        description: true,
+        phone: true,
+        website: true,
+        email: true,
+        googleRating: true,
+        _count: { select: { services: true, credentials: true, photos: true } },
+      },
     });
     const photos = await photosByBusiness(rows.map((row) => row.id));
     return rows
+      .filter((row) => companyGate(row).ok)
       .filter((row) => g.keep(routes.business(row.slug), `business:${row.id}`))
       .map((row) => ({
         path: routes.business(row.slug),
