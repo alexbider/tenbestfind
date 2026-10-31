@@ -42,12 +42,12 @@ export function InfoModal({
       <dialog ref={ref} aria-labelledby={`${title.replace(/\s+/g, "-").toLowerCase()}-h`}>
         <div style={{ padding: "26px 28px 24px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "12px" }}>
-            <h2
+            <p
               id={`${title.replace(/\s+/g, "-").toLowerCase()}-h`}
               style={{ fontSize: "20px", fontWeight: "700", color: "var(--blue-900)" }}
             >
               {title}
-            </h2>
+            </p>
             <button
               type="button"
               aria-label="Close"
