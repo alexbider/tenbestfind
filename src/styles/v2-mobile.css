@@ -41,7 +41,7 @@
   html body main[data-mskin] div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 
   /* section menu sits under the compact header */
-  [data-toc] { top: 64px !important; }
+  [data-toc] { top: 0 !important; }
   [data-toc] ul { padding: 7px 0 !important; }
   [data-toc] > div > span:first-child { display: none; }
 

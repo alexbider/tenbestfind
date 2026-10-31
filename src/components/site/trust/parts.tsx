@@ -285,7 +285,7 @@ export function Tile({
  * The sticky "on this page" strip: pills for each section, the one being read
  * marked navy by V2Motion, and a reading-progress line along its lower edge.
  */
-export function SectionToc({ items, top = "76px" }: { items: { href: string; label: string }[]; top?: string }) {
+export function SectionToc({ items, top = "0" }: { items: { href: string; label: string }[]; top?: string }) {
   return (
     <nav
       aria-label="On this page"

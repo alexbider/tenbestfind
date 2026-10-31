@@ -72,7 +72,7 @@
   }
 
   /* The design's section menu sits under the compact phone header. */
-  .biz-2026 [data-toc] { top: 64px !important; }
+  .biz-2026 [data-toc] { top: 0 !important; }
   .biz-2026 [data-toc] ul { padding: 7px 0 !important; }
   .biz-2026 [data-toc] > div > span:first-child { display: none; }
 }

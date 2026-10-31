@@ -267,7 +267,7 @@ export default async function ForBusinessesPage() {
           </div>
         </section>
 
-        <SectionToc items={toc} top="136px" />
+        <SectionToc items={toc} />
 
         {/* ------------------------------------------------------- claim flow */}
         <section id="hc" aria-labelledby="hc-h2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>

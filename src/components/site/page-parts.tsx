@@ -271,7 +271,7 @@ export function PageToc({ items }: { items: { href: string; label: string }[] })
       data-toc=""
       style={{
         position: "sticky",
-        top: "76px",
+        top: "0",
         zIndex: "150",
         background: "rgba(255,255,255,0.94)",
         backdropFilter: "blur(12px)",
