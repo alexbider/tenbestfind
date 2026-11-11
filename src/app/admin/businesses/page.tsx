@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminHeader, Panel, StatRow } from "@/components/admin/shell";
+import { BULK_FORM_ID, BulkActionBar, BulkSelectAll } from "@/components/admin/BusinessBulkActions";
 import { StatusPill } from "@/components/ui/primitives";
 import { money } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
@@ -105,15 +106,21 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
           </div>
         </div>
 
+        <BulkActionBar />
+
         <div className="table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
+                <th scope="col" className="admin-table__check">
+                  <BulkSelectAll />
+                </th>
                 <th scope="col">Business</th>
                 <th scope="col">Market</th>
                 <th scope="col">Plan</th>
                 <th scope="col">Rank</th>
                 <th scope="col">Google</th>
+                <th scope="col">Complete</th>
                 <th scope="col">Status</th>
                 <th scope="col" />
               </tr>
@@ -123,6 +130,15 @@ export default async function AdminBusinessesList({ searchParams }: Props) {
                 const subscription = business.subscriptions[0];
                 return (
                   <tr key={business.id}>
+                    <td className="admin-table__check">
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={business.id}
+                        form={BULK_FORM_ID}
+                        aria-label={`Select ${business.name}`}
+                      />
+                    </td>
                     <td>
                       <Link href={`/admin/businesses/${business.id}`} className="admin-table__primary">
                         {business.name}
