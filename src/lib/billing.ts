@@ -102,22 +102,33 @@ function isMissingResource(error: unknown): boolean {
 
 /* --------------------------------------------------------------- customers */
 
-/** Finds or creates the Stripe customer for a business. */
-export async function ensureCustomer(businessId: string, email: string, name?: string) {
+/**
+ * The Stripe customer a business already has, if any. A new customer is never
+ * made up front: Checkout creates one when the payment goes through, so
+ * someone who opens the payment page and leaves does not appear in Stripe.
+ */
+async function existingCustomer(businessId: string): Promise<string | null> {
+  const business = await db.business.findUnique({ where: { id: businessId }, select: { stripeCustomerId: true } });
+  return business?.stripeCustomerId ?? null;
+}
+
+/**
+ * Links the customer Checkout created to the business and labels it, since
+ * the Stripe account is shared and its customer list must say whose each is.
+ */
+async function adoptCustomer(businessId: string, customerId: string) {
   const business = await db.business.findUnique({ where: { id: businessId } });
-  if (!business) throw new Error("Business not found");
-  if (business.stripeCustomerId) return business.stripeCustomerId;
-
+  if (!business) return;
+  if (!business.stripeCustomerId) {
+    await db.business.update({ where: { id: business.id }, data: { stripeCustomerId: customerId } });
+  }
   const stripe = await getStripe();
-  const customer = await stripe.customers.create({
-    email,
-    name: name ?? business.name,
-    description: `${PRODUCT_PREFIX}: ${business.name}`,
-    metadata: { ...STRIPE_METADATA, businessId: business.id, businessSlug: business.slug },
-  });
-
-  await db.business.update({ where: { id: business.id }, data: { stripeCustomerId: customer.id } });
-  return customer.id;
+  await stripe.customers
+    .update(customerId, {
+      description: `${PRODUCT_PREFIX}: ${business.name}`,
+      metadata: { ...STRIPE_METADATA, businessId: business.id, businessSlug: business.slug },
+    })
+    .catch((error) => console.error("[billing] could not label customer:", error instanceof Error ? error.message : error));
 }
 
 /* ---------------------------------------------------------------- checkout */
@@ -183,16 +194,18 @@ export async function startCheckout(input: {
   }
 
   const stripe = await getStripe();
-  let customerId = await ensureCustomer(input.businessId, input.email, input.name);
+  let customerId = await existingCustomer(input.businessId);
 
   // Close the earlier page so the same row can never be paid for twice.
   if (unfinished?.stripeCheckoutId) {
     await stripe.checkout.sessions.expire(unfinished.stripeCheckoutId).catch(() => null);
   }
 
-  const params = (price: string, customer: string): Stripe.Checkout.SessionCreateParams => ({
+  const params = (price: string, customer: string | null): Stripe.Checkout.SessionCreateParams => ({
     mode: "subscription",
-    customer,
+    // A returning business pays as its existing customer; anyone else gets one
+    // made by Checkout only once they pay.
+    ...(customer ? { customer } : { customer_email: input.email }),
     line_items: [{ price, quantity: input.quantity ?? 1 }],
     success_url: siteUrl(`${input.successPath}?session={CHECKOUT_SESSION_ID}`),
     cancel_url: siteUrl(input.cancelPath),
@@ -242,7 +255,7 @@ export async function startCheckout(input: {
       if (attempt >= 2 || !isMissingResource(error)) throw error;
       if ((error as { param?: string }).param === "customer") {
         await db.business.update({ where: { id: input.businessId }, data: { stripeCustomerId: null } });
-        customerId = await ensureCustomer(input.businessId, input.email, input.name);
+        customerId = null;
       } else {
         priceId = (await syncPlanToStripe(plan.id)).priceId;
       }
@@ -588,13 +601,14 @@ export async function applyStripeEvent(event: Stripe.Event) {
 
       const stripeSubscriptionId =
         typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+      const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      if (stripeCustomerId) await adoptCustomer(ours.businessId, stripeCustomerId);
 
       await db.subscription.update({
         where: { id: subscriptionId },
         data: {
           stripeSubscriptionId,
-          stripeCustomerId:
-            typeof session.customer === "string" ? session.customer : session.customer?.id,
+          stripeCustomerId,
           status: "ACTIVE",
           startedAt: new Date(),
         },
