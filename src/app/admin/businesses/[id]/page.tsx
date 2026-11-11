@@ -21,6 +21,8 @@ import {
 } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { publishListing } from "@/app/actions/admin-billing";
+import { rerunListingReview } from "@/app/actions/admin-listing-review";
+import { autoReviewFor } from "@/lib/listing-verify";
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
@@ -70,6 +72,7 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
     },
   });
   if (!business) notFound();
+  const autoReview = await autoReviewFor(business.id);
 
   const [categories, cities, subservices] = await Promise.all([
     db.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -325,6 +328,45 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 </div>
               )}
             </Panel>
+
+            {autoReview || business.status === "PENDING" ? (
+              <Panel
+                title="Automatic website check"
+                description={
+                  autoReview
+                    ? `Checked ${fullDate(new Date(autoReview.checkedAt))}. ${
+                        autoReview.published
+                          ? "Every check passed, so it was published automatically."
+                          : autoReview.verdict === "APPROVED"
+                            ? "Every check passed. Automatic publishing is off, so it waits for you."
+                            : "Something did not match, so it waits for you."
+                      }`
+                    : "Runs within a minute or two of payment. Unpaid signups are never checked or published."
+                }
+              >
+                {autoReview ? (
+                  <ul style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+                    {autoReview.checks.map((check) => (
+                      <li key={check.key} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                        <Badge tone={check.ok ? "positive" : check.required ? "danger" : "neutral"}>
+                          {check.ok ? "pass" : check.required ? "fail" : "info"}
+                        </Badge>
+                        <span>
+                          <strong>{check.label}</strong>
+                          <span style={{ display: "block", fontSize: 13, color: "var(--text-secondary)" }}>{check.detail}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <form action={rerunListingReview}>
+                  <input type="hidden" name="id" value={business.id} />
+                  <button type="submit" className="btn btn--ghost btn--sm">
+                    {autoReview ? "Run the checks again" : "Run the checks now"}
+                  </button>
+                </form>
+              </Panel>
+            ) : null}
 
             <Panel title="Editorial standing">
               <dl className="transparency__grid" style={{ background: "none", padding: 0 }}>

@@ -13,6 +13,7 @@ import { flushIndexNowQueue, queueForIndexNow } from "../src/lib/indexnow";
 import { sitemapChild, sitemapIndex } from "../src/lib/sitemap";
 import { rescoreSeo } from "../src/lib/seo-rescore";
 import { checkEmail } from "../src/lib/email-quality";
+import { nextListingToReview, reviewListing } from "../src/lib/listing-verify";
 import { ACTIVE_PLAN_STATUSES, advanceTopicPlan, ensureWeeklyPlan } from "../src/lib/topic-plans";
 
 // The batch runner. It lives in its own container rather than inside a request
@@ -177,6 +178,27 @@ async function tickScheduledPublishes(): Promise<void> {
     if (result.held > 0) console.log(`[guide] ${result.held} due but held back for having no author`);
   } catch (error) {
     console.error("[guide] scheduled publish:", error instanceof Error ? error.message : error);
+  }
+}
+
+/**
+ * Paid new listings are checked against their own website and published when
+ * everything matches. One per pass, checked every half minute, so a payment is
+ * usually live within a minute or two.
+ */
+let nextListingCheck = 0;
+
+async function tickListingReviews(): Promise<void> {
+  if (Date.now() < nextListingCheck) return;
+  nextListingCheck = Date.now() + 30_000;
+  try {
+    const id = await nextListingToReview();
+    if (!id) return;
+    const review = await reviewListing(id);
+    console.log(`[listing] ${id} ${review.published ? "published automatically" : review.verdict.toLowerCase()}`);
+    nextListingCheck = Date.now() + 1_000;
+  } catch (error) {
+    console.error("[listing] review:", error instanceof Error ? error.message : error);
   }
 }
 
@@ -346,6 +368,7 @@ async function main(): Promise<void> {
     await tickHousekeeping();
     await tickWeeklyPlan();
     await tickScheduledPublishes();
+    await tickListingReviews();
     const busy =
       (await tickRefresh()) ||
       (await tickEnrichment()) ||
