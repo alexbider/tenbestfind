@@ -19,6 +19,7 @@ import { LEAD_STATUSES, notifyBusiness } from "@/lib/leads";
 import { completeClaimApproval, completeClaimRejection } from "@/lib/client-accounts";
 import { queueEnrichment } from "@/lib/enrich-run";
 import { recomputeCompleteness } from "@/lib/completeness";
+import { hoursFromForm, idsFromForm, replaceAreas, replaceServices } from "@/lib/business-edits";
 import { parseFilter, orderFor, whereFor } from "@/lib/enrich-filter";
 import { BUSINESS_STATUSES, type SeoEntityType } from "@/lib/enums";
 import { RANKING_MIN_ENTRIES } from "@/lib/seo-copy";
@@ -908,15 +909,6 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
   const previous = data.id ? await db.business.findUnique({ where: { id: data.id } }) : null;
   if (data.id && !previous) return fail("That business no longer exists.");
 
-  const hours = rows(data.hours)
-    .filter((row) => row.day?.trim())
-    .map((row) => ({
-      day: row.day.trim(),
-      opens: row.opens?.trim() ?? "",
-      closes: row.closes?.trim() ?? "",
-      closed: row.closed === "yes",
-    }));
-
   const payload = {
     name: data.name,
     slug: data.slug,
@@ -936,7 +928,7 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
     email: data.email || null,
     addressLine: data.addressLine || null,
     postalCode: data.postalCode || null,
-    hours: stringify(hours),
+    hours: hoursFromForm(data.hours),
     yearFounded: int(data.yearFounded),
     employeeCount: data.employeeCount || null,
     licenseNumber: data.licenseNumber || null,
@@ -1016,25 +1008,8 @@ export async function saveBusiness(_prev: ActionState, formData: FormData): Prom
 
   // Services offered and areas served are join rows, so they are rebuilt from
   // what the form posted rather than patched.
-  const serviceIds = lines(data.services);
-  await db.businessService.deleteMany({ where: { businessId: business.id } });
-  for (const subserviceId of serviceIds) {
-    const exists = await db.subservice.findUnique({ where: { id: subserviceId } });
-    if (exists) {
-      await db.businessService.create({ data: { businessId: business.id, subserviceId } });
-    }
-  }
-
-  const areaIds = lines(data.areas);
-  await db.businessArea.deleteMany({ where: { businessId: business.id } });
-  for (const [index, cityId] of areaIds.entries()) {
-    const exists = await db.city.findUnique({ where: { id: cityId } });
-    if (exists) {
-      await db.businessArea.create({
-        data: { businessId: business.id, cityId, primary: index === 0 },
-      });
-    }
-  }
+  await replaceServices(business.id, idsFromForm(data.services));
+  await replaceAreas(business.id, idsFromForm(data.areas));
 
   await db.credential.deleteMany({ where: { businessId: business.id } });
   for (const [index, row] of rows(data.credentials)
