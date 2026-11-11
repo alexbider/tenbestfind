@@ -208,6 +208,61 @@ ${input.payUrl ? button(input.payUrl, "Update payment") : ""}`;
   );
 }
 
+/**
+ * For a signup that stopped before payment: the checkout did not open, or was
+ * closed. The button opens a fresh checkout for the record already saved, so
+ * nothing has to be filled in again.
+ */
+export async function sendFinishSignup(input: {
+  to: string;
+  contactName?: string | null;
+  businessName: string;
+  planName: string;
+  amount: string;
+  finishUrl: string;
+  /** A new listing: the card is held and charged only when it publishes. */
+  chargedOnPublish: boolean;
+}) {
+  const first = input.contactName?.split(" ")[0] || "there";
+  const charge = input.chargedOnPublish
+    ? "Nothing is charged today. Your card is held, and the first charge happens on the day an editor publishes the listing. If it is declined, you are never charged."
+    : "The subscription starts when you complete the payment, and you can cancel any time.";
+  const body = `${p(`Hi ${esc(first)},`)}
+${p(`Your signup for <strong>${esc(input.businessName)}</strong> did not reach the payment step. If the secure checkout did not open for you, that was on our side and it is fixed.`)}
+${p("Everything you entered is saved. The button below takes you straight to the payment page.")}
+${rows([
+  ["Plan", input.planName],
+  ["Price", input.amount],
+  ["Due today", input.chargedOnPublish ? "$0.00" : input.amount],
+])}
+${button(input.finishUrl, "Finish signing up")}
+${p(charge)}
+${p("Questions? Just reply to this email.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Finish signing up ${input.businessName}`,
+      replyTo: await teamInbox(),
+      html: emailLayout({ heading: "One step left", body, footer: FOOTER, eyebrow: "Your signup", preheader: "Your details are saved. One click takes you to the secure payment page." }),
+      text: [
+        `Hi ${first},`,
+        `Your signup for ${input.businessName} did not reach the payment step. If the secure checkout did not open for you, that was on our side and it is fixed.`,
+        "Everything you entered is saved. This link takes you straight to the payment page:",
+        input.finishUrl,
+        textRows([
+          ["Plan", input.planName],
+          ["Price", input.amount],
+          ["Due today", input.chargedOnPublish ? "$0.00" : input.amount],
+        ]),
+        charge,
+        "Questions? Just reply to this email.",
+      ].join("\n\n"),
+    },
+    "finish signup",
+  );
+}
+
 /* ----------------------------------------------------------------- to team */
 
 async function alertTeam(subject: string, heading: string, items: [string, string | null | undefined][], adminPath: string, replyTo?: string) {
@@ -599,6 +654,7 @@ export const TEST_TEMPLATES = {
   contact_received: "Contact reply",
   password_changed: "Password changed",
   payment_failed: "Payment failed",
+  finish_signup: "Finish signup",
   plan_ended: "Plan ended",
   listing_declined: "Submission declined",
   team_alert: "Team alert",
@@ -643,6 +699,8 @@ export async function sendTemplateTest(template: TestTemplate, to: string): Prom
       return sendPasswordChanged({ to, name: sample.person });
     case "payment_failed":
       return sendPaymentFailed({ to, businessName: sample.business, planName: "Claim & Manage", amount: "$29.00", payUrl: `${site}/portal/` });
+    case "finish_signup":
+      return sendFinishSignup({ to, contactName: sample.person, businessName: sample.business, planName: "Directory Listing", amount: "$29.00 / month", finishUrl: `${site}/billing/finish/sample/`, chargedOnPublish: true });
     case "plan_ended":
       return sendPlanEnded({ to, businessName: sample.business, planName: "Claim & Manage", profileUrl: `${site}/` });
     case "listing_declined":

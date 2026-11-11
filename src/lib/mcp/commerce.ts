@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { stripeConfigured } from "../stripe";
 import { fullDate } from "../format";
+import { sendFinishSignupEmail } from "../finish-signup";
 import { parseList } from "../json";
 import {
   arr,
@@ -90,6 +91,33 @@ export const COMMERCE_TOOLS: Tool[] = [
             }
           : {}),
       };
+    },
+  },
+
+  {
+    name: "send_finish_signup",
+    title: "Email a finish-signup link",
+    description:
+      "For a PENDING subscription that never reached payment: emails the person who signed up a link that opens a fresh Stripe checkout for it, with nothing to fill in again. Get the id from list_commerce.",
+    write: true,
+    admin: true,
+    schema: object({ subscriptionId: str("The PENDING subscription's id.") }, ["subscriptionId"]),
+    handler: async (args, ctx) => {
+      const id = reqStr(args, "subscriptionId");
+      let sentTo: string;
+      try {
+        ({ sentTo } = await sendFinishSignupEmail(id));
+      } catch (error) {
+        throw new ToolError(error instanceof Error ? error.message : "The email could not be sent.");
+      }
+      await recordWrite(ctx, {
+        action: "update",
+        entityType: "subscription",
+        entityId: id,
+        summary: `finish-signup email sent to ${sentTo}`,
+        paths: [],
+      });
+      return { subscriptionId: id, sentTo };
     },
   },
 

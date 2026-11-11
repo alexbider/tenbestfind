@@ -4,6 +4,7 @@ import {
   cancelSubscriptionAction,
   refundSubscriptionAction,
   resumeSubscriptionAction,
+  sendFinishSignupAction,
 } from "@/app/actions/admin-billing";
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate, money } from "@/lib/format";
@@ -133,6 +134,14 @@ export default async function AdminSubscriptionsPage() {
                   </td>
                   <td>
                     <div className="admin-table__actions">
+                      {subscription.status === "PENDING" && !subscription.stripeSubscriptionId ? (
+                        <form action={sendFinishSignupAction}>
+                          <input type="hidden" name="id" value={subscription.id} />
+                          <button type="submit" className="btn btn--ghost btn--sm">
+                            Email finish link
+                          </button>
+                        </form>
+                      ) : null}
                       {subscription.status === "CANCELED" ? null : subscription.cancelAtPeriodEnd ? (
                         <form action={resumeSubscriptionAction}>
                           <input type="hidden" name="id" value={subscription.id} />

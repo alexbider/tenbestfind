@@ -11,6 +11,7 @@ import {
 import { audit, requireAdmin, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { onListingPublished } from "@/lib/listing-lifecycle";
+import { sendFinishSignupEmail } from "@/lib/finish-signup";
 
 export type BillingState = { status: "idle" | "ok" | "error"; message?: string; url?: string };
 
@@ -57,6 +58,21 @@ export async function cancelSubscriptionAction(formData: FormData) {
     entityType: "subscription",
     entityId: id,
     summary: immediately ? "Cancelled immediately" : "Cancels at period end",
+  });
+  revalidatePath("/admin/subscriptions");
+}
+
+/** Emails a link that reopens checkout for a signup that stopped before paying. */
+export async function sendFinishSignupAction(formData: FormData) {
+  const user = await requireStaff();
+  const id = String(formData.get("id"));
+  const { sentTo } = await sendFinishSignupEmail(id);
+  await audit({
+    userId: user.id,
+    action: "email",
+    entityType: "subscription",
+    entityId: id,
+    summary: `Finish-signup email sent to ${sentTo}`,
   });
   revalidatePath("/admin/subscriptions");
 }
