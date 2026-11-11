@@ -18,6 +18,7 @@ import { parseOrderPayload } from "./guest-post";
 import { FEATURED_PARTNER_KIND, TOP10_PLAN_KEY } from "./top10";
 import { alertNewSubscription, alertPaymentFailed, sendPaymentFailed, sendPlanEnded } from "./notify";
 import { approveClaimIfReady, grantListingAccess } from "./client-accounts";
+import { announcePaidSignup } from "./signup-notices";
 
 /**
  * The internal billing API. Everything that talks to Stripe goes through here,
@@ -622,6 +623,10 @@ export async function applyStripeEvent(event: Stripe.Event) {
       const top10 = await syncTop10Placement(subscriptionId, true);
 
       if (ours.status !== "ACTIVE") {
+        // The signup's emails go out now that it is paid, and only once.
+        await announcePaidSignup(subscriptionId).catch((error) =>
+          console.error("[billing] signup emails not sent:", error instanceof Error ? error.message : error),
+        );
         const sold = await db.subscription.findUnique({
           where: { id: subscriptionId },
           include: { plan: true, business: { select: { name: true } } },

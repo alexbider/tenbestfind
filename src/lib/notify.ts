@@ -93,7 +93,7 @@ ${ui.callout("Your payment is protected", "If we cannot confirm that you own the
       ["Reference", input.reference],
       ["Verification", input.method],
     ]),
-    "If the payment goes through but we cannot confirm ownership, the charge is refunded in full.",
+    "If we cannot confirm that you own the business, your payment is refunded in full.",
   ].join("\n\n");
 
   return deliver(
