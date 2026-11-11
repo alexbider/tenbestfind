@@ -213,7 +213,7 @@ export async function startCheckout(input: {
     allow_promotion_codes: true,
     // Everyone pays in US dollars, wherever they are browsing from.
     adaptive_pricing: { enabled: false },
-    // The Stripe account belongs to Bidernet, so the checkout page is branded
+    // The Stripe account belongs to 2M, LLC, so the checkout page is branded
     // TenBestFind here and says plainly who appears on the receipt.
     branding_settings: {
       display_name: "TenBestFind",
@@ -225,7 +225,7 @@ export async function startCheckout(input: {
     },
     custom_text: {
       submit: {
-        message: "TenBestFind is billed through Bidernet. Your card statement shows TENBESTFIND and your receipt comes from Bidernet.",
+        message: "TenBestFind is billed by 2M, LLC. Your card statement shows TENBESTFIND and your receipt comes from 2M, LLC.",
       },
     },
   });
@@ -301,7 +301,7 @@ export async function startOneTimeCheckout(input: {
     },
     custom_text: {
       submit: {
-        message: "TenBestFind is billed through Bidernet. Your card statement shows TENBESTFIND and your receipt comes from Bidernet.",
+        message: "TenBestFind is billed by 2M, LLC. Your card statement shows TENBESTFIND and your receipt comes from 2M, LLC.",
       },
     },
   });
