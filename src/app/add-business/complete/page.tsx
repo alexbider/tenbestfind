@@ -62,9 +62,9 @@ export default async function AddCompletePage({ searchParams }: Props) {
             Submission received
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 22 }}>
-            Your card is held and has not been charged. An editor reviews new listings against the
-            same standards as everything else, and the first charge happens on the day the listing
-            publishes. If it is declined, you are never charged.
+            Payment received. An editor reviews new listings against the same standards as
+            everything else and emails you either way. If the listing is declined, you are refunded
+            in full.
           </p>
 
           {subscription ? (
@@ -77,12 +77,12 @@ export default async function AddCompletePage({ searchParams }: Props) {
                 <dt>Plan</dt>
                 <dd>
                   {subscription.plan.name} ·{" "}
-                  {money(subscription.plan.priceCents, subscription.plan.currency)}/month once live
+                  {money(subscription.plan.priceCents, subscription.plan.currency)}/month
                 </dd>
               </div>
               <div>
-                <dt>Due today</dt>
-                <dd>{money(0)}</dd>
+                <dt>Paid today</dt>
+                <dd>{money(subscription.plan.priceCents * subscription.quantity, subscription.plan.currency)}</dd>
               </div>
               <div>
                 <dt>Status</dt>

@@ -36,7 +36,7 @@ export const BILLING_FAQS = [
   {
     question: "When am I charged?",
     answer:
-      "A claim is charged at checkout and refunded in full if we cannot verify your ownership. A new listing holds the card and charges only on the day it publishes, never if it is declined. A Top 10 placement is charged at checkout and then monthly. A guest post is charged once at checkout, before an editor reviews it.",
+      "A claim is charged at checkout and refunded in full if we cannot verify your ownership. A new listing is charged at checkout and refunded in full if an editor declines it. A Top 10 placement is charged at checkout and then monthly. A guest post is charged once at checkout, before an editor reviews it.",
   },
   {
     question: "How do I cancel?",

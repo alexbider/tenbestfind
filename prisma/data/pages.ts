@@ -118,7 +118,7 @@ export const PAGES: SeedPage[] = [
       h("The paid options", "options"),
       l([
         "Claim & Manage, $29 a month per location: verify ownership and keep your listing details current.",
-        "Directory Listing, $29 a month per published location: submit a business we do not cover yet. Charged only when it publishes.",
+        "Directory Listing, $29 a month per published location: submit a business we do not cover yet. Refunded in full if it is declined.",
         "Top 10 featured placement, $199 a month per city and trade: a labelled slot below the ranked ten for one city and trade. The ten positions stay editorial.",
         "Sponsored guest post, $99 once per post: one article with two paid links, reviewed by an editor before it is published.",
         "Advertising across several markets: priced on request, against coverage and availability.",
@@ -286,13 +286,13 @@ export const PLANS = [
     key: "listing",
     name: "Directory Listing",
     description:
-      "Add a business that is not yet in the directory. The card is held and first charged only on the day the listing publishes, never if it is declined.",
+      "Add a business that is not yet in the directory. Charged at checkout and refunded in full if an editor declines it.",
     priceCents: 2900,
     interval: "month",
     unitLabel: "per published location",
     features: [
       "Submit a new business for editorial review",
-      "Nothing charged until the listing publishes",
+      "Refunded in full if the listing is declined",
       "Full profile management once live",
       "Listing performance dashboard",
       "Cancel any time",

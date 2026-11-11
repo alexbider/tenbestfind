@@ -133,7 +133,7 @@ export const COMMERCE_TOOLS: Tool[] = [
         id: str("Omit to create."),
         key: str("claim, listing, top10 or advertising."),
         name: str("What it is called on the pricing page."),
-        blurb: str("One line."),
+        blurb: str("One line. Also the Stripe product description."),
         priceCents: int("Price in cents. Ignored when the interval is quote."),
         currency: str("Three-letter code, for example USD."),
         interval: str("month, year, once or quote."),
@@ -158,6 +158,11 @@ export const COMMERCE_TOOLS: Tool[] = [
         sortOrder: "int",
         features: "json",
       });
+      // "blurb" is the tool's name for the plan's description column.
+      if ("blurb" in data) {
+        data.description = data.blurb;
+        delete data.blurb;
+      }
       if (args.interval !== undefined) {
         data.interval = oneOf(String(args.interval), ["MONTH", "YEAR", "ONCE", "QUOTE"], "interval").toLowerCase();
       }
