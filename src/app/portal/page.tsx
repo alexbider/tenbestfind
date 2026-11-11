@@ -99,7 +99,7 @@ export default async function PortalOverview({ searchParams }: Props) {
           <strong>Payment received. Welcome to TenBestFind.</strong>{" "}
           {business.status === "PUBLISHED"
             ? "Your listing is live."
-            : "An editor is reviewing your listing and will email you when it is live."}{" "}
+            : "We are checking your details against your website and will email you the moment the listing is live."}{" "}
           We have emailed {user.email} your username and a link to create your password, so you can sign in again later.
           Meanwhile, add photos, hours and services here.
         </div>
@@ -313,7 +313,7 @@ export default async function PortalOverview({ searchParams }: Props) {
                 {business.status === "PUBLISHED"
                   ? "Your listing stays published and keeps collecting enquiries either way. A plan opens the contact details on them."
                   : business.status === "PENDING"
-                    ? "Your listing is not published yet. An editor reviews it before it goes live. A plan opens the contact details on any enquiries it collects."
+                    ? "Your listing is not published yet. We check it against your website first, and anything unclear goes to an editor. A plan opens the contact details on any enquiries it collects."
                     : "Your listing is not published right now. A plan opens the contact details on any enquiries it collects."}
               </p>
               <Link href={`/portal/billing?businessId=${business.id}`} className="btn btn--primary btn--sm">

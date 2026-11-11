@@ -200,7 +200,7 @@ export function AddBusinessFlow({
           label: "What happens next",
           full: true,
           title: "What happens next.",
-          text: "An editor reviews the submission against the same minimum standards as everything else: a verifiable presence in the market, current insurance, and licensing where the jurisdiction requires it. Submitting does not buy a place on a ranking.",
+          text: "After payment we check your details against your own website: the business name, your phone or email, and the trade. When everything matches, the listing goes live within minutes. Anything unclear goes to an editor, and a declined listing is refunded in full. Submitting does not buy a place on a ranking.",
         },
       ],
     },

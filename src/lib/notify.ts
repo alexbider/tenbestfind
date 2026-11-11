@@ -457,8 +457,8 @@ export async function sendListingWelcome(input: {
   const first = input.contactName.split(" ")[0] || "there";
   const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
   const body = `${p(`Hi ${esc(first)},`)}
-${ui.lead(`Payment received for <strong>${esc(input.businessName)}</strong>. An editor is reviewing the listing now and will email you when it is live.`)}
-${p("Your TenBestFind dashboard is ready. Use it to add photos, hours, services and your service area while the review runs.")}
+${ui.lead(`Payment received for <strong>${esc(input.businessName)}</strong>. We are checking your details against your website now, which usually takes a few minutes, and will email you the moment the listing is live.`)}
+${p("Your TenBestFind dashboard is ready. Use it to add photos, hours, services and your service area.")}
 ${rows([
   ["Sign-in page", "tenbestfind.com/login/"],
   ["Username", input.to],
@@ -475,7 +475,7 @@ ${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/
       html: emailLayout({ heading: "Your dashboard is ready", body, footer: FOOTER, eyebrow: "Welcome aboard", preheader: "Your username, and a link to create your password." }),
       text: [
         `Hi ${first},`,
-        `Payment received for ${input.businessName}. An editor is reviewing the listing now and will email you when it is live.`,
+        `Payment received for ${input.businessName}. We are checking your details against your website now, which usually takes a few minutes, and will email you the moment the listing is live.`,
         "Your TenBestFind dashboard is ready.",
         textRows([
           ["Sign-in page", "https://tenbestfind.com/login/"],
