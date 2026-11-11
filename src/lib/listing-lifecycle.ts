@@ -83,6 +83,9 @@ export async function onListingRejected(
     }
   }
 
+  // The submitter no longer manages a listing that will not be published.
+  await db.business.update({ where: { id: businessId }, data: { claimed: false, ownerId: null } });
+
   const emailed = await sendListingDeclined({
     to: submission.email,
     contactName: submission.name,

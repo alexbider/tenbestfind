@@ -40,7 +40,7 @@ export function finishSignupUrl(subscriptionId: string): string {
 
 /** Where each plan's checkout returns to, matching the forms that start it. */
 function pathsFor(planKey: string) {
-  if (planKey === "listing") return { successPath: `${routes.addBusiness()}complete/`, cancelPath: routes.addBusiness() };
+  if (planKey === "listing") return { successPath: "/billing/return/", cancelPath: routes.addBusiness() };
   if (planKey === "top10") return { successPath: `${routes.top10()}complete/`, cancelPath: routes.top10() };
   return { successPath: `${routes.claim()}complete/`, cancelPath: routes.claim() };
 }

@@ -7,7 +7,8 @@ import { siteUrl } from "./stripe";
 /**
  * The emails TenBestFind sends about the business side of the site: claims,
  * listing submissions, publishing, failed payments, and the alerts the team
- * gets for each. Stripe sends its own receipts, so none of these repeat one.
+ * gets for each. Paid invoices are emailed from here too, branded TenBestFind,
+ * because Stripe's own receipts are an account-wide setting shared with other sites.
  *
  * Every send here is best effort. A form submission or a webhook never fails
  * because an email could not go out; the failure is logged and the work stands.
@@ -93,7 +94,7 @@ ${ui.callout("Your payment is protected", "If we cannot confirm that you own the
       ["Reference", input.reference],
       ["Verification", input.method],
     ]),
-    "If the payment goes through but we cannot confirm ownership, the charge is refunded in full.",
+    "If we cannot confirm that you own the business, your payment is refunded in full.",
   ].join("\n\n");
 
   return deliver(
@@ -115,7 +116,7 @@ export async function sendListingSubmitted(input: {
   businessName: string;
   reference: string;
 }) {
-  const refundLine = "The first month is charged at checkout and Stripe sends the receipt. If the listing is declined, you are refunded in full.";
+  const refundLine = "The first month is charged at checkout and the invoice is emailed to you. If the listing is declined, you are refunded in full.";
   const first = input.contactName.split(" ")[0] || input.contactName;
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`Thanks for submitting <strong>${esc(input.businessName)}</strong>. An editor will review it against the same minimum standards as every other listing: a verifiable presence in the market, current insurance, and licensing where it is required.`)}
@@ -166,6 +167,56 @@ ${button(input.url, "See your listing")}`;
       ].join("\n\n"),
     },
     "listing published",
+  );
+}
+
+/** The invoice for a successful payment, with Stripe's invoice page and PDF. */
+export async function sendInvoicePaid(input: {
+  to: string;
+  businessName: string;
+  planName: string;
+  number: string;
+  amount: string;
+  paidAt: Date;
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
+  hostedUrl?: string | null;
+  pdfUrl?: string | null;
+}) {
+  const day = (date: Date) => date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+  const period = input.periodStart && input.periodEnd ? `${day(input.periodStart)} to ${day(input.periodEnd)}` : null;
+  const items: [string, string | null | undefined][] = [
+    ["Invoice", input.number],
+    ["Business", input.businessName],
+    ["Plan", input.planName],
+    ["Period", period],
+    ["Paid", day(input.paidAt)],
+    ["Amount paid", input.amount],
+    ["Billed by", "2M, LLC"],
+  ];
+  const body = `${p(`Thanks for your payment for <strong>${esc(input.businessName)}</strong>. Your invoice is below.`)}
+${rows(items)}
+${input.hostedUrl ? button(input.hostedUrl, "View invoice") : ""}
+${input.pdfUrl ? ui.muted(`Need a PDF for your records? <a href="${esc(input.pdfUrl)}">Download the invoice</a>.`) : ""}
+${ui.muted("Your card statement shows TENBESTFIND. Questions about billing? Just reply to this email.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Your TenBestFind invoice ${input.number}`,
+      replyTo: await teamInbox(),
+      html: emailLayout({ heading: "Payment received", body, footer: FOOTER, eyebrow: "Invoice", preheader: `${input.amount} paid for ${input.businessName}.` }),
+      text: [
+        `Thanks for your payment for ${input.businessName}.`,
+        textRows(items),
+        input.hostedUrl ? `View invoice: ${input.hostedUrl}` : "",
+        input.pdfUrl ? `Download PDF: ${input.pdfUrl}` : "",
+        "Your card statement shows TENBESTFIND. Questions about billing? Just reply to this email.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    },
+    "invoice paid",
   );
 }
 
@@ -388,6 +439,54 @@ ${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/
       ].join("\n\n"),
     },
     "claim approved",
+  );
+}
+
+/**
+ * A paid new listing: the owner's sign-in details. The username is their email;
+ * the password is one they choose through a one-time link, so no password is
+ * ever written into an email.
+ */
+export async function sendListingWelcome(input: {
+  to: string;
+  contactName: string;
+  businessName: string;
+  accessUrl: string;
+  needsPassword: boolean;
+}) {
+  const first = input.contactName.split(" ")[0] || "there";
+  const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
+  const body = `${p(`Hi ${esc(first)},`)}
+${ui.lead(`Payment received for <strong>${esc(input.businessName)}</strong>. An editor is reviewing the listing now and will email you when it is live.`)}
+${p("Your TenBestFind dashboard is ready. Use it to add photos, hours, services and your service area while the review runs.")}
+${rows([
+  ["Sign-in page", "tenbestfind.com/login/"],
+  ["Username", input.to],
+  ["Password", input.needsPassword ? "Create it with the button below" : "The one you already use"],
+])}
+${button(input.accessUrl, cta)}
+${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/ with this email address, or ask for a sign-in link there.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Your TenBestFind login for ${input.businessName}`,
+      replyTo: await teamInbox(),
+      html: emailLayout({ heading: "Your dashboard is ready", body, footer: FOOTER, eyebrow: "Welcome aboard", preheader: "Your username, and a link to create your password." }),
+      text: [
+        `Hi ${first},`,
+        `Payment received for ${input.businessName}. An editor is reviewing the listing now and will email you when it is live.`,
+        "Your TenBestFind dashboard is ready.",
+        textRows([
+          ["Sign-in page", "https://tenbestfind.com/login/"],
+          ["Username", input.to],
+          ["Password", input.needsPassword ? "Create it with the link below" : "The one you already use"],
+        ]),
+        `${cta}: ${input.accessUrl}`,
+        "The link works once. After that, sign in at https://tenbestfind.com/login/ with this email address.",
+      ].join("\n\n"),
+    },
+    "listing welcome",
   );
 }
 
@@ -654,6 +753,7 @@ export const TEST_TEMPLATES = {
   contact_received: "Contact reply",
   password_changed: "Password changed",
   payment_failed: "Payment failed",
+  invoice_paid: "Invoice",
   finish_signup: "Finish signup",
   plan_ended: "Plan ended",
   listing_declined: "Submission declined",
@@ -701,6 +801,8 @@ export async function sendTemplateTest(template: TestTemplate, to: string): Prom
       return sendPaymentFailed({ to, businessName: sample.business, planName: "Claim & Manage", amount: "$29.00", payUrl: `${site}/portal/` });
     case "finish_signup":
       return sendFinishSignup({ to, contactName: sample.person, businessName: sample.business, planName: "Directory Listing", amount: "$29.00 / month", finishUrl: `${site}/billing/finish/sample/`, chargedOnPublish: false });
+    case "invoice_paid":
+      return sendInvoicePaid({ to, businessName: sample.business, planName: "Directory Listing", number: "TBF-0001", amount: "$29.00", paidAt: new Date(), periodStart: new Date(), periodEnd: new Date(Date.now() + 30 * 86_400_000), hostedUrl: `${site}/`, pdfUrl: `${site}/` });
     case "plan_ended":
       return sendPlanEnded({ to, businessName: sample.business, planName: "Claim & Manage", profileUrl: `${site}/` });
     case "listing_declined":
