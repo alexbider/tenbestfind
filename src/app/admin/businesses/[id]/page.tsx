@@ -21,7 +21,7 @@ import {
 } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { publishListing } from "@/app/actions/admin-billing";
-import { rerunListingReview } from "@/app/actions/admin-listing-review";
+import { approveFlaggedListing, rejectFlaggedListing, rerunListingReview } from "@/app/actions/admin-listing-review";
 import { autoReviewFor } from "@/lib/listing-verify";
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange } from "@/lib/format";
@@ -335,13 +335,13 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                 description={
                   autoReview
                     ? `Checked ${fullDate(new Date(autoReview.checkedAt))}. ${
-                        autoReview.published
-                          ? "Every check passed, so it was published automatically."
+                        autoReview.resolution
+                          ? `${autoReview.resolution.decision === "APPROVED" ? "Kept live" : "Declined and refunded"} by ${autoReview.resolution.by} on ${fullDate(new Date(autoReview.resolution.at))}.`
                           : autoReview.verdict === "APPROVED"
-                            ? "Every check passed. Automatic publishing is off, so it waits for you."
-                            : "Something did not match, so it waits for you."
+                            ? "Every check passed. Nothing to do."
+                            : "Something did not match. Keep it live, or decline it to take it down and refund the payment."
                       }`
-                    : "Runs within a minute or two of payment. Unpaid signups are never checked or published."
+                    : "Runs within a minute or two of payment. Paid listings go live straight away; the check flags anything doubtful."
                 }
               >
                 {autoReview ? (
@@ -359,12 +359,33 @@ export default async function AdminBusinessDetail({ params, searchParams }: Prop
                     ))}
                   </ul>
                 ) : null}
-                <form action={rerunListingReview}>
-                  <input type="hidden" name="id" value={business.id} />
-                  <button type="submit" className="btn btn--ghost btn--sm">
-                    {autoReview ? "Run the checks again" : "Run the checks now"}
-                  </button>
-                </form>
+                <div className="admin-table__actions" style={{ flexWrap: "wrap", gap: 8 }}>
+                  {autoReview?.verdict === "NEEDS_REVIEW" && !autoReview.resolution ? (
+                    <>
+                      <form action={approveFlaggedListing}>
+                        <input type="hidden" name="id" value={business.id} />
+                        <button type="submit" className="btn btn--primary btn--sm">
+                          Looks fine, keep it live
+                        </button>
+                      </form>
+                      <form action={rejectFlaggedListing}>
+                        <input type="hidden" name="id" value={business.id} />
+                        <ConfirmButton
+                          className="btn btn--ghost btn--sm"
+                          question={`Decline ${business.name}? It comes down, the plan is cancelled and the payment is refunded in full.`}
+                        >
+                          Decline and refund
+                        </ConfirmButton>
+                      </form>
+                    </>
+                  ) : null}
+                  <form action={rerunListingReview}>
+                    <input type="hidden" name="id" value={business.id} />
+                    <button type="submit" className="btn btn--ghost btn--sm">
+                      {autoReview ? "Run the checks again" : "Run the checks now"}
+                    </button>
+                  </form>
+                </div>
               </Panel>
             ) : null}
 

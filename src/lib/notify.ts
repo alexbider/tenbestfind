@@ -368,6 +368,21 @@ export function alertClaimEmailVerified(input: { businessName: string; ownerEmai
   );
 }
 
+/** A paid listing the website check could not confirm. It stays as it is until someone decides. */
+export function alertListingFlagged(input: { businessName: string; businessId: string; live: boolean; problems: string[] }) {
+  return alertTeam(
+    `Check needed: ${input.businessName}`,
+    "A paid listing needs a manual check",
+    [
+      ["Business", input.businessName],
+      ["Status", input.live ? "Live (published on payment)" : "Not published"],
+      ...input.problems.map((problem, index): [string, string] => [index === 0 ? "What did not match" : "", problem]),
+      ["Next step", "Keep it live, or decline it: declining takes it down and refunds the payment."],
+    ],
+    `/admin/businesses/${input.businessId}`,
+  );
+}
+
 export function alertNewListing(input: {
   businessName: string;
   businessId: string;
@@ -453,19 +468,29 @@ export async function sendListingWelcome(input: {
   businessName: string;
   accessUrl: string;
   needsPassword: boolean;
+  /** The public profile, when the listing went live on payment. */
+  liveUrl?: string | null;
 }) {
+  const status = input.liveUrl
+    ? `Payment received. <strong>${esc(input.businessName)}</strong> is now live on TenBestFind.`
+    : `Payment received for <strong>${esc(input.businessName)}</strong>. An editor will publish it shortly and email you when it is live.`;
+  const statusText = input.liveUrl
+    ? `Payment received. ${input.businessName} is now live on TenBestFind: ${input.liveUrl}`
+    : `Payment received for ${input.businessName}. An editor will publish it shortly and email you when it is live.`;
   const first = input.contactName.split(" ")[0] || "there";
   const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
   const body = `${p(`Hi ${esc(first)},`)}
-${ui.lead(`Payment received for <strong>${esc(input.businessName)}</strong>. We are checking your details against your website now, which usually takes a few minutes, and will email you the moment the listing is live.`)}
+${ui.lead(status)}
 ${p("Your TenBestFind dashboard is ready. Use it to add photos, hours, services and your service area.")}
 ${rows([
+  ...(input.liveUrl ? ([["Your listing", input.liveUrl]] as [string, string][]) : []),
   ["Sign-in page", "tenbestfind.com/login/"],
   ["Username", input.to],
   ["Password", input.needsPassword ? "Create it with the button below" : "The one you already use"],
 ])}
 ${button(input.accessUrl, cta)}
-${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/ with this email address, or ask for a sign-in link there.")}`;
+${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/ with this email address, or ask for a sign-in link there.")}
+${ui.muted("We check every new listing against the business's own website. If something does not match, our team may get in touch.")}`;
 
   return deliver(
     {
@@ -475,7 +500,7 @@ ${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/
       html: emailLayout({ heading: "Your dashboard is ready", body, footer: FOOTER, eyebrow: "Welcome aboard", preheader: "Your username, and a link to create your password." }),
       text: [
         `Hi ${first},`,
-        `Payment received for ${input.businessName}. We are checking your details against your website now, which usually takes a few minutes, and will email you the moment the listing is live.`,
+        statusText,
         "Your TenBestFind dashboard is ready.",
         textRows([
           ["Sign-in page", "https://tenbestfind.com/login/"],
@@ -530,7 +555,7 @@ export async function sendListingDeclined(input: { to: string; contactName?: str
   const first = input.contactName?.split(" ")[0] || "there";
   const reason = input.reason?.trim();
   const body = `${p(`Hi ${esc(first)},`)}
-${p(`An editor reviewed <strong>${esc(input.businessName)}</strong> and we are not publishing it right now.${reason ? ` ${esc(reason)}` : ""}`)}
+${p(`An editor reviewed <strong>${esc(input.businessName)}</strong> and it does not meet our listing standards, so it is not listed on TenBestFind.${reason ? ` ${esc(reason)}` : ""}`)}
 ${p(paymentLine)}
 ${p("You are welcome to submit again once the details can be checked, for example a licence number we can look up or a street address in the area you serve.")}`;
 
@@ -541,7 +566,7 @@ ${p("You are welcome to submit again once the details can be checked, for exampl
       html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER, eyebrow: "Add a business", preheader: input.refunded ? "Your payment has been refunded in full." : "You have not been charged." }),
       text: [
         `Hi ${first},`,
-        `An editor reviewed ${input.businessName} and we are not publishing it right now.${reason ? ` ${reason}` : ""}`,
+        `An editor reviewed ${input.businessName} and it does not meet our listing standards, so it is not listed on TenBestFind.${reason ? ` ${reason}` : ""}`,
         paymentLine,
       ].join("\n\n"),
       replyTo: await teamInbox(),

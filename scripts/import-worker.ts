@@ -182,9 +182,9 @@ async function tickScheduledPublishes(): Promise<void> {
 }
 
 /**
- * Paid new listings are checked against their own website and published when
- * everything matches. One per pass, checked every half minute, so a payment is
- * usually live within a minute or two.
+ * Paid new listings (live from the moment of payment) are checked against their
+ * own website; anything doubtful is flagged to the team. One per pass, every
+ * half minute.
  */
 let nextListingCheck = 0;
 
@@ -195,7 +195,7 @@ async function tickListingReviews(): Promise<void> {
     const id = await nextListingToReview();
     if (!id) return;
     const review = await reviewListing(id);
-    console.log(`[listing] ${id} ${review.published ? "published automatically" : review.verdict.toLowerCase()}`);
+    console.log(`[listing] ${id} ${review.verdict === "APPROVED" ? "passed the website check" : "flagged for review"}`);
     nextListingCheck = Date.now() + 1_000;
   } catch (error) {
     console.error("[listing] review:", error instanceof Error ? error.message : error);

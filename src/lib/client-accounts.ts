@@ -5,6 +5,7 @@ import { db } from "./db";
 import type { UserRole } from "./enums";
 import { emailLayout, esc, sendMail, ui } from "./mail";
 import { sendClaimApproved, sendClaimDeclined, sendListingWelcome } from "./notify";
+import { publishPaidListing } from "./listing-publish";
 import { siteUrl } from "./stripe";
 
 /**
@@ -194,6 +195,9 @@ export async function grantListingAccess(subscriptionId: string) {
   if (!subscription || subscription.plan.key !== "listing") return null;
   const { business } = subscription;
 
+  // Paid means live. The website check runs afterwards and flags any doubt.
+  const published = await publishPaidListing(business.id);
+
   const submission = await db.submission.findFirst({
     where: { kind: "BUSINESS", payload: { contains: `"businessId":"${business.id}"` } },
     orderBy: { createdAt: "desc" },
@@ -223,6 +227,7 @@ export async function grantListingAccess(subscriptionId: string) {
         businessName: business.name,
         accessUrl: link.url,
         needsPassword: link.needsPassword,
+        liveUrl: published.url,
       });
     } catch (error) {
       console.error("[client-accounts] listing welcome not sent:", error instanceof Error ? error.message : error);

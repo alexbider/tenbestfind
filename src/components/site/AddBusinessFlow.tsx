@@ -200,7 +200,7 @@ export function AddBusinessFlow({
           label: "What happens next",
           full: true,
           title: "What happens next.",
-          text: "After payment we check your details against your own website: the business name, your phone or email, and the trade. When everything matches, the listing goes live within minutes. Anything unclear goes to an editor, and a declined listing is refunded in full. Submitting does not buy a place on a ranking.",
+          text: "Your listing goes live as soon as the payment goes through, and you get your dashboard login by email. We then check your details against your own website: the business name, your phone or email, and the trade. If something does not match, an editor takes a look, and a listing that is declined is refunded in full. Submitting does not buy a place on a ranking.",
         },
       ],
     },

@@ -62,9 +62,9 @@ export default async function AddCompletePage({ searchParams }: Props) {
             Submission received
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 22 }}>
-            Payment received. We are checking your details against your website now. When everything
-            matches, the listing goes live within minutes; anything unclear goes to an editor. We
-            email you either way, and a declined listing is refunded in full.
+            Payment received and your listing is live. Your dashboard login is on its way by email.
+            We also check every new listing against the business&apos;s own website; if something does
+            not match, an editor takes a look, and a declined listing is refunded in full.
           </p>
 
           {subscription ? (
