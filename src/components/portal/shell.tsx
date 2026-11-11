@@ -14,6 +14,7 @@ const PORTAL_NAV = [
   { name: "Leads", href: "/portal/leads", icon: "mail" as const },
   { name: "Performance", href: "/portal/analytics", icon: "chart" as const },
   { name: "Profile", href: "/portal/profile", icon: "store" as const },
+  { name: "Billing", href: "/portal/billing", icon: "card" as const },
 ];
 
 export function PortalShell({

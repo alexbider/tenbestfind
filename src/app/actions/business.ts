@@ -123,9 +123,10 @@ export async function submitClaim(_prev: ClaimState, formData: FormData): Promis
 
   await db.claimRequest.update({ where: { id: claim.id }, data: { subscriptionId: checkout.subscriptionId } });
 
-  // The receipt (with a code for email verification) and the team alert go out
-  // before the hand-off to Stripe. Neither can fail the claim.
-  await Promise.allSettled([
+  // With Stripe, the receipt (or the email verification code) and the team
+  // alert wait for the payment webhook, so a claim abandoned at the payment
+  // page sends nothing. Without Stripe the claim is complete now.
+  if (checkout.mode === "recorded") await Promise.allSettled([
     data.verificationMethod === "EMAIL"
       ? issueClaimCode(claim.id)
       : sendClaimReceived({
@@ -278,7 +279,8 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
       planKey: data.planKey,
       email: data.contactEmail,
       name: data.contactName,
-      successPath: `${routes.addBusiness()}complete/`,
+      // Back through the site, which signs the new owner in to the portal.
+      successPath: "/billing/return/",
       cancelPath: routes.addBusiness(),
     });
   } catch (error) {
@@ -290,8 +292,10 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
     };
   }
 
-  // The receipt and the team alert went out with the first submit.
-  if (!resubmitted) await Promise.allSettled([
+  // With Stripe, nothing is emailed until the payment goes through: then the
+  // owner gets their login and the team gets the alert. Without Stripe the
+  // submission is complete now, so the receipt and alert go out here.
+  if (checkout.mode === "recorded" && !resubmitted) await Promise.allSettled([
     sendListingSubmitted({
       to: data.contactEmail,
       contactName: data.contactName,

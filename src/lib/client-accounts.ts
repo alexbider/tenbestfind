@@ -4,7 +4,7 @@ import { expiresFor, hashToken, newToken, type TokenPurpose } from "./auth-token
 import { db } from "./db";
 import type { UserRole } from "./enums";
 import { emailLayout, esc, sendMail, ui } from "./mail";
-import { sendClaimApproved, sendClaimDeclined } from "./notify";
+import { sendClaimApproved, sendClaimDeclined, sendListingWelcome } from "./notify";
 import { siteUrl } from "./stripe";
 
 /**
@@ -176,6 +176,57 @@ export async function completeClaimApproval(claimId: string) {
     });
   } catch (error) {
     console.error("[client-accounts] approval email not sent:", error instanceof Error ? error.message : error);
+  }
+  return owner;
+}
+
+/**
+ * A paid new-listing signup gets a portal account the same way a verified
+ * claim does: the submitter becomes the listing's owner and is emailed their
+ * username and a link to create a password. Runs from the Stripe webhook and
+ * from the return page, whichever comes first; only the first links and emails.
+ */
+export async function grantListingAccess(subscriptionId: string) {
+  const subscription = await db.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { plan: true, business: true },
+  });
+  if (!subscription || subscription.plan.key !== "listing") return null;
+  const { business } = subscription;
+
+  const submission = await db.submission.findFirst({
+    where: { kind: "BUSINESS", payload: { contains: `"businessId":"${business.id}"` } },
+    orderBy: { createdAt: "desc" },
+  });
+  const email = submission?.email ?? business.email;
+  if (!email) return null;
+  const name = submission?.name ?? business.name;
+
+  const owner = await ownerAccountFor(email, name);
+  const { count } = await db.business.updateMany({
+    where: { id: business.id, ownerId: null },
+    data: { ownerId: owner.id, claimed: true },
+  });
+  if (count === 1) {
+    await audit({
+      userId: owner.id,
+      action: "approve",
+      entityType: "business",
+      entityId: business.id,
+      summary: `${business.name} linked to its submitter after payment`,
+    });
+    try {
+      const link = await accessLink(owner);
+      await sendListingWelcome({
+        to: owner.email,
+        contactName: name,
+        businessName: business.name,
+        accessUrl: link.url,
+        needsPassword: link.needsPassword,
+      });
+    } catch (error) {
+      console.error("[client-accounts] listing welcome not sent:", error instanceof Error ? error.message : error);
+    }
   }
   return owner;
 }

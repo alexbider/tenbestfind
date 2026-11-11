@@ -16,8 +16,9 @@ import { money } from "./format";
 import { parseJson } from "./json";
 import { parseOrderPayload } from "./guest-post";
 import { FEATURED_PARTNER_KIND, TOP10_PLAN_KEY } from "./top10";
-import { alertNewSubscription, alertPaymentFailed, sendPaymentFailed, sendPlanEnded } from "./notify";
-import { approveClaimIfReady } from "./client-accounts";
+import { alertNewSubscription, alertPaymentFailed, sendInvoicePaid, sendPaymentFailed, sendPlanEnded } from "./notify";
+import { approveClaimIfReady, grantListingAccess } from "./client-accounts";
+import { announcePaidSignup } from "./signup-notices";
 
 /**
  * The internal billing API. Everything that talks to Stripe goes through here,
@@ -344,17 +345,69 @@ async function portalConfiguration(): Promise<string | undefined> {
   return typeof stored === "string" && stored.trim() ? stored.trim() : undefined;
 }
 
+/**
+ * The TenBestFind billing portal configuration, created on first use. The
+ * Stripe account is shared with BeautyFind, so its default portal must never
+ * be used. A stored id that has gone missing (another account or mode) is
+ * replaced, and an existing TenBestFind configuration is reused before a new
+ * one is made, so calling this twice never creates a duplicate.
+ */
+export async function ensurePortalConfiguration(): Promise<string> {
+  const stripe = await getStripe();
+  const stored = await portalConfiguration();
+  if (stored) {
+    const existing = await stripe.billingPortal.configurations.retrieve(stored).catch((error) => {
+      if (isMissingResource(error)) return null;
+      throw error;
+    });
+    if (existing?.active) return existing.id;
+  }
+
+  const listed = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
+  const ours = listed.data.find((row) => row.metadata?.site === STRIPE_METADATA.site);
+  const configuration =
+    ours ??
+    (await stripe.billingPortal.configurations.create({
+      name: PRODUCT_PREFIX,
+      business_profile: { headline: "TenBestFind" },
+      default_return_url: siteUrl("/portal/billing/"),
+      features: {
+        payment_method_update: { enabled: true },
+        invoice_history: { enabled: true },
+        subscription_cancel: {
+          enabled: true,
+          mode: "at_period_end",
+          proration_behavior: "none",
+          cancellation_reason: {
+            enabled: true,
+            options: ["too_expensive", "missing_features", "switched_service", "unused", "low_quality", "other"],
+          },
+        },
+        // Plans are changed by starting a new checkout, never in the portal.
+        subscription_update: { enabled: false },
+      },
+      metadata: { ...STRIPE_METADATA },
+    }));
+
+  await db.setting.upsert({
+    where: { key: PORTAL_SETTING },
+    create: { key: PORTAL_SETTING, value: JSON.stringify(configuration.id), groupName: "billing", label: "Stripe billing portal configuration" },
+    update: { value: JSON.stringify(configuration.id) },
+  });
+  return configuration.id;
+}
+
 export async function billingPortalUrl(businessId: string, returnPath: string) {
   const business = await db.business.findUnique({ where: { id: businessId } });
   if (!business?.stripeCustomerId) return null;
   const stripe = await getStripe();
   // The shared account's default portal belongs to someone else, so ours is
-  // named explicitly when one has been set up.
-  const configuration = await portalConfiguration();
+  // always named explicitly.
+  const configuration = await ensurePortalConfiguration();
   const session = await stripe.billingPortal.sessions.create({
     customer: business.stripeCustomerId,
     return_url: siteUrl(returnPath),
-    ...(configuration ? { configuration } : {}),
+    configuration,
   });
   return session.url;
 }
@@ -617,9 +670,15 @@ export async function applyStripeEvent(event: Stripe.Event) {
       // so the claim is verified here and the owner gets their sign-in email.
       const claim = await db.claimRequest.findFirst({ where: { subscriptionId }, select: { id: true } });
       if (claim) await approveClaimIfReady(claim.id);
+      // A paid new listing gets its owner account and sign-in email.
+      await grantListingAccess(subscriptionId);
       const top10 = await syncTop10Placement(subscriptionId, true);
 
       if (ours.status !== "ACTIVE") {
+        // The signup's emails go out now that it is paid, and only once.
+        await announcePaidSignup(subscriptionId).catch((error) =>
+          console.error("[billing] signup emails not sent:", error instanceof Error ? error.message : error),
+        );
         const sold = await db.subscription.findUnique({
           where: { id: subscriptionId },
           include: { plan: true, business: { select: { name: true } } },
@@ -694,6 +753,9 @@ export async function applyStripeEvent(event: Stripe.Event) {
       if (!local) return null;
 
       const status = event.type === "invoice.payment_failed" ? "OPEN" : mapInvoiceStatus(invoice.status);
+      // Read before the write so the invoice email goes out once, on the first
+      // event that sees it paid (invoice.paid and invoice.finalized can both).
+      const before = await db.invoice.findUnique({ where: { stripeInvoiceId: invoice.id }, select: { status: true } });
 
       await db.invoice.upsert({
         where: { stripeInvoiceId: invoice.id },
@@ -719,6 +781,25 @@ export async function applyStripeEvent(event: Stripe.Event) {
           pdfUrl: invoice.invoice_pdf ?? null,
         },
       });
+
+      if (event.type === "invoice.paid" && before?.status !== "PAID" && invoice.amount_paid > 0) {
+        const business = await db.business.findUnique({ where: { id: local.businessId } });
+        const to = invoice.customer_email ?? business?.email;
+        if (to && business) {
+          await sendInvoicePaid({
+            to,
+            businessName: business.name,
+            planName: local.plan.name,
+            number: invoice.number ?? `STRIPE-${invoice.id.slice(-8).toUpperCase()}`,
+            amount: money(invoice.amount_paid, invoice.currency.toUpperCase()),
+            paidAt: fromUnix(invoice.status_transitions?.paid_at) ?? new Date(),
+            periodStart: invoice.lines?.data[0]?.period?.start ? fromUnix(invoice.lines.data[0].period.start) : fromUnix(invoice.period_start),
+            periodEnd: invoice.lines?.data[0]?.period?.end ? fromUnix(invoice.lines.data[0].period.end) : fromUnix(invoice.period_end),
+            hostedUrl: invoice.hosted_invoice_url,
+            pdfUrl: invoice.invoice_pdf,
+          });
+        }
+      }
 
       if (event.type === "invoice.payment_failed") {
         await db.subscription.update({ where: { id: local.id }, data: { status: "PAST_DUE" } });
