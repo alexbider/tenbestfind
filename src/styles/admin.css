@@ -1144,3 +1144,73 @@
   flex-wrap: wrap;
   margin-bottom: 6px;
 }
+
+/* ------------------------------------------------------- bulk actions */
+
+.admin-table__check {
+  width: 1%;
+  padding-right: 0;
+}
+
+.admin-table__check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.bulk-bar {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.bulk-bar__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.bulk-bar__count {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.bulk-bar__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bulk-bar__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fdecea;
+  border: 1px solid #f6cdc9;
+  font-size: 14px;
+  color: var(--maple-600);
+}
+
+.bulk-bar__confirm p {
+  margin: 0;
+  flex: 1 1 320px;
+}
+
+.bulk-bar__result {
+  margin: 10px 0 0;
+}
+
+.bulk-bar__result ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+}
