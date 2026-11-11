@@ -4,54 +4,31 @@ import { askForJson } from "./anthropic";
 import { db } from "./db";
 import { checkEmail, domainOf } from "./email-quality";
 import { isOwnWebsite, normalizeName, normalizePhone, websiteHost } from "./enrich";
-import { onListingPublished } from "./listing-lifecycle";
 import { parseJson } from "./json";
 import { crawlSite, EMPTY_SITE, type SiteData } from "./site-crawl";
-import { queueForIndexNow } from "./indexnow";
-import { routes } from "./urls";
+import { alertListingFlagged } from "./notify";
 
 /**
- * Checking a paid new listing against the company's own website, so a listing
- * that plainly is what it says can go live without waiting for an editor.
+ * Checking a paid new listing against the company's own website. The listing
+ * is already live (it publishes on payment); this decides whether anyone needs
+ * to look at it.
  *
  * Every check is something a reader could confirm in a minute on the site: the
  * name is there, the phone or the email domain is theirs, the site is about the
  * trade they picked, and nobody else already listed that website. A model then
- * reads the same pages for anything a rule cannot see. All of it has to agree
- * for the listing to publish; one doubt and it waits for a person, with the
- * reasons written down. Editors can still publish, decline or unpublish by hand.
+ * reads the same pages for anything a rule cannot see. One doubt and the team
+ * is alerted, with the reasons written down; they keep it, or decline it, which
+ * takes it down and refunds the payment.
  */
-
-export const AUTO_APPROVE_SETTING = "editorial.autoApproveListings";
 
 export type CheckResult = { key: string; label: string; ok: boolean; required: boolean; detail: string };
 export type AutoReview = {
   verdict: "APPROVED" | "NEEDS_REVIEW";
   checks: CheckResult[];
   checkedAt: string;
-  /** Whether the listing was published by this check. */
-  published: boolean;
+  /** An editor's decision on a flagged listing. Null until someone decides. */
+  resolution?: { decision: "APPROVED" | "REJECTED"; by: string; at: string } | null;
 };
-
-/** On unless an editor has switched it off in Settings. */
-export async function autoApproveEnabled(): Promise<boolean> {
-  const row = await db.setting.findUnique({ where: { key: AUTO_APPROVE_SETTING } });
-  if (!row) {
-    // Make the switch visible on the Settings screen the first time it is read.
-    await db.setting
-      .create({
-        data: {
-          key: AUTO_APPROVE_SETTING,
-          value: "true",
-          groupName: "editorial",
-          label: "Publish paid new listings automatically when they match their website",
-        },
-      })
-      .catch(() => null);
-    return true;
-  }
-  return parseJson<unknown>(row.value, true) !== false;
-}
 
 const words = (value: string) => value.split(" ").filter((word) => word.length >= 3);
 
@@ -276,82 +253,104 @@ export async function autoReviewFor(businessId: string): Promise<AutoReview | nu
   return payload.autoReview ?? null;
 }
 
+async function saveReview(businessId: string, review: AutoReview, status: string) {
+  const submission = await submissionFor(businessId);
+  if (!submission) return;
+  const payload = parseJson<Record<string, unknown>>(submission.payload, {});
+  await db.submission.update({
+    where: { id: submission.id },
+    data: { payload: JSON.stringify({ ...payload, autoReview: review }), status },
+  });
+}
+
 /**
- * Checks one listing, records the outcome on its submission, and publishes it
- * when every required check passed and automatic approval is on. Returns the review.
+ * Checks one paid listing against its website and records the outcome. A clean
+ * result closes the matter; anything doubtful is flagged for the team (shown on
+ * the admin dashboard and emailed) without taking the listing down. Publishing
+ * happens at payment, not here.
  */
 export async function reviewListing(businessId: string): Promise<AutoReview> {
   const checks = await checkListing(businessId);
   const passed = checks.every((check) => check.ok || !check.required);
-
   const business = await db.business.findUnique({ where: { id: businessId } });
-  const enabled = await autoApproveEnabled();
-  let published = false;
-  if (passed && enabled && business?.status === "PENDING") {
-    const { count } = await db.business.updateMany({
-      where: { id: businessId, status: "PENDING" },
-      data: { status: "PUBLISHED", publishedAt: new Date() },
-    });
-    published = count === 1;
-    if (published) {
-      await onListingPublished(businessId).catch((error) =>
-        console.error("[listing-verify] publish follow-up failed:", error instanceof Error ? error.message : error),
-      );
-      await queueForIndexNow([routes.business(business.slug)]).catch(() => 0);
-    }
-  }
 
   const review: AutoReview = {
     verdict: passed ? "APPROVED" : "NEEDS_REVIEW",
     checks,
     checkedAt: new Date().toISOString(),
-    published,
+    resolution: null,
   };
+  await saveReview(businessId, review, passed ? "RESOLVED" : "IN_REVIEW");
 
-  const submission = await submissionFor(businessId);
-  if (submission) {
-    const payload = parseJson<Record<string, unknown>>(submission.payload, {});
-    await db.submission.update({
-      where: { id: submission.id },
-      data: {
-        payload: JSON.stringify({ ...payload, autoReview: review }),
-        ...(published ? { status: "RESOLVED" } : {}),
-      },
-    });
-  }
-
-  const failed = checks.filter((check) => check.required && !check.ok).map((check) => check.label);
+  const failed = checks.filter((check) => check.required && !check.ok);
   await db.auditLog.create({
     data: {
-      action: published ? "approve" : "review",
+      action: "review",
       entityType: "business",
       entityId: businessId,
-      summary: published
-        ? `${business?.name ?? businessId} published automatically: every website check passed`
-        : passed
-          ? `${business?.name ?? businessId} passed the website checks; automatic publishing is off`
-          : `${business?.name ?? businessId} needs an editor: ${failed.join(", ")}`,
+      summary: passed
+        ? `${business?.name ?? businessId} passed every website check`
+        : `${business?.name ?? businessId} flagged for review: ${failed.map((check) => check.label).join(", ")}`,
     },
   });
 
+  if (!passed && business) {
+    await alertListingFlagged({
+      businessName: business.name,
+      businessId,
+      live: business.status === "PUBLISHED",
+      problems: failed.map((check) => `${check.label}: ${check.detail}`),
+    }).catch(() => null);
+  }
   return review;
 }
 
+/** An editor's decision on a flagged listing, kept with the review it settles. */
+export async function resolveReview(businessId: string, decision: "APPROVED" | "REJECTED", by: string) {
+  const current = await autoReviewFor(businessId);
+  if (!current) return;
+  await saveReview(
+    businessId,
+    { ...current, resolution: { decision, by, at: new Date().toISOString() } },
+    "RESOLVED",
+  );
+}
+
+/** Flagged listings nobody has decided on yet, newest first. */
+export async function flaggedListings(): Promise<{ id: string; name: string }[]> {
+  const open = await db.submission.findMany({
+    where: { kind: "BUSINESS", status: "IN_REVIEW" },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+  const ids = open
+    .map((row) => parseJson<{ businessId?: string; autoReview?: AutoReview }>(row.payload, {}))
+    .filter((payload) => payload.autoReview?.verdict === "NEEDS_REVIEW" && !payload.autoReview.resolution && payload.businessId)
+    .map((payload) => payload.businessId as string);
+  if (ids.length === 0) return [];
+  return db.business.findMany({
+    where: { id: { in: ids }, status: { in: ["PUBLISHED", "PENDING"] } },
+    select: { id: true, name: true },
+  });
+}
+
 /**
- * The next paid, pending new listing that has not been checked yet. Paid means
- * an ACTIVE Directory Listing subscription; unpaid signups are never published.
+ * The next paid new listing that has not been checked yet: live (published on
+ * payment) or still pending, with an ACTIVE Directory Listing subscription.
  */
 export async function nextListingToReview(): Promise<string | null> {
   const candidates = await db.business.findMany({
     where: {
-      status: "PENDING",
+      status: { in: ["PUBLISHED", "PENDING"] },
       subscriptions: { some: { status: "ACTIVE", plan: { key: "listing" } } },
     },
     orderBy: { submittedAt: "asc" },
     select: { id: true },
-    take: 20,
+    take: 40,
   });
   for (const candidate of candidates) {
+    const submission = await submissionFor(candidate.id);
+    if (!submission) continue;
     if (!(await autoReviewFor(candidate.id))) return candidate.id;
   }
   return null;

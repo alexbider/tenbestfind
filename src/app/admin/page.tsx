@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { flaggedListings } from "@/lib/listing-verify";
 import { AdminHeader, BarChart, EmptyState, Panel, QueueList, StackedChart, StatRow } from "@/components/admin/shell";
 import { StatusPill } from "@/components/ui/primitives";
 import { fullDate, money, percentChange, shortMonthYear } from "@/lib/format";
@@ -68,6 +69,7 @@ export default async function AdminDashboard() {
     byPlan.set(plan.id, current);
   }
   const packages = [...byPlan.values()].sort((a, b) => b.cents - a.cents);
+  const flagged = await flaggedListings();
 
   return (
     <>
@@ -87,8 +89,8 @@ export default async function AdminDashboard() {
           },
           {
             label: "Needs attention",
-            value: openClaims.length + openSubmissions.length + pendingBusinesses,
-            hint: `${openClaims.length} claims, ${openSubmissions.length} reports, ${pendingBusinesses} pending listings`,
+            value: openClaims.length + openSubmissions.length + pendingBusinesses + flagged.length,
+            hint: `${flagged.length} flagged, ${openClaims.length} claims, ${openSubmissions.length} reports, ${pendingBusinesses} pending listings`,
           },
         ]}
       />
@@ -104,6 +106,14 @@ export default async function AdminDashboard() {
         <Panel title="Needs your attention">
           <QueueList
             items={[
+              {
+                title: "Live listings flagged by the website check",
+                sub: flagged.length ? flagged.slice(0, 3).map((row) => row.name).join(", ") : "Paid listings that did not match their website",
+                count: flagged.length,
+                href: flagged.length === 1 ? `/admin/businesses/${flagged[0].id}` : "/admin/submissions",
+                icon: "flag",
+                tone: "red",
+              },
               {
                 title: "Claims awaiting review",
                 sub: "Ownership verification",
