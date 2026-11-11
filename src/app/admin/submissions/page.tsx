@@ -1,9 +1,13 @@
 import { AdminHeader, EmptyState, Panel, StatRow } from "@/components/admin/shell";
 import { setSubmissionStatus } from "@/app/actions/admin-content";
+import { decideDescriptionEdit } from "@/app/actions/admin-profile-edits";
+import { ConfirmButton } from "@/components/admin/ConfirmButton";
 import { Badge, StatusPill } from "@/components/ui/primitives";
 import { fullDate } from "@/lib/format";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseJson } from "@/lib/json";
+import { DESCRIPTION_EDIT, type DescriptionEditPayload } from "@/lib/portal-profile";
 
 export const metadata = { title: "Reports & corrections" };
 
@@ -12,6 +16,7 @@ const KIND_LABEL: Record<string, string> = {
   CONTACT: "Contact",
   BUSINESS: "Business submission",
   RANKING_REQUEST: "Ranking request",
+  [DESCRIPTION_EDIT]: "Owner description",
 };
 
 export default async function AdminSubmissionsPage() {
@@ -72,7 +77,9 @@ export default async function AdminSubmissionsPage() {
                   <tr key={submission.id}>
                     <td>
                       <span className="admin-table__primary">{submission.subject}</span>
-                      {submission.message ? (
+                      {submission.kind === DESCRIPTION_EDIT ? (
+                        <DescriptionChange payload={submission.payload} />
+                      ) : submission.message ? (
                         <span className="admin-table__meta">{submission.message.slice(0, 120)}</span>
                       ) : null}
                       {submission.pageUrl ? (
@@ -105,13 +112,32 @@ export default async function AdminSubmissionsPage() {
                                 </button>
                               </form>
                             ) : null}
-                            <form action={setSubmissionStatus}>
-                              <input type="hidden" name="id" value={submission.id} />
-                              <input type="hidden" name="status" value="RESOLVED" />
-                              <button type="submit" className="btn btn--secondary btn--sm">
-                                Resolve
-                              </button>
-                            </form>
+                            {submission.kind === DESCRIPTION_EDIT ? (
+                              <>
+                                <form action={decideDescriptionEdit}>
+                                  <input type="hidden" name="id" value={submission.id} />
+                                  <input type="hidden" name="decision" value="approve" />
+                                  <button type="submit" className="btn btn--primary btn--sm">
+                                    Approve
+                                  </button>
+                                </form>
+                                <form action={decideDescriptionEdit}>
+                                  <input type="hidden" name="id" value={submission.id} />
+                                  <input type="hidden" name="decision" value="decline" />
+                                  <ConfirmButton question="Decline this description? The profile keeps the current one.">
+                                    Decline
+                                  </ConfirmButton>
+                                </form>
+                              </>
+                            ) : (
+                              <form action={setSubmissionStatus}>
+                                <input type="hidden" name="id" value={submission.id} />
+                                <input type="hidden" name="status" value="RESOLVED" />
+                                <button type="submit" className="btn btn--secondary btn--sm">
+                                  Resolve
+                                </button>
+                              </form>
+                            )}
                           </>
                         ) : (
                           <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -128,5 +154,27 @@ export default async function AdminSubmissionsPage() {
         )}
       </Panel>
     </>
+  );
+}
+
+/** The proposed text beside what is live now, so an editor can compare. */
+function DescriptionChange({ payload }: { payload: string | null }) {
+  const change = parseJson<Partial<DescriptionEditPayload>>(payload, {});
+  return (
+    <details style={{ marginTop: 4 }}>
+      <summary className="admin-table__meta" style={{ cursor: "pointer" }}>
+        Compare with the live description
+      </summary>
+      <div style={{ display: "grid", gap: 8, marginTop: 8, fontSize: 13, maxWidth: 560 }}>
+        <div>
+          <strong>Proposed</strong>
+          <p style={{ whiteSpace: "pre-wrap" }}>{change.description ?? "—"}</p>
+        </div>
+        <div>
+          <strong>Live when sent</strong>
+          <p style={{ whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>{change.previous || "—"}</p>
+        </div>
+      </div>
+    </details>
   );
 }
