@@ -391,6 +391,54 @@ ${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/
   );
 }
 
+/**
+ * A paid new listing: the owner's sign-in details. The username is their email;
+ * the password is one they choose through a one-time link, so no password is
+ * ever written into an email.
+ */
+export async function sendListingWelcome(input: {
+  to: string;
+  contactName: string;
+  businessName: string;
+  accessUrl: string;
+  needsPassword: boolean;
+}) {
+  const first = input.contactName.split(" ")[0] || "there";
+  const cta = input.needsPassword ? "Create your password" : "Open your dashboard";
+  const body = `${p(`Hi ${esc(first)},`)}
+${ui.lead(`Payment received for <strong>${esc(input.businessName)}</strong>. An editor is reviewing the listing now and will email you when it is live.`)}
+${p("Your TenBestFind dashboard is ready. Use it to add photos, hours, services and your service area while the review runs.")}
+${rows([
+  ["Sign-in page", "tenbestfind.com/login/"],
+  ["Username", input.to],
+  ["Password", input.needsPassword ? "Create it with the button below" : "The one you already use"],
+])}
+${button(input.accessUrl, cta)}
+${ui.muted("The button works once. After that, sign in at tenbestfind.com/login/ with this email address, or ask for a sign-in link there.")}`;
+
+  return deliver(
+    {
+      to: input.to,
+      subject: `Your TenBestFind login for ${input.businessName}`,
+      replyTo: await teamInbox(),
+      html: emailLayout({ heading: "Your dashboard is ready", body, footer: FOOTER, eyebrow: "Welcome aboard", preheader: "Your username, and a link to create your password." }),
+      text: [
+        `Hi ${first},`,
+        `Payment received for ${input.businessName}. An editor is reviewing the listing now and will email you when it is live.`,
+        "Your TenBestFind dashboard is ready.",
+        textRows([
+          ["Sign-in page", "https://tenbestfind.com/login/"],
+          ["Username", input.to],
+          ["Password", input.needsPassword ? "Create it with the link below" : "The one you already use"],
+        ]),
+        `${cta}: ${input.accessUrl}`,
+        "The link works once. After that, sign in at https://tenbestfind.com/login/ with this email address.",
+      ].join("\n\n"),
+    },
+    "listing welcome",
+  );
+}
+
 export async function sendClaimDeclined(input: {
   to: string;
   ownerName: string;

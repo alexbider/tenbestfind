@@ -17,7 +17,7 @@ import { parseJson } from "./json";
 import { parseOrderPayload } from "./guest-post";
 import { FEATURED_PARTNER_KIND, TOP10_PLAN_KEY } from "./top10";
 import { alertNewSubscription, alertPaymentFailed, sendPaymentFailed, sendPlanEnded } from "./notify";
-import { approveClaimIfReady } from "./client-accounts";
+import { approveClaimIfReady, grantListingAccess } from "./client-accounts";
 
 /**
  * The internal billing API. Everything that talks to Stripe goes through here,
@@ -617,6 +617,8 @@ export async function applyStripeEvent(event: Stripe.Event) {
       // so the claim is verified here and the owner gets their sign-in email.
       const claim = await db.claimRequest.findFirst({ where: { subscriptionId }, select: { id: true } });
       if (claim) await approveClaimIfReady(claim.id);
+      // A paid new listing gets its owner account and sign-in email.
+      await grantListingAccess(subscriptionId);
       const top10 = await syncTop10Placement(subscriptionId, true);
 
       if (ours.status !== "ACTIVE") {

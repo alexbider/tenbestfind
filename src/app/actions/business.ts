@@ -278,7 +278,8 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
       planKey: data.planKey,
       email: data.contactEmail,
       name: data.contactName,
-      successPath: `${routes.addBusiness()}complete/`,
+      // Back through the site, which signs the new owner in to the portal.
+      successPath: "/billing/return/",
       cancelPath: routes.addBusiness(),
     });
   } catch (error) {
