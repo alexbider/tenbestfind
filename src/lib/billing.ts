@@ -49,9 +49,16 @@ export async function syncPlanToStripe(planId: string) {
     statement_descriptor: STATEMENT_DESCRIPTOR,
     metadata: { ...STRIPE_METADATA, planKey: plan.key },
   };
-  const product = plan.stripeProductId
-    ? await stripe.products.update(plan.stripeProductId, productFields)
-    : await stripe.products.create(productFields);
+  // A stored id from another Stripe account (or the other mode) no longer
+  // exists, so it is replaced rather than left to fail every sync.
+  const existingProduct = plan.stripeProductId
+    ? await stripe.products.update(plan.stripeProductId, productFields).catch((error) => {
+        if (isMissingResource(error)) return null;
+        throw error;
+      })
+    : null;
+  const product = existingProduct ?? (await stripe.products.create(productFields));
+  if (!existingProduct) plan.stripePriceId = null;
 
   // Reuse the existing price when the amount, currency and billing shape still match.
   const recurring = plan.interval !== "once";
@@ -86,6 +93,11 @@ export async function syncPlanToStripe(planId: string) {
   });
 
   return { productId: product.id, priceId };
+}
+
+/** True for Stripe's "No such product / price / customer" error. */
+function isMissingResource(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "resource_missing";
 }
 
 /* --------------------------------------------------------------- customers */
@@ -171,17 +183,17 @@ export async function startCheckout(input: {
   }
 
   const stripe = await getStripe();
-  const customerId = await ensureCustomer(input.businessId, input.email, input.name);
+  let customerId = await ensureCustomer(input.businessId, input.email, input.name);
 
   // Close the earlier page so the same row can never be paid for twice.
   if (unfinished?.stripeCheckoutId) {
     await stripe.checkout.sessions.expire(unfinished.stripeCheckoutId).catch(() => null);
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const params = (price: string, customer: string): Stripe.Checkout.SessionCreateParams => ({
     mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: plan.stripePriceId, quantity: input.quantity ?? 1 }],
+    customer,
+    line_items: [{ price, quantity: input.quantity ?? 1 }],
     success_url: siteUrl(`${input.successPath}?session={CHECKOUT_SESSION_ID}`),
     cancel_url: siteUrl(input.cancelPath),
     client_reference_id: subscription.id,
@@ -218,6 +230,25 @@ export async function startCheckout(input: {
     },
   });
 
+  // A price, product or customer id saved against another Stripe account (or
+  // the other mode) is missing here. Recreate whichever one Stripe names and
+  // try again, rather than failing every checkout until someone notices.
+  let priceId = plan.stripePriceId;
+  let session: Stripe.Checkout.Session | undefined;
+  for (let attempt = 0; !session; attempt++) {
+    try {
+      session = await stripe.checkout.sessions.create(params(priceId, customerId));
+    } catch (error) {
+      if (attempt >= 2 || !isMissingResource(error)) throw error;
+      if ((error as { param?: string }).param === "customer") {
+        await db.business.update({ where: { id: input.businessId }, data: { stripeCustomerId: null } });
+        customerId = await ensureCustomer(input.businessId, input.email, input.name);
+      } else {
+        priceId = (await syncPlanToStripe(plan.id)).priceId;
+      }
+    }
+  }
+
   await db.subscription.update({
     where: { id: subscription.id },
     data: { stripeCustomerId: customerId, stripeCheckoutId: session.id },
@@ -246,10 +277,10 @@ export async function startOneTimeCheckout(input: {
   if (!(await stripeConfigured()) || !plan.stripePriceId) return null;
 
   const stripe = await getStripe();
-  const session = await stripe.checkout.sessions.create({
+  const params = (price: string): Stripe.Checkout.SessionCreateParams => ({
     mode: "payment",
     customer_email: input.email,
-    line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+    line_items: [{ price, quantity: 1 }],
     success_url: siteUrl(`${input.successPath}?session={CHECKOUT_SESSION_ID}`),
     cancel_url: siteUrl(input.cancelPath),
     client_reference_id: input.orderId,
@@ -274,6 +305,14 @@ export async function startOneTimeCheckout(input: {
       },
     },
   });
+
+  // A price saved against another Stripe account is recreated once, then retried.
+  const session = await stripe.checkout.sessions
+    .create(params(plan.stripePriceId))
+    .catch(async (error) => {
+      if (!isMissingResource(error)) throw error;
+      return stripe.checkout.sessions.create(params((await syncPlanToStripe(plan.id)).priceId));
+    });
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return session.url;
