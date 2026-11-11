@@ -286,7 +286,17 @@ export default async function PortalOverview({ searchParams }: Props) {
           </Panel>
         )}
 
-        <Panel title="Your plan">
+        <Panel
+          title="Your plan"
+          actions={
+            <Link href={`/portal/billing?businessId=${business.id}`} style={{ fontSize: 12.5, fontWeight: 600 }}>
+              Billing and invoices →
+            </Link>
+          }
+        >
+          {business.status === "PENDING" ? (
+            <p style={{ fontSize: 12.5, fontWeight: 600, color: "#8A5F0B", marginBottom: 8 }}>In editorial review</p>
+          ) : null}
           {plan ? (
             <>
               <p style={{ fontSize: 16, fontWeight: 650, marginBottom: 6 }}>{plan.name}</p>
@@ -300,11 +310,14 @@ export default async function PortalOverview({ searchParams }: Props) {
             <>
               <p style={{ fontSize: 16, fontWeight: 650, marginBottom: 6 }}>No plan yet</p>
               <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
-                Your listing stays published and keeps collecting enquiries either way. A plan opens
-                the contact details on them.
+                {business.status === "PUBLISHED"
+                  ? "Your listing stays published and keeps collecting enquiries either way. A plan opens the contact details on them."
+                  : business.status === "PENDING"
+                    ? "Your listing is not published yet. An editor reviews it before it goes live. A plan opens the contact details on any enquiries it collects."
+                    : "Your listing is not published right now. A plan opens the contact details on any enquiries it collects."}
               </p>
-              <Link href={routes.forBusinesses()} className="btn btn--primary btn--sm">
-                See the plans
+              <Link href={`/portal/billing?businessId=${business.id}`} className="btn btn--primary btn--sm">
+                See billing options
               </Link>
             </>
           )}

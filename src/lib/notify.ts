@@ -555,8 +555,8 @@ ${p("You are welcome to submit again once the details can be checked, for exampl
 export async function sendPlanEnded(input: { to: string; businessName: string; planName: string; profileUrl: string }) {
   const body = `${p(`Your <strong>${esc(input.planName)}</strong> plan for <strong>${esc(input.businessName)}</strong> has ended.`)}
 ${p("The listing stays published as an editorial profile. It is not removed, and its ranking position does not change. New quote requests are still saved for you, with the contact details held until a plan is active again.")}
-${p("You can restart at any time from the dashboard.")}
-${button(input.profileUrl, "See your listing")}`;
+${p("You can restart at any time from the billing page of your dashboard.")}
+${button(siteUrl("/portal/billing/"), "Restart your plan")}`;
 
   return deliver(
     {
@@ -566,6 +566,7 @@ ${button(input.profileUrl, "See your listing")}`;
       text: [
         `Your ${input.planName} plan for ${input.businessName} has ended.`,
         "The listing stays published as an editorial profile. It is not removed, and its ranking position does not change.",
+        `Restart your plan: ${siteUrl("/portal/billing/")}`,
         `See your listing: ${input.profileUrl}`,
       ].join("\n\n"),
     },
