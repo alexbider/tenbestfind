@@ -161,6 +161,9 @@ export async function submitClaim(_prev: ClaimState, formData: FormData): Promis
 
 export type AddState = ClaimState;
 
+/** How long a pending listing is picked up again by a repeat submit. */
+const RESUBMIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 const addSchema = z.object({
   name: z.string().trim().min(2, "Tell us the business name").max(200),
   categorySlug: z.string().trim().min(1, "Pick a category"),
@@ -194,55 +197,80 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
   const category = await db.category.findUnique({ where: { slug: data.categorySlug } });
   if (!category) return { status: "error", message: "That category no longer exists." };
 
-  const baseSlug = data.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  const existing = await db.business.findUnique({ where: { slug: baseSlug } });
-  const slug = existing ? `${baseSlug}-${Date.now().toString(36).slice(-4)}` : baseSlug;
-
-  const business = await db.business.create({
-    data: {
+  // A second submit of the same business (a checkout closed or retried) picks
+  // up the listing already waiting for review instead of making another one,
+  // so one business never becomes several pending listings and Stripe customers.
+  const resubmitted = await db.business.findFirst({
+    where: {
       name: data.name,
-      slug,
       categoryId: category.id,
       cityId: data.cityId,
-      description: data.description,
       email: data.contactEmail,
-      phone: data.phone || null,
-      website: data.website || null,
-      addressLine: data.addressLine || null,
-      licenseNumber: data.licenseNumber || null,
       status: "PENDING",
-      submittedAt: new Date(),
+      claimed: false,
+      submittedAt: { gte: new Date(Date.now() - RESUBMIT_WINDOW_MS) },
     },
+    orderBy: { submittedAt: "desc" },
   });
 
-  await db.submission.create({
-    data: {
-      kind: "BUSINESS",
-      subject: `Add ${data.name}`,
-      name: data.contactName,
-      email: data.contactEmail,
-      // The service area and the services are what the submitter says; an
-      // editor checks them against the website before any of it is published.
-      message: [
-        data.description,
-        data.serviceArea ? `Service area: ${data.serviceArea}` : "",
-        data.services ? `Services: ${data.services}` : "",
-        data.licenseNumber ? `Licence or registration: ${data.licenseNumber}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      payload: JSON.stringify({
-        businessId: business.id,
-        serviceArea: data.serviceArea || null,
-        services: data.services ? data.services.split(",").map((item) => item.trim()).filter(Boolean) : [],
-        licenseNumber: data.licenseNumber || null,
-      }),
-      status: "NEW",
-    },
-  });
+  const details = {
+    description: data.description,
+    phone: data.phone || null,
+    website: data.website || null,
+    addressLine: data.addressLine || null,
+    licenseNumber: data.licenseNumber || null,
+  };
+
+  let business;
+  if (resubmitted) {
+    business = await db.business.update({ where: { id: resubmitted.id }, data: details });
+  } else {
+    const baseSlug = data.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const existing = await db.business.findUnique({ where: { slug: baseSlug } });
+    const slug = existing ? `${baseSlug}-${Date.now().toString(36).slice(-4)}` : baseSlug;
+
+    business = await db.business.create({
+      data: {
+        name: data.name,
+        slug,
+        categoryId: category.id,
+        cityId: data.cityId,
+        email: data.contactEmail,
+        ...details,
+        status: "PENDING",
+        submittedAt: new Date(),
+      },
+    });
+
+    await db.submission.create({
+      data: {
+        kind: "BUSINESS",
+        subject: `Add ${data.name}`,
+        name: data.contactName,
+        email: data.contactEmail,
+        // The service area and the services are what the submitter says; an
+        // editor checks them against the website before any of it is published.
+        message: [
+          data.description,
+          data.serviceArea ? `Service area: ${data.serviceArea}` : "",
+          data.services ? `Services: ${data.services}` : "",
+          data.licenseNumber ? `Licence or registration: ${data.licenseNumber}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        payload: JSON.stringify({
+          businessId: business.id,
+          serviceArea: data.serviceArea || null,
+          services: data.services ? data.services.split(",").map((item) => item.trim()).filter(Boolean) : [],
+          licenseNumber: data.licenseNumber || null,
+        }),
+        status: "NEW",
+      },
+    });
+  }
 
   let checkout: CheckoutResult;
   try {
@@ -264,7 +292,8 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
     };
   }
 
-  await Promise.allSettled([
+  // The receipt and the team alert went out with the first submit.
+  if (!resubmitted) await Promise.allSettled([
     sendListingSubmitted({
       to: data.contactEmail,
       contactName: data.contactName,
