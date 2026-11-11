@@ -344,17 +344,69 @@ async function portalConfiguration(): Promise<string | undefined> {
   return typeof stored === "string" && stored.trim() ? stored.trim() : undefined;
 }
 
+/**
+ * The TenBestFind billing portal configuration, created on first use. The
+ * Stripe account is shared with BeautyFind, so its default portal must never
+ * be used. A stored id that has gone missing (another account or mode) is
+ * replaced, and an existing TenBestFind configuration is reused before a new
+ * one is made, so calling this twice never creates a duplicate.
+ */
+export async function ensurePortalConfiguration(): Promise<string> {
+  const stripe = await getStripe();
+  const stored = await portalConfiguration();
+  if (stored) {
+    const existing = await stripe.billingPortal.configurations.retrieve(stored).catch((error) => {
+      if (isMissingResource(error)) return null;
+      throw error;
+    });
+    if (existing?.active) return existing.id;
+  }
+
+  const listed = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
+  const ours = listed.data.find((row) => row.metadata?.site === STRIPE_METADATA.site);
+  const configuration =
+    ours ??
+    (await stripe.billingPortal.configurations.create({
+      name: PRODUCT_PREFIX,
+      business_profile: { headline: "TenBestFind" },
+      default_return_url: siteUrl("/portal/billing/"),
+      features: {
+        payment_method_update: { enabled: true },
+        invoice_history: { enabled: true },
+        subscription_cancel: {
+          enabled: true,
+          mode: "at_period_end",
+          proration_behavior: "none",
+          cancellation_reason: {
+            enabled: true,
+            options: ["too_expensive", "missing_features", "switched_service", "unused", "low_quality", "other"],
+          },
+        },
+        // Plans are changed by starting a new checkout, never in the portal.
+        subscription_update: { enabled: false },
+      },
+      metadata: { ...STRIPE_METADATA },
+    }));
+
+  await db.setting.upsert({
+    where: { key: PORTAL_SETTING },
+    create: { key: PORTAL_SETTING, value: JSON.stringify(configuration.id), groupName: "billing", label: "Stripe billing portal configuration" },
+    update: { value: JSON.stringify(configuration.id) },
+  });
+  return configuration.id;
+}
+
 export async function billingPortalUrl(businessId: string, returnPath: string) {
   const business = await db.business.findUnique({ where: { id: businessId } });
   if (!business?.stripeCustomerId) return null;
   const stripe = await getStripe();
   // The shared account's default portal belongs to someone else, so ours is
-  // named explicitly when one has been set up.
-  const configuration = await portalConfiguration();
+  // always named explicitly.
+  const configuration = await ensurePortalConfiguration();
   const session = await stripe.billingPortal.sessions.create({
     customer: business.stripeCustomerId,
     return_url: siteUrl(returnPath),
-    ...(configuration ? { configuration } : {}),
+    configuration,
   });
   return session.url;
 }
