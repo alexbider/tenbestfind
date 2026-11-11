@@ -541,7 +541,7 @@ export function CentreFlow({
               </ul>
             ) : query ? (
               <p style={{ padding: "16px 18px", borderRadius: "14px", background: "var(--paper)", border: "1px solid var(--border-subtle)", fontSize: "14.5px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
-                <strong style={{ color: "var(--ink)" }}>We do not have that listing yet.</strong> Add it instead. Nothing is charged until an editor publishes it.
+                <strong style={{ color: "var(--ink)" }}>We do not have that listing yet.</strong> Add it instead. A declined listing is refunded in full.
               </p>
             ) : null}
             {field.notListed}

@@ -168,7 +168,7 @@ export function AddBusinessFlow({
     {
       label: "Plan",
       title: "Choose your plan",
-      sub: `${price} a month per published location. Nothing is charged until the listing publishes.`,
+      sub: `${price} a month per published location. Charged at checkout, refunded in full if the listing is declined.`,
       fields: [
         {
           id: "plan",
@@ -181,7 +181,7 @@ export function AddBusinessFlow({
             {
               id: "listing",
               title: `Directory Listing · ${price}/mo`,
-              tag: "$0 today",
+              tag: `${price} today`,
               text: "Full profile management once live, plus the listing performance dashboard. Cancel any time.",
             },
           ],
@@ -224,8 +224,8 @@ export function AddBusinessFlow({
 
   const summary = () => ({
     items: [{ name: "Directory Listing", price: `${price}/mo` }],
-    due: money(0),
-    dueNote: "First charged on the day the listing publishes. Never charged if the submission is declined.",
+    due: price,
+    dueNote: "Charged today, then monthly. Refunded in full if the submission is declined.",
   });
 
   return (
@@ -234,7 +234,7 @@ export function AddBusinessFlow({
       flowLabel="Submission flow"
       finalLabel="Continue to secure checkout"
       pendingLabel="Redirecting to Stripe…"
-      stripeText="Continuing takes you to Stripe Checkout, which holds your card without charging it. The first charge happens on the day the listing publishes, and never if it is declined. Card details go straight to Stripe and never touch our servers."
+      stripeText="Continuing takes you to Stripe Checkout, which charges the first month now. If the listing is declined, you are refunded in full. Card details go straight to Stripe and never touch our servers."
       summary={summary}
       toForm={toForm}
       action={action}
@@ -249,7 +249,6 @@ export function AddBusinessFlow({
             rows={[
               { label: "Reference", value: state.reference ?? "" },
               { label: "Status", value: "In editorial review" },
-              { label: "Due today", value: money(0) },
             ]}
             links={[{ href: routes.forBusinesses(), label: "Back to the business centre", primary: true }]}
           />

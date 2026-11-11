@@ -181,9 +181,8 @@ const addSchema = z.object({
 });
 
 /**
- * Creates the listing PENDING and opens a Checkout session that holds the card
- * on a trial. Nothing is charged until an editor publishes the listing, which
- * ends the trial; a declined listing is simply never charged.
+ * Creates the listing PENDING and opens a Checkout session that charges the
+ * first month straight away. A listing an editor declines is refunded in full.
  */
 export async function submitBusiness(_prev: AddState, formData: FormData): Promise<AddState> {
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
@@ -279,7 +278,6 @@ export async function submitBusiness(_prev: AddState, formData: FormData): Promi
       planKey: data.planKey,
       email: data.contactEmail,
       name: data.contactName,
-      trialUntilPublished: true,
       successPath: `${routes.addBusiness()}complete/`,
       cancelPath: routes.addBusiness(),
     });

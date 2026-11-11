@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = withSocial({
   title: "Add a business",
   description:
-    "Submit a business we have not covered yet. Editorial review applies the same standards as everything else, and nothing is charged until the listing publishes.",
+    "Submit a business we have not covered yet. Editorial review applies the same standards as everything else, and a declined listing is refunded in full.",
   alternates: { canonical: "/add-business/" },
 });
 

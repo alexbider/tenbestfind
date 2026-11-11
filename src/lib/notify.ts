@@ -115,30 +115,29 @@ export async function sendListingSubmitted(input: {
   businessName: string;
   reference: string;
 }) {
+  const refundLine = "The first month is charged at checkout and Stripe sends the receipt. If the listing is declined, you are refunded in full.";
   const first = input.contactName.split(" ")[0] || input.contactName;
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`Thanks for submitting <strong>${esc(input.businessName)}</strong>. An editor will review it against the same minimum standards as every other listing: a verifiable presence in the market, current insurance, and licensing where it is required.`)}
 ${rows([
   ["Reference", input.reference],
   ["Status", "In editorial review"],
-  ["Due today", "$0.00"],
 ])}
-${p("Your card is held, not charged. The first charge happens on the day the listing publishes, and never if it is declined. We will email you either way.")}`;
+${p(`${refundLine} We will email you either way.`)}`;
 
   return deliver(
     {
       to: input.to,
       subject: `We have your listing for ${input.businessName}`,
-      html: emailLayout({ heading: "Listing submitted", body, footer: FOOTER, eyebrow: "Add a business", preheader: "Nothing has been charged. An editor will review it and email you either way." }),
+      html: emailLayout({ heading: "Listing submitted", body, footer: FOOTER, eyebrow: "Add a business", preheader: "An editor will review it and email you either way. Declined listings are refunded in full." }),
       text: [
         `Hi ${first},`,
         `Thanks for submitting ${input.businessName}. An editor will review it against the same minimum standards as every other listing.`,
         textRows([
           ["Reference", input.reference],
           ["Status", "In editorial review"],
-          ["Due today", "$0.00"],
         ]),
-        "Your card is held, not charged. The first charge happens on the day the listing publishes, and never if it is declined.",
+        refundLine,
       ].join("\n\n"),
     },
     "listing submitted",
@@ -154,7 +153,6 @@ export async function sendListingPublished(input: {
   const first = input.contactName?.split(" ")[0] || "there";
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`<strong>${esc(input.businessName)}</strong> is now live on TenBestFind.`)}
-${p("This is also the day your subscription starts, so Stripe will send the first receipt separately.")}
 ${button(input.url, "See your listing")}`;
 
   return deliver(
@@ -165,7 +163,6 @@ ${button(input.url, "See your listing")}`;
       text: [
         `Hi ${first},`,
         `${input.businessName} is now live on TenBestFind: ${input.url}`,
-        "This is also the day your subscription starts, so Stripe will send the first receipt separately.",
       ].join("\n\n"),
     },
     "listing published",
@@ -427,23 +424,26 @@ ${p("If you do run this business, reply to this email with a registration docume
   );
 }
 
-export async function sendListingDeclined(input: { to: string; contactName?: string | null; businessName: string; reason?: string | null }) {
+export async function sendListingDeclined(input: { to: string; contactName?: string | null; businessName: string; reason?: string | null; refunded?: boolean }) {
+  const paymentLine = input.refunded
+    ? "Everything you paid for this listing has been refunded to the card you used. It usually shows within 5 to 10 business days."
+    : "You have not been charged for this listing.";
   const first = input.contactName?.split(" ")[0] || "there";
   const reason = input.reason?.trim();
   const body = `${p(`Hi ${esc(first)},`)}
 ${p(`An editor reviewed <strong>${esc(input.businessName)}</strong> and we are not publishing it right now.${reason ? ` ${esc(reason)}` : ""}`)}
-${p("Your card was not charged, and the hold on it has been released.")}
+${p(paymentLine)}
 ${p("You are welcome to submit again once the details can be checked, for example a licence number we can look up or a street address in the area you serve.")}`;
 
   return deliver(
     {
       to: input.to,
       subject: `About your submission for ${input.businessName}`,
-      html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER, eyebrow: "Add a business", preheader: "Your card was not charged, and the hold has been released." }),
+      html: emailLayout({ heading: "Your submission was not published", body, footer: FOOTER, eyebrow: "Add a business", preheader: input.refunded ? "Your payment has been refunded in full." : "You have not been charged." }),
       text: [
         `Hi ${first},`,
         `An editor reviewed ${input.businessName} and we are not publishing it right now.${reason ? ` ${reason}` : ""}`,
-        "Your card was not charged, and the hold on it has been released.",
+        paymentLine,
       ].join("\n\n"),
       replyTo: await teamInbox(),
     },
@@ -700,7 +700,7 @@ export async function sendTemplateTest(template: TestTemplate, to: string): Prom
     case "payment_failed":
       return sendPaymentFailed({ to, businessName: sample.business, planName: "Claim & Manage", amount: "$29.00", payUrl: `${site}/portal/` });
     case "finish_signup":
-      return sendFinishSignup({ to, contactName: sample.person, businessName: sample.business, planName: "Directory Listing", amount: "$29.00 / month", finishUrl: `${site}/billing/finish/sample/`, chargedOnPublish: true });
+      return sendFinishSignup({ to, contactName: sample.person, businessName: sample.business, planName: "Directory Listing", amount: "$29.00 / month", finishUrl: `${site}/billing/finish/sample/`, chargedOnPublish: false });
     case "plan_ended":
       return sendPlanEnded({ to, businessName: sample.business, planName: "Claim & Manage", profileUrl: `${site}/` });
     case "listing_declined":

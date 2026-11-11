@@ -82,11 +82,6 @@ async function contactFor(subscriptionId: string, businessId: string, businessEm
   return businessEmail ? { email: businessEmail, name: null } : null;
 }
 
-/** A new listing is charged on publish; everything else is charged at checkout. */
-function chargedOnPublish(planKey: string, businessStatus: string) {
-  return planKey === "listing" && businessStatus !== "PUBLISHED";
-}
-
 /**
  * Opens a fresh Checkout page for an unfinished signup and returns its URL.
  * startCheckout picks up the PENDING row it belongs to, so no new record is made.
@@ -106,7 +101,6 @@ export async function resumeSignupCheckout(subscriptionId: string): Promise<{ ur
     quantity: subscription.quantity,
     scopeCityId: subscription.scopeCityId ?? undefined,
     scopeCategoryId: subscription.scopeCategoryId ?? undefined,
-    trialUntilPublished: chargedOnPublish(subscription.plan.key, subscription.business.status),
     ...pathsFor(subscription.plan.key),
   });
   if (result.mode !== "stripe") return { error: "Online payment is not available just now." };
@@ -130,7 +124,7 @@ export async function sendFinishSignupEmail(subscriptionId: string): Promise<{ s
     planName: plan.name,
     amount: `${money(plan.priceCents * subscription.quantity, plan.currency)}${interval}`,
     finishUrl: finishSignupUrl(subscription.id),
-    chargedOnPublish: chargedOnPublish(plan.key, subscription.business.status),
+    chargedOnPublish: false,
   });
   if (!sent) throw new Error("The email could not be sent. Check the Resend key under Admin, Integrations.");
   return { sentTo: contact.email };
