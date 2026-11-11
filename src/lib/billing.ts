@@ -138,16 +138,32 @@ export async function startCheckout(input: {
   const plan = await db.plan.findUnique({ where: { key: input.planKey } });
   if (!plan) throw new Error(`Unknown plan: ${input.planKey}`);
 
-  const subscription = await db.subscription.create({
-    data: {
+  // A retried checkout reuses the PENDING row it left behind rather than
+  // stacking another one for the same business and plan.
+  const unfinished = await db.subscription.findFirst({
+    where: {
       businessId: input.businessId,
       planId: plan.id,
       status: "PENDING",
-      quantity: input.quantity ?? 1,
-      scopeCityId: input.scopeCityId,
-      scopeCategoryId: input.scopeCategoryId,
+      stripeSubscriptionId: null,
+      scopeCityId: input.scopeCityId ?? null,
+      scopeCategoryId: input.scopeCategoryId ?? null,
     },
+    orderBy: { createdAt: "desc" },
   });
+
+  const subscription =
+    unfinished ??
+    (await db.subscription.create({
+      data: {
+        businessId: input.businessId,
+        planId: plan.id,
+        status: "PENDING",
+        quantity: input.quantity ?? 1,
+        scopeCityId: input.scopeCityId,
+        scopeCategoryId: input.scopeCategoryId,
+      },
+    }));
 
   // Without keys the intent is recorded and an editor completes it by hand.
   if (!(await stripeConfigured()) || !plan.stripePriceId) {
@@ -156,6 +172,11 @@ export async function startCheckout(input: {
 
   const stripe = await getStripe();
   const customerId = await ensureCustomer(input.businessId, input.email, input.name);
+
+  // Close the earlier page so the same row can never be paid for twice.
+  if (unfinished?.stripeCheckoutId) {
+    await stripe.checkout.sessions.expire(unfinished.stripeCheckoutId).catch(() => null);
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
